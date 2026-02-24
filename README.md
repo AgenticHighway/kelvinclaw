@@ -7,6 +7,7 @@ Rust re-architecture of OpenClaw-style "brain" + memory/runtime seams with stric
 See:
 
 - [OVERVIEW.md](OVERVIEW.md)
+- [docs/architecture.md](docs/architecture.md)
 - [docs/openclaw-gap-analysis.md](docs/openclaw-gap-analysis.md)
 
 Workspace crates:
@@ -15,7 +16,7 @@ Workspace crates:
 - `crates/kelvin-memory`: memory backends + fallback manager
 - `crates/kelvin-brain`: agent loop orchestration
 - `crates/kelvin-runtime`: run registry, lane scheduler, adapters
-- `crates/kelvin-cli`: executable wiring
+- `archive/kelvin-cli`: archived executable wiring (not in workspace members)
 
 ## Interface-First Design
 
@@ -43,7 +44,7 @@ The fallback manager mimics OpenClaw's primary->fallback behavior.
 ## CLI Example
 
 ```bash
-cargo run -p kelvin-cli -- --prompt "hello" --workspace /path/to/workspace --memory fallback
+cargo run --manifest-path archive/kelvin-cli/Cargo.toml -- --prompt "hello" --workspace /path/to/workspace --memory fallback
 ```
 
 Tool-trigger pattern for the default model provider:
@@ -51,6 +52,22 @@ Tool-trigger pattern for the default model provider:
 ```text
 [[tool:time]]
 [[tool:hello_tool {"foo":"bar"}]]
+```
+
+## Remote EC2 Build/Test
+
+One-command sync + remote test runner:
+
+```bash
+scripts/remote-test.sh
+```
+
+Useful variants:
+
+```bash
+REMOTE_TEST_HOST=ec2-user@your-host scripts/remote-test.sh
+scripts/remote-test.sh --docker
+scripts/remote-test.sh --host ec2-user@your-host --cargo-args '-- --nocapture'
 ```
 
 ## Note

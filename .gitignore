@@ -1,2 +1,15 @@
 /target
 **/*.rs.bk
+
+# OS cruft
+.DS_Store
+
+# Editor/IDE
+.idea/
+*.swp
+*.swo
+*~
+
+# Local env/config overrides
+.env
+.env.local
