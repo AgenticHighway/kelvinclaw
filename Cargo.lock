@@ -30,17 +30,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "kelvin-cli"
-version = "0.1.0"
-dependencies = [
- "kelvin-brain",
- "kelvin-core",
- "kelvin-memory",
- "kelvin-runtime",
- "tokio",
-]
-
-[[package]]
 name = "kelvin-core"
 version = "0.1.0"
 dependencies = [
