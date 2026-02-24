@@ -3,6 +3,7 @@ members = [
   "crates/kelvin-core",
   "crates/kelvin-memory",
   "crates/kelvin-brain",
+  "crates/kelvin-wasm",
 ]
 resolver = "2"
 
@@ -20,3 +21,4 @@ thiserror = "1"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
 walkdir = "2"
 semver = "1"
+wasmtime = "42"

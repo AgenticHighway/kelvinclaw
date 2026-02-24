@@ -14,12 +14,14 @@ See:
 - [docs/KELVIN_CORE_SDK.md](docs/KELVIN_CORE_SDK.md)
 - [docs/CORE_ADMISSION_POLICY.md](docs/CORE_ADMISSION_POLICY.md)
 - [docs/SDK_PRINCIPLES.md](docs/SDK_PRINCIPLES.md)
+- [docs/trusted-executive-wasm.md](docs/trusted-executive-wasm.md)
 
 Workspace crates:
 
 - `crates/kelvin-core`: contracts and shared types
 - `crates/kelvin-memory`: memory backends + fallback manager
 - `crates/kelvin-brain`: agent loop orchestration
+- `crates/kelvin-wasm`: trusted native executive for untrusted WASM skills
 
 Archived crates:
 
@@ -40,6 +42,21 @@ Main traits:
 - `CoreRuntime` / `RunRegistry` (core lifecycle state machine)
 
 Everything in the runtime is composed with trait objects so concrete implementations can be swapped.
+
+## Trusted Executive + Untrusted Skills
+
+Kelvin now supports the split model:
+
+- trusted native Rust host (`kelvin-wasm`) with system keys
+- untrusted WASM skills loaded at runtime
+- explicit host ABI (`claw::*` imports) for what skills may request
+- sandbox policy gates that deny disallowed capabilities at module instantiation
+
+Key types in `kelvin-wasm`:
+
+- `WasmSkillHost`
+- `SandboxPolicy`
+- `ClawCall`
 
 ## Memory Backend Swapping
 
@@ -90,4 +107,10 @@ Docker:
 
 ```bash
 docker run --rm -v "$PWD:/work" -w /work rust:1.77 cargo test --workspace
+```
+
+Build the sample Rust WASM skill:
+
+```bash
+cargo build --target wasm32-unknown-unknown --manifest-path skills/echo-wasm-skill/Cargo.toml
 ```

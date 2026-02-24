@@ -15,4 +15,5 @@
 .env
 .env.local
 local_docs/*
+skills/*/Cargo.lock
 .devcontainer/*
