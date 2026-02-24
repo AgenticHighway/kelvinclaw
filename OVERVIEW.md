@@ -28,6 +28,7 @@ A literal `OVERVIEW.md` was not present in the cloned `openclaw` repository. Thi
 - `crates/kelvin-core`: domain contracts and traits.
 - `crates/kelvin-memory`: memory backends and fallback wrapper.
 - `crates/kelvin-brain`: OpenClaw-style orchestration loop (`OpenClawBrain`).
+- `crates/kelvin-wasm`: trusted native executive for untrusted WASM skill execution.
 - `archive/kelvin-runtime`: archived lane scheduler, run registry, adapters.
 - `archive/kelvin-cli`: archived runnable composition layer (excluded from workspace members).
 
@@ -38,6 +39,7 @@ KelvinClaw now formalizes "small core, extensible ecosystem" rules:
 - [docs/KELVIN_CORE_SDK.md](docs/KELVIN_CORE_SDK.md): 8-part Kelvin Core SDK implementation.
 - [docs/CORE_ADMISSION_POLICY.md](docs/CORE_ADMISSION_POLICY.md): strict criteria for what can enter `kelvin-core`.
 - [docs/SDK_PRINCIPLES.md](docs/SDK_PRINCIPLES.md): plugin/SDK expectations for stability, safety, and security.
+- [docs/trusted-executive-wasm.md](docs/trusted-executive-wasm.md): trusted host + untrusted skill runtime model.
 
 These documents are intended to keep core tiny while making extension surfaces predictable.
 

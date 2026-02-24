@@ -26,6 +26,7 @@ The intent is to keep the "brains" (orchestration and contracts) stable while en
 - [docs/KELVIN_CORE_SDK.md](docs/KELVIN_CORE_SDK.md)
 - [docs/CORE_ADMISSION_POLICY.md](docs/CORE_ADMISSION_POLICY.md)
 - [docs/SDK_PRINCIPLES.md](docs/SDK_PRINCIPLES.md)
+- [docs/trusted-executive-wasm.md](docs/trusted-executive-wasm.md)
 
 Use these as merge criteria when deciding whether logic belongs in core or in extensions.
 
@@ -34,6 +35,7 @@ Use these as merge criteria when deciding whether logic belongs in core or in ex
 - `crates/kelvin-core`: domain models and interfaces.
 - `crates/kelvin-memory`: memory backend implementations and backend selection.
 - `crates/kelvin-brain`: agent loop orchestration implementation.
+- `crates/kelvin-wasm`: trusted host runtime for loading untrusted WASM skills.
 - `archive/kelvin-runtime`: archived scheduling, run lifecycle, and concrete adapters.
 - `archive/kelvin-cli`: archived executable composition and local operator UX (not active workspace member).
 
@@ -113,6 +115,15 @@ Backends:
 Selection:
 
 - `MemoryFactory` builds backend by `MemoryBackendKind`.
+
+### WASM Executive (`kelvin-wasm`)
+
+`WasmSkillHost` executes untrusted WebAssembly modules with explicit capability boundaries:
+
+- exports expected from skill modules: `run() -> i32`
+- host ABI imports exposed under `claw::*` (for example `send_message`, `move_servo`)
+- `SandboxPolicy` controls which privileged imports are linked
+- denied capabilities fail module instantiation before skill execution
 
 ## Execution Flow
 
