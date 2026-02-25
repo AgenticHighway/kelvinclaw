@@ -69,7 +69,20 @@ require_cmd() {
 
 require_cmd tar
 require_cmd jq
-require_cmd shasum
+
+sha256_file() {
+  local file="$1"
+  if command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "${file}" | awk '{print $1}'
+    return
+  fi
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "${file}" | awk '{print $1}'
+    return
+  fi
+  echo "Missing required command: shasum or sha256sum" >&2
+  exit 1
+}
 
 if [[ -z "${PACKAGE_PATH}" ]]; then
   echo "Missing --package <path>." >&2
@@ -133,7 +146,7 @@ fi
 
 EXPECTED_SHA="$(jq -er '.entrypoint_sha256 // empty' "${MANIFEST_PATH}")"
 if [[ -n "${EXPECTED_SHA}" ]]; then
-  ACTUAL_SHA="$(shasum -a 256 "${ENTRYPOINT_ABS}" | awk '{print $1}')"
+  ACTUAL_SHA="$(sha256_file "${ENTRYPOINT_ABS}")"
   if [[ "${ACTUAL_SHA}" != "${EXPECTED_SHA}" ]]; then
     echo "Checksum mismatch for entrypoint. expected=${EXPECTED_SHA} actual=${ACTUAL_SHA}" >&2
     exit 1
