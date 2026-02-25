@@ -1,8 +1,26 @@
 # kelvinclaw
 
-Rust re-architecture of KelvinClaw-style "brain" + memory/runtime seams with strict interfaces for plug-and-play implementations.
+KelvinClaw is a security-first Rust runtime for running untrusted WASM plugins through a small trusted host.
+The project is designed to stay minimal in root code while exposing a stable SDK for extension authors.
 
 SDK name: **Kelvin Core**.
+
+Core model:
+
+- control plane (`kelvin` root + brain): policy, orchestration, lifecycle
+- data plane (memory controller): RPC memory execution with defense-in-depth checks
+- extension plane (WASM plugins): installable modules with signed manifests and scoped capabilities
+
+For end users, plugins are installed as packages and executed by Kelvin. They do not need to compile the Rust workspace.
+
+## Repository Layout
+
+- `apps/kelvin-host`: thin trusted host executable
+- `crates/*`: core contracts, runtime, SDK, memory API/client/controller, and execution engine
+- `plugins/`: installable first-party plugin package sources (manifest/signature/payload)
+- `examples/`: developer sample source crates (for learning and reference), including sample WASM skills
+
+There is intentionally no top-level `skills/` directory now. Installable artifacts live in `plugins/`, and sample source code lives in `examples/`.
 
 ## Architecture
 
@@ -37,10 +55,9 @@ Workspace crates:
 - `crates/kelvin-brain`: agent loop orchestration
 - `crates/kelvin-wasm`: trusted native executive for untrusted WASM skills
 
-Archived crates:
+Apps:
 
-- `archive/kelvin-runtime`: archived run registry, lane scheduler, adapters
-- `archive/kelvin-cli`: archived executable wiring (not in workspace members)
+- `apps/kelvin-host`: thin host executable for Kelvin SDK
 
 ## Interface-First Design
 
@@ -104,7 +121,7 @@ The fallback manager mimics KelvinClaw's primary->fallback behavior.
 scripts/install-kelvin-cli-plugin.sh
 KELVIN_PLUGIN_HOME=.kelvin/plugins \
 KELVIN_TRUST_POLICY_PATH=.kelvin/trusted_publishers.json \
-CARGO_TARGET_DIR=target/try-kelvin-cli cargo run --manifest-path archive/kelvin-cli/Cargo.toml -- --prompt "hello" --workspace /path/to/workspace --memory fallback
+CARGO_TARGET_DIR=target/try-kelvin-cli cargo run -p kelvin-host -- --prompt "hello" --workspace /path/to/workspace --memory fallback
 ```
 
 The CLI executable is only a thin launcher. Runtime behavior is composed in `kelvin-sdk`, and
@@ -224,9 +241,9 @@ Trust policy template:
 
 - `trusted_publishers.example.json`
 
-Archived CLI boot behavior:
+Host boot behavior:
 
-- `archive/kelvin-cli` calls `kelvin_sdk::run_with_sdk(...)` only.
+- `apps/kelvin-host` calls `kelvin_sdk::run_with_sdk(...)` only.
 - `kelvin-sdk` requires installed `kelvin_cli` and auto-loads installed SDK plugins with `load_installed_tool_plugins_default(...)`.
 
 ## Local Test
@@ -244,17 +261,17 @@ scripts/test-sdk.sh
 Docker:
 
 ```bash
-docker run --rm -v "$PWD:/work" -w /work rust:1.77 cargo test --workspace
+docker run --rm -v "$PWD:/work" -w /work rust:latest cargo test --workspace
 ```
 
 Build the sample Rust WASM skill:
 
 ```bash
-cargo build --target wasm32-unknown-unknown --manifest-path skills/echo-wasm-skill/Cargo.toml
+cargo build --target wasm32-unknown-unknown --manifest-path examples/echo-wasm-skill/Cargo.toml
 ```
 
 Run the sample skill:
 
 ```bash
-cargo run -p kelvin-wasm --bin kelvin-wasm-runner -- --wasm skills/echo-wasm-skill/target/wasm32-unknown-unknown/debug/echo_wasm_skill.wasm
+cargo run -p kelvin-wasm --bin kelvin-wasm-runner -- --wasm examples/echo-wasm-skill/target/wasm32-unknown-unknown/debug/echo_wasm_skill.wasm
 ```

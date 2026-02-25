@@ -130,7 +130,7 @@ scripts/plugin-sign.sh \
 Reference template:
 
 - `trusted_publishers.example.json`
-- `fixtures/trusted_publishers.kelvin.json` (bundled Kelvin publisher key)
+- `plugins/trusted_publishers.kelvin.json` (bundled Kelvin publisher key)
 
 ## Verification
 

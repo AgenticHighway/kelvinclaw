@@ -14,7 +14,7 @@ struct CliConfig {
 }
 
 fn usage() -> &'static str {
-    "Usage: kelvin-cli --prompt <text> [--session <id>] [--workspace <dir>] [--memory markdown|in-memory|fallback] [--timeout-ms <ms>]"
+    "Usage: kelvin-host --prompt <text> [--session <id>] [--workspace <dir>] [--memory markdown|in-memory|fallback] [--timeout-ms <ms>]"
 }
 
 fn parse_args() -> Result<CliConfig, String> {

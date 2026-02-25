@@ -13,7 +13,7 @@ What this does:
 - uses local `cargo` if installed
 - otherwise falls back to Docker (`rust:latest`)
 - installs/updates the first-party `kelvin_cli` WASM plugin package into `./.kelvin/plugins`
-- runs `archive/kelvin-cli` with a prompt
+- runs `apps/kelvin-host` with a prompt
 
 Expected output includes:
 

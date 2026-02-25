@@ -18,11 +18,11 @@ echo "[test-cli-plugin-dogfood] installing bundled kelvin_cli package"
   --plugin-home "${PLUGIN_HOME}" \
   --trust-policy-path "${TRUST_POLICY_PATH}"
 
-echo "[test-cli-plugin-dogfood] running archive/kelvin-cli via SDK"
+echo "[test-cli-plugin-dogfood] running kelvin-host via SDK"
 KELVIN_PLUGIN_HOME="${PLUGIN_HOME}" \
 KELVIN_TRUST_POLICY_PATH="${TRUST_POLICY_PATH}" \
 CARGO_TARGET_DIR="${TARGET_DIR}" \
-  cargo run --manifest-path "${ROOT_DIR}/archive/kelvin-cli/Cargo.toml" -- \
+  cargo run -p kelvin-host -- \
     --prompt "dogfood sdk lane" \
     --timeout-ms 5000 > "${LOG_PATH}"
 

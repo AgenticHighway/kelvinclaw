@@ -395,6 +395,8 @@ pub async fn run_with_sdk(config: KelvinSdkConfig) -> KelvinResult<KelvinRunSumm
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
     use super::{run_with_sdk, KelvinCliMemoryMode, KelvinSdkConfig};
 
     fn repo_root() -> std::path::PathBuf {
@@ -415,19 +417,32 @@ mod tests {
         path
     }
 
+    fn seed_plugin_home(repo_root: &Path, plugin_home: &Path) {
+        let source = repo_root.join("plugins/kelvin-cli");
+        let version_dir = plugin_home.join("kelvin.cli").join("0.1.0");
+        let payload_dir = version_dir.join("payload");
+
+        std::fs::create_dir_all(&payload_dir).expect("create payload dir");
+        std::fs::copy(source.join("plugin.json"), version_dir.join("plugin.json"))
+            .expect("copy plugin manifest");
+        std::fs::copy(source.join("plugin.sig"), version_dir.join("plugin.sig"))
+            .expect("copy plugin signature");
+        std::fs::copy(
+            source.join("payload/kelvin_cli.wasm"),
+            payload_dir.join("kelvin_cli.wasm"),
+        )
+        .expect("copy plugin payload");
+    }
+
     #[tokio::test]
     async fn run_with_sdk_executes_cli_plugin_and_returns_payload() {
         let root = repo_root();
-        let plugin_home = root.join("fixtures/installed_plugins");
-        let trust_policy = root.join("fixtures/trusted_publishers.kelvin.json");
-        assert!(
-            plugin_home.is_dir(),
-            "missing plugin fixture directory: {}",
-            plugin_home.to_string_lossy()
-        );
+        let plugin_home = unique_workspace().join("plugins");
+        let trust_policy = root.join("plugins/trusted_publishers.kelvin.json");
+        seed_plugin_home(&root, &plugin_home);
         assert!(
             trust_policy.is_file(),
-            "missing trust policy fixture: {}",
+            "missing trust policy file: {}",
             trust_policy.to_string_lossy()
         );
 

@@ -2,12 +2,14 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PACKAGE_PATH="${ROOT_DIR}/dist/kelvin.cli-0.1.0.tar.gz"
+PACKAGE_PATH=""
+PLUGIN_SOURCE_DIR="${ROOT_DIR}/plugins/kelvin-cli"
 PLUGIN_HOME="${KELVIN_PLUGIN_HOME:-${ROOT_DIR}/.kelvin/plugins}"
 TRUST_POLICY_PATH="${KELVIN_TRUST_POLICY_PATH:-${ROOT_DIR}/.kelvin/trusted_publishers.json}"
-TRUST_POLICY_SEED="${ROOT_DIR}/fixtures/trusted_publishers.kelvin.json"
+TRUST_POLICY_SEED="${ROOT_DIR}/plugins/trusted_publishers.kelvin.json"
 FORCE="0"
 REFRESH_TRUST_POLICY="0"
+WORK_DIR=""
 
 usage() {
   cat <<'USAGE'
@@ -16,7 +18,8 @@ Usage: scripts/install-kelvin-cli-plugin.sh [options]
 Install Kelvin's first-party CLI WASM plugin using the same package flow as third-party plugins.
 
 Options:
-  --package <path>            Plugin package path (default: ./dist/kelvin.cli-0.1.0.tar.gz)
+  --package <path>            Plugin package path (optional)
+  --plugin-source <dir>       First-party plugin source dir (default: ./plugins/kelvin-cli)
   --plugin-home <dir>         Plugin install root (default: $KELVIN_PLUGIN_HOME or ./.kelvin/plugins)
   --trust-policy-path <path>  Trust policy file path (default: $KELVIN_TRUST_POLICY_PATH or ./.kelvin/trusted_publishers.json)
   --force                     Reinstall plugin version if it already exists
@@ -29,6 +32,10 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --package)
       PACKAGE_PATH="${2:?missing value for --package}"
+      shift 2
+      ;;
+    --plugin-source)
+      PLUGIN_SOURCE_DIR="${2:?missing value for --plugin-source}"
       shift 2
       ;;
     --plugin-home)
@@ -68,13 +75,41 @@ require_cmd() {
 }
 
 require_cmd jq
+require_cmd tar
+
+if [[ ! -f "${TRUST_POLICY_SEED}" ]]; then
+  echo "Bundled trust policy not found: ${TRUST_POLICY_SEED}" >&2
+  exit 1
+fi
+
+cleanup() {
+  if [[ -n "${WORK_DIR}" && -d "${WORK_DIR}" ]]; then
+    rm -rf "${WORK_DIR}"
+  fi
+}
+trap cleanup EXIT
+
+if [[ -z "${PACKAGE_PATH}" ]]; then
+  if [[ ! -f "${PLUGIN_SOURCE_DIR}/plugin.json" ]]; then
+    echo "Plugin source missing plugin.json: ${PLUGIN_SOURCE_DIR}/plugin.json" >&2
+    exit 1
+  fi
+  if [[ ! -d "${PLUGIN_SOURCE_DIR}/payload" ]]; then
+    echo "Plugin source missing payload/: ${PLUGIN_SOURCE_DIR}/payload" >&2
+    exit 1
+  fi
+  if [[ ! -f "${PLUGIN_SOURCE_DIR}/plugin.sig" ]]; then
+    echo "Plugin source missing plugin.sig: ${PLUGIN_SOURCE_DIR}/plugin.sig" >&2
+    exit 1
+  fi
+
+  WORK_DIR="$(mktemp -d)"
+  PACKAGE_PATH="${WORK_DIR}/kelvin.cli-0.1.0.tar.gz"
+  tar -czf "${PACKAGE_PATH}" -C "${PLUGIN_SOURCE_DIR}" plugin.json payload plugin.sig
+fi
 
 if [[ ! -f "${PACKAGE_PATH}" ]]; then
   echo "Kelvin CLI plugin package not found: ${PACKAGE_PATH}" >&2
-  exit 1
-fi
-if [[ ! -f "${TRUST_POLICY_SEED}" ]]; then
-  echo "Bundled trust policy not found: ${TRUST_POLICY_SEED}" >&2
   exit 1
 fi
 

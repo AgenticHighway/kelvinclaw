@@ -29,8 +29,8 @@ A literal `OVERVIEW.md` was not present in the cloned `KelvinClaw` repository. T
 - `crates/kelvin-memory`: memory backends and fallback wrapper.
 - `crates/kelvin-brain`: KelvinClaw-style orchestration loop (`KelvinBrain`).
 - `crates/kelvin-wasm`: trusted native executive for untrusted WASM skill execution.
-- `archive/kelvin-runtime`: archived lane scheduler, run registry, adapters.
-- `archive/kelvin-cli`: archived runnable composition layer (excluded from workspace members).
+- `apps/kelvin-host`: active runnable composition layer for SDK orchestration.
+- `plugins/kelvin-cli`: first-party WASM plugin package source (`kelvin_cli`).
 
 ## Minimal Core Governance
 
