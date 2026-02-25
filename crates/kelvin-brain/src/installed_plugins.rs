@@ -1,4 +1,5 @@
 use std::collections::{HashMap, VecDeque};
+use std::env;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 use std::sync::Arc;
@@ -26,6 +27,8 @@ const DEFAULT_MAX_RETRIES: u32 = 0;
 const DEFAULT_MAX_CALLS_PER_MINUTE: usize = 120;
 const DEFAULT_CIRCUIT_BREAKER_FAILURES: u32 = 3;
 const DEFAULT_CIRCUIT_BREAKER_COOLDOWN_MS: u64 = 30_000;
+const DEFAULT_PLUGIN_HOME_RELATIVE: &str = ".kelvinclaw/plugins";
+const DEFAULT_TRUST_POLICY_RELATIVE: &str = ".kelvinclaw/trusted_publishers.json";
 
 #[derive(Debug, Clone)]
 pub struct LoadedInstalledPlugin {
@@ -60,6 +63,39 @@ impl InstalledPluginLoaderConfig {
             trust_policy: PublisherTrustPolicy::default(),
         }
     }
+}
+
+pub fn default_plugin_home() -> KelvinResult<PathBuf> {
+    if let Some(path) = env_path("KELVIN_PLUGIN_HOME") {
+        return Ok(path);
+    }
+    Ok(resolve_home_dir()?.join(DEFAULT_PLUGIN_HOME_RELATIVE))
+}
+
+pub fn default_trust_policy_path() -> KelvinResult<PathBuf> {
+    if let Some(path) = env_path("KELVIN_TRUST_POLICY_PATH") {
+        return Ok(path);
+    }
+    Ok(resolve_home_dir()?.join(DEFAULT_TRUST_POLICY_RELATIVE))
+}
+
+pub fn load_installed_tool_plugins_default(
+    core_version: impl Into<String>,
+    security_policy: PluginSecurityPolicy,
+) -> KelvinResult<LoadedInstalledPlugins> {
+    let trust_policy_path = default_trust_policy_path()?;
+    let trust_policy = if let Some(path) = maybe_load_trust_policy_path(&trust_policy_path)? {
+        PublisherTrustPolicy::from_json_file(path)?
+    } else {
+        PublisherTrustPolicy::default()
+    };
+
+    load_installed_tool_plugins(InstalledPluginLoaderConfig {
+        plugin_home: default_plugin_home()?,
+        core_version: core_version.into(),
+        security_policy,
+        trust_policy,
+    })
 }
 
 #[derive(Debug, Clone, Default)]
@@ -983,6 +1019,39 @@ fn normalize_host_pattern(input: &str) -> KelvinResult<String> {
         )));
     }
     Ok(cleaned)
+}
+
+fn env_path(key: &str) -> Option<PathBuf> {
+    let value = env::var(key).ok()?;
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    Some(PathBuf::from(trimmed))
+}
+
+fn resolve_home_dir() -> KelvinResult<PathBuf> {
+    env_path("HOME").ok_or_else(|| {
+        KelvinError::InvalidInput(
+            "HOME is not set; configure KELVIN_PLUGIN_HOME and KELVIN_TRUST_POLICY_PATH explicitly"
+                .to_string(),
+        )
+    })
+}
+
+fn maybe_load_trust_policy_path(path: &Path) -> KelvinResult<Option<&Path>> {
+    if path.exists() {
+        return Ok(Some(path));
+    }
+
+    if env_path("KELVIN_TRUST_POLICY_PATH").is_some() {
+        return Err(KelvinError::InvalidInput(format!(
+            "configured trust policy file does not exist: {}",
+            path.to_string_lossy()
+        )));
+    }
+
+    Ok(None)
 }
 
 fn host_allowed(target: &str, allowlist: &[String]) -> bool {

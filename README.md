@@ -167,6 +167,33 @@ scripts/test-plugin-install.sh
 
 Source: `crates/kelvin-brain/src/installed_plugins.rs`
 
+Default boot helpers:
+
+- `load_installed_tool_plugins_default(core_version, security_policy)`
+- `default_plugin_home()`
+- `default_trust_policy_path()`
+
+Default paths:
+
+- plugin home: `~/.kelvinclaw/plugins` (or `KELVIN_PLUGIN_HOME`)
+- trust policy: `~/.kelvinclaw/trusted_publishers.json` (or `KELVIN_TRUST_POLICY_PATH`)
+
+## Publisher Signing
+
+Sign a package manifest and generate `plugin.sig`:
+
+```bash
+scripts/plugin-sign.sh \
+  --manifest ~/.kelvinclaw/plugins/acme.echo/1.0.0/plugin.json \
+  --private-key ~/.kelvinclaw/keys/acme-ed25519-private.pem \
+  --publisher-id acme \
+  --trust-policy-out ./trusted_publishers.acme.json
+```
+
+Trust policy template:
+
+- `trusted_publishers.example.json`
+
 ## Local Test
 
 ```bash
