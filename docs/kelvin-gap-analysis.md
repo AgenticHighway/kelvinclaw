@@ -19,8 +19,8 @@ KelvinClaw mapping:
 
 - `kelvin-brain::KelvinBrain`
 - `kelvin-core::AgentEventData`
-- `archive/kelvin-runtime::LaneScheduler` (archived reference implementation)
-- `archive/kelvin-runtime::AgentRuntime` (archived reference implementation)
+- `kelvin-core::LaneScheduler`
+- `kelvin-core::CoreRuntime`
 
 ### 2. Memory Manager Contract
 

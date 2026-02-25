@@ -25,7 +25,7 @@ run_local() {
   KELVIN_PLUGIN_HOME="${PLUGIN_HOME}" \
   KELVIN_TRUST_POLICY_PATH="${TRUST_POLICY_PATH}" \
   CARGO_TARGET_DIR="${TARGET_DIR}" \
-    cargo run --manifest-path archive/kelvin-cli/Cargo.toml -- \
+    cargo run -p kelvin-host -- \
       --prompt "${PROMPT}" \
       --timeout-ms "${TIMEOUT_MS}"
 }
@@ -42,7 +42,7 @@ run_docker() {
     -v "${ROOT_DIR}:/work" \
     -w /work \
     rust:latest \
-    bash -lc 'export PATH=/usr/local/cargo/bin:$PATH && CARGO_TARGET_DIR="$KELVIN_TRY_TARGET_DIR" cargo run --manifest-path archive/kelvin-cli/Cargo.toml -- --prompt "$KELVIN_TRY_PROMPT" --timeout-ms "$KELVIN_TRY_TIMEOUT_MS"'
+    bash -lc 'export PATH=/usr/local/cargo/bin:$PATH && CARGO_TARGET_DIR="$KELVIN_TRY_TARGET_DIR" cargo run -p kelvin-host -- --prompt "$KELVIN_TRY_PROMPT" --timeout-ms "$KELVIN_TRY_TIMEOUT_MS"'
 }
 
 if [[ "${MODE}" == "local" ]]; then

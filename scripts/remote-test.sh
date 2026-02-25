@@ -3,6 +3,7 @@ set -euo pipefail
 
 HOST="${REMOTE_TEST_HOST:-}"
 REMOTE_DIR="${REMOTE_TEST_REMOTE_DIR:-~/kelvinclaw}"
+DOCKER_IMAGE="${REMOTE_TEST_DOCKER_IMAGE:-rust:latest}"
 MODE="native"
 DO_SYNC="1"
 EXTRA_CARGO_ARGS=""
@@ -61,10 +62,16 @@ for env_file in "${ROOT_DIR}/.env.local" "${ROOT_DIR}/.env"; do
       REMOTE_TEST_REMOTE_DIR="${value}"
     fi
   fi
+  if [[ -z "${REMOTE_TEST_DOCKER_IMAGE:-}" ]]; then
+    if value="$(load_env_var_from_file "REMOTE_TEST_DOCKER_IMAGE" "${env_file}")"; then
+      REMOTE_TEST_DOCKER_IMAGE="${value}"
+    fi
+  fi
 done
 
 HOST="${HOST:-${REMOTE_TEST_HOST:-}}"
 REMOTE_DIR="${REMOTE_TEST_REMOTE_DIR:-${REMOTE_DIR}}"
+DOCKER_IMAGE="${REMOTE_TEST_DOCKER_IMAGE:-${DOCKER_IMAGE}}"
 
 usage() {
   cat <<USAGE
@@ -80,6 +87,7 @@ Options:
   --mode <native|docker>   Test mode (default: ${MODE})
   --docker                 Shortcut for --mode docker
   --native                 Shortcut for --mode native
+  --docker-image <image>   Docker image for docker mode (default: ${DOCKER_IMAGE})
   --no-sync                Skip file sync step
   --cargo-args '<args>'    Extra args appended to cargo test
   -h, --help               Show this help
@@ -87,7 +95,7 @@ Options:
 Examples:
   REMOTE_TEST_HOST=your-host scripts/remote-test.sh
   REMOTE_TEST_REMOTE_DIR=~/work/kelvinclaw scripts/remote-test.sh --native
-  scripts/remote-test.sh --docker
+  REMOTE_TEST_DOCKER_IMAGE=rust:latest scripts/remote-test.sh --docker
   scripts/remote-test.sh --host ec2-user@your-host --cargo-args '-- --nocapture'
 USAGE
 }
@@ -113,6 +121,10 @@ while [[ $# -gt 0 ]]; do
     --native)
       MODE="native"
       shift
+      ;;
+    --docker-image)
+      DOCKER_IMAGE="${2:?missing value for --docker-image}"
+      shift 2
       ;;
     --no-sync)
       DO_SYNC="0"
@@ -150,6 +162,9 @@ MSG
 fi
 
 echo "[remote-test] host=${HOST} mode=${MODE} remote_dir=${REMOTE_DIR}"
+if [[ "${MODE}" == "docker" ]]; then
+  echo "[remote-test] docker_image=${DOCKER_IMAGE}"
+fi
 
 echo "[remote-test] checking SSH connectivity"
 ssh -o BatchMode=yes -o ConnectTimeout=8 "${HOST}" 'echo ok >/dev/null'
@@ -189,7 +204,7 @@ if [[ "${MODE}" == "native" ]]; then
   ssh "${HOST}" "source \$HOME/.cargo/env && cd ${REMOTE_DIR} && cargo test --workspace ${EXTRA_CARGO_ARGS}"
 else
   echo "[remote-test] running cargo test in Docker"
-  ssh "${HOST}" "REMOTE_DIR='${REMOTE_DIR}'; REMOTE_DIR=\${REMOTE_DIR/#\~/\$HOME}; cd \${REMOTE_DIR} && docker run --rm -v \"\${REMOTE_DIR}:/work\" -w /work rust:1.77 cargo test --workspace ${EXTRA_CARGO_ARGS}"
+  ssh "${HOST}" "REMOTE_DIR='${REMOTE_DIR}'; REMOTE_DIR=\${REMOTE_DIR/#\~/\$HOME}; cd \${REMOTE_DIR} && docker run --rm -v \"\${REMOTE_DIR}:/work\" -w /work ${DOCKER_IMAGE} cargo test --workspace ${EXTRA_CARGO_ARGS}"
 fi
 
 echo "[remote-test] done"

@@ -44,8 +44,7 @@ Use these as merge criteria when deciding whether logic belongs in core or in ex
 - `crates/kelvin-memory`: transitional in-process memory backends (deprecated for root composition).
 - `crates/kelvin-brain`: agent loop orchestration implementation.
 - `crates/kelvin-wasm`: trusted host runtime for loading untrusted WASM skills.
-- `archive/kelvin-runtime`: archived scheduling, run lifecycle, and concrete adapters.
-- `archive/kelvin-cli`: archived executable composition and local operator UX (not active workspace member).
+- `apps/kelvin-host`: thin SDK host executable.
 
 ## Core Interfaces
 
@@ -99,17 +98,6 @@ These traits are the architecture's stable API.
 
 `LaneScheduler` ensures per-session serialization.
 
-### Runtime Archive (`archive/kelvin-runtime`)
-
-`AgentRuntime` provides asynchronous run handling:
-
-- `submit` returns immediate acceptance metadata.
-- run executes in background task.
-- run state is recorded in `RunRegistry`.
-- caller can `wait` for completion with timeout.
-
-`LaneScheduler` ensures a run is serialized per `session_key`, with optional global serialization.
-
 ### Memory Planes (`kelvin-memory-*`)
 
 Control/Data split:
@@ -160,17 +148,17 @@ This keeps plugin execution out of Kelvin root code compilation while preserving
 
 First-party dogfood path:
 
-- `dist/kelvin.cli-0.1.0.tar.gz` is installed by `scripts/install-kelvin-cli-plugin.sh`.
-- `archive/kelvin-cli` calls `kelvin-sdk`, which requires installed tool `kelvin_cli` before each run.
+- `plugins/kelvin-cli` is packaged/installed by `scripts/install-kelvin-cli-plugin.sh`.
+- `apps/kelvin-host` calls `kelvin-sdk`, which requires installed tool `kelvin_cli` before each run.
 
 ## Execution Flow
 
 ### High-Level
 
-1. CLI builds concrete dependencies.
-2. CLI submits run to `AgentRuntime`.
-3. Runtime registers run + schedules execution in session lane.
-4. `KelvinBrain` executes orchestration loop.
+1. `apps/kelvin-host` parses input and calls `kelvin_sdk::run_with_sdk(...)`.
+2. SDK loads installed plugins and requires tool `kelvin_cli`.
+3. SDK runs `kelvin_cli` preflight, then constructs `CoreRuntime`.
+4. `CoreRuntime` submits run state and executes `KelvinBrain`.
 5. Events stream through `EventSink`.
 6. Run completion/failure is stored in `RunRegistry`.
 7. Caller waits for final status/outcome.

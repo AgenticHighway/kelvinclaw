@@ -1,5 +1,6 @@
 [workspace]
 members = [
+  "apps/kelvin-host",
   "crates/kelvin-core",
   "crates/kelvin-sdk",
   "crates/kelvin-memory",

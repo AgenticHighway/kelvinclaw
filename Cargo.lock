@@ -1035,6 +1035,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "kelvin-host"
+version = "0.1.0"
+dependencies = [
+ "kelvin-sdk",
+ "tokio",
+]
+
+[[package]]
 name = "kelvin-memory"
 version = "0.1.0"
 dependencies = [
