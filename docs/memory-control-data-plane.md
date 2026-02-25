@@ -33,6 +33,7 @@ Root never links concrete storage/index drivers directly in the run path.
 - Root and controller are expected in the same trust domain/VPC for MVP.
 - delegation token crosses the boundary from root to controller.
 - controller treats all module code as untrusted and sandboxed.
+- controller defaults to loopback-only plaintext binding; non-loopback requires TLS or explicit insecure override.
 
 ## Request Flow (MVP)
 

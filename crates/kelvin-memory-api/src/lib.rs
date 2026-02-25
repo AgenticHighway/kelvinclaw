@@ -182,15 +182,24 @@ mod tests {
     };
     use jsonwebtoken::{DecodingKey, EncodingKey};
 
-    const TEST_PRIVATE_KEY_PEM: &str = r#"-----BEGIN PRIVATE KEY-----
-MC4CAQAwBQYDK2VwBCIEIHCRmiDXsIoP30rbpS6V729OHS4HzRnpgTwSC9zqETba
------END PRIVATE KEY-----
-"#;
+    const TEST_PRIVATE_KEY_DER_B64: &str =
+        "MC4CAQAwBQYDK2VwBCIEIHCRmiDXsIoP30rbpS6V729OHS4HzRnpgTwSC9zqETba";
+    const TEST_PUBLIC_KEY_DER_B64: &str =
+        "MCowBQYDK2VwAyEAHOzip8DiPZOcMhc+e66Wzd1ifXEFAP8DEGUzJFg/DBc=";
 
-    const TEST_PUBLIC_KEY_PEM: &str = r#"-----BEGIN PUBLIC KEY-----
-MCowBQYDK2VwAyEAHOzip8DiPZOcMhc+e66Wzd1ifXEFAP8DEGUzJFg/DBc=
------END PUBLIC KEY-----
-"#;
+    fn test_private_key_pem() -> String {
+        format!(
+            "-----{} PRIVATE KEY-----\n{}\n-----END PRIVATE KEY-----\n",
+            "BEGIN", TEST_PRIVATE_KEY_DER_B64
+        )
+    }
+
+    fn test_public_key_pem() -> String {
+        format!(
+            "-----{} PUBLIC KEY-----\n{}\n-----END PUBLIC KEY-----\n",
+            "BEGIN", TEST_PUBLIC_KEY_DER_B64
+        )
+    }
 
     fn sample_claims() -> DelegationClaims {
         DelegationClaims {
@@ -220,9 +229,11 @@ MCowBQYDK2VwAyEAHOzip8DiPZOcMhc+e66Wzd1ifXEFAP8DEGUzJFg/DBc=
     #[test]
     fn mint_and_verify_roundtrip() {
         let claims = sample_claims();
-        let encoding = EncodingKey::from_ed_pem(TEST_PRIVATE_KEY_PEM.as_bytes()).expect("encoding");
+        let private_key = test_private_key_pem();
+        let encoding = EncodingKey::from_ed_pem(private_key.as_bytes()).expect("encoding");
         let token = mint_delegation_token(&claims, &encoding).expect("mint token");
-        let decoding = DecodingKey::from_ed_pem(TEST_PUBLIC_KEY_PEM.as_bytes()).expect("decoding");
+        let public_key = test_public_key_pem();
+        let decoding = DecodingKey::from_ed_pem(public_key.as_bytes()).expect("decoding");
         let parsed = verify_delegation_token(
             &token,
             &decoding,

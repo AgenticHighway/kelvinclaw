@@ -16,6 +16,7 @@ tonic.workspace = true
 
 [dev-dependencies]
 kelvin-memory-controller = { path = "../kelvin-memory-controller" }
+rcgen = "0.13"
 tokio = { workspace = true, features = ["rt-multi-thread", "macros", "sync", "time"] }
 tokio-stream = "0.1"
 wat = "1"

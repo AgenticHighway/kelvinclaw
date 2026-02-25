@@ -1,9 +1,10 @@
+use std::fs;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use async_trait::async_trait;
 use jsonwebtoken::EncodingKey;
 use tokio::sync::Mutex;
-use tonic::transport::Channel;
+use tonic::transport::{Certificate, Channel, ClientTlsConfig, Endpoint, Identity};
 use tonic::Request;
 
 use kelvin_core::{
@@ -30,6 +31,14 @@ pub struct MemoryClientConfig {
     pub session_id: String,
     pub module_id: String,
     pub signing_key_pem: String,
+    pub signing_key_path: String,
+    pub tls_ca_pem: String,
+    pub tls_ca_path: String,
+    pub tls_domain_name: String,
+    pub tls_client_cert_pem: String,
+    pub tls_client_cert_path: String,
+    pub tls_client_key_pem: String,
+    pub tls_client_key_path: String,
     pub timeout_ms: u64,
     pub max_bytes: u64,
     pub max_results: u32,
@@ -47,6 +56,14 @@ impl Default for MemoryClientConfig {
             session_id: "default".to_string(),
             module_id: "memory.echo".to_string(),
             signing_key_pem: String::new(),
+            signing_key_path: String::new(),
+            tls_ca_pem: String::new(),
+            tls_ca_path: String::new(),
+            tls_domain_name: String::new(),
+            tls_client_cert_pem: String::new(),
+            tls_client_cert_path: String::new(),
+            tls_client_key_pem: String::new(),
+            tls_client_key_path: String::new(),
             timeout_ms: 2_000,
             max_bytes: 1024 * 1024,
             max_results: 20,
@@ -102,6 +119,46 @@ impl MemoryClientConfig {
                 cfg.signing_key_pem = value;
             }
         }
+        if let Ok(value) = std::env::var("KELVIN_MEMORY_SIGNING_KEY_PATH") {
+            if !value.trim().is_empty() {
+                cfg.signing_key_path = value;
+            }
+        }
+        if let Ok(value) = std::env::var("KELVIN_MEMORY_RPC_TLS_CA_PEM") {
+            if !value.trim().is_empty() {
+                cfg.tls_ca_pem = value;
+            }
+        }
+        if let Ok(value) = std::env::var("KELVIN_MEMORY_RPC_TLS_CA_PATH") {
+            if !value.trim().is_empty() {
+                cfg.tls_ca_path = value;
+            }
+        }
+        if let Ok(value) = std::env::var("KELVIN_MEMORY_RPC_TLS_DOMAIN_NAME") {
+            if !value.trim().is_empty() {
+                cfg.tls_domain_name = value;
+            }
+        }
+        if let Ok(value) = std::env::var("KELVIN_MEMORY_RPC_TLS_CLIENT_CERT_PEM") {
+            if !value.trim().is_empty() {
+                cfg.tls_client_cert_pem = value;
+            }
+        }
+        if let Ok(value) = std::env::var("KELVIN_MEMORY_RPC_TLS_CLIENT_CERT_PATH") {
+            if !value.trim().is_empty() {
+                cfg.tls_client_cert_path = value;
+            }
+        }
+        if let Ok(value) = std::env::var("KELVIN_MEMORY_RPC_TLS_CLIENT_KEY_PEM") {
+            if !value.trim().is_empty() {
+                cfg.tls_client_key_pem = value;
+            }
+        }
+        if let Ok(value) = std::env::var("KELVIN_MEMORY_RPC_TLS_CLIENT_KEY_PATH") {
+            if !value.trim().is_empty() {
+                cfg.tls_client_key_path = value;
+            }
+        }
         if let Ok(value) = std::env::var("KELVIN_MEMORY_TIMEOUT_MS") {
             if let Ok(parsed) = value.parse::<u64>() {
                 cfg.timeout_ms = parsed;
@@ -129,22 +186,22 @@ pub struct RpcMemoryManager {
 
 impl RpcMemoryManager {
     pub async fn connect(cfg: MemoryClientConfig) -> KelvinResult<Self> {
-        if cfg.signing_key_pem.trim().is_empty() {
-            return Err(KelvinError::InvalidInput(
-                "memory rpc signing key pem must be provided".to_string(),
-            ));
-        }
-        let signer = EncodingKey::from_ed_pem(cfg.signing_key_pem.as_bytes()).map_err(|err| {
+        let signing_key_pem = resolve_required_pem(
+            &cfg.signing_key_pem,
+            &cfg.signing_key_path,
+            "memory rpc signing key",
+        )?;
+        let signer = EncodingKey::from_ed_pem(signing_key_pem.as_bytes()).map_err(|err| {
             KelvinError::InvalidInput(format!("invalid memory rpc signing key pem: {err}"))
         })?;
-        let endpoint = cfg.endpoint.clone();
-        let client = MemoryServiceClient::connect(endpoint.clone())
-            .await
-            .map_err(|err| {
-                KelvinError::Backend(format!(
-                    "memory controller unavailable at {endpoint}: {err}"
-                ))
-            })?;
+        let endpoint = build_endpoint(&cfg)?;
+        let channel = endpoint.connect().await.map_err(|err| {
+            KelvinError::Backend(format!(
+                "memory controller unavailable at {}: {err}",
+                cfg.endpoint
+            ))
+        })?;
+        let client = MemoryServiceClient::new(channel);
         Ok(Self {
             cfg,
             signer,
@@ -313,6 +370,139 @@ impl MemorySearchManager for RpcMemoryManager {
 
     async fn probe_vector_availability(&self) -> KelvinResult<bool> {
         Ok(false)
+    }
+}
+
+fn build_endpoint(cfg: &MemoryClientConfig) -> KelvinResult<Endpoint> {
+    let mut endpoint = Endpoint::from_shared(cfg.endpoint.clone()).map_err(|err| {
+        KelvinError::InvalidInput(format!(
+            "invalid memory rpc endpoint '{}': {err}",
+            cfg.endpoint
+        ))
+    })?;
+    let uses_tls = endpoint_uses_tls(&cfg.endpoint);
+    let tls_material_configured = !cfg.tls_ca_pem.trim().is_empty()
+        || !cfg.tls_ca_path.trim().is_empty()
+        || !cfg.tls_domain_name.trim().is_empty()
+        || !cfg.tls_client_cert_pem.trim().is_empty()
+        || !cfg.tls_client_cert_path.trim().is_empty()
+        || !cfg.tls_client_key_pem.trim().is_empty()
+        || !cfg.tls_client_key_path.trim().is_empty();
+
+    if uses_tls {
+        let domain_name = if cfg.tls_domain_name.trim().is_empty() {
+            infer_tls_domain_name(&cfg.endpoint).ok_or_else(|| {
+                KelvinError::InvalidInput(
+                    "unable to infer tls domain name from memory rpc endpoint; set KELVIN_MEMORY_RPC_TLS_DOMAIN_NAME"
+                        .to_string(),
+                )
+            })?
+        } else {
+            cfg.tls_domain_name.trim().to_string()
+        };
+
+        let mut tls = ClientTlsConfig::new().domain_name(domain_name);
+        if let Some(ca_pem) =
+            resolve_optional_pem(&cfg.tls_ca_pem, &cfg.tls_ca_path, "memory rpc tls ca")?
+        {
+            tls = tls.ca_certificate(Certificate::from_pem(ca_pem));
+        }
+
+        let client_cert = resolve_optional_pem(
+            &cfg.tls_client_cert_pem,
+            &cfg.tls_client_cert_path,
+            "memory rpc tls client cert",
+        )?;
+        let client_key = resolve_optional_pem(
+            &cfg.tls_client_key_pem,
+            &cfg.tls_client_key_path,
+            "memory rpc tls client key",
+        )?;
+        match (client_cert, client_key) {
+            (Some(cert), Some(key)) => {
+                tls = tls.identity(Identity::from_pem(cert, key));
+            }
+            (None, None) => {}
+            _ => {
+                return Err(KelvinError::InvalidInput(
+                    "mTLS client identity requires both cert and key".to_string(),
+                ));
+            }
+        }
+
+        endpoint = endpoint.tls_config(tls).map_err(|err| {
+            KelvinError::InvalidInput(format!("invalid memory rpc tls config: {err}"))
+        })?;
+    } else if tls_material_configured {
+        return Err(KelvinError::InvalidInput(
+            "tls settings provided for non-https memory rpc endpoint".to_string(),
+        ));
+    }
+
+    Ok(endpoint)
+}
+
+fn resolve_required_pem(inline: &str, path: &str, label: &str) -> KelvinResult<String> {
+    resolve_optional_pem(inline, path, label)?.ok_or_else(|| {
+        KelvinError::InvalidInput(format!("{label} must be provided via inline pem or path"))
+    })
+}
+
+fn resolve_optional_pem(inline: &str, path: &str, label: &str) -> KelvinResult<Option<String>> {
+    let inline = inline.trim();
+    let path = path.trim();
+    if !inline.is_empty() && !path.is_empty() {
+        return Err(KelvinError::InvalidInput(format!(
+            "{label} cannot set both inline pem and path"
+        )));
+    }
+    if !inline.is_empty() {
+        return Ok(Some(inline.to_string()));
+    }
+    if path.is_empty() {
+        return Ok(None);
+    }
+    let pem = fs::read_to_string(path).map_err(|err| {
+        KelvinError::InvalidInput(format!("{label} path '{path}' is not readable: {err}"))
+    })?;
+    if pem.trim().is_empty() {
+        return Err(KelvinError::InvalidInput(format!(
+            "{label} path '{path}' is empty"
+        )));
+    }
+    Ok(Some(pem))
+}
+
+fn endpoint_uses_tls(endpoint: &str) -> bool {
+    endpoint
+        .trim_start()
+        .to_ascii_lowercase()
+        .starts_with("https://")
+}
+
+fn infer_tls_domain_name(endpoint: &str) -> Option<String> {
+    let rest = endpoint
+        .trim_start()
+        .to_ascii_lowercase()
+        .strip_prefix("https://")?
+        .to_string();
+    let authority = rest.split('/').next().unwrap_or_default();
+    let host_port = authority.rsplit('@').next().unwrap_or(authority);
+    if host_port.starts_with('[') {
+        let end = host_port.find(']')?;
+        let host = &host_port[1..end];
+        if host.is_empty() {
+            None
+        } else {
+            Some(host.to_string())
+        }
+    } else {
+        let host = host_port.split(':').next().unwrap_or_default();
+        if host.is_empty() {
+            None
+        } else {
+            Some(host.to_string())
+        }
     }
 }
 

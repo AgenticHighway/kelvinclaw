@@ -13,7 +13,7 @@ use kelvin_memory_controller::{
 
 use common::{
     busy_loop_wasm, claims_for, context_for, controller_with_module, next_id, sample_manifest,
-    sample_wasm, TEST_PUBLIC_KEY_PEM,
+    sample_wasm, test_public_key_pem,
 };
 
 // GOVERN: policy and profile governance.
@@ -28,7 +28,7 @@ fn govern_default_build_profile_remains_minimal_and_non_nvidia() {
 #[test]
 fn govern_profile_mismatch_is_rejected_when_nvidia_is_unavailable() {
     let mut cfg = MemoryControllerConfig::default();
-    cfg.decoding_key_pem = TEST_PUBLIC_KEY_PEM.to_string();
+    cfg.decoding_key_pem = test_public_key_pem();
     cfg.profile = ProviderProfile::LinuxGpu;
     let err = match MemoryController::new(cfg, ProviderRegistry::with_default_in_memory()) {
         Ok(_) => panic!("linux-gpu profile without nvidia should fail"),
@@ -120,7 +120,9 @@ async fn measure_health_reports_enabled_features_and_loaded_modules() {
         .expect("health")
         .into_inner();
     assert!(health.ok);
-    assert!(health.enabled_features.contains(&"provider_sqlite".to_string()));
+    assert!(health
+        .enabled_features
+        .contains(&"provider_sqlite".to_string()));
     assert!(health.loaded_modules.contains(&"memory.echo".to_string()));
 }
 

@@ -1,23 +1,33 @@
-use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 
 use jsonwebtoken::{EncodingKey, Header};
 
 use kelvin_memory_api::v1alpha1::RequestContext;
 use kelvin_memory_api::{
-    DelegationClaims, JWT_ALGORITHM, MemoryModuleManifest, MemoryOperation, RequestLimits,
+    DelegationClaims, MemoryModuleManifest, MemoryOperation, RequestLimits, JWT_ALGORITHM,
 };
 use kelvin_memory_controller::{MemoryController, MemoryControllerConfig, ProviderRegistry};
 
-pub const TEST_PRIVATE_KEY_PEM: &str = r#"-----BEGIN PRIVATE KEY-----
-MC4CAQAwBQYDK2VwBCIEIHCRmiDXsIoP30rbpS6V729OHS4HzRnpgTwSC9zqETba
------END PRIVATE KEY-----
-"#;
+const TEST_PRIVATE_KEY_DER_B64: &str =
+    "MC4CAQAwBQYDK2VwBCIEIHCRmiDXsIoP30rbpS6V729OHS4HzRnpgTwSC9zqETba";
 
-pub const TEST_PUBLIC_KEY_PEM: &str = r#"-----BEGIN PUBLIC KEY-----
-MCowBQYDK2VwAyEAHOzip8DiPZOcMhc+e66Wzd1ifXEFAP8DEGUzJFg/DBc=
------END PUBLIC KEY-----
-"#;
+const TEST_PUBLIC_KEY_DER_B64: &str =
+    "MCowBQYDK2VwAyEAHOzip8DiPZOcMhc+e66Wzd1ifXEFAP8DEGUzJFg/DBc=";
+
+pub fn test_private_key_pem() -> String {
+    format!(
+        "-----{} PRIVATE KEY-----\n{}\n-----END PRIVATE KEY-----\n",
+        "BEGIN", TEST_PRIVATE_KEY_DER_B64
+    )
+}
+
+pub fn test_public_key_pem() -> String {
+    format!(
+        "-----{} PUBLIC KEY-----\n{}\n-----END PUBLIC KEY-----\n",
+        "BEGIN", TEST_PUBLIC_KEY_DER_B64
+    )
+}
 
 static COUNTER: AtomicU64 = AtomicU64::new(0);
 
@@ -107,12 +117,11 @@ pub fn busy_loop_wasm() -> Vec<u8> {
 
 pub async fn controller_with_module(wasm: Vec<u8>) -> Arc<MemoryController> {
     let mut cfg = MemoryControllerConfig::default();
-    cfg.decoding_key_pem = TEST_PUBLIC_KEY_PEM.to_string();
+    cfg.decoding_key_pem = test_public_key_pem();
     cfg.default_timeout_ms = 150;
     cfg.default_fuel = 5_000;
     let controller = Arc::new(
-        MemoryController::new(cfg, ProviderRegistry::with_default_in_memory())
-            .expect("controller"),
+        MemoryController::new(cfg, ProviderRegistry::with_default_in_memory()).expect("controller"),
     );
     controller
         .register_module_bytes(sample_manifest(vec!["provider_sqlite".to_string()]), &wasm)
@@ -148,7 +157,8 @@ pub fn claims_for(operation: MemoryOperation, jti: &str) -> DelegationClaims {
 }
 
 pub fn context_for(claims: &DelegationClaims, request_id: &str) -> RequestContext {
-    let key = EncodingKey::from_ed_pem(TEST_PRIVATE_KEY_PEM.as_bytes()).expect("encoding");
+    let private_key = test_private_key_pem();
+    let key = EncodingKey::from_ed_pem(private_key.as_bytes()).expect("encoding");
     let token =
         jsonwebtoken::encode(&Header::new(JWT_ALGORITHM), claims, &key).expect("encode token");
     RequestContext {
