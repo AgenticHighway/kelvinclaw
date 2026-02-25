@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package kelvin.memory.v1alpha1;
+
+message RequestContext {
+  string delegation_token = 1;
+  string request_id = 2;
+  string tenant_id = 3;
+  string workspace_id = 4;
+  string session_id = 5;
+  string module_id = 6;
+}
+
+message UpsertRequest {
+  RequestContext context = 1;
+  string key = 2;
+  bytes value = 3;
+  map<string, string> metadata = 4;
+}
+
+message UpsertResponse {
+  bool stored = 1;
+}
+
+message QueryRequest {
+  RequestContext context = 1;
+  string query = 2;
+  uint32 max_results = 3;
+}
+
+message SearchHit {
+  string path = 1;
+  string snippet = 2;
+  float score = 3;
+  uint32 start_line = 4;
+  uint32 end_line = 5;
+}
+
+message QueryResponse {
+  repeated SearchHit hits = 1;
+}
+
+message ReadRequest {
+  RequestContext context = 1;
+  string key = 2;
+}
+
+message ReadResponse {
+  bool found = 1;
+  bytes value = 2;
+}
+
+message DeleteRequest {
+  RequestContext context = 1;
+  string key = 2;
+}
+
+message DeleteResponse {
+  bool deleted = 1;
+}
+
+message HealthRequest {
+  RequestContext context = 1;
+}
+
+message HealthResponse {
+  bool ok = 1;
+  string provider = 2;
+  repeated string enabled_features = 3;
+  repeated string loaded_modules = 4;
+}
+
+service MemoryService {
+  rpc Upsert(UpsertRequest) returns (UpsertResponse);
+  rpc Query(QueryRequest) returns (QueryResponse);
+  rpc Read(ReadRequest) returns (ReadResponse);
+  rpc Delete(DeleteRequest) returns (DeleteResponse);
+  rpc Health(HealthRequest) returns (HealthResponse);
+}

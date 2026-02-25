@@ -1,0 +1,10 @@
+{
+  "module_id": "memory.echo",
+  "version": "0.1.0",
+  "api_version": "v1alpha1",
+  "capabilities": ["memory_crud", "memory_read", "memory_health"],
+  "required_host_features": ["provider_sqlite"],
+  "entrypoint": "memory_echo.wasm",
+  "publisher": "example.publisher",
+  "signature": "replace-with-real-signature"
+}

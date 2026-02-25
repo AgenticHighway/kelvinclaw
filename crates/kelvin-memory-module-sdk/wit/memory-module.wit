@@ -1,0 +1,20 @@
+package kelvin:memory-module@0.1.0;
+
+interface memory-host {
+  kv-get: func(handle: s32) -> s32;
+  kv-put: func(handle: s32) -> s32;
+  blob-get: func(handle: s32) -> s32;
+  blob-put: func(handle: s32) -> s32;
+  emit-metric: func(handle: s32) -> s32;
+  log: func(handle: s32) -> s32;
+  clock-now-ms: func() -> s64;
+}
+
+world memory-module {
+  import memory-host;
+  export handle-upsert: func() -> s32;
+  export handle-query: func() -> s32;
+  export handle-read: func() -> s32;
+  export handle-delete: func() -> s32;
+  export handle-health: func() -> s32;
+}

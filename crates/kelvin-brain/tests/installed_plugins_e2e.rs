@@ -190,8 +190,11 @@ fn write_trust_policy(path: &Path, publisher_id: &str, public_key_base64: &str) 
             }
         ]
     });
-    std::fs::write(path, serde_json::to_vec_pretty(&payload).expect("trust policy json"))
-        .expect("write trust policy");
+    std::fs::write(
+        path,
+        serde_json::to_vec_pretty(&payload).expect("trust policy json"),
+    )
+    .expect("write trust policy");
 }
 
 #[tokio::test]
@@ -201,8 +204,8 @@ async fn installed_plugin_loads_and_runs_through_brain_runtime() {
 
     let signing_key = SigningKey::from_bytes(&[17_u8; 32]);
     write_installed_plugin(&plugin_home, "acme.echo", "1.0.0", true, &signing_key);
-    let public_key = base64::engine::general_purpose::STANDARD
-        .encode(signing_key.verifying_key().to_bytes());
+    let public_key =
+        base64::engine::general_purpose::STANDARD.encode(signing_key.verifying_key().to_bytes());
     let trust_policy = PublisherTrustPolicy::default()
         .with_publisher_key("acme", &public_key)
         .expect("publisher key");
@@ -282,8 +285,8 @@ fn installed_plugin_loader_rejects_missing_signature_when_required() {
 
     let signing_key = SigningKey::from_bytes(&[18_u8; 32]);
     write_installed_plugin(&plugin_home, "acme.echo", "1.0.0", false, &signing_key);
-    let public_key = base64::engine::general_purpose::STANDARD
-        .encode(signing_key.verifying_key().to_bytes());
+    let public_key =
+        base64::engine::general_purpose::STANDARD.encode(signing_key.verifying_key().to_bytes());
     let trust_policy = PublisherTrustPolicy::default()
         .with_publisher_key("acme", &public_key)
         .expect("publisher key");
@@ -308,7 +311,10 @@ fn default_loader_uses_env_paths_and_enforces_missing_explicit_trust_policy() {
     let trust_path = workspace.join("trusted_publishers.json");
 
     unsafe {
-        std::env::set_var("KELVIN_PLUGIN_HOME", plugin_home.to_string_lossy().to_string());
+        std::env::set_var(
+            "KELVIN_PLUGIN_HOME",
+            plugin_home.to_string_lossy().to_string(),
+        );
         std::env::set_var(
             "KELVIN_TRUST_POLICY_PATH",
             trust_path.to_string_lossy().to_string(),
@@ -319,7 +325,9 @@ fn default_loader_uses_env_paths_and_enforces_missing_explicit_trust_policy() {
         Ok(_) => panic!("missing explicit trust policy path should fail"),
         Err(err) => err,
     };
-    assert!(err.to_string().contains("configured trust policy file does not exist"));
+    assert!(err
+        .to_string()
+        .contains("configured trust policy file does not exist"));
 
     unsafe {
         std::env::remove_var("KELVIN_PLUGIN_HOME");
@@ -336,12 +344,15 @@ fn default_loader_loads_signed_plugin_with_env_bootstrap() {
 
     let signing_key = SigningKey::from_bytes(&[19_u8; 32]);
     write_installed_plugin(&plugin_home, "acme.echo", "1.0.0", true, &signing_key);
-    let public_key = base64::engine::general_purpose::STANDARD
-        .encode(signing_key.verifying_key().to_bytes());
+    let public_key =
+        base64::engine::general_purpose::STANDARD.encode(signing_key.verifying_key().to_bytes());
     write_trust_policy(&trust_path, "acme", &public_key);
 
     unsafe {
-        std::env::set_var("KELVIN_PLUGIN_HOME", plugin_home.to_string_lossy().to_string());
+        std::env::set_var(
+            "KELVIN_PLUGIN_HOME",
+            plugin_home.to_string_lossy().to_string(),
+        );
         std::env::set_var(
             "KELVIN_TRUST_POLICY_PATH",
             trust_path.to_string_lossy().to_string(),

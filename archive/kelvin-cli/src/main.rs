@@ -4,14 +4,23 @@ use std::sync::Arc;
 
 use kelvin_brain::{load_installed_tool_plugins_default, EchoModelProvider, KelvinBrain};
 use kelvin_core::{
-    now_ms, AgentRunRequest, KelvinError, KelvinResult, PluginSecurityPolicy, ToolRegistry,
+    now_ms, AgentRunRequest, KelvinError, KelvinResult, MemorySearchManager, PluginSecurityPolicy,
+    ToolRegistry,
 };
-use kelvin_memory::{MemoryBackendKind, MemoryFactory};
+use kelvin_memory::MemoryBackendKind;
+#[cfg(any(not(feature = "memory_rpc"), feature = "memory_legacy_fallback"))]
+use kelvin_memory::MemoryFactory;
+#[cfg(feature = "memory_rpc")]
+use kelvin_memory_client::{MemoryClientConfig, RpcMemoryManager};
 use kelvin_runtime::{
     AgentRuntime, HashMapToolRegistry, InMemorySessionStore, LaneScheduler, RunOutcome,
     RunRegistry, StaticTextTool, StdoutEventSink, TimeTool,
 };
 
+#[cfg_attr(
+    all(feature = "memory_rpc", not(feature = "memory_legacy_fallback")),
+    allow(dead_code)
+)]
 #[derive(Debug, Clone)]
 struct CliConfig {
     prompt: String,
@@ -144,7 +153,36 @@ async fn run(config: CliConfig) -> KelvinResult<()> {
         builtin_tools,
     ));
 
-    let memory = MemoryFactory::build(&config.workspace_dir, config.memory_backend);
+    #[cfg(feature = "memory_rpc")]
+    let memory: Arc<dyn MemorySearchManager> = {
+        let mut rpc_cfg = MemoryClientConfig::from_env();
+        rpc_cfg.workspace_id = config.workspace_dir.to_string_lossy().to_string();
+        rpc_cfg.session_id = config.session_id.clone();
+        match RpcMemoryManager::connect(rpc_cfg).await {
+            Ok(manager) => {
+                println!("using rpc memory manager");
+                Arc::new(manager)
+            }
+            Err(err) => {
+                #[cfg(feature = "memory_legacy_fallback")]
+                {
+                    eprintln!("warning: rpc memory unavailable, falling back to legacy in-proc memory: {err}");
+                    MemoryFactory::build(&config.workspace_dir, config.memory_backend)
+                }
+                #[cfg(not(feature = "memory_legacy_fallback"))]
+                {
+                    return Err(KelvinError::Backend(format!(
+                        "memory controller unavailable and legacy fallback disabled: {err}"
+                    )));
+                }
+            }
+        }
+    };
+
+    #[cfg(not(feature = "memory_rpc"))]
+    let memory: Arc<dyn MemorySearchManager> =
+        MemoryFactory::build(&config.workspace_dir, config.memory_backend);
+
     let model = Arc::new(EchoModelProvider::new("kelvin", "echo-v1"));
     let brain = Arc::new(KelvinBrain::new(
         session_store,
