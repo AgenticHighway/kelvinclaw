@@ -1,3 +1,9 @@
+//! Deprecated transitional in-process memory crate.
+//!
+//! Kelvin is migrating to an RPC data plane (`kelvin-memory-controller`) with
+//! WASM-only memory modules. This crate remains for compatibility during the
+//! transition and should not be used for new root composition paths.
+
 pub mod factory;
 pub mod fallback;
 pub mod in_memory;

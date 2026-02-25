@@ -27,13 +27,21 @@ The intent is to keep the "brains" (orchestration and contracts) stable while en
 - [docs/CORE_ADMISSION_POLICY.md](docs/CORE_ADMISSION_POLICY.md)
 - [docs/SDK_PRINCIPLES.md](docs/SDK_PRINCIPLES.md)
 - [docs/trusted-executive-wasm.md](docs/trusted-executive-wasm.md)
+- [docs/memory-control-data-plane.md](docs/memory-control-data-plane.md)
+- [docs/memory-rpc-contract.md](docs/memory-rpc-contract.md)
+- [docs/memory-module-sdk.md](docs/memory-module-sdk.md)
+- [docs/memory-controller-deployment-profiles.md](docs/memory-controller-deployment-profiles.md)
 
 Use these as merge criteria when deciding whether logic belongs in core or in extensions.
 
 ## Workspace Topology
 
 - `crates/kelvin-core`: domain models and interfaces.
-- `crates/kelvin-memory`: memory backend implementations and backend selection.
+- `crates/kelvin-memory-api`: protobuf schema + generated gRPC contracts.
+- `crates/kelvin-memory-client`: RPC adapter implementing `MemorySearchManager`.
+- `crates/kelvin-memory-controller`: memory data plane gRPC service + WASM sandbox runtime.
+- `crates/kelvin-memory-module-sdk`: module ABI constants and WIT contracts.
+- `crates/kelvin-memory`: transitional in-process memory backends (deprecated for root composition).
 - `crates/kelvin-brain`: agent loop orchestration implementation.
 - `crates/kelvin-wasm`: trusted host runtime for loading untrusted WASM skills.
 - `archive/kelvin-runtime`: archived scheduling, run lifecycle, and concrete adapters.
@@ -102,7 +110,15 @@ These traits are the architecture's stable API.
 
 `LaneScheduler` ensures a run is serialized per `session_key`, with optional global serialization.
 
-### Memory (`kelvin-memory`)
+### Memory Planes (`kelvin-memory-*`)
+
+Control/Data split:
+
+- Root (control plane) calls memory over gRPC through `RpcMemoryManager`.
+- Memory Controller (data plane) re-validates JWT delegation claims and executes WASM memory modules.
+- Module access is bounded by manifest capabilities, delegation claims, and enabled provider features.
+
+### Transitional In-Proc Memory (`kelvin-memory`)
 
 Backends:
 
@@ -116,7 +132,7 @@ Backends:
 
 Selection:
 
-- `MemoryFactory` builds backend by `MemoryBackendKind`.
+- `MemoryFactory` builds backend by `MemoryBackendKind` for migration/fallback only.
 
 ### WASM Executive (`kelvin-wasm`)
 

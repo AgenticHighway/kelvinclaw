@@ -152,7 +152,8 @@ impl PublisherTrustPolicy {
         ed25519_public_key_base64: &str,
     ) -> KelvinResult<Self> {
         let key = parse_public_key(ed25519_public_key_base64)?;
-        self.trusted_publishers.insert(publisher_id.to_string(), key);
+        self.trusted_publishers
+            .insert(publisher_id.to_string(), key);
         Ok(self)
     }
 
@@ -214,11 +215,12 @@ impl PublisherTrustPolicy {
                 manifest.id
             )));
         }
-        let signature_bytes = STANDARD
-            .decode(signature_base64)
-            .map_err(|err| KelvinError::InvalidInput(format!("invalid plugin.sig base64: {err}")))?;
-        let signature = Signature::from_slice(&signature_bytes)
-            .map_err(|err| KelvinError::InvalidInput(format!("invalid ed25519 signature: {err}")))?;
+        let signature_bytes = STANDARD.decode(signature_base64).map_err(|err| {
+            KelvinError::InvalidInput(format!("invalid plugin.sig base64: {err}"))
+        })?;
+        let signature = Signature::from_slice(&signature_bytes).map_err(|err| {
+            KelvinError::InvalidInput(format!("invalid ed25519 signature: {err}"))
+        })?;
 
         verifier.verify(manifest_bytes, &signature).map_err(|err| {
             KelvinError::InvalidInput(format!(
@@ -348,7 +350,12 @@ impl InstalledPluginPackageManifest {
 
     fn resolved_tool_name(&self) -> KelvinResult<String> {
         let fallback = self.id.replace('.', "_");
-        let candidate = self.tool_name.as_deref().unwrap_or(&fallback).trim().to_string();
+        let candidate = self
+            .tool_name
+            .as_deref()
+            .unwrap_or(&fallback)
+            .trim()
+            .to_string();
         if candidate.is_empty() {
             return Err(KelvinError::InvalidInput(format!(
                 "plugin '{}' has empty tool_name",
@@ -576,7 +583,10 @@ impl Tool for InstalledWasmTool {
 
         self.mark_failure().await;
         Err(last_error.unwrap_or_else(|| {
-            KelvinError::Backend(format!("tool '{}' failed without error detail", self.tool_name))
+            KelvinError::Backend(format!(
+                "tool '{}' failed without error detail",
+                self.tool_name
+            ))
         }))
     }
 }
@@ -603,7 +613,9 @@ pub fn load_installed_tool_plugins(
     let mut loaded_plugins = Vec::new();
 
     if !config.plugin_home.exists() {
-        let tool_registry = Arc::new(SdkToolRegistry::from_plugin_registry(plugin_registry.as_ref())?);
+        let tool_registry = Arc::new(SdkToolRegistry::from_plugin_registry(
+            plugin_registry.as_ref(),
+        )?);
         return Ok(LoadedInstalledPlugins {
             plugin_registry,
             tool_registry,
@@ -614,11 +626,7 @@ pub fn load_installed_tool_plugins(
     let plugin_dirs = collect_plugin_dirs(&config.plugin_home)?;
     let host = Arc::new(WasmSkillHost::try_new()?);
     for plugin_dir in plugin_dirs {
-        let plugin = load_one_plugin(
-            &plugin_dir,
-            &config,
-            host.clone(),
-        )?;
+        let plugin = load_one_plugin(&plugin_dir, &config, host.clone())?;
 
         let loaded = LoadedInstalledPlugin {
             id: plugin.manifest.id.clone(),
@@ -646,7 +654,9 @@ pub fn load_installed_tool_plugins(
             .then_with(|| left.tool_name.cmp(&right.tool_name))
     });
 
-    let tool_registry = Arc::new(SdkToolRegistry::from_plugin_registry(plugin_registry.as_ref())?);
+    let tool_registry = Arc::new(SdkToolRegistry::from_plugin_registry(
+        plugin_registry.as_ref(),
+    )?);
     Ok(LoadedInstalledPlugins {
         plugin_registry,
         tool_registry,
@@ -673,8 +683,8 @@ fn load_one_plugin(
 
     let manifest_path = version_dir.join("plugin.json");
     let manifest_bytes = fs::read(&manifest_path)?;
-    let package_manifest: InstalledPluginPackageManifest =
-        serde_json::from_slice(&manifest_bytes).map_err(|err| {
+    let package_manifest: InstalledPluginPackageManifest = serde_json::from_slice(&manifest_bytes)
+        .map_err(|err| {
             KelvinError::InvalidInput(format!(
                 "invalid plugin manifest at {}: {err}",
                 manifest_path.to_string_lossy()
@@ -726,9 +736,11 @@ fn load_one_plugin(
         )));
     }
 
-    config
-        .trust_policy
-        .verify_manifest_signature(&package_manifest, &manifest_bytes, &version_dir)?;
+    config.trust_policy.verify_manifest_signature(
+        &package_manifest,
+        &manifest_bytes,
+        &version_dir,
+    )?;
 
     let core_manifest = package_manifest.to_core_manifest();
     core_manifest.validate()?;
@@ -864,7 +876,10 @@ fn normalize_scopes(manifest: &InstalledPluginPackageManifest) -> KelvinResult<C
 
     let mut fs_read_paths = Vec::new();
     for path in &manifest.capability_scopes.fs_read_paths {
-        fs_read_paths.push(normalize_safe_relative_path(path, "capability_scopes.fs_read_paths")?);
+        fs_read_paths.push(normalize_safe_relative_path(
+            path,
+            "capability_scopes.fs_read_paths",
+        )?);
     }
     if has_fs_read && fs_read_paths.is_empty() {
         return Err(KelvinError::InvalidInput(format!(
@@ -902,7 +917,9 @@ fn normalize_scopes(manifest: &InstalledPluginPackageManifest) -> KelvinResult<C
     })
 }
 
-fn normalize_controls(manifest: &InstalledPluginPackageManifest) -> KelvinResult<OperationalControls> {
+fn normalize_controls(
+    manifest: &InstalledPluginPackageManifest,
+) -> KelvinResult<OperationalControls> {
     let controls = &manifest.operational_controls;
     if controls.timeout_ms == 0 || controls.timeout_ms > 120_000 {
         return Err(KelvinError::InvalidInput(format!(
@@ -956,9 +973,7 @@ fn sandbox_from_manifest(manifest: &InstalledPluginPackageManifest) -> KelvinRes
     {
         policy.allow_network_send = true;
     }
-    if manifest
-        .capabilities
-        .contains(&PluginCapability::FsWrite)
+    if manifest.capabilities.contains(&PluginCapability::FsWrite)
         || manifest
             .capabilities
             .contains(&PluginCapability::CommandExecution)
@@ -1152,8 +1167,10 @@ mod tests {
 
         if let Some(key) = signing_key {
             let signature = key.sign(&manifest_bytes);
-            let signature_base64 = base64::engine::general_purpose::STANDARD.encode(signature.to_bytes());
-            std::fs::write(version_dir.join("plugin.sig"), signature_base64).expect("write signature");
+            let signature_base64 =
+                base64::engine::general_purpose::STANDARD.encode(signature.to_bytes());
+            std::fs::write(version_dir.join("plugin.sig"), signature_base64)
+                .expect("write signature");
         }
     }
 
@@ -1190,7 +1207,8 @@ mod tests {
     async fn loads_signed_plugin_and_executes_tool() {
         let plugin_home = unique_temp_dir("load-exec");
         let signing_key = SigningKey::from_bytes(&[7_u8; 32]);
-        let public_key = base64::engine::general_purpose::STANDARD.encode(signing_key.verifying_key().to_bytes());
+        let public_key = base64::engine::general_purpose::STANDARD
+            .encode(signing_key.verifying_key().to_bytes());
 
         write_installed_plugin(
             &plugin_home,
@@ -1244,7 +1262,8 @@ mod tests {
     fn rejects_missing_signature_when_required() {
         let plugin_home = unique_temp_dir("missing-signature");
         let signing_key = SigningKey::from_bytes(&[8_u8; 32]);
-        let public_key = base64::engine::general_purpose::STANDARD.encode(signing_key.verifying_key().to_bytes());
+        let public_key = base64::engine::general_purpose::STANDARD
+            .encode(signing_key.verifying_key().to_bytes());
         write_installed_plugin(
             &plugin_home,
             "acme.echo",
@@ -1279,7 +1298,8 @@ mod tests {
     async fn enforces_scopes_and_operational_controls() {
         let plugin_home = unique_temp_dir("scopes-controls");
         let signing_key = SigningKey::from_bytes(&[9_u8; 32]);
-        let public_key = base64::engine::general_purpose::STANDARD.encode(signing_key.verifying_key().to_bytes());
+        let public_key = base64::engine::general_purpose::STANDARD
+            .encode(signing_key.verifying_key().to_bytes());
 
         let mut manifest = default_manifest("acme.scoped", "1.0.0");
         manifest["capabilities"] = json!(["tool_provider", "fs_read", "network_egress"]);
@@ -1350,7 +1370,9 @@ mod tests {
             })
             .await
             .expect_err("scope should deny path");
-        assert!(scope_err.to_string().contains("outside allowed fs_read scopes"));
+        assert!(scope_err
+            .to_string()
+            .contains("outside allowed fs_read scopes"));
 
         let ok = tool
             .call(ToolCallInput {

@@ -20,11 +20,19 @@ See:
 - [docs/CORE_ADMISSION_POLICY.md](docs/CORE_ADMISSION_POLICY.md)
 - [docs/SDK_PRINCIPLES.md](docs/SDK_PRINCIPLES.md)
 - [docs/trusted-executive-wasm.md](docs/trusted-executive-wasm.md)
+- [docs/memory-control-data-plane.md](docs/memory-control-data-plane.md)
+- [docs/memory-rpc-contract.md](docs/memory-rpc-contract.md)
+- [docs/memory-module-sdk.md](docs/memory-module-sdk.md)
+- [docs/memory-controller-deployment-profiles.md](docs/memory-controller-deployment-profiles.md)
 
 Workspace crates:
 
 - `crates/kelvin-core`: contracts and shared types
-- `crates/kelvin-memory`: memory backends + fallback manager
+- `crates/kelvin-memory-api`: protobuf and gRPC service contracts
+- `crates/kelvin-memory-client`: root-side RPC adapter implementing `MemorySearchManager`
+- `crates/kelvin-memory-controller`: memory data plane gRPC server + WASM execution policy
+- `crates/kelvin-memory-module-sdk`: memory module ABI helpers and WIT contract
+- `crates/kelvin-memory`: transitional in-proc memory backends (deprecated migration path)
 - `crates/kelvin-brain`: agent loop orchestration
 - `crates/kelvin-wasm`: trusted native executive for untrusted WASM skills
 
