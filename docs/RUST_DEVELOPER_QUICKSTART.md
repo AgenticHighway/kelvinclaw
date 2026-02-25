@@ -12,11 +12,12 @@ What this does:
 
 - uses local `cargo` if installed
 - otherwise falls back to Docker (`rust:latest`)
+- installs/updates the first-party `kelvin_cli` WASM plugin package into `./.kelvin/plugins`
 - runs `archive/kelvin-cli` with a prompt
 
 Expected output includes:
 
-- cli plugin preflight (`kelvin_cli plugin executed ...`)
+- cli plugin preflight (`kelvin_cli executed ...`)
 - run accepted
 - lifecycle events (`start` / `end`)
 - assistant payload (echo provider for MVP)
@@ -40,6 +41,7 @@ SDK suites:
 
 ```bash
 scripts/test-sdk.sh
+scripts/test-cli-plugin-dogfood.sh
 ```
 
 Memory controller OWASP + NIST suites:

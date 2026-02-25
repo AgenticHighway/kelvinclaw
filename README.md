@@ -101,12 +101,15 @@ The fallback manager mimics KelvinClaw's primary->fallback behavior.
 ## CLI Example
 
 ```bash
+scripts/install-kelvin-cli-plugin.sh
+KELVIN_PLUGIN_HOME=.kelvin/plugins \
+KELVIN_TRUST_POLICY_PATH=.kelvin/trusted_publishers.json \
 CARGO_TARGET_DIR=target/try-kelvin-cli cargo run --manifest-path archive/kelvin-cli/Cargo.toml -- --prompt "hello" --workspace /path/to/workspace --memory fallback
 ```
 
 The CLI executable is only a thin launcher. Runtime behavior is composed in `kelvin-sdk`, and
-the CLI lane is dogfooded through a WASM plugin (`kelvin_cli`) registered via the SDK plugin
-registry.
+the CLI lane is dogfooded through an installed WASM plugin (`kelvin_cli`) loaded through the
+same secure installed-plugin path as third-party plugins.
 
 Fastest dev try path:
 
@@ -150,6 +153,12 @@ Notes:
 
 ## Plugin Install (No Build Required)
 
+Install Kelvin's first-party CLI plugin package:
+
+```bash
+scripts/install-kelvin-cli-plugin.sh
+```
+
 Install a prebuilt plugin package:
 
 ```bash
@@ -174,6 +183,7 @@ Run installer tests:
 
 ```bash
 scripts/test-plugin-install.sh
+scripts/test-cli-plugin-dogfood.sh
 ```
 
 ## Installed Plugin Runtime (Secure Loader)
@@ -217,7 +227,7 @@ Trust policy template:
 Archived CLI boot behavior:
 
 - `archive/kelvin-cli` calls `kelvin_sdk::run_with_sdk(...)` only.
-- `kelvin-sdk` registers/executes the `kelvin_cli` WASM plugin and auto-loads installed SDK plugins with `load_installed_tool_plugins_default(...)`.
+- `kelvin-sdk` requires installed `kelvin_cli` and auto-loads installed SDK plugins with `load_installed_tool_plugins_default(...)`.
 
 ## Local Test
 

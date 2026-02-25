@@ -1,0 +1,28 @@
+{
+  "id": "kelvin.cli",
+  "name": "Kelvin CLI Plugin",
+  "version": "0.1.0",
+  "api_version": "1.0.0",
+  "description": "WASM-backed CLI integration plugin",
+  "homepage": "https://github.com/kelvinclaw/kelvinclaw",
+  "capabilities": ["tool_provider"],
+  "experimental": false,
+  "min_core_version": "0.1.0",
+  "max_core_version": null,
+  "runtime": "wasm_tool_v1",
+  "tool_name": "kelvin_cli",
+  "entrypoint": "kelvin_cli.wasm",
+  "entrypoint_sha256": "66ece835012e290a54a87c30156f0959b34fcd1fb9d5fdd12eb3ce8eaceb117f",
+  "publisher": "kelvin",
+  "capability_scopes": {
+    "fs_read_paths": [],
+    "network_allow_hosts": []
+  },
+  "operational_controls": {
+    "timeout_ms": 2000,
+    "max_retries": 0,
+    "max_calls_per_minute": 120,
+    "circuit_breaker_failures": 3,
+    "circuit_breaker_cooldown_ms": 30000
+  }
+}

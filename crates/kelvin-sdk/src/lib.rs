@@ -9,11 +9,9 @@ use tokio::sync::RwLock;
 
 use kelvin_brain::{load_installed_tool_plugins_default, EchoModelProvider, KelvinBrain};
 use kelvin_core::{
-    now_ms, AgentEvent, AgentRunRequest, CoreRuntime, EventSink, InMemoryPluginRegistry,
-    KelvinError, KelvinResult, MemorySearchManager, PluginCapability, PluginFactory,
-    PluginManifest, PluginRegistry, PluginSecurityPolicy, RunOutcome, SdkToolRegistry,
-    SessionDescriptor, SessionMessage, SessionStore, Tool, ToolCallInput, ToolCallResult,
-    ToolRegistry, KELVIN_CORE_API_VERSION,
+    now_ms, AgentEvent, AgentRunRequest, CoreRuntime, EventSink, KelvinError, KelvinResult,
+    MemorySearchManager, PluginSecurityPolicy, RunOutcome, SessionDescriptor, SessionMessage,
+    SessionStore, Tool, ToolCallInput, ToolCallResult, ToolRegistry,
 };
 #[cfg(any(not(feature = "memory_rpc"), feature = "memory_legacy_fallback"))]
 use kelvin_memory::MemoryBackendKind;
@@ -21,7 +19,6 @@ use kelvin_memory::MemoryBackendKind;
 use kelvin_memory::MemoryFactory;
 #[cfg(feature = "memory_rpc")]
 use kelvin_memory_client::{MemoryClientConfig, RpcMemoryManager};
-use kelvin_wasm::{SandboxPolicy, WasmSkillHost};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum KelvinCliMemoryMode {
@@ -267,133 +264,9 @@ impl Tool for StaticTextTool {
     }
 }
 
-#[derive(Clone)]
-struct CliWasmPluginTool {
-    host: Arc<WasmSkillHost>,
-    module: Vec<u8>,
-}
-
-impl CliWasmPluginTool {
-    fn new() -> KelvinResult<Self> {
-        let module = wat::parse_str(
-            r#"
-            (module
-              (import "claw" "send_message" (func $send_message (param i32) (result i32)))
-              (func (export "run") (result i32)
-                i32.const 1337
-                call $send_message
-                drop
-                i32.const 0
-              )
-            )
-            "#,
-        )
-        .map_err(|err| KelvinError::InvalidInput(format!("invalid embedded CLI wasm: {err}")))?;
-
-        Ok(Self {
-            host: Arc::new(WasmSkillHost::try_new()?),
-            module,
-        })
-    }
-}
-
-#[async_trait]
-impl Tool for CliWasmPluginTool {
-    fn name(&self) -> &str {
-        "kelvin_cli"
-    }
-
-    async fn call(&self, _input: ToolCallInput) -> KelvinResult<ToolCallResult> {
-        let execution = self
-            .host
-            .run_bytes(&self.module, SandboxPolicy::locked_down())?;
-        let summary = format!(
-            "kelvin_cli plugin executed exit={} calls={}",
-            execution.exit_code,
-            execution.calls.len()
-        );
-        Ok(ToolCallResult {
-            summary: summary.clone(),
-            output: Some(
-                json!({
-                    "exit_code": execution.exit_code,
-                    "calls": execution.calls.len(),
-                })
-                .to_string(),
-            ),
-            visible_text: Some(summary),
-            is_error: false,
-        })
-    }
-}
-
-struct CliWasmPlugin {
-    manifest: PluginManifest,
-    tool: Arc<CliWasmPluginTool>,
-}
-
-impl CliWasmPlugin {
-    fn new() -> KelvinResult<Self> {
-        let tool = Arc::new(CliWasmPluginTool::new()?);
-        Ok(Self {
-            manifest: PluginManifest {
-                id: "kelvin.cli".to_string(),
-                name: "Kelvin CLI Plugin".to_string(),
-                version: "0.1.0".to_string(),
-                api_version: KELVIN_CORE_API_VERSION.to_string(),
-                description: Some("WASM-backed CLI integration plugin".to_string()),
-                homepage: Some("https://github.com/kelvinclaw/kelvinclaw".to_string()),
-                capabilities: vec![PluginCapability::ToolProvider],
-                experimental: false,
-                min_core_version: Some("0.1.0".to_string()),
-                max_core_version: None,
-            },
-            tool,
-        })
-    }
-}
-
-impl PluginFactory for CliWasmPlugin {
-    fn manifest(&self) -> &PluginManifest {
-        &self.manifest
-    }
-
-    fn tool(&self) -> Option<Arc<dyn Tool>> {
-        Some(self.tool.clone())
-    }
-}
-
-fn register_cli_plugin(
-    core_version: &str,
-    policy: &PluginSecurityPolicy,
-) -> KelvinResult<Arc<SdkToolRegistry>> {
-    let plugin_registry = InMemoryPluginRegistry::new();
-    plugin_registry.register(Arc::new(CliWasmPlugin::new()?), core_version, policy)?;
-    Ok(Arc::new(SdkToolRegistry::from_plugin_registry(
-        &plugin_registry,
-    )?))
-}
-
 pub async fn run_with_sdk(config: KelvinSdkConfig) -> KelvinResult<KelvinRunSummary> {
     let session_store = Arc::new(InMemorySessionStore::default());
     let event_sink = Arc::new(StdoutEventSink);
-
-    let cli_plugin_registry =
-        register_cli_plugin(&config.core_version, &config.plugin_security_policy)?;
-    let cli_plugin_tool = cli_plugin_registry
-        .get("kelvin_cli")
-        .ok_or_else(|| KelvinError::NotFound("kelvin_cli plugin tool missing".to_string()))?;
-
-    let run_id = format!("run-{}", now_ms());
-    let cli_preflight = cli_plugin_tool
-        .call(ToolCallInput {
-            run_id: run_id.clone(),
-            session_id: config.session_id.clone(),
-            workspace_dir: config.workspace_dir.to_string_lossy().to_string(),
-            arguments: json!({"prompt": config.prompt}),
-        })
-        .await?
-        .summary;
 
     let builtin_tools = Arc::new(HashMapToolRegistry::default());
     builtin_tools.register(TimeTool);
@@ -414,8 +287,25 @@ pub async fn run_with_sdk(config: KelvinSdkConfig) -> KelvinResult<KelvinRunSumm
             (Arc::new(HashMapToolRegistry::default()), 0)
         };
 
+    let cli_plugin_tool = installed_tools.get("kelvin_cli").ok_or_else(|| {
+        KelvinError::NotFound(
+            "required plugin tool 'kelvin_cli' not found; install it with scripts/install-kelvin-cli-plugin.sh"
+                .to_string(),
+        )
+    })?;
+
+    let run_id = format!("run-{}", now_ms());
+    let cli_preflight = cli_plugin_tool
+        .call(ToolCallInput {
+            run_id: run_id.clone(),
+            session_id: config.session_id.clone(),
+            workspace_dir: config.workspace_dir.to_string_lossy().to_string(),
+            arguments: json!({"prompt": config.prompt}),
+        })
+        .await?
+        .summary;
+
     let tools: Arc<dyn ToolRegistry> = Arc::new(CombinedToolRegistry::new(vec![
-        cli_plugin_registry,
         installed_tools,
         builtin_tools,
     ]));
@@ -507,6 +397,14 @@ pub async fn run_with_sdk(config: KelvinSdkConfig) -> KelvinResult<KelvinRunSumm
 mod tests {
     use super::{run_with_sdk, KelvinCliMemoryMode, KelvinSdkConfig};
 
+    fn repo_root() -> std::path::PathBuf {
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("..")
+            .canonicalize()
+            .expect("resolve repo root")
+    }
+
     fn unique_workspace() -> std::path::PathBuf {
         let millis = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -519,17 +417,44 @@ mod tests {
 
     #[tokio::test]
     async fn run_with_sdk_executes_cli_plugin_and_returns_payload() {
+        let root = repo_root();
+        let plugin_home = root.join("fixtures/installed_plugins");
+        let trust_policy = root.join("fixtures/trusted_publishers.kelvin.json");
+        assert!(
+            plugin_home.is_dir(),
+            "missing plugin fixture directory: {}",
+            plugin_home.to_string_lossy()
+        );
+        assert!(
+            trust_policy.is_file(),
+            "missing trust policy fixture: {}",
+            trust_policy.to_string_lossy()
+        );
+
+        let previous_plugin_home = std::env::var("KELVIN_PLUGIN_HOME").ok();
+        let previous_trust_policy = std::env::var("KELVIN_TRUST_POLICY_PATH").ok();
+        std::env::set_var("KELVIN_PLUGIN_HOME", plugin_home.as_os_str());
+        std::env::set_var("KELVIN_TRUST_POLICY_PATH", trust_policy.as_os_str());
+
         let workspace = unique_workspace();
         let mut config = KelvinSdkConfig::for_prompt("hello sdk");
         config.workspace_dir = workspace;
         config.timeout_ms = 5_000;
         config.memory_mode = KelvinCliMemoryMode::Fallback;
-        config.load_installed_plugins = false;
+        config.load_installed_plugins = true;
 
         let result = run_with_sdk(config).await.expect("run with sdk");
-        assert!(result
-            .cli_plugin_preflight
-            .contains("kelvin_cli plugin executed"));
+
+        match previous_plugin_home {
+            Some(value) => std::env::set_var("KELVIN_PLUGIN_HOME", value),
+            None => std::env::remove_var("KELVIN_PLUGIN_HOME"),
+        }
+        match previous_trust_policy {
+            Some(value) => std::env::set_var("KELVIN_TRUST_POLICY_PATH", value),
+            None => std::env::remove_var("KELVIN_TRUST_POLICY_PATH"),
+        }
+
+        assert!(result.cli_plugin_preflight.contains("kelvin_cli executed"));
         assert!(result
             .payloads
             .iter()

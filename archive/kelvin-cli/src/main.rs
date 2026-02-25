@@ -117,6 +117,11 @@ async fn main() {
                 }
                 Err(err) => {
                     eprintln!("error: {err}");
+                    if err.to_string().contains("kelvin_cli") {
+                        eprintln!(
+                            "hint: install the bundled CLI plugin with scripts/install-kelvin-cli-plugin.sh"
+                        );
+                    }
                     std::process::exit(1);
                 }
             }

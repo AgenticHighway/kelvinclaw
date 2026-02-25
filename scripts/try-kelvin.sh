@@ -6,21 +6,39 @@ PROMPT="${1:-hello kelvin}"
 TIMEOUT_MS="${KELVIN_TRY_TIMEOUT_MS:-5000}"
 MODE="${KELVIN_TRY_MODE:-auto}" # auto | local | docker
 TARGET_DIR="${KELVIN_TRY_TARGET_DIR:-${ROOT_DIR}/target/try-kelvin-cli}"
+PLUGIN_HOME="${KELVIN_PLUGIN_HOME:-${ROOT_DIR}/.kelvin/plugins}"
+TRUST_POLICY_PATH="${KELVIN_TRUST_POLICY_PATH:-${ROOT_DIR}/.kelvin/trusted_publishers.json}"
+
+ensure_cli_plugin() {
+  echo "[try-kelvin] ensuring kelvin_cli WASM plugin is installed"
+  KELVIN_PLUGIN_HOME="${PLUGIN_HOME}" \
+  KELVIN_TRUST_POLICY_PATH="${TRUST_POLICY_PATH}" \
+    "${ROOT_DIR}/scripts/install-kelvin-cli-plugin.sh" \
+      --plugin-home "${PLUGIN_HOME}" \
+      --trust-policy-path "${TRUST_POLICY_PATH}"
+}
 
 run_local() {
   echo "[try-kelvin] mode=local"
+  ensure_cli_plugin
   cd "${ROOT_DIR}"
-  CARGO_TARGET_DIR="${TARGET_DIR}" cargo run --manifest-path archive/kelvin-cli/Cargo.toml -- \
-    --prompt "${PROMPT}" \
-    --timeout-ms "${TIMEOUT_MS}"
+  KELVIN_PLUGIN_HOME="${PLUGIN_HOME}" \
+  KELVIN_TRUST_POLICY_PATH="${TRUST_POLICY_PATH}" \
+  CARGO_TARGET_DIR="${TARGET_DIR}" \
+    cargo run --manifest-path archive/kelvin-cli/Cargo.toml -- \
+      --prompt "${PROMPT}" \
+      --timeout-ms "${TIMEOUT_MS}"
 }
 
 run_docker() {
   echo "[try-kelvin] mode=docker"
+  ensure_cli_plugin
   docker run --rm \
     -e KELVIN_TRY_PROMPT="${PROMPT}" \
     -e KELVIN_TRY_TIMEOUT_MS="${TIMEOUT_MS}" \
     -e KELVIN_TRY_TARGET_DIR="/work/target/try-kelvin-cli" \
+    -e KELVIN_PLUGIN_HOME="/work/.kelvin/plugins" \
+    -e KELVIN_TRUST_POLICY_PATH="/work/.kelvin/trusted_publishers.json" \
     -v "${ROOT_DIR}:/work" \
     -w /work \
     rust:latest \
