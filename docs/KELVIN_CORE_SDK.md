@@ -124,5 +124,8 @@ Primary API:
 
 - `InstalledPluginLoaderConfig`
 - `load_installed_tool_plugins(...)`
+- `load_installed_tool_plugins_default(...)`
+- `default_plugin_home()`
+- `default_trust_policy_path()`
 
 Source: `crates/kelvin-brain/src/installed_plugins.rs`

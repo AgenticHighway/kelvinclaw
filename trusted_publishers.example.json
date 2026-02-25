@@ -1,0 +1,9 @@
+{
+  "require_signature": true,
+  "publishers": [
+    {
+      "id": "acme",
+      "ed25519_public_key": "REPLACE_WITH_BASE64_RAW_32_BYTE_ED25519_PUBLIC_KEY"
+    }
+  ]
+}

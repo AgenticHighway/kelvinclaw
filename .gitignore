@@ -14,6 +14,8 @@
 # Local env/config overrides
 .env
 .env.local
+trusted_publishers.json
+*.ed25519-private.pem
 local_docs/*
 skills/*/Cargo.lock
 .devcontainer/*

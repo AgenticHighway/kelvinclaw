@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use async_trait::async_trait;
@@ -11,8 +12,8 @@ use sha2::{Digest, Sha256};
 use tokio::sync::RwLock;
 
 use kelvin_brain::{
-    load_installed_tool_plugins, EchoModelProvider, InstalledPluginLoaderConfig, KelvinBrain,
-    PublisherTrustPolicy,
+    load_installed_tool_plugins, load_installed_tool_plugins_default, EchoModelProvider,
+    InstalledPluginLoaderConfig, KelvinBrain, PublisherTrustPolicy,
 };
 use kelvin_core::{
     AgentEvent, AgentEventData, AgentRunRequest, CoreRuntime, EventSink, KelvinResult,
@@ -20,6 +21,8 @@ use kelvin_core::{
     SessionStore, ToolPhase, ToolRegistry,
 };
 use kelvin_memory::MarkdownMemoryManager;
+
+static ENV_LOCK: Mutex<()> = Mutex::new(());
 
 #[derive(Default)]
 struct RecordingEventSink {
@@ -177,6 +180,20 @@ fn request(workspace: &Path, prompt: &str) -> AgentRunRequest {
     }
 }
 
+fn write_trust_policy(path: &Path, publisher_id: &str, public_key_base64: &str) {
+    let payload = json!({
+        "require_signature": true,
+        "publishers": [
+            {
+                "id": publisher_id,
+                "ed25519_public_key": public_key_base64
+            }
+        ]
+    });
+    std::fs::write(path, serde_json::to_vec_pretty(&payload).expect("trust policy json"))
+        .expect("write trust policy");
+}
+
 #[tokio::test]
 async fn installed_plugin_loads_and_runs_through_brain_runtime() {
     let workspace = unique_workspace("success");
@@ -281,4 +298,63 @@ fn installed_plugin_loader_rejects_missing_signature_when_required() {
         Err(err) => err,
     };
     assert!(err.to_string().contains("missing required plugin.sig"));
+}
+
+#[test]
+fn default_loader_uses_env_paths_and_enforces_missing_explicit_trust_policy() {
+    let _guard = ENV_LOCK.lock().expect("lock env");
+    let workspace = unique_workspace("default-loader-missing-trust");
+    let plugin_home = workspace.join("plugins");
+    let trust_path = workspace.join("trusted_publishers.json");
+
+    unsafe {
+        std::env::set_var("KELVIN_PLUGIN_HOME", plugin_home.to_string_lossy().to_string());
+        std::env::set_var(
+            "KELVIN_TRUST_POLICY_PATH",
+            trust_path.to_string_lossy().to_string(),
+        );
+    }
+
+    let err = match load_installed_tool_plugins_default("0.1.0", PluginSecurityPolicy::default()) {
+        Ok(_) => panic!("missing explicit trust policy path should fail"),
+        Err(err) => err,
+    };
+    assert!(err.to_string().contains("configured trust policy file does not exist"));
+
+    unsafe {
+        std::env::remove_var("KELVIN_PLUGIN_HOME");
+        std::env::remove_var("KELVIN_TRUST_POLICY_PATH");
+    }
+}
+
+#[test]
+fn default_loader_loads_signed_plugin_with_env_bootstrap() {
+    let _guard = ENV_LOCK.lock().expect("lock env");
+    let workspace = unique_workspace("default-loader-success");
+    let plugin_home = workspace.join("plugins");
+    let trust_path = workspace.join("trusted_publishers.json");
+
+    let signing_key = SigningKey::from_bytes(&[19_u8; 32]);
+    write_installed_plugin(&plugin_home, "acme.echo", "1.0.0", true, &signing_key);
+    let public_key = base64::engine::general_purpose::STANDARD
+        .encode(signing_key.verifying_key().to_bytes());
+    write_trust_policy(&trust_path, "acme", &public_key);
+
+    unsafe {
+        std::env::set_var("KELVIN_PLUGIN_HOME", plugin_home.to_string_lossy().to_string());
+        std::env::set_var(
+            "KELVIN_TRUST_POLICY_PATH",
+            trust_path.to_string_lossy().to_string(),
+        );
+    }
+
+    let loaded = load_installed_tool_plugins_default("0.1.0", PluginSecurityPolicy::default())
+        .expect("default loader should load signed plugin");
+    assert_eq!(loaded.loaded_plugins.len(), 1);
+    assert!(loaded.tool_registry.get("installed_echo").is_some());
+
+    unsafe {
+        std::env::remove_var("KELVIN_PLUGIN_HOME");
+        std::env::remove_var("KELVIN_TRUST_POLICY_PATH");
+    }
 }

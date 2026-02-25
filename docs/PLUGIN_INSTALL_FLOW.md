@@ -51,6 +51,11 @@ Override install root:
 KELVIN_PLUGIN_HOME=./.kelvin/plugins scripts/plugin-install.sh --package ./dist/acme.echo-1.0.0.tar.gz
 ```
 
+Optional runtime env overrides:
+
+- `KELVIN_PLUGIN_HOME`
+- `KELVIN_TRUST_POLICY_PATH`
+
 ## List Installed Plugins
 
 Table output:
@@ -101,6 +106,22 @@ Install-time checks validate package integrity and structure. Runtime checks in 
 - trusted publisher signature verification (when enabled)
 - capability scope allowlists
 - execution timeout/retry/rate/circuit controls
+
+## Publisher Signing Workflow
+
+Generate `plugin.sig` from `plugin.json` and emit trust policy snippet:
+
+```bash
+scripts/plugin-sign.sh \
+  --manifest ./plugin.json \
+  --private-key ./acme-ed25519-private.pem \
+  --publisher-id acme \
+  --trust-policy-out ./trusted_publishers.acme.json
+```
+
+Reference template:
+
+- `trusted_publishers.example.json`
 
 ## Verification
 
