@@ -9,6 +9,24 @@ DO_SYNC="1"
 EXTRA_CARGO_ARGS=""
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+require_cmd() {
+  local name="$1"
+  if ! command -v "${name}" >/dev/null 2>&1; then
+    echo "Missing required command: ${name}" >&2
+    exit 1
+  fi
+}
+
+is_safe_remote_host() {
+  local value="$1"
+  [[ "${value}" =~ ^[A-Za-z0-9._@:-]+$ ]]
+}
+
+is_safe_remote_dir_for_rsync() {
+  local value="$1"
+  [[ "${value}" =~ ^[A-Za-z0-9._/~+-]+$ ]]
+}
+
 trim_whitespace() {
   local value="$1"
   value="${value#"${value%%[![:space:]]*}"}"
@@ -146,6 +164,8 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+require_cmd ssh
+
 if [[ "${MODE}" != "native" && "${MODE}" != "docker" ]]; then
   echo "Invalid mode: ${MODE} (expected native or docker)" >&2
   exit 1
@@ -184,7 +204,9 @@ fi
 
 if [[ "${DO_SYNC}" == "1" ]]; then
   echo "[remote-test] syncing repository"
-  if command -v rsync >/dev/null 2>&1; then
+  if command -v rsync >/dev/null 2>&1 \
+    && is_safe_remote_host "${HOST}" \
+    && is_safe_remote_dir_for_rsync "${REMOTE_DIR}"; then
     rsync -az --delete \
       --exclude '.git' \
       --exclude 'target' \
@@ -195,16 +217,48 @@ if [[ "${DO_SYNC}" == "1" ]]; then
       --exclude='.git' \
       --exclude='target' \
       --exclude='.DS_Store' \
-      -C "${ROOT_DIR}" . | ssh "${HOST}" "rm -rf ${REMOTE_DIR} && mkdir -p ${REMOTE_DIR} && tar xzf - -C ${REMOTE_DIR}"
+      -C "${ROOT_DIR}" . | ssh "${HOST}" bash -s -- "${REMOTE_DIR}" <<'EOF'
+set -euo pipefail
+remote_dir="$1"
+remote_dir="${remote_dir/#\~/$HOME}"
+rm -rf "${remote_dir}"
+mkdir -p "${remote_dir}"
+tar xzf - -C "${remote_dir}"
+EOF
   fi
 fi
 
 if [[ "${MODE}" == "native" ]]; then
   echo "[remote-test] running native cargo test"
-  ssh "${HOST}" "source \$HOME/.cargo/env && cd ${REMOTE_DIR} && cargo test --workspace ${EXTRA_CARGO_ARGS}"
+  ssh "${HOST}" bash -s -- "${REMOTE_DIR}" "${EXTRA_CARGO_ARGS}" <<'EOF'
+set -euo pipefail
+remote_dir="$1"
+extra_cargo_args="$2"
+remote_dir="${remote_dir/#\~/$HOME}"
+source "$HOME/.cargo/env"
+cd "${remote_dir}"
+extra_args=()
+if [[ -n "${extra_cargo_args}" ]]; then
+  read -r -a extra_args <<< "${extra_cargo_args}"
+fi
+cargo test --workspace "${extra_args[@]}"
+EOF
 else
   echo "[remote-test] running cargo test in Docker"
-  ssh "${HOST}" "REMOTE_DIR='${REMOTE_DIR}'; REMOTE_DIR=\${REMOTE_DIR/#\~/\$HOME}; cd \${REMOTE_DIR} && docker run --rm -v \"\${REMOTE_DIR}:/work\" -w /work ${DOCKER_IMAGE} cargo test --workspace ${EXTRA_CARGO_ARGS}"
+  ssh "${HOST}" bash -s -- "${REMOTE_DIR}" "${DOCKER_IMAGE}" "${EXTRA_CARGO_ARGS}" <<'EOF'
+set -euo pipefail
+remote_dir="$1"
+docker_image="$2"
+extra_cargo_args="$3"
+remote_dir="${remote_dir/#\~/$HOME}"
+cd "${remote_dir}"
+extra_args=()
+if [[ -n "${extra_cargo_args}" ]]; then
+  read -r -a extra_args <<< "${extra_cargo_args}"
+fi
+docker run --rm -v "${remote_dir}:/work" -w /work "${docker_image}" \
+  cargo test --workspace "${extra_args[@]}"
+EOF
 fi
 
 echo "[remote-test] done"
