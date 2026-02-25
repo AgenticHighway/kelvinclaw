@@ -92,6 +92,7 @@ tar -xzf "${PACKAGE_PATH}" -C "${WORK_DIR}"
 
 MANIFEST_PATH="${WORK_DIR}/plugin.json"
 PAYLOAD_DIR="${WORK_DIR}/payload"
+SIGNATURE_PATH="${WORK_DIR}/plugin.sig"
 
 if [[ ! -f "${MANIFEST_PATH}" ]]; then
   echo "Invalid package: missing plugin.json" >&2
@@ -152,6 +153,9 @@ rm -rf "${INSTALL_DIR}"
 mkdir -p "${INSTALL_DIR}"
 cp "${MANIFEST_PATH}" "${INSTALL_DIR}/plugin.json"
 cp -R "${PAYLOAD_DIR}" "${INSTALL_DIR}/payload"
+if [[ -f "${SIGNATURE_PATH}" ]]; then
+  cp "${SIGNATURE_PATH}" "${INSTALL_DIR}/plugin.sig"
+fi
 ln -sfn "${PLUGIN_VERSION}" "${CURRENT_LINK}"
 
 echo "Installed plugin:"
@@ -161,4 +165,3 @@ echo "  version:     ${PLUGIN_VERSION}"
 echo "  api_version: ${API_VERSION}"
 echo "  path:        ${INSTALL_DIR}"
 echo "  current:     ${CURRENT_LINK} -> ${PLUGIN_VERSION}"
-

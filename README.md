@@ -156,6 +156,17 @@ Run installer tests:
 scripts/test-plugin-install.sh
 ```
 
+## Installed Plugin Runtime (Secure Loader)
+
+`kelvin-brain` can load installed SDK plugin packages and project them into runtime tools with policy enforcement:
+
+- signed manifest verification (`plugin.sig`, Ed25519 trusted publishers)
+- manifest integrity validation (`entrypoint_sha256`)
+- capability scopes (`fs_read_paths`, `network_allow_hosts`)
+- operational controls (timeout, retries, rate limit, circuit breaker)
+
+Source: `crates/kelvin-brain/src/installed_plugins.rs`
+
 ## Local Test
 
 ```bash

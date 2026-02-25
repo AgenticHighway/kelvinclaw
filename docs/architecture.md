@@ -130,6 +130,18 @@ Selection:
 
 `kelvin-wasm-runner` provides a minimal host CLI for executing skill binaries with policy presets.
 
+### Installed Plugin Runtime (`kelvin-brain`)
+
+`installed_plugins` provides a secure loader for prebuilt SDK plugin packages under `~/.kelvinclaw/plugins` (or configured plugin home):
+
+- runtime loader for installed `wasm_tool_v1` plugins
+- execution bridge via SDK (`InMemoryPluginRegistry` -> `SdkToolRegistry` -> runtime `ToolRegistry`)
+- supply-chain trust verification (`plugin.sig` Ed25519 against trusted publisher keys)
+- scoped capability enforcement (`capability_scopes.fs_read_paths`, `capability_scopes.network_allow_hosts`)
+- operational controls (`timeout_ms`, `max_retries`, rate limit, circuit breaker)
+
+This keeps plugin execution out of Kelvin root code compilation while preserving host-side policy enforcement.
+
 ## Execution Flow
 
 ### High-Level
@@ -199,13 +211,13 @@ Implemented:
 - KelvinClaw-style run/event/memory seams
 - swappable backends and adapters
 - remote test workflow
+- dynamic installed plugin loading with trust/scoping/operational guardrails
 
 Not yet implemented:
 
 - websocket gateway server/protocol
 - provider-specific auth/failover trees
 - full compaction/retry pipelines
-- dynamic plugin loading runtime
 
 ## Operational Notes
 
