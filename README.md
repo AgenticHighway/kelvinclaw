@@ -1,15 +1,16 @@
 # kelvinclaw
 
-KelvinClaw is a security-first Rust runtime for running untrusted WASM plugins through a small trusted host.
-The project is designed to stay minimal in root code while exposing a stable SDK for extension authors.
+KelvinClaw is a Secure, Stable, and Modular Runtime for Agentic Workflows.
+It focuses on predictable runtime behavior, policy-driven extension loading, and a maintainable SDK surface for plugin developers.
 
 SDK name: **Kelvin Core**.
 
-Core model:
+What this project includes:
 
 - control plane (`kelvin` root + brain): policy, orchestration, lifecycle
-- data plane (memory controller): RPC memory execution with defense-in-depth checks
-- extension plane (WASM plugins): installable modules with signed manifests and scoped capabilities
+- data plane (`kelvin-memory-controller`): RPC memory operations with security checks
+- SDK (`Kelvin Core`): stable interfaces for plugins, tools, and runtime integration
+- plugin system: signed package install/verification and policy-based capability enforcement
 
 For end users, plugins are installed as packages and executed by Kelvin. They do not need to compile the Rust workspace.
 
@@ -17,10 +18,8 @@ For end users, plugins are installed as packages and executed by Kelvin. They do
 
 - `apps/kelvin-host`: thin trusted host executable
 - `crates/*`: core contracts, runtime, SDK, memory API/client/controller, and execution engine
-- `plugins/`: installable first-party plugin package sources (manifest/signature/payload)
-- `examples/`: developer sample source crates (for learning and reference), including sample WASM skills
-
-There is intentionally no top-level `skills/` directory now. Installable artifacts live in `plugins/`, and sample source code lives in `examples/`.
+- `plugins/`: installable plugin package sources (manifest/signature/payload)
+- `examples/`: sample source crates for developers
 
 ## Architecture
 
@@ -51,7 +50,7 @@ Workspace crates:
 - `crates/kelvin-memory-client`: root-side RPC adapter implementing `MemorySearchManager`
 - `crates/kelvin-memory-controller`: memory data plane gRPC server + WASM execution policy
 - `crates/kelvin-memory-module-sdk`: memory module ABI helpers and WIT contract
-- `crates/kelvin-memory`: transitional in-proc memory backends (deprecated migration path)
+- `crates/kelvin-memory`: in-process memory backends used by local/test compositions
 - `crates/kelvin-brain`: agent loop orchestration
 - `crates/kelvin-wasm`: trusted native executive for untrusted WASM skills
 
@@ -74,14 +73,14 @@ Main traits:
 
 Everything in the runtime is composed with trait objects so concrete implementations can be swapped.
 
-## SDK Dogfooding
+## SDK Runtime Integration
 
-The MVP secure skill loop is wired through the Kelvin Core SDK path:
+The runtime integrates through the Kelvin Core SDK path:
 
 - `WasmSkillPlugin` (plugin manifest + tool factory)
 - `InMemoryPluginRegistry` (policy-gated registration)
 - `SdkToolRegistry` (validated tool projection for runtime wiring)
-- `kelvin_cli` (WASM-backed CLI plugin executed before each run)
+- `kelvin_cli` (CLI plugin executed before each run)
 
 ## Trusted Executive + Untrusted Skills
 
@@ -125,7 +124,7 @@ CARGO_TARGET_DIR=target/try-kelvin-cli cargo run -p kelvin-host -- --prompt "hel
 ```
 
 The CLI executable is only a thin launcher. Runtime behavior is composed in `kelvin-sdk`, and
-the CLI lane is dogfooded through an installed WASM plugin (`kelvin_cli`) loaded through the
+the CLI path executes through an installed plugin (`kelvin_cli`) loaded through the
 same secure installed-plugin path as third-party plugins.
 
 Fastest dev try path:
@@ -141,7 +140,7 @@ Tool-trigger pattern for the default model provider:
 [[tool:hello_tool {"foo":"bar"}]]
 ```
 
-## Optional: Remote Build/Test
+## Remote Build and Test (Optional)
 
 Remote testing is optional. Public clones can run local Docker tests without any private host setup.
 
@@ -153,7 +152,7 @@ $EDITOR .env
 scripts/remote-test.sh --docker
 ```
 
-Useful variants:
+Additional variants:
 
 ```bash
 REMOTE_TEST_HOST=your-user@your-host scripts/remote-test.sh
@@ -165,7 +164,7 @@ scripts/remote-test.sh --host your-user@your-host --cargo-args '-- --nocapture'
 Notes:
 
 - `.env` and `.env.local` are gitignored; keep personal hosts/IPs there only.
-- `scripts/remote-test.sh` reads only `REMOTE_TEST_HOST` and `REMOTE_TEST_REMOTE_DIR` from `.env`/`.env.local`.
+- `scripts/remote-test.sh` reads `REMOTE_TEST_HOST`, `REMOTE_TEST_REMOTE_DIR`, and `REMOTE_TEST_DOCKER_IMAGE` from `.env`/`.env.local`.
 - `.env` files are parsed as key/value data and are not executed as shell code.
 
 ## Plugin Install (No Build Required)
@@ -200,7 +199,7 @@ Run installer tests:
 
 ```bash
 scripts/test-plugin-install.sh
-scripts/test-cli-plugin-dogfood.sh
+scripts/test-cli-plugin-integration.sh
 ```
 
 ## Installed Plugin Runtime (Secure Loader)

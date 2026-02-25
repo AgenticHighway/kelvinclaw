@@ -41,7 +41,7 @@ SDK suites:
 
 ```bash
 scripts/test-sdk.sh
-scripts/test-cli-plugin-dogfood.sh
+scripts/test-cli-plugin-integration.sh
 ```
 
 Memory controller OWASP + NIST suites:
