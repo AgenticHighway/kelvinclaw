@@ -109,3 +109,20 @@ SDK certification command:
 ```bash
 scripts/test-sdk.sh
 ```
+
+## 9. Installed Plugin Runtime (SDK Path)
+
+`kelvin-brain` now includes an installed-plugin loader that keeps plugin execution on the SDK path:
+
+- package discovery from plugin home (`<plugin_id>/<version>/plugin.json`)
+- manifest integrity checks (`entrypoint_sha256`) and optional mandatory signatures (`plugin.sig`)
+- publisher trust policy (`PublisherTrustPolicy`) with Ed25519 keys
+- runtime capability scopes for filesystem/network access
+- per-tool operational controls (timeout, retries, rate limit, circuit breaker)
+
+Primary API:
+
+- `InstalledPluginLoaderConfig`
+- `load_installed_tool_plugins(...)`
+
+Source: `crates/kelvin-brain/src/installed_plugins.rs`

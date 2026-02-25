@@ -24,9 +24,15 @@ A plugin package is a `.tar.gz` with:
 - `entrypoint` (relative path under `payload/`)
 - `capabilities` (non-empty list)
 
-Optional field:
+Optional fields:
 
 - `entrypoint_sha256` (recommended integrity check)
+- `publisher` (required when signature verification is enforced)
+- `runtime` / `tool_name` / `capability_scopes` / `operational_controls`
+
+Optional package file:
+
+- `plugin.sig` (Ed25519 signature over `plugin.json`)
 
 ## Install Command
 
@@ -87,6 +93,14 @@ scripts/plugin-uninstall.sh --id acme.echo --purge
 - no personal paths or host data in plugin artifacts
 - no compilation step on user machine
 - install root is local and user-scoped by default
+
+## Runtime Security Notes
+
+Install-time checks validate package integrity and structure. Runtime checks in `kelvin-brain` additionally enforce:
+
+- trusted publisher signature verification (when enabled)
+- capability scope allowlists
+- execution timeout/retry/rate/circuit controls
 
 ## Verification
 
