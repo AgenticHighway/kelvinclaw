@@ -1,5 +1,6 @@
 use jsonwebtoken::DecodingKey;
 use kelvin_core::{KelvinError, KelvinResult};
+use tonic::transport::{Certificate, Identity};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProviderProfile {
@@ -13,6 +14,13 @@ pub struct MemoryControllerConfig {
     pub issuer: String,
     pub audience: String,
     pub decoding_key_pem: String,
+    pub decoding_key_path: String,
+    pub tls_cert_pem: String,
+    pub tls_cert_path: String,
+    pub tls_key_pem: String,
+    pub tls_key_path: String,
+    pub tls_client_ca_pem: String,
+    pub tls_client_ca_path: String,
     pub clock_skew_secs: u64,
     pub max_module_bytes: usize,
     pub max_memory_pages: u32,
@@ -29,6 +37,13 @@ impl Default for MemoryControllerConfig {
             issuer: "kelvin-root".to_string(),
             audience: "kelvin-memory-controller".to_string(),
             decoding_key_pem: String::new(),
+            decoding_key_path: String::new(),
+            tls_cert_pem: String::new(),
+            tls_cert_path: String::new(),
+            tls_key_pem: String::new(),
+            tls_key_path: String::new(),
+            tls_client_ca_pem: String::new(),
+            tls_client_ca_path: String::new(),
             clock_skew_secs: 30,
             max_module_bytes: 2 * 1024 * 1024,
             max_memory_pages: 64,
@@ -57,6 +72,41 @@ impl MemoryControllerConfig {
         if let Ok(value) = std::env::var("KELVIN_MEMORY_PUBLIC_KEY_PEM") {
             if !value.trim().is_empty() {
                 cfg.decoding_key_pem = value;
+            }
+        }
+        if let Ok(value) = std::env::var("KELVIN_MEMORY_PUBLIC_KEY_PATH") {
+            if !value.trim().is_empty() {
+                cfg.decoding_key_path = value;
+            }
+        }
+        if let Ok(value) = std::env::var("KELVIN_MEMORY_TLS_CERT_PEM") {
+            if !value.trim().is_empty() {
+                cfg.tls_cert_pem = value;
+            }
+        }
+        if let Ok(value) = std::env::var("KELVIN_MEMORY_TLS_CERT_PATH") {
+            if !value.trim().is_empty() {
+                cfg.tls_cert_path = value;
+            }
+        }
+        if let Ok(value) = std::env::var("KELVIN_MEMORY_TLS_KEY_PEM") {
+            if !value.trim().is_empty() {
+                cfg.tls_key_pem = value;
+            }
+        }
+        if let Ok(value) = std::env::var("KELVIN_MEMORY_TLS_KEY_PATH") {
+            if !value.trim().is_empty() {
+                cfg.tls_key_path = value;
+            }
+        }
+        if let Ok(value) = std::env::var("KELVIN_MEMORY_TLS_CLIENT_CA_PEM") {
+            if !value.trim().is_empty() {
+                cfg.tls_client_ca_pem = value;
+            }
+        }
+        if let Ok(value) = std::env::var("KELVIN_MEMORY_TLS_CLIENT_CA_PATH") {
+            if !value.trim().is_empty() {
+                cfg.tls_client_ca_path = value;
             }
         }
         if let Ok(value) = std::env::var("KELVIN_MEMORY_CLOCK_SKEW_SECS") {
@@ -106,7 +156,72 @@ impl MemoryControllerConfig {
     }
 
     pub fn decoding_key(&self) -> KelvinResult<DecodingKey> {
-        DecodingKey::from_ed_pem(self.decoding_key_pem.as_bytes())
+        let pem = resolve_required_pem(
+            &self.decoding_key_pem,
+            &self.decoding_key_path,
+            "memory controller public key",
+        )?;
+        DecodingKey::from_ed_pem(pem.as_bytes())
             .map_err(|err| KelvinError::InvalidInput(format!("invalid decoding key pem: {err}")))
     }
+
+    pub fn tls_identity(&self) -> KelvinResult<Option<Identity>> {
+        let cert = resolve_optional_pem(
+            &self.tls_cert_pem,
+            &self.tls_cert_path,
+            "memory controller tls cert",
+        )?;
+        let key = resolve_optional_pem(
+            &self.tls_key_pem,
+            &self.tls_key_path,
+            "memory controller tls key",
+        )?;
+        match (cert, key) {
+            (Some(cert), Some(key)) => Ok(Some(Identity::from_pem(cert, key))),
+            (None, None) => Ok(None),
+            _ => Err(KelvinError::InvalidInput(
+                "controller tls requires both cert and key".to_string(),
+            )),
+        }
+    }
+
+    pub fn tls_client_ca(&self) -> KelvinResult<Option<Certificate>> {
+        Ok(resolve_optional_pem(
+            &self.tls_client_ca_pem,
+            &self.tls_client_ca_path,
+            "memory controller tls client ca",
+        )?
+        .map(Certificate::from_pem))
+    }
+}
+
+fn resolve_required_pem(inline: &str, path: &str, label: &str) -> KelvinResult<String> {
+    resolve_optional_pem(inline, path, label)?.ok_or_else(|| {
+        KelvinError::InvalidInput(format!("{label} must be provided via inline pem or path"))
+    })
+}
+
+fn resolve_optional_pem(inline: &str, path: &str, label: &str) -> KelvinResult<Option<String>> {
+    let inline = inline.trim();
+    let path = path.trim();
+    if !inline.is_empty() && !path.is_empty() {
+        return Err(KelvinError::InvalidInput(format!(
+            "{label} cannot set both inline pem and path"
+        )));
+    }
+    if !inline.is_empty() {
+        return Ok(Some(inline.to_string()));
+    }
+    if path.is_empty() {
+        return Ok(None);
+    }
+    let pem = std::fs::read_to_string(path).map_err(|err| {
+        KelvinError::InvalidInput(format!("{label} path '{path}' is not readable: {err}"))
+    })?;
+    if pem.trim().is_empty() {
+        return Err(KelvinError::InvalidInput(format!(
+            "{label} path '{path}' is empty"
+        )));
+    }
+    Ok(Some(pem))
 }

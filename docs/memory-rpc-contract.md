@@ -14,6 +14,19 @@ Unary RPCs:
 
 Source: `crates/kelvin-memory-api/proto/kelvin/memory/v1alpha1/memory.proto`
 
+## Transport Security
+
+- Local/dev defaults use `http://127.0.0.1:50051`.
+- Production is expected to use `https://...` with TLS configured on controller.
+- Optional mTLS can be enabled by configuring controller client-CA and client cert/key on root-side client.
+- Root client JWT signing key:
+- `KELVIN_MEMORY_SIGNING_KEY_PEM` or `KELVIN_MEMORY_SIGNING_KEY_PATH`
+- Root client TLS knobs:
+- `KELVIN_MEMORY_RPC_TLS_CA_PEM` or `KELVIN_MEMORY_RPC_TLS_CA_PATH`
+- `KELVIN_MEMORY_RPC_TLS_DOMAIN_NAME`
+- `KELVIN_MEMORY_RPC_TLS_CLIENT_CERT_PEM` or `KELVIN_MEMORY_RPC_TLS_CLIENT_CERT_PATH`
+- `KELVIN_MEMORY_RPC_TLS_CLIENT_KEY_PEM` or `KELVIN_MEMORY_RPC_TLS_CLIENT_KEY_PATH`
+
 ## Required Context
 
 Every request includes `RequestContext`:

@@ -10,7 +10,7 @@ use kelvin_memory_api::MemoryOperation;
 
 use common::{
     claims_for, context_for, controller_with_module, next_id, sample_manifest, sample_wasm,
-    TEST_PRIVATE_KEY_PEM,
+    test_private_key_pem,
 };
 
 #[tokio::test]
@@ -169,7 +169,9 @@ async fn llm08_vector_and_embedding_weaknesses_reject_unavailable_provider_featu
         )
         .await
         .expect_err("missing provider should fail");
-    assert!(err.to_string().contains("requires unavailable host feature"));
+    assert!(err
+        .to_string()
+        .contains("requires unavailable host feature"));
 }
 
 #[tokio::test]
@@ -228,6 +230,7 @@ async fn llm10_unbounded_consumption_rejects_excessive_result_window() {
 fn llm03_supply_chain_rejects_malformed_signing_key_material() {
     let invalid = jsonwebtoken::EncodingKey::from_ed_pem(b"not-a-key");
     assert!(invalid.is_err());
-    let valid = jsonwebtoken::EncodingKey::from_ed_pem(TEST_PRIVATE_KEY_PEM.as_bytes());
+    let private_key = test_private_key_pem();
+    let valid = jsonwebtoken::EncodingKey::from_ed_pem(private_key.as_bytes());
     assert!(valid.is_ok());
 }

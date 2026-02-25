@@ -22,6 +22,7 @@ Controller environment:
 
 - `KELVIN_MEMORY_CONTROLLER_ADDR`
 - `KELVIN_MEMORY_PUBLIC_KEY_PEM`
+- `KELVIN_MEMORY_PUBLIC_KEY_PATH`
 - `KELVIN_MEMORY_ISSUER`
 - `KELVIN_MEMORY_AUDIENCE`
 - `KELVIN_MEMORY_PROFILE`
@@ -32,6 +33,17 @@ Controller environment:
 - `KELVIN_MEMORY_MAX_MODULE_BYTES`
 - `KELVIN_MEMORY_MAX_MEMORY_PAGES`
 - `KELVIN_MEMORY_DEFAULT_MAX_RESPONSE_BYTES`
+- `KELVIN_MEMORY_ALLOW_INSECURE_NON_LOOPBACK`
+- `KELVIN_MEMORY_TLS_CERT_PEM` or `KELVIN_MEMORY_TLS_CERT_PATH`
+- `KELVIN_MEMORY_TLS_KEY_PEM` or `KELVIN_MEMORY_TLS_KEY_PATH`
+- `KELVIN_MEMORY_TLS_CLIENT_CA_PEM` or `KELVIN_MEMORY_TLS_CLIENT_CA_PATH` (optional mTLS)
+
+Network safety default:
+
+- Controller refuses non-loopback plaintext binds unless either:
+- TLS cert/key are configured, or
+- `KELVIN_MEMORY_ALLOW_INSECURE_NON_LOOPBACK=true` is explicitly set.
+- Use insecure override only behind a trusted boundary (private VPC + service ACLs) and prefer TLS/mTLS.
 
 ## Profile Guarantees
 

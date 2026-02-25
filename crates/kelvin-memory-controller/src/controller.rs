@@ -780,15 +780,24 @@ mod tests {
     use crate::controller::{now_secs, MemoryController};
     use crate::provider::ProviderRegistry;
 
-    const TEST_PRIVATE_KEY_PEM: &str = r#"-----BEGIN PRIVATE KEY-----
-MC4CAQAwBQYDK2VwBCIEIHCRmiDXsIoP30rbpS6V729OHS4HzRnpgTwSC9zqETba
------END PRIVATE KEY-----
-"#;
+    const TEST_PRIVATE_KEY_DER_B64: &str =
+        "MC4CAQAwBQYDK2VwBCIEIHCRmiDXsIoP30rbpS6V729OHS4HzRnpgTwSC9zqETba";
+    const TEST_PUBLIC_KEY_DER_B64: &str =
+        "MCowBQYDK2VwAyEAHOzip8DiPZOcMhc+e66Wzd1ifXEFAP8DEGUzJFg/DBc=";
 
-    const TEST_PUBLIC_KEY_PEM: &str = r#"-----BEGIN PUBLIC KEY-----
-MCowBQYDK2VwAyEAHOzip8DiPZOcMhc+e66Wzd1ifXEFAP8DEGUzJFg/DBc=
------END PUBLIC KEY-----
-"#;
+    fn test_private_key_pem() -> String {
+        format!(
+            "-----{} PRIVATE KEY-----\n{}\n-----END PRIVATE KEY-----\n",
+            "BEGIN", TEST_PRIVATE_KEY_DER_B64
+        )
+    }
+
+    fn test_public_key_pem() -> String {
+        format!(
+            "-----{} PUBLIC KEY-----\n{}\n-----END PUBLIC KEY-----\n",
+            "BEGIN", TEST_PUBLIC_KEY_DER_B64
+        )
+    }
 
     fn sample_manifest(required_host_features: Vec<String>) -> MemoryModuleManifest {
         MemoryModuleManifest {
@@ -908,7 +917,8 @@ MCowBQYDK2VwAyEAHOzip8DiPZOcMhc+e66Wzd1ifXEFAP8DEGUzJFg/DBc=
 
     fn mint_context(jti: &str, request_id: &str, operation: MemoryOperation) -> RequestContext {
         let claims = claims(jti, operation);
-        let key = EncodingKey::from_ed_pem(TEST_PRIVATE_KEY_PEM.as_bytes()).expect("encoding");
+        let private_key = test_private_key_pem();
+        let key = EncodingKey::from_ed_pem(private_key.as_bytes()).expect("encoding");
         let token =
             jsonwebtoken::encode(&Header::new(JWT_ALGORITHM), &claims, &key).expect("encode token");
         RequestContext {
@@ -923,7 +933,7 @@ MCowBQYDK2VwAyEAHOzip8DiPZOcMhc+e66Wzd1ifXEFAP8DEGUzJFg/DBc=
 
     async fn controller_with_module(wasm: Vec<u8>) -> Arc<MemoryController> {
         let mut config = MemoryControllerConfig::default();
-        config.decoding_key_pem = TEST_PUBLIC_KEY_PEM.to_string();
+        config.decoding_key_pem = test_public_key_pem();
         config.default_timeout_ms = 150;
         config.default_fuel = 5_000;
         let controller = Arc::new(
@@ -1128,7 +1138,7 @@ MCowBQYDK2VwAyEAHOzip8DiPZOcMhc+e66Wzd1ifXEFAP8DEGUzJFg/DBc=
     #[tokio::test]
     async fn module_registration_rejects_missing_provider_feature() {
         let mut config = MemoryControllerConfig::default();
-        config.decoding_key_pem = TEST_PUBLIC_KEY_PEM.to_string();
+        config.decoding_key_pem = test_public_key_pem();
         let controller = MemoryController::new(config, ProviderRegistry::with_default_in_memory())
             .expect("controller");
 
@@ -1151,7 +1161,8 @@ MCowBQYDK2VwAyEAHOzip8DiPZOcMhc+e66Wzd1ifXEFAP8DEGUzJFg/DBc=
             aud: "wrong-audience".to_string(),
             ..claims("jti-wrong-aud", MemoryOperation::Read)
         };
-        let key = EncodingKey::from_ed_pem(TEST_PRIVATE_KEY_PEM.as_bytes()).expect("encoding");
+        let private_key = test_private_key_pem();
+        let key = EncodingKey::from_ed_pem(private_key.as_bytes()).expect("encoding");
         let token =
             jsonwebtoken::encode(&Header::new(JWT_ALGORITHM), &bad_claims, &key).expect("token");
         let result = controller
@@ -1174,17 +1185,15 @@ MCowBQYDK2VwAyEAHOzip8DiPZOcMhc+e66Wzd1ifXEFAP8DEGUzJFg/DBc=
     #[test]
     fn profile_config_validation_rejects_mismatched_build() {
         let mut cfg = MemoryControllerConfig::default();
-        cfg.decoding_key_pem = TEST_PUBLIC_KEY_PEM.to_string();
+        cfg.decoding_key_pem = test_public_key_pem();
         cfg.profile = crate::config::ProviderProfile::LinuxGpu;
         let result = MemoryController::new(cfg, ProviderRegistry::with_default_in_memory());
         assert!(result.is_err());
-        assert!(
-            result
-                .err()
-                .expect("error")
-                .to_string()
-                .contains("requires provider_vector_nvidia")
-        );
+        assert!(result
+            .err()
+            .expect("error")
+            .to_string()
+            .contains("requires provider_vector_nvidia"));
     }
 
     #[tokio::test]
@@ -1196,7 +1205,8 @@ MCowBQYDK2VwAyEAHOzip8DiPZOcMhc+e66Wzd1ifXEFAP8DEGUzJFg/DBc=
             nbf: now.saturating_sub(180),
             ..claims("jti-expired", MemoryOperation::Read)
         };
-        let key = EncodingKey::from_ed_pem(TEST_PRIVATE_KEY_PEM.as_bytes()).expect("encoding");
+        let private_key = test_private_key_pem();
+        let key = EncodingKey::from_ed_pem(private_key.as_bytes()).expect("encoding");
         let token =
             jsonwebtoken::encode(&Header::new(JWT_ALGORITHM), &expired, &key).expect("token");
         let result = controller
@@ -1223,7 +1233,8 @@ MCowBQYDK2VwAyEAHOzip8DiPZOcMhc+e66Wzd1ifXEFAP8DEGUzJFg/DBc=
             MemoryOperation::Read,
             vec!["memory_crud".to_string()],
         );
-        let key = EncodingKey::from_ed_pem(TEST_PRIVATE_KEY_PEM.as_bytes()).expect("encoding");
+        let private_key = test_private_key_pem();
+        let key = EncodingKey::from_ed_pem(private_key.as_bytes()).expect("encoding");
         let token =
             jsonwebtoken::encode(&Header::new(JWT_ALGORITHM), &restricted, &key).expect("token");
         let result = controller
