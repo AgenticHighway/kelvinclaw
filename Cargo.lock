@@ -1112,10 +1112,8 @@ dependencies = [
  "kelvin-core",
  "kelvin-memory",
  "kelvin-memory-client",
- "kelvin-wasm",
  "serde_json",
  "tokio",
- "wat",
 ]
 
 [[package]]

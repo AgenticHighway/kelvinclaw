@@ -36,6 +36,14 @@ Optional package file:
 
 ## Install Command
 
+Install Kelvin's first-party CLI plugin package:
+
+```bash
+scripts/install-kelvin-cli-plugin.sh
+```
+
+Generic package install:
+
 ```bash
 scripts/plugin-install.sh --package ./dist/acme.echo-1.0.0.tar.gz
 ```
@@ -122,6 +130,7 @@ scripts/plugin-sign.sh \
 Reference template:
 
 - `trusted_publishers.example.json`
+- `fixtures/trusted_publishers.kelvin.json` (bundled Kelvin publisher key)
 
 ## Verification
 

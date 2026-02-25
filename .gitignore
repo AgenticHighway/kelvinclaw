@@ -19,3 +19,4 @@ trusted_publishers.json
 local_docs/*
 skills/*/Cargo.lock
 .devcontainer/*
+.kelvin/
