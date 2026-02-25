@@ -16,7 +16,20 @@ require_cmd() {
 
 require_cmd jq
 require_cmd tar
-require_cmd shasum
+
+sha256_file() {
+  local file="$1"
+  if command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "${file}" | awk '{print $1}'
+    return
+  fi
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "${file}" | awk '{print $1}'
+    return
+  fi
+  echo "Missing required command: shasum or sha256sum" >&2
+  exit 1
+}
 
 WORK_DIR="$(mktemp -d)"
 cleanup() {
@@ -34,7 +47,7 @@ cat > "${PAYLOAD_DIR}/echo.wasm" <<'WASM'
 fake-wasm-bytes
 WASM
 
-SHA="$(shasum -a 256 "${PAYLOAD_DIR}/echo.wasm" | awk '{print $1}')"
+SHA="$(sha256_file "${PAYLOAD_DIR}/echo.wasm")"
 cat > "${PACKAGE_DIR}/plugin.json" <<JSON
 {
   "id": "acme.echo",
@@ -103,7 +116,7 @@ mkdir -p "${PACKAGE_V2_DIR}/payload"
 cat > "${PACKAGE_V2_DIR}/payload/echo.wasm" <<'WASM'
 fake-wasm-bytes-v2
 WASM
-SHA_V2="$(shasum -a 256 "${PACKAGE_V2_DIR}/payload/echo.wasm" | awk '{print $1}')"
+SHA_V2="$(sha256_file "${PACKAGE_V2_DIR}/payload/echo.wasm")"
 cat > "${PACKAGE_V2_DIR}/plugin.json" <<JSON
 {
   "id": "acme.echo",
