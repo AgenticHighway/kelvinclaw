@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "${ROOT_DIR}/scripts/lib/rust-toolchain-path.sh"
 PROMPT="${1:-hello kelvin}"
 TIMEOUT_MS="${KELVIN_TRY_TIMEOUT_MS:-5000}"
 MODE="${KELVIN_TRY_MODE:-auto}" # auto | local | docker
@@ -9,6 +10,7 @@ TARGET_DIR="${KELVIN_TRY_TARGET_DIR:-${ROOT_DIR}/target/try-kelvin-cli}"
 PLUGIN_HOME="${KELVIN_PLUGIN_HOME:-${ROOT_DIR}/.kelvin/plugins}"
 TRUST_POLICY_PATH="${KELVIN_TRUST_POLICY_PATH:-${ROOT_DIR}/.kelvin/trusted_publishers.json}"
 DOCKER_IMAGE="${KELVIN_TRY_DOCKER_IMAGE:-rust:1.93.1-bookworm}"
+PLUGIN_INDEX_URL="${KELVIN_PLUGIN_INDEX_URL:-https://raw.githubusercontent.com/TheKelvinProject/kelvinclaw-plugins/main/index.json}"
 
 ensure_cli_plugin() {
   echo "[try-kelvin] ensuring kelvin_cli WASM plugin is installed"
@@ -25,6 +27,7 @@ ensure_cli_plugin_docker() {
     -e DEBIAN_FRONTEND=noninteractive \
     -e KELVIN_PLUGIN_HOME="/work/.kelvin/plugins" \
     -e KELVIN_TRUST_POLICY_PATH="/work/.kelvin/trusted_publishers.json" \
+    -e KELVIN_PLUGIN_INDEX_URL="${PLUGIN_INDEX_URL}" \
     -v "${ROOT_DIR}:/work" \
     -w /work \
     "${DOCKER_IMAGE}" \
@@ -46,6 +49,7 @@ run_local() {
   cd "${ROOT_DIR}"
   KELVIN_PLUGIN_HOME="${PLUGIN_HOME}" \
   KELVIN_TRUST_POLICY_PATH="${TRUST_POLICY_PATH}" \
+  KELVIN_PLUGIN_INDEX_URL="${PLUGIN_INDEX_URL}" \
   CARGO_TARGET_DIR="${TARGET_DIR}" \
     cargo run -p kelvin-host -- \
       --prompt "${PROMPT}" \
@@ -61,6 +65,7 @@ run_docker() {
     -e KELVIN_TRY_TARGET_DIR="/work/target/try-kelvin-cli" \
     -e KELVIN_PLUGIN_HOME="/work/.kelvin/plugins" \
     -e KELVIN_TRUST_POLICY_PATH="/work/.kelvin/trusted_publishers.json" \
+    -e KELVIN_PLUGIN_INDEX_URL="${PLUGIN_INDEX_URL}" \
     -v "${ROOT_DIR}:/work" \
     -w /work \
     "${DOCKER_IMAGE}" \
@@ -68,7 +73,7 @@ run_docker() {
 }
 
 if [[ "${MODE}" == "local" ]]; then
-  if ! command -v cargo >/dev/null 2>&1; then
+  if ! ensure_rust_toolchain_path || ! command -v cargo >/dev/null 2>&1; then
     echo "[try-kelvin] error: cargo not found and KELVIN_TRY_MODE=local was requested" >&2
     exit 1
   fi
@@ -85,7 +90,7 @@ if [[ "${MODE}" == "docker" ]]; then
   exit 0
 fi
 
-if command -v cargo >/dev/null 2>&1; then
+if ensure_rust_toolchain_path && command -v cargo >/dev/null 2>&1; then
   run_local
 elif command -v docker >/dev/null 2>&1; then
   run_docker

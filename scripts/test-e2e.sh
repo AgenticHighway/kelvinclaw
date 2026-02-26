@@ -2,6 +2,12 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "${ROOT_DIR}/scripts/lib/rust-toolchain-path.sh"
+
+if ! ensure_rust_toolchain_path; then
+  echo "[test-e2e] missing required commands: cargo/rustup" >&2
+  exit 1
+fi
 
 cd "${ROOT_DIR}"
 echo "[test-e2e] running Kelvin brain/runtime e2e suites"

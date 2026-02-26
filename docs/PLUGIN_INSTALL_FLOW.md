@@ -60,8 +60,12 @@ scripts/plugin-install.sh --package ./dist/acme.echo-1.0.0.tar.gz
 Install from remote plugin index:
 
 ```bash
-scripts/plugin-index-install.sh --index-url https://example.com/kelvin/plugins/index.json --plugin kelvin.cli
+scripts/plugin-index-install.sh --plugin kelvin.cli
 ```
+
+Default index URL:
+
+- `https://raw.githubusercontent.com/TheKelvinProject/kelvinclaw-plugins/main/index.json`
 
 Default install location:
 
@@ -145,7 +149,7 @@ scripts/plugin-sign.sh \
 Reference template:
 
 - `trusted_publishers.example.json`
-- `plugins/trusted_publishers.kelvin.json` (bundled Kelvin publisher key)
+- `https://raw.githubusercontent.com/TheKelvinProject/kelvinclaw-plugins/main/trusted_publishers.kelvin.json`
 
 ## Verification
 

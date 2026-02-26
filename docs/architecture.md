@@ -148,7 +148,7 @@ This keeps plugin execution out of Kelvin root code compilation while preserving
 
 First-party CLI plugin path:
 
-- `plugins/kelvin-cli` is packaged/installed by `scripts/install-kelvin-cli-plugin.sh`.
+- installable first-party plugin artifacts are hosted in `TheKelvinProject/kelvinclaw-plugins`.
 - `apps/kelvin-host` calls `kelvin-sdk`, which requires installed tool `kelvin_cli` before each run.
 
 ## Execution Flow

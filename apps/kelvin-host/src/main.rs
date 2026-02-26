@@ -150,7 +150,7 @@ async fn main() {
                     eprintln!("error: {err}");
                     if err.to_string().contains("kelvin_cli") {
                         eprintln!(
-                            "hint: install the bundled CLI plugin with scripts/install-kelvin-cli-plugin.sh"
+                            "hint: install the CLI plugin with scripts/install-kelvin-cli-plugin.sh"
                         );
                     }
                     if err.to_string().contains("OPENAI_API_KEY") {

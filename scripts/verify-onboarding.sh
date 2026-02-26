@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "${ROOT_DIR}/scripts/lib/rust-toolchain-path.sh"
 TRACK="all"
 PROMPT_BASE="${KELVIN_VERIFY_PROMPT:-kelvin onboarding check}"
 TARGET_DIR="${KELVIN_VERIFY_TARGET_DIR:-${ROOT_DIR}/target/verify-onboarding}"
@@ -89,6 +90,10 @@ run_beginner() {
 
 run_rust() {
   echo "[verify-onboarding] track=rust"
+  if ! ensure_rust_toolchain_path; then
+    echo "[verify-onboarding] missing required commands: cargo/rustup" >&2
+    exit 1
+  fi
   require_cmd cargo
   (
     cd "${ROOT_DIR}"
@@ -109,6 +114,10 @@ run_rust() {
 
 run_wasm() {
   echo "[verify-onboarding] track=wasm"
+  if ! ensure_rust_toolchain_path; then
+    echo "[verify-onboarding] missing required commands: cargo/rustup" >&2
+    exit 1
+  fi
   require_cmd cargo
   require_cmd rustup
   if ! rustup target list --installed | grep -qx 'wasm32-unknown-unknown'; then

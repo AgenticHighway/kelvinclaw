@@ -30,7 +30,7 @@ A literal `OVERVIEW.md` was not present in the cloned `KelvinClaw` repository. T
 - `crates/kelvin-brain`: KelvinClaw-style orchestration loop (`KelvinBrain`).
 - `crates/kelvin-wasm`: trusted native executive for untrusted WASM skill execution.
 - `apps/kelvin-host`: active runnable composition layer for SDK orchestration.
-- `plugins/kelvin-cli`: first-party WASM plugin package source (`kelvin_cli`).
+- first-party installable plugin artifacts live in `TheKelvinProject/kelvinclaw-plugins`.
 
 ## Minimal Core Governance
 

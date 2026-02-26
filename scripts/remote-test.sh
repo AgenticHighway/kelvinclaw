@@ -240,10 +240,10 @@ fi
 
 if [[ "${MODE}" == "native" ]]; then
   echo "[remote-test] running native cargo test"
-  ssh "${HOST}" bash -s -- "${REMOTE_DIR}" "${EXTRA_CARGO_ARGS}" <<'EOF'
+ssh "${HOST}" bash -s -- "${REMOTE_DIR}" "${EXTRA_CARGO_ARGS}" <<'EOF'
 set -euo pipefail
 remote_dir="$1"
-extra_cargo_args="$2"
+extra_cargo_args="${2:-}"
 remote_dir="${remote_dir/#\~/$HOME}"
 source "$HOME/.cargo/env"
 cd "${remote_dir}"
@@ -255,11 +255,11 @@ cargo test --workspace "${extra_args[@]}"
 EOF
 else
   echo "[remote-test] running cargo test in Docker"
-  ssh "${HOST}" bash -s -- "${REMOTE_DIR}" "${DOCKER_IMAGE}" "${EXTRA_CARGO_ARGS}" <<'EOF'
+ssh "${HOST}" bash -s -- "${REMOTE_DIR}" "${DOCKER_IMAGE}" "${EXTRA_CARGO_ARGS}" <<'EOF'
 set -euo pipefail
 remote_dir="$1"
 docker_image="$2"
-extra_cargo_args="$3"
+extra_cargo_args="${3:-}"
 remote_dir="${remote_dir/#\~/$HOME}"
 cd "${remote_dir}"
 extra_args=()
@@ -267,7 +267,7 @@ if [[ -n "${extra_cargo_args}" ]]; then
   read -r -a extra_args <<< "${extra_cargo_args}"
 fi
 docker run --rm -v "${remote_dir}:/work" -w /work "${docker_image}" \
-  cargo test --workspace "${extra_args[@]}"
+  /usr/local/cargo/bin/cargo test --workspace "${extra_args[@]}"
 EOF
 fi
 
