@@ -13,8 +13,9 @@ What this does:
 
 - uses local `cargo` if installed
 - otherwise falls back to Docker (`rust:1.93.1-bookworm` by default)
-- installs/updates the first-party `kelvin_cli` WASM plugin package into `./.kelvin/plugins`
+- installs/updates the first-party `kelvin_cli` WASM plugin package from the plugin index into `./.kelvin/plugins`
 - runs `apps/kelvin-host` with a prompt
+- auto-bootstraps Rust PATH (`$HOME/.cargo/bin`, `/usr/local/cargo/bin`) before cargo/rustup checks
 
 Expected output includes:
 

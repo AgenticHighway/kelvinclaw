@@ -32,7 +32,7 @@ scripts/verify-onboarding.sh --track wasm
 
 - `apps/kelvin-host`: thin trusted host executable
 - `crates/*`: core contracts, runtime, SDK, memory API/client/controller, and execution engine
-- `plugins/`: installable plugin package sources (manifest/signature/payload)
+- first-party plugin distribution repo: `TheKelvinProject/kelvinclaw-plugins`
 - `examples/`: sample source crates for developers
 
 ## Architecture
@@ -173,7 +173,7 @@ scripts/try-kelvin.sh "hello"
 For end users, run the minimal runtime container and complete first-time setup interactively:
 
 ```bash
-scripts/run-runtime-container.sh --index-url https://example.com/kelvin/plugins/index.json
+scripts/run-runtime-container.sh
 ```
 
 This opens a setup wizard in-container, installs required plugins from the remote plugin index,
@@ -231,6 +231,10 @@ Install Kelvin's first-party CLI plugin package:
 ```bash
 scripts/install-kelvin-cli-plugin.sh
 ```
+
+Default index:
+
+- `https://raw.githubusercontent.com/TheKelvinProject/kelvinclaw-plugins/main/index.json`
 
 Install a prebuilt plugin package:
 

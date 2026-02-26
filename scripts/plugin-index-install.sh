@@ -2,10 +2,11 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+DEFAULT_INDEX_URL="https://raw.githubusercontent.com/TheKelvinProject/kelvinclaw-plugins/main/index.json"
 PLUGIN_HOME_DEFAULT="${HOME}/.kelvinclaw/plugins"
 TRUST_POLICY_DEFAULT="${HOME}/.kelvinclaw/trusted_publishers.json"
 
-INDEX_URL="${KELVIN_PLUGIN_INDEX_URL:-}"
+INDEX_URL="${KELVIN_PLUGIN_INDEX_URL:-${DEFAULT_INDEX_URL}}"
 PLUGIN_ID=""
 PLUGIN_VERSION=""
 PLUGIN_HOME="${KELVIN_PLUGIN_HOME:-${PLUGIN_HOME_DEFAULT}}"
@@ -14,15 +15,16 @@ FORCE="0"
 
 usage() {
   cat <<'USAGE'
-Usage: scripts/plugin-index-install.sh --index-url <url> --plugin <id> [options]
+Usage: scripts/plugin-index-install.sh --plugin <id> [options]
 
 Install a plugin package from a remote plugin index (no local Rust compilation).
 
 Required options:
-  --index-url <url>     Plugin index JSON URL
   --plugin <id>         Plugin id from index (example: kelvin.cli)
 
 Optional:
+  --index-url <url>     Plugin index JSON URL
+                        (default: $KELVIN_PLUGIN_INDEX_URL or kelvinclaw-plugins main index)
   --version <version>   Version to install (defaults to highest semver for id)
   --plugin-home <dir>   Install root (default: $KELVIN_PLUGIN_HOME or ~/.kelvinclaw/plugins)
   --trust-policy-path <path>
@@ -110,10 +112,6 @@ require_cmd curl
 require_cmd jq
 require_cmd tar
 
-if [[ -z "${INDEX_URL}" ]]; then
-  echo "Missing --index-url <url>" >&2
-  exit 1
-fi
 if [[ -z "${PLUGIN_ID}" ]]; then
   echo "Missing --plugin <id>" >&2
   exit 1

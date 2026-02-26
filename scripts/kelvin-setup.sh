@@ -2,14 +2,14 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+DEFAULT_INDEX_URL="https://raw.githubusercontent.com/TheKelvinProject/kelvinclaw-plugins/main/index.json"
 KELVIN_HOME="${KELVIN_HOME:-/kelvin}"
 PLUGIN_HOME="${KELVIN_PLUGIN_HOME:-${KELVIN_HOME}/plugins}"
 TRUST_POLICY_PATH="${KELVIN_TRUST_POLICY_PATH:-${KELVIN_HOME}/trusted_publishers.json}"
 SETUP_MARKER="${KELVIN_HOME}/.setup_complete"
 
-INTERACTIVE="1"
 FORCE="0"
-INDEX_URL="${KELVIN_PLUGIN_INDEX_URL:-}"
+INDEX_URL="${KELVIN_PLUGIN_INDEX_URL:-${DEFAULT_INDEX_URL}}"
 
 usage() {
   cat <<'USAGE'
@@ -36,7 +36,6 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --non-interactive)
-      INTERACTIVE="0"
       shift
       ;;
     -h|--help)
@@ -87,17 +86,8 @@ CLI_PLUGIN_DIR="${KELVIN_PLUGIN_HOME}/kelvin.cli/current"
 if [[ -d "${CLI_PLUGIN_DIR}" ]]; then
   echo "[kelvin-setup] kelvin.cli already installed: ${CLI_PLUGIN_DIR}"
 else
-  if [[ -z "${INDEX_URL}" && "${INTERACTIVE}" == "1" ]]; then
-    read -r -p "Enter plugin index URL for Kelvin plugins: " INDEX_URL
-  fi
-
-  if [[ -z "${INDEX_URL}" ]]; then
-    echo "[kelvin-setup] missing plugin index URL; cannot install required plugin kelvin.cli" >&2
-    echo "[kelvin-setup] rerun with --index-url <url> or set KELVIN_PLUGIN_INDEX_URL" >&2
-    exit 1
-  fi
-
   echo "[kelvin-setup] installing required plugin: kelvin.cli"
+  echo "[kelvin-setup] using plugin index: ${INDEX_URL}"
   "${ROOT_DIR}/scripts/plugin-index-install.sh" \
     --index-url "${INDEX_URL}" \
     --plugin "kelvin.cli" \

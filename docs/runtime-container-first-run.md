@@ -11,7 +11,7 @@ This flow is for end users who should not need Rust or `cargo`.
 ## Build and Run Local Runtime Image
 
 ```bash
-scripts/run-runtime-container.sh --index-url https://example.com/kelvin/plugins/index.json
+scripts/run-runtime-container.sh
 ```
 
 What this does:
@@ -19,7 +19,7 @@ What this does:
 - builds `docker/Dockerfile.runtime` (minimal runtime image)
 - starts an interactive container
 - runs `scripts/kelvin-setup.sh` automatically
-- installs required plugin `kelvin.cli` from the provided index URL
+- installs required plugin `kelvin.cli` from the configured index URL (default or override)
 
 Container defaults:
 
@@ -43,8 +43,12 @@ kelvin-host --prompt "What is KelvinClaw?" --timeout-ms 3000
 ## Non-Interactive Setup
 
 ```bash
-scripts/kelvin-setup.sh --index-url https://example.com/kelvin/plugins/index.json --non-interactive
+scripts/kelvin-setup.sh --non-interactive
 ```
+
+Default plugin index URL:
+
+- `https://raw.githubusercontent.com/TheKelvinProject/kelvinclaw-plugins/main/index.json`
 
 ## Security Notes
 

@@ -26,7 +26,6 @@ COPY scripts/plugin-install.sh /opt/kelvin/scripts/plugin-install.sh
 COPY scripts/plugin-index-install.sh /opt/kelvin/scripts/plugin-index-install.sh
 COPY scripts/kelvin-setup.sh /opt/kelvin/scripts/kelvin-setup.sh
 COPY scripts/runtime-entrypoint.sh /opt/kelvin/scripts/runtime-entrypoint.sh
-COPY plugins/trusted_publishers.kelvin.json /opt/kelvin/plugins/trusted_publishers.kelvin.json
 
 RUN chmod +x /usr/local/bin/kelvin-host /opt/kelvin/scripts/*.sh
 

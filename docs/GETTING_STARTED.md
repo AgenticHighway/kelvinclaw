@@ -17,7 +17,7 @@ Steps:
 ```bash
 git clone <repo-url>
 cd kelvinclaw
-scripts/run-runtime-container.sh --index-url https://example.com/kelvin/plugins/index.json
+scripts/run-runtime-container.sh
 ```
 
 Verification:
@@ -31,6 +31,10 @@ Expected result:
 - Interactive setup wizard runs on container start.
 - Required `kelvin.cli` plugin is installed from plugin index.
 - Running `kelvin-host --prompt "hello" --timeout-ms 3000` works without local Rust setup.
+
+Default plugin index URL:
+
+- `https://raw.githubusercontent.com/TheKelvinProject/kelvinclaw-plugins/main/index.json`
 
 ## Track 2: Rust Developer (Runtime Contributor)
 

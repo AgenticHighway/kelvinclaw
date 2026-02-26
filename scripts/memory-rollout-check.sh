@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if ! command -v cargo >/dev/null 2>&1; then
-  echo "error: cargo is required" >&2
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "${ROOT_DIR}/scripts/lib/rust-toolchain-path.sh"
+
+if ! ensure_rust_toolchain_path; then
+  echo "error: cargo/rustup are required" >&2
   exit 1
 fi
 
