@@ -57,6 +57,12 @@ Generic package install:
 scripts/plugin-install.sh --package ./dist/acme.echo-1.0.0.tar.gz
 ```
 
+Install from remote plugin index:
+
+```bash
+scripts/plugin-index-install.sh --index-url https://example.com/kelvin/plugins/index.json --plugin kelvin.cli
+```
+
 Default install location:
 
 - `~/.kelvinclaw/plugins/<plugin_id>/<version>/`
