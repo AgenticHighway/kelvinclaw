@@ -17,7 +17,7 @@ Steps:
 ```bash
 git clone <repo-url>
 cd kelvinclaw
-KELVIN_TRY_MODE=docker scripts/try-kelvin.sh "hello"
+scripts/run-runtime-container.sh --index-url https://example.com/kelvin/plugins/index.json
 ```
 
 Verification:
@@ -28,8 +28,9 @@ scripts/verify-onboarding.sh --track beginner
 
 Expected result:
 
-- Kelvin starts and prints lifecycle events.
-- Output includes `payload: Echo: ...`.
+- Interactive setup wizard runs on container start.
+- Required `kelvin.cli` plugin is installed from plugin index.
+- Running `kelvin-host --prompt "hello" --timeout-ms 3000` works without local Rust setup.
 
 ## Track 2: Rust Developer (Runtime Contributor)
 

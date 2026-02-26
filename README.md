@@ -59,6 +59,8 @@ See:
 - [docs/memory-controller-deployment-profiles.md](docs/memory-controller-deployment-profiles.md)
 - [docs/model-plugin-abi.md](docs/model-plugin-abi.md)
 - [docs/openai-plugin-install-and-run.md](docs/openai-plugin-install-and-run.md)
+- [docs/runtime-container-first-run.md](docs/runtime-container-first-run.md)
+- [docs/plugin-index-schema.md](docs/plugin-index-schema.md)
 
 Workspace crates:
 
@@ -165,6 +167,28 @@ Quick run:
 ```bash
 scripts/try-kelvin.sh "hello"
 ```
+
+## Runtime Container (No Rust Toolchain Required)
+
+For end users, run the minimal runtime container and complete first-time setup interactively:
+
+```bash
+scripts/run-runtime-container.sh --index-url https://example.com/kelvin/plugins/index.json
+```
+
+This opens a setup wizard in-container, installs required plugins from the remote plugin index,
+and prepares a persistent runtime home under `.kelvin/`.
+
+After setup:
+
+```bash
+kelvin-host --prompt "What is KelvinClaw?" --timeout-ms 3000
+```
+
+Reference docs:
+
+- [docs/runtime-container-first-run.md](docs/runtime-container-first-run.md)
+- [docs/plugin-index-schema.md](docs/plugin-index-schema.md)
 
 Tool-trigger pattern for the default model provider:
 

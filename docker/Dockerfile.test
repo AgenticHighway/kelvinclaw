@@ -8,6 +8,7 @@ ARG CARGO_AUDIT_VERSION=0.22.1
 ARG CARGO_OUTDATED_VERSION=0.17.0
 WORKDIR /work
 
+RUN apt-get update && apt-get install -y --no-install-recommends jq && rm -rf /var/lib/apt/lists/*
 RUN rustup component add rustfmt clippy
 RUN cargo install --locked cargo-chef --version "${CARGO_CHEF_VERSION}"
 RUN cargo install --locked cargo-audit --version "${CARGO_AUDIT_VERSION}"
