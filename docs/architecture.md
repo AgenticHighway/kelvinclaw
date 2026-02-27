@@ -221,11 +221,13 @@ Implemented:
 - swappable backends and adapters
 - remote test workflow
 - dynamic installed plugin loading with trust/scoping/operational guardrails
+- websocket gateway control plane (`apps/kelvin-gateway`) with connect/auth/idempotent run submission
+- SDK model failover chains with bounded retries and fail-closed non-retryable errors
 
 Not yet implemented:
 
-- websocket gateway server/protocol
-- provider-specific auth/failover trees
+- full channel integrations and operator UI surfaces
+- provider credential profile routing trees
 - full compaction/retry pipelines
 
 ## Operational Notes
