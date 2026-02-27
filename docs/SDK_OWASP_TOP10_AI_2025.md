@@ -62,3 +62,15 @@ Memory Controller OWASP suite:
 This adds OWASP-oriented checks for delegation-token misuse, context tampering,
 capability overreach, request bounds enforcement, provider-feature gating, and
 deterministic query ordering in the memory data plane.
+
+## Tool Sandbox Extension
+
+SDK tool sandbox OWASP suite:
+
+- `crates/kelvin-sdk/tests/tool_sandbox_owasp_top10_ai_2025.rs`
+
+Coverage includes:
+
+- traversal-based prompt injection rejection (`fs_safe_read`)
+- network egress host allowlist enforcement (`web_fetch_safe`)
+- bounded response-size controls for untrusted fetch payloads

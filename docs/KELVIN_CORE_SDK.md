@@ -78,6 +78,20 @@ Source: `crates/kelvin-core/src/sdk.rs`
 
 Source: `crates/kelvin-core/src/sdk.rs`
 
+## 6.1 First-Party Tool Pack (SDK Plugin Lane)
+
+`kelvin-sdk` ships a first-party default tool pack registered through the SDK plugin path:
+
+- `fs_safe_read`
+- `fs_safe_write`
+- `web_fetch_safe`
+- `schedule_cron`
+- `session_tools`
+
+Sensitive operations require explicit per-call approvals and are bounded by scope/allowlist policy.
+
+Source: `crates/kelvin-sdk/src/toolpack.rs`
+
 ## 7. Conformance Tests
 
 Current SDK tests cover:
@@ -123,6 +137,7 @@ scripts/test-sdk.sh
 - package discovery from plugin home (`<plugin_id>/<version>/plugin.json`)
 - manifest integrity checks (`entrypoint_sha256`) and optional mandatory signatures (`plugin.sig`)
 - publisher trust policy (`PublisherTrustPolicy`) with Ed25519 keys
+- publisher revocation checks and plugin->publisher pinning checks
 - runtime capability scopes for filesystem/network access
 - per-tool operational controls (timeout, retries, rate limit, circuit breaker)
 

@@ -1,4 +1,4 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::env;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
@@ -143,6 +143,8 @@ impl Default for OperationalControls {
 pub struct PublisherTrustPolicy {
     pub require_signature: bool,
     trusted_publishers: HashMap<String, VerifyingKey>,
+    revoked_publishers: HashSet<String>,
+    pinned_plugin_publishers: HashMap<String, String>,
 }
 
 impl Default for PublisherTrustPolicy {
@@ -150,6 +152,8 @@ impl Default for PublisherTrustPolicy {
         Self {
             require_signature: true,
             trusted_publishers: HashMap::new(),
+            revoked_publishers: HashSet::new(),
+            pinned_plugin_publishers: HashMap::new(),
         }
     }
 }
@@ -171,6 +175,17 @@ impl PublisherTrustPolicy {
         Ok(self)
     }
 
+    pub fn with_revoked_publisher(mut self, publisher_id: &str) -> Self {
+        self.revoked_publishers.insert(publisher_id.to_string());
+        self
+    }
+
+    pub fn with_pinned_plugin_publisher(mut self, plugin_id: &str, publisher_id: &str) -> Self {
+        self.pinned_plugin_publishers
+            .insert(plugin_id.to_string(), publisher_id.to_string());
+        self
+    }
+
     pub fn from_json_file(path: impl AsRef<Path>) -> KelvinResult<Self> {
         let text = fs::read_to_string(path.as_ref())?;
         let parsed: PublisherTrustPolicyFile = serde_json::from_str(&text).map_err(|err| {
@@ -180,10 +195,27 @@ impl PublisherTrustPolicy {
         let mut policy = Self {
             require_signature: parsed.require_signature.unwrap_or(true),
             trusted_publishers: HashMap::new(),
+            revoked_publishers: HashSet::new(),
+            pinned_plugin_publishers: HashMap::new(),
         };
         for publisher in parsed.publishers {
             let key = parse_public_key(&publisher.ed25519_public_key)?;
             policy.trusted_publishers.insert(publisher.id, key);
+        }
+        for publisher_id in parsed.revoked_publishers {
+            let cleaned = publisher_id.trim();
+            if !cleaned.is_empty() {
+                policy.revoked_publishers.insert(cleaned.to_string());
+            }
+        }
+        for (plugin_id, publisher_id) in parsed.pinned_plugin_publishers {
+            let plugin_id = plugin_id.trim();
+            let publisher_id = publisher_id.trim();
+            if !plugin_id.is_empty() && !publisher_id.is_empty() {
+                policy
+                    .pinned_plugin_publishers
+                    .insert(plugin_id.to_string(), publisher_id.to_string());
+            }
         }
         Ok(policy)
     }
@@ -196,6 +228,33 @@ impl PublisherTrustPolicy {
     ) -> KelvinResult<()> {
         let signature_path = version_dir.join("plugin.sig");
         let has_signature = signature_path.is_file();
+
+        if let Some(expected_publisher) = self.pinned_plugin_publishers.get(&manifest.id) {
+            match manifest.publisher.as_deref() {
+                Some(actual) if actual == expected_publisher => {}
+                Some(actual) => {
+                    return Err(KelvinError::InvalidInput(format!(
+                        "plugin '{}' publisher '{}' does not match pinned publisher '{}'",
+                        manifest.id, actual, expected_publisher
+                    )));
+                }
+                None => {
+                    return Err(KelvinError::InvalidInput(format!(
+                        "plugin '{}' is missing publisher id required by pinning policy",
+                        manifest.id
+                    )));
+                }
+            }
+        }
+
+        if let Some(publisher) = manifest.publisher.as_deref() {
+            if self.revoked_publishers.contains(publisher) {
+                return Err(KelvinError::InvalidInput(format!(
+                    "plugin '{}' publisher '{}' is revoked",
+                    manifest.id, publisher
+                )));
+            }
+        }
 
         if !self.require_signature && !has_signature {
             return Ok(());
@@ -252,6 +311,10 @@ struct PublisherTrustPolicyFile {
     require_signature: Option<bool>,
     #[serde(default)]
     publishers: Vec<TrustedPublisherEntry>,
+    #[serde(default)]
+    revoked_publishers: Vec<String>,
+    #[serde(default)]
+    pinned_plugin_publishers: HashMap<String, String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -1864,5 +1927,81 @@ mod tests {
             .expect("model registry entry");
         assert_eq!(provider.provider_name(), "openai");
         assert_eq!(provider.model_name(), "gpt-4.1-mini");
+    }
+
+    #[test]
+    fn rejects_revoked_publisher_even_with_valid_signature() {
+        let plugin_home = unique_temp_dir("revoked-publisher");
+        let signing_key = SigningKey::from_bytes(&[11_u8; 32]);
+        let public_key = base64::engine::general_purpose::STANDARD
+            .encode(signing_key.verifying_key().to_bytes());
+
+        write_installed_plugin(
+            &plugin_home,
+            "acme.echo",
+            "1.0.0",
+            default_manifest("acme.echo", "1.0.0"),
+            r#"
+            (module
+              (func (export "run") (result i32)
+                i32.const 0
+              )
+            )
+            "#,
+            Some(&signing_key),
+        );
+
+        let trust_policy = PublisherTrustPolicy::default()
+            .with_publisher_key("acme", &public_key)
+            .expect("publisher key")
+            .with_revoked_publisher("acme");
+        let err = match load_installed_tool_plugins(InstalledPluginLoaderConfig {
+            plugin_home,
+            core_version: "0.1.0".to_string(),
+            security_policy: PluginSecurityPolicy::default(),
+            trust_policy,
+        }) {
+            Ok(_) => panic!("revoked publisher should fail"),
+            Err(err) => err,
+        };
+        assert!(err.to_string().contains("is revoked"));
+    }
+
+    #[test]
+    fn rejects_publisher_that_does_not_match_pin_policy() {
+        let plugin_home = unique_temp_dir("pinned-publisher");
+        let signing_key = SigningKey::from_bytes(&[12_u8; 32]);
+        let public_key = base64::engine::general_purpose::STANDARD
+            .encode(signing_key.verifying_key().to_bytes());
+
+        write_installed_plugin(
+            &plugin_home,
+            "acme.echo",
+            "1.0.0",
+            default_manifest("acme.echo", "1.0.0"),
+            r#"
+            (module
+              (func (export "run") (result i32)
+                i32.const 0
+              )
+            )
+            "#,
+            Some(&signing_key),
+        );
+
+        let trust_policy = PublisherTrustPolicy::default()
+            .with_publisher_key("acme", &public_key)
+            .expect("publisher key")
+            .with_pinned_plugin_publisher("acme.echo", "kelvin");
+        let err = match load_installed_tool_plugins(InstalledPluginLoaderConfig {
+            plugin_home,
+            core_version: "0.1.0".to_string(),
+            security_policy: PluginSecurityPolicy::default(),
+            trust_policy,
+        }) {
+            Ok(_) => panic!("pinned publisher mismatch should fail"),
+            Err(err) => err,
+        };
+        assert!(err.to_string().contains("does not match pinned publisher"));
     }
 }

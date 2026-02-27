@@ -21,7 +21,9 @@ Default index URL:
       "version": "0.1.0",
       "package_url": "https://raw.githubusercontent.com/TheKelvinProject/kelvinclaw-plugins/main/packages/kelvin.cli/0.1.0/kelvin.cli-0.1.0.tar.gz",
       "sha256": "7db6...<64 hex chars>...",
-      "trust_policy_url": "https://raw.githubusercontent.com/TheKelvinProject/kelvinclaw-plugins/main/trusted_publishers.kelvin.json"
+      "trust_policy_url": "https://raw.githubusercontent.com/TheKelvinProject/kelvinclaw-plugins/main/trusted_publishers.kelvin.json",
+      "quality_tier": "signed_trusted",
+      "tags": ["first_party", "cli"]
     }
   ]
 }
@@ -37,12 +39,15 @@ Field requirements:
   - `package_url`: required
   - `sha256`: required (fail-closed if missing/mismatch)
   - `trust_policy_url`: optional
+  - `quality_tier`: optional (`unsigned_local`, `signed_community`, `signed_trusted`)
+  - `tags`: optional string array for discovery/category
 
 Selection behavior:
 
 - `--plugin <id>` required
 - `--version <version>` optional
 - if version is omitted, installer chooses the highest version (string-sort descending)
+- optional minimum quality gate via `--min-quality-tier` or `KELVIN_PLUGIN_MIN_QUALITY_TIER`
 
 ## Trust Policy
 
@@ -52,3 +57,13 @@ If `trust_policy_url` is present, installer fetches and merges it into local tru
 - `publishers` merged by `id` (last entry wins for duplicates)
 
 This keeps runtime signature verification strict by default.
+
+## Discovery
+
+Registry discovery helper:
+
+```bash
+scripts/plugin-discovery.sh
+scripts/plugin-discovery.sh --plugin kelvin.cli
+scripts/plugin-discovery.sh --json
+```

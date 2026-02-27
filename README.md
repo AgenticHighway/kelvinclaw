@@ -72,6 +72,11 @@ See:
 - [docs/openai-plugin-install-and-run.md](docs/openai-plugin-install-and-run.md)
 - [docs/runtime-container-first-run.md](docs/runtime-container-first-run.md)
 - [docs/plugin-index-schema.md](docs/plugin-index-schema.md)
+- [docs/toolpack-sdk-plugins.md](docs/toolpack-sdk-plugins.md)
+- [docs/plugin-author-kit.md](docs/plugin-author-kit.md)
+- [docs/plugin-quality-tiers.md](docs/plugin-quality-tiers.md)
+- [docs/plugin-trust-operations.md](docs/plugin-trust-operations.md)
+- [docs/agents-tradeoffs.md](docs/agents-tradeoffs.md)
 - [docs/compatibility-contracts.md](docs/compatibility-contracts.md)
 
 Workspace crates:
@@ -115,6 +120,7 @@ The runtime integrates through the Kelvin Core SDK path:
 - `SdkModelProviderRegistry` (validated model-provider projection)
 - `kelvin_cli` (CLI plugin executed before each run)
 - `kelvin.openai` (first-party OpenAI model plugin, optional)
+- Kelvin Core tool-pack plugins (`fs_safe_read`, `fs_safe_write`, `web_fetch_safe`, `schedule_cron`, `session_tools`)
 
 ## Trusted Executive + Untrusted Skills
 
@@ -289,6 +295,12 @@ Install Kelvin's first-party CLI plugin package:
 scripts/install-kelvin-cli-plugin.sh
 ```
 
+Install optional browser automation plugin profile:
+
+```bash
+scripts/install-kelvin-browser-plugin.sh
+```
+
 Default index:
 
 - `https://raw.githubusercontent.com/TheKelvinProject/kelvinclaw-plugins/main/index.json`
@@ -318,6 +330,13 @@ Run installer tests:
 ```bash
 scripts/test-plugin-install.sh
 scripts/test-cli-plugin-integration.sh
+```
+
+Plugin discovery:
+
+```bash
+scripts/plugin-discovery.sh
+scripts/plugin-discovery.sh --plugin kelvin.cli
 ```
 
 ## Installed Plugin Runtime (Secure Loader)
@@ -355,6 +374,25 @@ scripts/plugin-sign.sh \
   --private-key ~/.kelvinclaw/keys/acme-ed25519-private.pem \
   --publisher-id acme \
   --trust-policy-out ./trusted_publishers.acme.json
+```
+
+Trust policy operations:
+
+```bash
+scripts/plugin-trust.sh show
+scripts/plugin-trust.sh rotate-key --publisher acme --public-key <base64>
+scripts/plugin-trust.sh revoke --publisher acme
+scripts/plugin-trust.sh pin --plugin acme.echo --publisher acme
+```
+
+Plugin author workflow:
+
+```bash
+export PATH="$PWD/scripts:$PATH"
+kelvin plugin new --id acme.echo --name "Acme Echo" --runtime wasm_tool_v1
+kelvin plugin test --manifest ./plugin-acme.echo/plugin.json
+kelvin plugin pack --manifest ./plugin-acme.echo/plugin.json
+kelvin plugin verify --package ./plugin-acme.echo/dist/acme.echo-0.1.0.tar.gz
 ```
 
 Trust policy template:

@@ -58,5 +58,16 @@ This matrix keeps Kelvin Core SDK verification focused on security, stability, a
 - `crates/kelvin-memory-controller/tests/memory_controller_nist_ai_rmf_1_0.rs` memory data-plane NIST suite
 - `docs/SDK_OWASP_TOP10_AI_2025.md` category-to-test mapping
 - `docs/SDK_NIST_AI_RMF_1_0.md` function-to-test mapping
+
+## Tool Sandbox Lane
+
+- `crates/kelvin-sdk/tests/tool_sandbox_owasp_top10_ai_2025.rs`
+  - deterministic path traversal denial
+  - web allowlist host denial
+  - bounded response-size rejection
+- `crates/kelvin-sdk/tests/tool_sandbox_nist_ai_rmf_1_0.rs`
+  - approval-gated sensitive operation controls
+  - deterministic scheduler ordering
+  - session clear recovery behavior
 - `docs/model-plugin-abi.md`
 - `docs/openai-plugin-install-and-run.md`

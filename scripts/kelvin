@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+usage() {
+  cat <<'USAGE'
+Usage:
+  kelvin plugin <new|test|pack|verify> [args...]
+
+Tip:
+  export PATH="$PWD/scripts:$PATH"
+USAGE
+}
+
+if [[ $# -lt 1 ]]; then
+  usage
+  exit 1
+fi
+
+case "$1" in
+  plugin)
+    shift
+    exec "${ROOT_DIR}/scripts/kelvin-plugin.sh" "$@"
+    ;;
+  -h|--help)
+    usage
+    ;;
+  *)
+    echo "Unknown command: $1" >&2
+    usage
+    exit 1
+    ;;
+esac

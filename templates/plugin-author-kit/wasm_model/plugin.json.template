@@ -1,0 +1,35 @@
+{
+  "id": "acme.openai",
+  "name": "Acme Model Provider",
+  "version": "0.1.0",
+  "api_version": "1.0.0",
+  "description": "Example Kelvin model provider plugin",
+  "homepage": "https://example.com/acme-openai",
+  "capabilities": [
+    "model_provider",
+    "network_egress"
+  ],
+  "experimental": false,
+  "min_core_version": "0.1.0",
+  "max_core_version": null,
+  "runtime": "wasm_model_v1",
+  "provider_name": "openai",
+  "model_name": "gpt-4.1-mini",
+  "entrypoint": "plugin.wasm",
+  "entrypoint_sha256": null,
+  "publisher": "acme",
+  "quality_tier": "signed_trusted",
+  "capability_scopes": {
+    "fs_read_paths": [],
+    "network_allow_hosts": [
+      "api.openai.com"
+    ]
+  },
+  "operational_controls": {
+    "timeout_ms": 5000,
+    "max_retries": 0,
+    "max_calls_per_minute": 120,
+    "circuit_breaker_failures": 3,
+    "circuit_breaker_cooldown_ms": 30000
+  }
+}

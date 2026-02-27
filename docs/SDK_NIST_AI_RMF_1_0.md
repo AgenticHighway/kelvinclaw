@@ -73,3 +73,16 @@ Memory Controller NIST suite:
 This extends GOVERN/MAP/MEASURE/MANAGE coverage into the memory data plane
 with checks for profile governance, issuer/audience pinning, claim-to-request
 mapping, typed error observability, replay control, and timeout/resource limits.
+
+## Tool Sandbox Extension
+
+SDK tool sandbox NIST suite:
+
+- `crates/kelvin-sdk/tests/tool_sandbox_nist_ai_rmf_1_0.rs`
+
+Coverage includes:
+
+- GOVERN: explicit approval requirement for sensitive operations
+- MAP: allowed-scope write behavior under approval
+- MEASURE: deterministic scheduler state ordering
+- MANAGE: controlled session state clear/recovery flows

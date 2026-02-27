@@ -25,6 +25,16 @@ pub struct KelvinBrain {
     seq: Arc<AtomicU64>,
 }
 
+struct ToolReceipt<'a> {
+    run_id: &'a str,
+    session_id: &'a str,
+    tool_name: &'a str,
+    tool_call_id: &'a str,
+    result_class: &'a str,
+    reason: &'a str,
+    latency_ms: u128,
+}
+
 impl KelvinBrain {
     pub fn new(
         session_store: Arc<dyn SessionStore>,
@@ -89,6 +99,24 @@ impl KelvinBrain {
             output,
         );
         self.events.emit(event).await
+    }
+
+    fn emit_tool_receipt(&self, receipt: ToolReceipt<'_>) {
+        let line = json!({
+            "stream": "tool_receipt",
+            "run_id": receipt.run_id,
+            "who": {
+                "session_id": receipt.session_id,
+            },
+            "what": {
+                "tool_name": receipt.tool_name,
+                "tool_call_id": receipt.tool_call_id,
+            },
+            "why": sanitize_receipt_reason(receipt.reason),
+            "result_class": receipt.result_class,
+            "latency_ms": receipt.latency_ms,
+        });
+        println!("{line}");
     }
 
     async fn run_inner(&self, req: AgentRunRequest) -> KelvinResult<AgentRunResult> {
@@ -169,6 +197,7 @@ impl KelvinBrain {
         }
 
         for tool_call in tool_calls {
+            let started_tool_at = now_ms();
             self.emit_tool(
                 &req.run_id,
                 &tool_call.name,
@@ -188,6 +217,15 @@ impl KelvinBrain {
                     None,
                 )
                 .await?;
+                self.emit_tool_receipt(ToolReceipt {
+                    run_id: &req.run_id,
+                    session_id: &req.session_id,
+                    tool_name: &tool_call.name,
+                    tool_call_id: &tool_call.id,
+                    result_class: "denied",
+                    reason: &summary,
+                    latency_ms: now_ms().saturating_sub(started_tool_at),
+                });
                 payloads.push(AgentPayload {
                     text: summary,
                     is_error: true,
@@ -195,14 +233,56 @@ impl KelvinBrain {
                 continue;
             };
 
-            let result = tool
+            let tool_result = tool
                 .call(ToolCallInput {
                     run_id: req.run_id.clone(),
                     session_id: req.session_id.clone(),
                     workspace_dir: req.workspace_dir.clone(),
                     arguments: tool_call.arguments.clone(),
                 })
-                .await?;
+                .await;
+
+            let result = match tool_result {
+                Ok(result) => result,
+                Err(err) => {
+                    let summary = format!("tool '{}' failed: {}", tool.name(), err);
+                    self.emit_tool(
+                        &req.run_id,
+                        tool.name(),
+                        ToolPhase::Error,
+                        Some(summary.clone()),
+                        None,
+                    )
+                    .await?;
+                    self.session_store
+                        .append_message(
+                            &req.session_id,
+                            SessionMessage::tool(
+                                summary.clone(),
+                                json!({
+                                    "tool": tool.name(),
+                                    "is_error": true,
+                                    "error": err.to_string(),
+                                }),
+                            ),
+                        )
+                        .await?;
+                    self.emit_tool_receipt(ToolReceipt {
+                        run_id: &req.run_id,
+                        session_id: &req.session_id,
+                        tool_name: tool.name(),
+                        tool_call_id: &tool_call.id,
+                        result_class: "error",
+                        reason: &summary,
+                        latency_ms: now_ms().saturating_sub(started_tool_at),
+                    });
+                    payloads.push(AgentPayload {
+                        text: summary,
+                        is_error: true,
+                    });
+                    continue;
+                }
+            };
 
             let phase = if result.is_error {
                 ToolPhase::Error
@@ -231,6 +311,20 @@ impl KelvinBrain {
                     ),
                 )
                 .await?;
+
+            self.emit_tool_receipt(ToolReceipt {
+                run_id: &req.run_id,
+                session_id: &req.session_id,
+                tool_name: tool.name(),
+                tool_call_id: &tool_call.id,
+                result_class: if result.is_error {
+                    "tool_error"
+                } else {
+                    "success"
+                },
+                reason: &result.summary,
+                latency_ms: now_ms().saturating_sub(started_tool_at),
+            });
 
             if let Some(visible_text) = result.visible_text {
                 payloads.push(AgentPayload {
@@ -261,6 +355,21 @@ impl KelvinBrain {
             },
         })
     }
+}
+
+fn sanitize_receipt_reason(reason: &str) -> String {
+    let mut out = String::new();
+    for (idx, ch) in reason.chars().enumerate() {
+        if idx >= 512 {
+            out.push_str("...");
+            break;
+        }
+        if ch.is_control() {
+            continue;
+        }
+        out.push(ch);
+    }
+    out
 }
 
 #[async_trait]

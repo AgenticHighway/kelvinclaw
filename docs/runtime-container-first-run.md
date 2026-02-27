@@ -20,6 +20,7 @@ What this does:
 - starts an interactive container
 - runs `scripts/kelvin-setup.sh` automatically
 - installs required plugin `kelvin.cli` from the configured index URL (default or override)
+- optionally installs `kelvin.browser.automation` when `KELVIN_SETUP_INSTALL_BROWSER_AUTOMATION=1`
 
 Container defaults:
 

@@ -117,6 +117,17 @@ install_required_plugins() {
   if [[ -z "${OPENAI_API_KEY:-}" ]]; then
     echo "[kelvin-local-profile] OPENAI_API_KEY not set; gateway defaults to echo provider until key is configured"
   fi
+
+  if [[ "${KELVIN_INSTALL_BROWSER_PLUGIN:-0}" == "1" ]]; then
+    if [[ -d "${PLUGIN_HOME}/kelvin.browser.automation/current" ]]; then
+      echo "[kelvin-local-profile] plugin already installed: kelvin.browser.automation"
+    else
+      echo "[kelvin-local-profile] installing optional plugin: kelvin.browser.automation"
+      "${ROOT_DIR}/scripts/install-kelvin-browser-plugin.sh" \
+        --plugin-home "${PLUGIN_HOME}" \
+        --trust-policy-path "${TRUST_POLICY_PATH}"
+    fi
+  fi
 }
 
 start_memory_controller() {

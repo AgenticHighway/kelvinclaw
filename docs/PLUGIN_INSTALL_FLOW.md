@@ -32,6 +32,7 @@ Optional fields:
 - `tool_name` (tool runtime)
 - `provider_name` + `model_name` (model runtime)
 - `capability_scopes` / `operational_controls`
+- `quality_tier` (`unsigned_local`, `signed_community`, `signed_trusted`)
 
 Optional package file:
 
@@ -51,6 +52,12 @@ Install Kelvin's first-party OpenAI model plugin package:
 scripts/install-kelvin-openai-plugin.sh
 ```
 
+Install optional browser automation plugin profile:
+
+```bash
+scripts/install-kelvin-browser-plugin.sh
+```
+
 Generic package install:
 
 ```bash
@@ -61,6 +68,13 @@ Install from remote plugin index:
 
 ```bash
 scripts/plugin-index-install.sh --plugin kelvin.cli
+```
+
+Discover index entries:
+
+```bash
+scripts/plugin-discovery.sh
+scripts/plugin-discovery.sh --plugin kelvin.cli
 ```
 
 Default index URL:
@@ -157,4 +171,22 @@ Run plugin lifecycle tests:
 
 ```bash
 scripts/test-plugin-install.sh
+```
+
+Authoring/packaging flow:
+
+```bash
+scripts/kelvin-plugin.sh new --id acme.echo --name "Acme Echo" --runtime wasm_tool_v1
+scripts/kelvin-plugin.sh test --manifest ./plugin-acme.echo/plugin.json
+scripts/kelvin-plugin.sh pack --manifest ./plugin-acme.echo/plugin.json
+scripts/kelvin-plugin.sh verify --package ./plugin-acme.echo/dist/acme.echo-0.1.0.tar.gz
+```
+
+Trust policy operations:
+
+```bash
+scripts/plugin-trust.sh show
+scripts/plugin-trust.sh rotate-key --publisher acme --public-key <base64>
+scripts/plugin-trust.sh revoke --publisher acme
+scripts/plugin-trust.sh pin --plugin acme.echo --publisher acme
 ```

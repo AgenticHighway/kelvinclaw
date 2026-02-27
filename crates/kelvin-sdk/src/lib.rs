@@ -27,6 +27,8 @@ use kelvin_memory::MemoryFactory;
 #[cfg(feature = "memory_rpc")]
 use kelvin_memory_client::{MemoryClientConfig, RpcMemoryManager};
 
+mod toolpack;
+
 const MIN_DEFAULT_TIMEOUT_MS: u64 = 100;
 const MAX_DEFAULT_TIMEOUT_MS: u64 = 300_000;
 const MAX_CONFIG_ID_LEN: usize = 128;
@@ -1028,6 +1030,9 @@ impl KelvinSdkRuntime {
             "hello_tool",
             "Hello from Kelvin SDK built-in tools.",
         ));
+        let (toolpack_tools, toolpack_count) =
+            toolpack::load_default_toolpack_plugins(&config.core_version)?;
+        println!("loaded kelvin core toolpack plugins: {toolpack_count}");
 
         let (installed_tools, installed_models, loaded_installed_plugins): LoadedInstalledPlugins =
             if config.load_installed_plugins {
@@ -1061,6 +1066,7 @@ impl KelvinSdkRuntime {
 
         let tools: Arc<dyn ToolRegistry> = Arc::new(CombinedToolRegistry::new(vec![
             installed_tools,
+            toolpack_tools,
             builtin_tools,
         ]));
 

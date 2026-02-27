@@ -254,11 +254,14 @@ async fn mvp_secure_skill_run_denies_disallowed_capability() {
         .wait_for_outcome("run-mvp-denied", 2_000)
         .await
         .expect("wait outcome");
-    let error = match outcome {
-        kelvin_core::RunOutcome::Failed(error) => error,
-        other => panic!("expected failed outcome, got {other:?}"),
+    let result = match outcome {
+        kelvin_core::RunOutcome::Completed(result) => result,
+        other => panic!("expected completed outcome with tool error payload, got {other:?}"),
     };
-    assert!(error.contains("denied by sandbox policy"));
+    assert!(result
+        .payloads
+        .iter()
+        .any(|payload| payload.text.contains("denied by sandbox policy") && payload.is_error));
 
     let memory_file = workspace.join("memory/mvp.md");
     assert!(
@@ -270,10 +273,21 @@ async fn mvp_secure_skill_run_denies_disallowed_capability() {
     assert!(matches!(
         events.last().map(|event| &event.data),
         Some(AgentEventData::Lifecycle {
-            phase: LifecyclePhase::Error,
+            phase: LifecyclePhase::End,
             ..
         })
     ));
+
+    let tool_phases = events
+        .iter()
+        .filter_map(|event| match &event.data {
+            AgentEventData::Tool {
+                tool_name, phase, ..
+            } if tool_name == "wasm_skill" => Some(phase.clone()),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(tool_phases, vec![ToolPhase::Start, ToolPhase::Error]);
 }
 
 #[test]
