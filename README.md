@@ -31,6 +31,7 @@ scripts/verify-onboarding.sh --track wasm
 ## Repository Layout
 
 - `apps/kelvin-host`: thin trusted host executable
+- `apps/kelvin-gateway`: secure WebSocket control-plane gateway
 - `crates/*`: core contracts, runtime, SDK, memory API/client/controller, and execution engine
 - first-party plugin distribution repo: `TheKelvinProject/kelvinclaw-plugins`
 - `examples/`: sample source crates for developers
@@ -41,6 +42,7 @@ See:
 
 - [OVERVIEW.md](OVERVIEW.md)
 - [docs/architecture.md](docs/architecture.md)
+- [docs/gateway-protocol.md](docs/gateway-protocol.md)
 - [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)
 - [docs/kelvin-gap-analysis.md](docs/kelvin-gap-analysis.md)
 - [docs/KELVIN_CORE_SDK.md](docs/KELVIN_CORE_SDK.md)
@@ -76,6 +78,7 @@ Workspace crates:
 Apps:
 
 - `apps/kelvin-host`: thin host executable for Kelvin SDK
+- `apps/kelvin-gateway`: WebSocket gateway over SDK runtime
 
 ## Interface-First Design
 
@@ -167,6 +170,26 @@ Quick run:
 ```bash
 scripts/try-kelvin.sh "hello"
 ```
+
+## Gateway Example
+
+Run the gateway with connect-token auth:
+
+```bash
+KELVIN_GATEWAY_TOKEN=change-me \
+CARGO_TARGET_DIR=target/try-kelvin-gateway cargo run -p kelvin-gateway -- \
+  --bind 127.0.0.1:18789 \
+  --workspace /path/to/workspace
+```
+
+Methods available over the socket:
+
+- `connect`
+- `health`
+- `agent` / `run.submit`
+- `agent.wait` / `run.wait`
+- `agent.state` / `run.state`
+- `agent.outcome` / `run.outcome`
 
 ## Runtime Container (No Rust Toolchain Required)
 

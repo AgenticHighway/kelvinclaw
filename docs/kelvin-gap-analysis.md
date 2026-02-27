@@ -1,96 +1,129 @@
-# KelvinClaw Gap Analysis -> KelvinClaw Refactor
+# KelvinClaw High-Level Gap Analysis
 
-## Objective
+This document tracks high-level parity gaps and closure work against the reference "Claw" product shape, while preserving KelvinClaw's security-first SDK and control/data plane separation.
 
-Refactor KelvinClaw into an interface-first Rust architecture that mirrors KelvinClaw's runtime "brain" structure and backend abstraction points.
+## Completed Gap Closures
 
-## Canonical KelvinClaw Behaviors Mapped
+### 1) Secure Gateway Control Plane
 
-### 1. Agent Loop and Stream Events
+Status: `DONE`
 
-KelvinClaw signals:
+Implemented:
 
-- serialized runs per session lane
-- lifecycle start/end/error stream
-- assistant delta stream
-- tool stream
+- new app: `apps/kelvin-gateway`
+- typed WebSocket request/response/event envelopes
+- strict connect-first handshake
+- optional auth token enforcement on connect (`KELVIN_GATEWAY_TOKEN` / `--token`)
+- idempotent `agent` submission via required `request_id`
+- async run surfaces:
+  - `agent` / `run.submit`
+  - `agent.wait` / `run.wait`
+  - `agent.state` / `run.state`
+  - `agent.outcome` / `run.outcome`
+- streamed runtime events from SDK runtime to connected clients
 
-KelvinClaw mapping:
+Security properties:
 
-- `kelvin-brain::KelvinBrain`
-- `kelvin-core::AgentEventData`
-- `kelvin-core::LaneScheduler`
-- `kelvin-core::CoreRuntime`
+- fail-closed handshake validation
+- explicit auth check before runtime operations
+- method allowlist and typed parameter validation
+- no direct plugin loading in gateway code (SDK-only composition path)
 
-### 2. Memory Manager Contract
+### 2) Model Failover + Retry Semantics
 
-KelvinClaw signals:
+Status: `DONE`
 
-- `search`, `readFile`, `status`, `sync`, probe methods
-- swappable backend (builtin vs qmd)
-- fallback to builtin when primary backend fails
+Implemented in `kelvin-sdk`:
 
-KelvinClaw mapping:
+- `KelvinSdkModelSelection::InstalledPluginFailover`
+- ordered provider chain selection
+- bounded retries per provider (`max_retries_per_provider`)
+- bounded backoff (`retry_backoff_ms`)
+- fail-closed behavior:
+  - retry/fallback only on transient classes (`backend`, `timeout`, `io`)
+  - no fallback on non-recoverable classes (`invalid_input`, `not_found`)
 
-- `kelvin-core::MemorySearchManager`
-- `kelvin-memory::MarkdownMemoryManager`
-- `kelvin-memory::InMemoryVectorMemoryManager`
-- `kelvin-memory::FallbackMemoryManager`
-- `kelvin-memory::MemoryFactory`
+Security and reliability properties:
 
-### 3. Run Registry and Wait Semantics
+- no silent fallback to unintended providers
+- explicit provider ordering and retry bounds
+- deterministic error surfaces when chain is exhausted
 
-KelvinClaw signals:
+### 3) Reusable SDK Runtime for Host/Gateway Surfaces
 
-- immediate `accepted` response
-- async run completion
-- wait with timeout
+Status: `DONE`
 
-KelvinClaw mapping:
+Implemented:
 
-- `kelvin-core::RunRegistry`
-- `kelvin-core::CoreRuntime::submit`
-- `kelvin-core::CoreRuntime::wait`
-- `kelvin-core::CoreRuntime::wait_for_outcome`
+- `KelvinSdkRuntimeConfig`
+- `KelvinSdkRuntime::initialize(...)`
+- `KelvinSdkRuntime::submit/state/wait/wait_for_outcome`
+- `KelvinSdkRunRequest` + `KelvinSdkAcceptedRun`
 
-## Interface Inventory
+Architecture impact:
 
-Implemented in `kelvin-core`:
+- external surfaces can now use the SDK runtime directly instead of composing root crates.
+- host and gateway stay on the same policy-governed composition path.
 
-- `Brain`
-- `MemorySearchManager`
-- `ModelProvider`
-- `SessionStore`
-- `EventSink`
-- `Tool`
-- `ToolRegistry`
-- `PluginFactory`
-- `PluginRegistry`
-- `CoreRuntime`
-- `RunRegistry`
+## Remaining High-Level Gaps
 
-## Plug-and-Play Examples
+These are still open and are prioritized by security, stability, and maintainability impact.
 
-- Swap memory backend with one line in composition code:
-  - `MemoryBackendKind::Markdown`
-  - `MemoryBackendKind::InMemoryVector`
-  - `MemoryBackendKind::InMemoryWithMarkdownFallback`
-- Swap model provider by replacing `Arc<dyn ModelProvider>`.
-- Swap session persistence by replacing `Arc<dyn SessionStore>`.
-- Swap event emission target by replacing `Arc<dyn EventSink>`.
+### 1) Channel Integrations
 
-## Tests Added
+Status: `OPEN`
 
-`crates/kelvin-core/src/runtime.rs`:
+Needed:
 
-- serializes runs in same session lane
-- wait timeout behavior
-- completed outcome retrieval
+- production channel adapters (chat/voice surfaces)
+- per-channel auth/routing/allowlist policy
+- deterministic delivery/retry + rate controls per channel
 
-## Remaining Work for Full KelvinClaw Parity
+### 2) Daemon Lifecycle + Operator UX
 
-- gateway WS protocol and frame validation
-- model-specific auth/failover logic
-- compaction and retry orchestration
-- plugin loader/runtime (currently direct composition)
-- richer memory retrieval (embeddings/vector DB/QMD sidecar)
+Status: `OPEN`
+
+Needed:
+
+- first-class daemon install/start/stop/status
+- startup health checks and fail-fast diagnostics
+- remote-safe defaults for exposure/auth
+
+### 3) Control UI and Operator Observability
+
+Status: `OPEN`
+
+Needed:
+
+- minimal web/operator UI over gateway APIs
+- run/session/event inspection
+- policy and plugin state visibility
+
+### 4) Rich Context Management (Compaction/Pruning)
+
+Status: `OPEN`
+
+Needed:
+
+- deterministic compaction policy
+- pruning thresholds + summaries
+- run-level bounds on context growth
+
+### 5) Multi-provider Auth Profiles and Routing Policy
+
+Status: `OPEN`
+
+Needed:
+
+- credential profile abstraction
+- policy-based model/provider routing
+- typed fallback trees tied to workspace/session policy
+
+## Near-Term TODO (Execution Order)
+
+1. Add daemon/service management for `kelvin-gateway` (systemd/launchd docs + scripts).
+2. Add gateway protocol schema docs and compatibility tests.
+3. Add gateway security tests for malformed frames, replay pressure, and auth brute-force throttling.
+4. Add compaction/pruning policy trait in SDK path with deterministic tests.
+5. Add a minimal control UI shell consuming gateway methods.
+
