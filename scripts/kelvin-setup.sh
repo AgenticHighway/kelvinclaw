@@ -95,6 +95,14 @@ else
     --trust-policy-path "${KELVIN_TRUST_POLICY_PATH}"
 fi
 
+if [[ "${KELVIN_SETUP_INSTALL_BROWSER_AUTOMATION:-0}" == "1" ]]; then
+  echo "[kelvin-setup] installing optional plugin profile: kelvin.browser.automation"
+  "${ROOT_DIR}/scripts/install-kelvin-browser-plugin.sh" \
+    --index-url "${INDEX_URL}" \
+    --plugin-home "${KELVIN_PLUGIN_HOME}" \
+    --trust-policy-path "${KELVIN_TRUST_POLICY_PATH}"
+fi
+
 cat > "${SETUP_MARKER}" <<EOF
 setup_completed_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 plugin_home=${KELVIN_PLUGIN_HOME}

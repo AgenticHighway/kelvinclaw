@@ -152,10 +152,53 @@ Now implemented for channel lane:
 - route metadata surfaced in channel ingest responses
 - explicit route inspection method (`channel.route.inspect`) for operator validation
 
+### 6) Core Value Tools (SDK Plugin Lane)
+
+Status: `DONE`
+
+Implemented:
+
+- first-party Kelvin Core tool-pack plugins in SDK lane:
+  - `fs_safe_read`
+  - `fs_safe_write`
+  - `web_fetch_safe` (strict host allowlist)
+  - `schedule_cron`
+  - `session_tools`
+- explicit sensitive-operation approval payloads (`approval.granted` + `approval.reason`)
+- structured tool execution receipts (`who/what/why/result_class/latency_ms`)
+- graceful degradation: tool failures no longer crash whole runs
+- deterministic OWASP/NIST tool sandbox suites
+
+### 7) Ecosystem and Plugin DX
+
+Status: `PARTIAL`
+
+Implemented:
+
+- plugin author command flow:
+  - `kelvin plugin new`
+  - `kelvin plugin test`
+  - `kelvin plugin pack`
+  - `kelvin plugin verify`
+- plugin author templates under `templates/plugin-author-kit/`
+- plugin quality tier conventions (`unsigned_local`, `signed_community`, `signed_trusted`)
+- plugin discovery helper (`scripts/plugin-discovery.sh`)
+- trust policy lifecycle ops (`scripts/plugin-trust.sh`) for:
+  - key rotation
+  - revocation
+  - plugin publisher pinning
+- runtime trust enforcement for revoked publishers and pin mismatches
+
+Still open:
+
+- fully hosted plugin registry API service endpoints (current discovery is static index + helper)
+- multi-version ABI compatibility CI matrix against external plugin repos
+- automated publisher key rotation pipelines
+
 ## Near-Term TODO (Execution Order)
 
-1. Add daemon/service management for `kelvin-gateway` (systemd/launchd docs + scripts).
-2. Add gateway protocol schema docs and compatibility tests.
-3. Add gateway security tests for malformed frames, replay pressure, and auth brute-force throttling.
-4. Add compaction/pruning policy trait in SDK path with deterministic tests.
+1. Add hosted plugin registry API service endpoints beyond static index.
+2. Add external plugin repository compatibility-matrix CI lanes.
+3. Add daemon/service management for `kelvin-gateway` (systemd/launchd docs + scripts).
+4. Add gateway security tests for malformed frames, replay pressure, and auth brute-force throttling.
 5. Add a minimal control UI shell consuming gateway methods.

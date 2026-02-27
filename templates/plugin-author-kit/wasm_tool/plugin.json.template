@@ -1,0 +1,31 @@
+{
+  "id": "acme.echo",
+  "name": "Acme Echo Tool",
+  "version": "0.1.0",
+  "api_version": "1.0.0",
+  "description": "Example Kelvin tool plugin",
+  "homepage": "https://example.com/acme-echo",
+  "capabilities": [
+    "tool_provider"
+  ],
+  "experimental": false,
+  "min_core_version": "0.1.0",
+  "max_core_version": null,
+  "runtime": "wasm_tool_v1",
+  "tool_name": "acme_echo",
+  "entrypoint": "plugin.wasm",
+  "entrypoint_sha256": null,
+  "publisher": "acme",
+  "quality_tier": "signed_community",
+  "capability_scopes": {
+    "fs_read_paths": [],
+    "network_allow_hosts": []
+  },
+  "operational_controls": {
+    "timeout_ms": 2000,
+    "max_retries": 0,
+    "max_calls_per_minute": 120,
+    "circuit_breaker_failures": 3,
+    "circuit_breaker_cooldown_ms": 30000
+  }
+}

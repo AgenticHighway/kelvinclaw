@@ -141,6 +141,7 @@ Selection:
 - runtime loader for installed `wasm_tool_v1` plugins
 - execution bridge via SDK (`InMemoryPluginRegistry` -> `SdkToolRegistry` -> runtime `ToolRegistry`)
 - supply-chain trust verification (`plugin.sig` Ed25519 against trusted publisher keys)
+- trust policy revocation and plugin->publisher pinning enforcement
 - scoped capability enforcement (`capability_scopes.fs_read_paths`, `capability_scopes.network_allow_hosts`)
 - operational controls (`timeout_ms`, `max_retries`, rate limit, circuit breaker)
 
@@ -186,6 +187,7 @@ Replace `Arc<dyn ModelProvider>` to support different provider implementations.
 ### Tools
 
 Register tools through `ToolRegistry`; `SdkToolRegistry` can compose this directly from SDK plugin registrations with fail-fast validation.
+Kelvin also ships a first-party default SDK tool-pack plugin set (`fs_safe_read`, `fs_safe_write`, `web_fetch_safe`, `schedule_cron`, `session_tools`) with explicit sensitive-operation approvals.
 
 ### Sessions
 
@@ -221,6 +223,7 @@ Implemented:
 - swappable backends and adapters
 - remote test workflow
 - dynamic installed plugin loading with trust/scoping/operational guardrails
+- first-party SDK tool pack and tool execution receipts (`who/what/why/result_class`)
 - websocket gateway control plane (`apps/kelvin-gateway`) with connect/auth/idempotent run submission
 - SDK model failover chains with bounded retries and fail-closed non-retryable errors
 - multi-channel gateway lane (`telegram`, `slack`, `discord`) with channel-specific policy controls

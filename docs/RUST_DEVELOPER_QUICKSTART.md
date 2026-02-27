@@ -53,6 +53,13 @@ scripts/test-cli-plugin-integration.sh
 scripts/test-docker.sh
 ```
 
+Plugin author/DX scripts:
+
+```bash
+scripts/test-plugin-author-kit.sh
+scripts/test-plugin-trust.sh
+```
+
 Before final pushes:
 
 ```bash
@@ -70,6 +77,7 @@ cargo test -p kelvin-memory-controller --test memory_controller_nist_ai_rmf_1_0
 
 - The default demo path uses the built-in echo model provider.
 - CLI flow is SDK-first and runs through a WASM plugin (`kelvin_cli`) before run execution.
+- Kelvin Core ships first-party SDK tool-pack plugins (`fs_safe_read`, `fs_safe_write`, `web_fetch_safe`, `schedule_cron`, `session_tools`).
 - Memory/data-plane split exists and is tested.
 - Plugin install path is prebuilt-package based (no recompiling root required).
 

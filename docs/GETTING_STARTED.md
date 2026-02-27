@@ -49,6 +49,12 @@ cd kelvinclaw
 scripts/run-runtime-container.sh
 ```
 
+Optional browser automation profile during container setup:
+
+```bash
+KELVIN_SETUP_INSTALL_BROWSER_AUTOMATION=1 scripts/run-runtime-container.sh
+```
+
 Verification:
 
 ```bash
@@ -121,6 +127,9 @@ git clone <repo-url>
 cd kelvinclaw
 CARGO_TARGET_DIR=target/echo-wasm-skill cargo build --target wasm32-unknown-unknown --manifest-path examples/echo-wasm-skill/Cargo.toml
 cargo run -p kelvin-wasm --bin kelvin-wasm-runner -- --wasm target/echo-wasm-skill/wasm32-unknown-unknown/debug/echo_wasm_skill.wasm --policy-preset locked_down
+export PATH="$PWD/scripts:$PATH"
+kelvin plugin new --id acme.echo --name "Acme Echo" --runtime wasm_tool_v1
+kelvin plugin test --manifest ./plugin-acme.echo/plugin.json
 ```
 
 Verification:
@@ -133,6 +142,7 @@ Expected result:
 
 - Sample WASM skill builds successfully.
 - WASM runner executes the module under sandbox policy.
+- Plugin author commands scaffold and validate plugin package structure without touching root crates.
 
 ## Verify All Tracks
 

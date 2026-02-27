@@ -12,6 +12,7 @@ PLUGIN_VERSION=""
 PLUGIN_HOME="${KELVIN_PLUGIN_HOME:-${PLUGIN_HOME_DEFAULT}}"
 TRUST_POLICY_PATH="${KELVIN_TRUST_POLICY_PATH:-${TRUST_POLICY_DEFAULT}}"
 FORCE="0"
+MIN_QUALITY_TIER="${KELVIN_PLUGIN_MIN_QUALITY_TIER:-unsigned_local}"
 
 usage() {
   cat <<'USAGE'
@@ -30,6 +31,10 @@ Optional:
   --trust-policy-path <path>
                         Trust policy file (default: $KELVIN_TRUST_POLICY_PATH or ~/.kelvinclaw/trusted_publishers.json)
   --force               Reinstall even if version exists
+  --min-quality-tier <tier>
+                        Minimum accepted quality tier:
+                        unsigned_local | signed_community | signed_trusted
+                        (default: $KELVIN_PLUGIN_MIN_QUALITY_TIER or unsigned_local)
   -h, --help            Show help
 
 Index schema (v1):
@@ -74,6 +79,10 @@ while [[ $# -gt 0 ]]; do
       FORCE="1"
       shift
       ;;
+    --min-quality-tier)
+      MIN_QUALITY_TIER="${2:?missing value for --min-quality-tier}"
+      shift 2
+      ;;
     -h|--help)
       usage
       exit 0
@@ -85,6 +94,18 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+tier_rank() {
+  case "$1" in
+    unsigned_local) echo 0 ;;
+    signed_community) echo 1 ;;
+    signed_trusted) echo 2 ;;
+    *)
+      echo "Invalid quality tier: $1" >&2
+      exit 1
+      ;;
+  esac
+}
 
 require_cmd() {
   local name="$1"
@@ -159,9 +180,15 @@ PACKAGE_URL="$(jq -r '.package_url // empty' "${PLUGIN_JSON}")"
 EXPECTED_SHA="$(jq -r '.sha256 // empty' "${PLUGIN_JSON}")"
 SELECTED_VERSION="$(jq -r '.version // empty' "${PLUGIN_JSON}")"
 TRUST_POLICY_URL="$(jq -r '.trust_policy_url // empty' "${PLUGIN_JSON}")"
+QUALITY_TIER="$(jq -r '.quality_tier // "unsigned_local"' "${PLUGIN_JSON}")"
 
 if [[ -z "${PACKAGE_URL}" || -z "${EXPECTED_SHA}" || -z "${SELECTED_VERSION}" ]]; then
   echo "Invalid index entry: package_url, version, and sha256 are required" >&2
+  exit 1
+fi
+
+if [[ "$(tier_rank "${QUALITY_TIER}")" -lt "$(tier_rank "${MIN_QUALITY_TIER}")" ]]; then
+  echo "Plugin quality tier '${QUALITY_TIER}' is below required minimum '${MIN_QUALITY_TIER}'" >&2
   exit 1
 fi
 
