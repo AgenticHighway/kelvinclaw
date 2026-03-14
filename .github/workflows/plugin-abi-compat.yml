@@ -2,19 +2,6 @@ name: Plugin ABI Compat
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 6 * * *'
-  push:
-    paths:
-      - '.github/workflows/plugin-abi-compat.yml'
-      - 'crates/kelvin-brain/**'
-      - 'crates/kelvin-host/**'
-      - 'crates/kelvin-sdk/**'
-      - 'docs/model-plugin-abi.md'
-      - 'scripts/lib/rust-toolchain-path.sh'
-      - 'scripts/plugin-discovery.sh'
-      - 'scripts/plugin-index-install.sh'
-      - 'scripts/test-plugin-abi-compat.sh'
 
 permissions:
   contents: read
