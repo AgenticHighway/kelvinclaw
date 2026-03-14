@@ -32,7 +32,7 @@ jobs:
     timeout-minutes: 45
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        uses: useblacksmith/checkout@41cdeedae8edb2e684ba22896a5fd2a3cb85db6b
         with:
           persist-credentials: false
 
@@ -40,6 +40,9 @@ jobs:
         uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9
         with:
           toolchain: ${{ inputs.rust_toolchain }}
+
+      - name: Restore Rust cache
+        uses: useblacksmith/rust-cache@f53e7f127245d2a269b3d90879ccf259876842d5
 
       - name: Install Rust components
         run: rustup component add rustfmt clippy
