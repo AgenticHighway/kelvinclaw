@@ -44,11 +44,35 @@ Tagged releases publish Linux executable bundles for:
 - `kelvin-gateway`
 - `kelvin-memory-controller`
 - `kelvin-registry`
+- top-level `./kelvin` launcher
 
 The release workflow is backed by Blacksmith runners and produces native
 `linux-x86_64` and `linux-arm64` tarballs with matching SHA-256 files.
-For manual validation without publishing a GitHub Release, run the
+The intended end-user entrypoint is:
+
+```bash
+tar -xzf kelvinclaw-<version>-linux-<arch>.tar.gz
+cd kelvinclaw-<version>-linux-<arch>
+./kelvin
+```
+
+On first run, `./kelvin` fetches the required official first-party plugins into
+`~/.kelvinclaw`, then starts Kelvin. For manual validation without publishing a GitHub Release, run the
 `Release Linux Executables` workflow with `workflow_dispatch`.
+
+Release prerequisites:
+
+- `curl`
+- `tar`
+- `awk`
+- `ca-certificates` on minimal Linux images
+
+OpenAI key options for the release launcher:
+
+- export `OPENAI_API_KEY` before running `./kelvin`
+- put `OPENAI_API_KEY=...` in `./.env` or `./.env.local`
+- put `OPENAI_API_KEY=...` in `~/.kelvinclaw/.env` or `~/.kelvinclaw/.env.local`
+- if you run `./kelvin` interactively with no key configured, Kelvin prompts once and uses the key for that run only
 
 ## Repository Layout
 
