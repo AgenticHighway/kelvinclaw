@@ -52,7 +52,10 @@ fn unique_workspace(prefix: &str) -> PathBuf {
     path
 }
 
-async fn start_gateway(auth_token: Option<&str>) -> (String, JoinHandle<()>) {
+async fn start_gateway_with_state_dir(
+    auth_token: Option<&str>,
+    state_dir: Option<PathBuf>,
+) -> (String, JoinHandle<()>) {
     let listener = TcpListener::bind("127.0.0.1:0")
         .await
         .expect("bind test listener");
@@ -69,7 +72,7 @@ async fn start_gateway(auth_token: Option<&str>) -> (String, JoinHandle<()>) {
         model_provider: KelvinSdkModelSelection::Echo,
         require_cli_plugin_tool: false,
         emit_stdout_events: false,
-        state_dir: None,
+        state_dir,
         persist_runs: true,
         max_session_history_messages: 128,
         compact_to_messages: 64,
@@ -83,6 +86,10 @@ async fn start_gateway(auth_token: Option<&str>) -> (String, JoinHandle<()>) {
     });
     sleep(Duration::from_millis(75)).await;
     (format!("ws://{addr}"), handle)
+}
+
+async fn start_gateway(auth_token: Option<&str>) -> (String, JoinHandle<()>) {
+    start_gateway_with_state_dir(auth_token, None).await
 }
 
 async fn send_request(
@@ -209,6 +216,133 @@ async fn conformance_delivery_ordering_and_idempotency() {
     let dup = read_until_response(&mut socket, "msg-2-dup").await;
     assert_eq!(dup["ok"], json!(true));
     assert_eq!(dup["payload"]["status"], json!("deduped"));
+
+    server_handle.abort();
+}
+
+#[tokio::test]
+async fn conformance_persists_pairing_and_dedupe_across_restart() {
+    let _guard = ENV_LOCK.lock().await;
+    let _env_restore = [
+        EnvVarRestore::set("KELVIN_TELEGRAM_ENABLED", Some("true")),
+        EnvVarRestore::set("KELVIN_TELEGRAM_BOT_TOKEN", None),
+        EnvVarRestore::set("KELVIN_TELEGRAM_PAIRING_ENABLED", Some("true")),
+    ];
+    let state_dir = unique_workspace("state");
+
+    let (url, server_handle) =
+        start_gateway_with_state_dir(Some("secret"), Some(state_dir.clone())).await;
+    let (mut socket, _) = connect_async(url).await.expect("connect");
+
+    send_request(
+        &mut socket,
+        "connect-persist-1",
+        "connect",
+        json!({
+            "auth": {"token": "secret"},
+            "client_id": "channel-conformance"
+        }),
+    )
+    .await;
+    assert_eq!(
+        read_until_response(&mut socket, "connect-persist-1").await["ok"],
+        json!(true)
+    );
+
+    send_request(
+        &mut socket,
+        "pair-required",
+        "channel.telegram.ingest",
+        json!({
+            "delivery_id": "persist-pair-1",
+            "chat_id": 42,
+            "text": "hello"
+        }),
+    )
+    .await;
+    let pairing = read_until_response(&mut socket, "pair-required").await;
+    assert_eq!(pairing["ok"], json!(true));
+    assert_eq!(pairing["payload"]["status"], json!("pairing_required"));
+    let pairing_code = pairing["payload"]["pairing_code"]
+        .as_str()
+        .expect("pairing code")
+        .to_string();
+
+    send_request(
+        &mut socket,
+        "pair-approve",
+        "channel.telegram.pair.approve",
+        json!({
+            "code": pairing_code,
+        }),
+    )
+    .await;
+    let approved = read_until_response(&mut socket, "pair-approve").await;
+    assert_eq!(approved["ok"], json!(true));
+    assert_eq!(approved["payload"]["approved"], json!(true));
+
+    send_request(
+        &mut socket,
+        "persist-complete",
+        "channel.telegram.ingest",
+        json!({
+            "delivery_id": "persist-complete",
+            "chat_id": 42,
+            "text": "persist me"
+        }),
+    )
+    .await;
+    let completed = read_until_response(&mut socket, "persist-complete").await;
+    assert_eq!(completed["ok"], json!(true));
+    assert_eq!(completed["payload"]["status"], json!("completed"));
+
+    server_handle.abort();
+
+    let (url, server_handle) =
+        start_gateway_with_state_dir(Some("secret"), Some(state_dir.clone())).await;
+    let (mut socket, _) = connect_async(url).await.expect("reconnect");
+
+    send_request(
+        &mut socket,
+        "connect-persist-2",
+        "connect",
+        json!({
+            "auth": {"token": "secret"},
+            "client_id": "channel-conformance"
+        }),
+    )
+    .await;
+    assert_eq!(
+        read_until_response(&mut socket, "connect-persist-2").await["ok"],
+        json!(true)
+    );
+
+    send_request(
+        &mut socket,
+        "telegram-status",
+        "channel.telegram.status",
+        json!({}),
+    )
+    .await;
+    let status = read_until_response(&mut socket, "telegram-status").await;
+    assert_eq!(status["ok"], json!(true));
+    assert_eq!(status["payload"]["paired_accounts"], json!(1));
+    assert_eq!(status["payload"]["state_persistence_enabled"], json!(true));
+
+    send_request(
+        &mut socket,
+        "persist-deduped",
+        "channel.telegram.ingest",
+        json!({
+            "delivery_id": "persist-complete",
+            "chat_id": 42,
+            "text": "persist me"
+        }),
+    )
+    .await;
+    let deduped = read_until_response(&mut socket, "persist-deduped").await;
+    assert_eq!(deduped["ok"], json!(true));
+    assert_eq!(deduped["payload"]["status"], json!("deduped"));
 
     server_handle.abort();
 }

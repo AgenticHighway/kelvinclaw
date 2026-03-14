@@ -231,8 +231,17 @@ if [[ "${DO_SYNC}" == "1" ]]; then
 set -euo pipefail
 remote_dir="$1"
 remote_dir="${remote_dir/#\~/$HOME}"
+preserve_dir=""
+if [[ -d "${remote_dir}/.cache" ]]; then
+  preserve_dir="$(mktemp -d)"
+  mv "${remote_dir}/.cache" "${preserve_dir}/.cache"
+fi
 rm -rf "${remote_dir}"
 mkdir -p "${remote_dir}"
+if [[ -n "${preserve_dir}" && -d "${preserve_dir}/.cache" ]]; then
+  mv "${preserve_dir}/.cache" "${remote_dir}/.cache"
+  rmdir "${preserve_dir}"
+fi
 tar xzf - -C "${remote_dir}"
 EOF
   fi
@@ -261,12 +270,14 @@ remote_dir="$1"
 docker_image="$2"
 extra_cargo_args="${3:-}"
 remote_dir="${remote_dir/#\~/$HOME}"
+source "${remote_dir}/scripts/lib/docker-cache.sh"
+kelvin_prepare_docker_rust_cache "${remote_dir}" "remote-test"
 cd "${remote_dir}"
 extra_args=()
 if [[ -n "${extra_cargo_args}" ]]; then
   read -r -a extra_args <<< "${extra_cargo_args}"
 fi
-docker run --rm -v "${remote_dir}:/work" -w /work "${docker_image}" \
+docker run --rm "${DOCKER_RUST_CACHE_ARGS[@]}" -v "${remote_dir}:/work" -w /work "${docker_image}" \
   /usr/local/cargo/bin/cargo test --workspace "${extra_args[@]}"
 EOF
 fi

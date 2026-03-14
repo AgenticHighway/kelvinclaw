@@ -177,8 +177,9 @@ impl AuthFailureTracker {
                     .saturating_sub(security.auth_failure_threshold)
                     .saturating_add(1),
             );
-            entry.blocked_until_ms =
-                now.saturating_add(u128::from(security.auth_failure_backoff_ms) * u128::from(multiplier));
+            entry.blocked_until_ms = now.saturating_add(
+                u128::from(security.auth_failure_backoff_ms) * u128::from(multiplier),
+            );
         }
         self.touch(peer_ip, entry);
     }
@@ -402,8 +403,9 @@ pub async fn run_gateway_doctor(config: GatewayDoctorConfig) -> Result<Value, St
                                 .to_string();
                             health_error = Some(message.clone());
                             doctor_errors.push(message);
-                        } else if let Some(security) =
-                            health_response.get("payload").and_then(|value| value.get("security"))
+                        } else if let Some(security) = health_response
+                            .get("payload")
+                            .and_then(|value| value.get("security"))
                         {
                             let bind_scope = security
                                 .get("bind_scope")
@@ -573,7 +575,11 @@ async fn wait_for_response(
 }
 
 pub async fn run_gateway(config: GatewayConfig) -> Result<(), String> {
-    validate_gateway_security(config.bind_addr, config.auth_token.as_deref(), &config.security)?;
+    validate_gateway_security(
+        config.bind_addr,
+        config.auth_token.as_deref(),
+        &config.security,
+    )?;
     let listener = TcpListener::bind(config.bind_addr)
         .await
         .map_err(|err| format!("bind failed on {}: {err}", config.bind_addr))?;
@@ -616,8 +622,9 @@ pub async fn run_gateway_with_listener_secure(
         "kelvin-gateway listening on {}://{local_addr}",
         gateway_scheme(&security)
     );
-    let channels =
-        ChannelEngine::from_env().map_err(|err| format!("initialize channel engine: {err}"))?;
+    let channel_state_dir = runtime.state_dir().map(Path::to_path_buf);
+    let channels = ChannelEngine::from_env_with_state_dir(channel_state_dir.as_deref())
+        .map_err(|err| format!("initialize channel engine: {err}"))?;
 
     let state = GatewayState {
         bind_addr: local_addr,
@@ -654,7 +661,9 @@ pub async fn run_gateway_with_listener_secure(
             let _permit = permit;
             let result = match acceptor {
                 Some(acceptor) => match acceptor.accept(stream).await {
-                    Ok(tls_stream) => handle_connection(tls_stream, peer.ip(), connection_state).await,
+                    Ok(tls_stream) => {
+                        handle_connection(tls_stream, peer.ip(), connection_state).await
+                    }
                     Err(err) => Err(format!("tls handshake failed: {err}")),
                 },
                 None => handle_connection(stream, peer.ip(), connection_state).await,
@@ -693,9 +702,7 @@ fn validate_gateway_security(
         return Err("gateway max_frame_size_bytes must be >= 512".to_string());
     }
     if security.max_frame_size_bytes > security.max_message_size_bytes {
-        return Err(
-            "gateway max_frame_size_bytes must be <= max_message_size_bytes".to_string(),
-        );
+        return Err("gateway max_frame_size_bytes must be <= max_message_size_bytes".to_string());
     }
     if security.handshake_timeout_ms < 100 {
         return Err("gateway handshake_timeout_ms must be >= 100".to_string());
@@ -707,9 +714,7 @@ fn validate_gateway_security(
         return Err("gateway auth_failure_backoff_ms must be >= 100".to_string());
     }
     if security.max_outbound_messages_per_connection == 0 {
-        return Err(
-            "gateway max_outbound_messages_per_connection must be >= 1".to_string(),
-        );
+        return Err("gateway max_outbound_messages_per_connection must be >= 1".to_string());
     }
 
     let public_bind = !is_loopback_bind(bind_addr);
@@ -772,14 +777,15 @@ fn load_tls_key(path: &Path) -> Result<PrivateKeyDer<'static>, String> {
     let mut reader = BufReader::new(file);
     rustls_pemfile::private_key(&mut reader)
         .map_err(|err| format!("read gateway tls key '{}': {err}", path.to_string_lossy()))?
-        .ok_or_else(|| format!("gateway tls key '{}' did not contain a private key", path.to_string_lossy()))
+        .ok_or_else(|| {
+            format!(
+                "gateway tls key '{}' did not contain a private key",
+                path.to_string_lossy()
+            )
+        })
 }
 
-async fn handle_connection<S>(
-    stream: S,
-    peer_ip: IpAddr,
-    state: GatewayState,
-) -> Result<(), String>
+async fn handle_connection<S>(stream: S, peer_ip: IpAddr, state: GatewayState) -> Result<(), String>
 where
     S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
 {
@@ -791,8 +797,8 @@ where
             ..Default::default()
         }),
     )
-        .await
-        .map_err(|err| format!("websocket upgrade failed: {err}"))?;
+    .await
+    .map_err(|err| format!("websocket upgrade failed: {err}"))?;
     let (mut sink, mut source) = ws_stream.split();
     let (writer_tx, mut writer_rx) =
         mpsc::channel::<Message>(state.security.max_outbound_messages_per_connection);
@@ -805,7 +811,12 @@ where
         }
     });
 
-    if let Some(remaining_ms) = state.auth_failures.lock().await.backoff_remaining_ms(peer_ip) {
+    if let Some(remaining_ms) = state
+        .auth_failures
+        .lock()
+        .await
+        .backoff_remaining_ms(peer_ip)
+    {
         let _ = send_error(
             &writer_tx,
             "",
@@ -825,12 +836,7 @@ where
     .await
     {
         Err(_) => {
-            let _ = send_error(
-                &writer_tx,
-                "",
-                "timeout",
-                "connect handshake timed out",
-            );
+            let _ = send_error(&writer_tx, "", "timeout", "connect handshake timed out");
             let _ = writer_tx.try_send(Message::Close(None));
             drop(writer_tx);
             let _ = writer_task.await;
@@ -872,7 +878,7 @@ where
             "handshake_required",
             "first method must be connect",
         );
-        let _ = writer_tx.send(Message::Close(None));
+        let _ = writer_tx.try_send(Message::Close(None));
         drop(writer_tx);
         let _ = writer_task.await;
         return Ok(());
@@ -1224,11 +1230,7 @@ fn map_kelvin_error(err: KelvinError) -> GatewayErrorPayload {
     }
 }
 
-fn send_ok(
-    writer_tx: &mpsc::Sender<Message>,
-    id: &str,
-    payload: Value,
-) -> Result<(), String> {
+fn send_ok(writer_tx: &mpsc::Sender<Message>, id: &str, payload: Value) -> Result<(), String> {
     let frame = ServerFrame::Res {
         id: id.to_string(),
         ok: true,
@@ -1280,10 +1282,7 @@ fn send_event(
     send_frame(writer_tx, frame)
 }
 
-fn send_frame(
-    writer_tx: &mpsc::Sender<Message>,
-    frame: ServerFrame,
-) -> Result<(), String> {
+fn send_frame(writer_tx: &mpsc::Sender<Message>, frame: ServerFrame) -> Result<(), String> {
     let text = serde_json::to_string(&frame).map_err(|err| err.to_string())?;
     writer_tx
         .try_send(Message::Text(text))
@@ -1376,22 +1375,24 @@ mod tests {
         let bind_addr: SocketAddr = "0.0.0.0:34617".parse().expect("bind addr");
         let error = validate_gateway_security(bind_addr, None, &GatewaySecurityConfig::default())
             .expect_err("public bind should fail closed");
-        assert!(error.contains("without --token"), "unexpected error: {error}");
+        assert!(
+            error.contains("without --token"),
+            "unexpected error: {error}"
+        );
 
-        let error = validate_gateway_security(
-            bind_addr,
-            Some("secret"),
-            &GatewaySecurityConfig::default(),
-        )
-        .expect_err("public ws bind should require tls or override");
+        let error =
+            validate_gateway_security(bind_addr, Some("secret"), &GatewaySecurityConfig::default())
+                .expect_err("public ws bind should require tls or override");
         assert!(error.contains("without TLS"), "unexpected error: {error}");
     }
 
     #[test]
     fn public_bind_can_use_explicit_insecure_override() {
         let bind_addr: SocketAddr = "0.0.0.0:34617".parse().expect("bind addr");
-        let mut security = GatewaySecurityConfig::default();
-        security.allow_insecure_public_bind = true;
+        let security = GatewaySecurityConfig {
+            allow_insecure_public_bind: true,
+            ..GatewaySecurityConfig::default()
+        };
         validate_gateway_security(bind_addr, Some("secret"), &security)
             .expect("explicit insecure override should allow public ws bind");
     }

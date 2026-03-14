@@ -1135,6 +1135,10 @@ impl KelvinSdkRuntime {
         self.loaded_installed_plugins
     }
 
+    pub fn state_dir(&self) -> Option<&Path> {
+        self.persistence.state_dir.as_deref()
+    }
+
     pub fn subscribe_events(&self) -> broadcast::Receiver<AgentEvent> {
         self.event_tx.subscribe()
     }

@@ -4,8 +4,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use futures_util::{SinkExt, StreamExt};
 use kelvin_gateway::{
-    run_gateway_with_listener_secure, GatewaySecurityConfig,
-    GATEWAY_METHODS_V1, GATEWAY_PROTOCOL_VERSION,
+    run_gateway_with_listener_secure, GatewaySecurityConfig, GATEWAY_METHODS_V1,
+    GATEWAY_PROTOCOL_VERSION,
 };
 use kelvin_sdk::{
     KelvinCliMemoryMode, KelvinSdkModelSelection, KelvinSdkRuntime, KelvinSdkRuntimeConfig,
@@ -236,9 +236,18 @@ async fn gateway_agent_submit_wait_and_idempotency_flow_works() {
         health_response["payload"]["supported_methods"],
         json!(GATEWAY_METHODS_V1)
     );
-    assert_eq!(health_response["payload"]["security"]["transport"], json!("ws"));
-    assert_eq!(health_response["payload"]["security"]["bind_scope"], json!("loopback"));
-    assert_eq!(health_response["payload"]["security"]["max_inflight_requests_per_connection"], json!(1));
+    assert_eq!(
+        health_response["payload"]["security"]["transport"],
+        json!("ws")
+    );
+    assert_eq!(
+        health_response["payload"]["security"]["bind_scope"],
+        json!("loopback")
+    );
+    assert_eq!(
+        health_response["payload"]["security"]["max_inflight_requests_per_connection"],
+        json!(1)
+    );
 
     send_request(
         &mut socket,

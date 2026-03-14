@@ -2,9 +2,12 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "${ROOT_DIR}/scripts/lib/docker-cache.sh"
 IMAGE="${KELVIN_RUNTIME_IMAGE:-kelvin-runtime:dev}"
 DEFAULT_INDEX_URL="https://raw.githubusercontent.com/agentichighway/kelvinclaw-plugins/main/index.json"
 INDEX_URL="${KELVIN_PLUGIN_INDEX_URL:-${DEFAULT_INDEX_URL}}"
+BUILDER_NAME="${KELVIN_DOCKER_BUILDER:-kelvinclaw-builder}"
+CACHE_DIR="${KELVIN_RUNTIME_DOCKER_CACHE_DIR:-$(kelvin_docker_buildx_cache_dir "${ROOT_DIR}" "runtime")}"
 
 usage() {
   cat <<'USAGE'
@@ -49,10 +52,35 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ "${DO_BUILD}" == "1" ]]; then
-  docker build \
-    -f "${ROOT_DIR}/docker/Dockerfile.runtime" \
-    -t "${IMAGE}" \
-    "${ROOT_DIR}"
+  if ! docker buildx inspect "${BUILDER_NAME}" >/dev/null 2>&1; then
+    docker buildx create --name "${BUILDER_NAME}" --use >/dev/null
+  else
+    docker buildx use "${BUILDER_NAME}" >/dev/null
+  fi
+
+  mkdir -p "${CACHE_DIR}"
+  CACHE_TMP="${CACHE_DIR}-new"
+  rm -rf "${CACHE_TMP}"
+
+  build_cmd=(
+    docker buildx build
+    --builder "${BUILDER_NAME}"
+    --file "${ROOT_DIR}/docker/Dockerfile.runtime"
+    --progress plain
+    --load
+    --tag "${IMAGE}"
+    --cache-to "type=local,dest=${CACHE_TMP},mode=max"
+  )
+
+  if [[ -f "${CACHE_DIR}/index.json" ]]; then
+    build_cmd+=(--cache-from "type=local,src=${CACHE_DIR}")
+  fi
+
+  build_cmd+=("${ROOT_DIR}")
+  "${build_cmd[@]}"
+
+  rm -rf "${CACHE_DIR}"
+  mv "${CACHE_TMP}" "${CACHE_DIR}"
 fi
 
 docker_args=(

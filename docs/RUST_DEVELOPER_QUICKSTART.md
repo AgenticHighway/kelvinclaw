@@ -13,6 +13,7 @@ What this does:
 
 - uses local `cargo` if installed
 - otherwise falls back to Docker (`rust:1.93.1-bookworm` by default)
+- reuses repo-local Docker cargo/build caches under `./.cache/docker` to avoid cold-start redownloads on every run
 - installs/updates the first-party `kelvin_cli` WASM plugin package from the plugin index into `./.kelvin/plugins`
 - runs `apps/kelvin-host` with a prompt
 - auto-bootstraps Rust PATH (`$HOME/.cargo/bin`, `/usr/local/cargo/bin`) before cargo/rustup checks
@@ -65,6 +66,8 @@ Before final pushes:
 ```bash
 scripts/test-docker.sh --final
 ```
+
+If you need to reclaim disk from the shared Docker caches, remove `./.cache/docker`.
 
 Memory controller OWASP + NIST suites:
 

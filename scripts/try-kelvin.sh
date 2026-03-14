@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/lib/rust-toolchain-path.sh"
+source "${ROOT_DIR}/scripts/lib/docker-cache.sh"
 PROMPT="${1:-hello kelvin}"
 TIMEOUT_MS="${KELVIN_TRY_TIMEOUT_MS:-5000}"
 MODE="${KELVIN_TRY_MODE:-auto}" # auto | local | docker
@@ -27,7 +28,9 @@ ensure_cli_plugin() {
 
 ensure_cli_plugin_docker() {
   echo "[try-kelvin] ensuring kelvin_cli plugin is installed (docker bootstrap)"
+  kelvin_prepare_docker_rust_cache "${ROOT_DIR}" "try-kelvin"
   docker run --rm \
+    "${DOCKER_RUST_CACHE_ARGS[@]}" \
     -e DEBIAN_FRONTEND=noninteractive \
     -e KELVIN_PLUGIN_HOME="/work/.kelvin/plugins" \
     -e KELVIN_TRUST_POLICY_PATH="/work/.kelvin/trusted_publishers.json" \
@@ -67,7 +70,9 @@ run_local() {
 run_docker() {
   echo "[try-kelvin] mode=docker"
   ensure_cli_plugin_docker
+  kelvin_prepare_docker_rust_cache "${ROOT_DIR}" "try-kelvin"
   docker run --rm \
+    "${DOCKER_RUST_CACHE_ARGS[@]}" \
     -e KELVIN_TRY_PROMPT="${PROMPT}" \
     -e KELVIN_TRY_TIMEOUT_MS="${TIMEOUT_MS}" \
     -e KELVIN_TRY_TARGET_DIR="/work/target/try-kelvin-cli" \
