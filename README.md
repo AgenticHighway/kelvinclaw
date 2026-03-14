@@ -425,6 +425,17 @@ Default paths:
 Sign a package manifest and generate `plugin.sig`:
 
 ```bash
+AWS_PROFILE=REDACTED_AWS_PROFILE scripts/plugin-sign.sh \
+  --manifest ~/.kelvinclaw/plugins/acme.echo/1.0.0/plugin.json \
+  --kms-key-id REDACTED_KMS_ALIAS \
+  --kms-region us-east-1 \
+  --publisher-id acme \
+  --trust-policy-out ./trusted_publishers.acme.json
+```
+
+PEM signing remains supported for community publishers and local development:
+
+```bash
 scripts/plugin-sign.sh \
   --manifest ~/.kelvinclaw/plugins/acme.echo/1.0.0/plugin.json \
   --private-key ~/.kelvinclaw/keys/acme-ed25519-private.pem \
