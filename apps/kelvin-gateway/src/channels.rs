@@ -1,4 +1,6 @@
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use kelvin_core::{now_ms, KelvinError, RunOutcome};
@@ -18,11 +20,11 @@ pub struct ChannelEngine {
 }
 
 impl ChannelEngine {
-    pub fn from_env() -> KelvinErrorOr<Self> {
+    pub fn from_env_with_state_dir(state_dir: Option<&Path>) -> KelvinErrorOr<Self> {
         let routing = ChannelRoutingTable::from_env()?;
-        let telegram = TextChannelAdapter::telegram_from_env()?;
-        let slack = TextChannelAdapter::slack_from_env()?;
-        let discord = TextChannelAdapter::discord_from_env()?;
+        let telegram = TextChannelAdapter::telegram_from_env(state_dir)?;
+        let slack = TextChannelAdapter::slack_from_env(state_dir)?;
+        let discord = TextChannelAdapter::discord_from_env(state_dir)?;
         Ok(Self {
             routing,
             telegram,
@@ -413,7 +415,7 @@ fn validate_base_url(kind: ChannelKind, raw: &str, allow_custom_base: bool) -> K
     Ok(())
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct ChannelEnvelope {
     delivery_id: String,
     sender_id: String,
@@ -557,10 +559,91 @@ impl WasmChannelPolicyPlugin {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct QueuedEnvelope {
     envelope: ChannelEnvelope,
     route: RouteDecision,
+}
+
+#[derive(Debug, Clone)]
+struct ChannelStatePersistence {
+    state_path: PathBuf,
+}
+
+impl ChannelStatePersistence {
+    fn for_channel(state_dir: Option<&Path>, kind: ChannelKind) -> KelvinErrorOr<Option<Self>> {
+        let Some(root) = state_dir else {
+            return Ok(None);
+        };
+        let dir = root.join("gateway").join("channels");
+        fs::create_dir_all(&dir)
+            .map_err(|err| KelvinError::Io(format!("create channel state dir: {err}")))?;
+        Ok(Some(Self {
+            state_path: dir.join(format!("{}.json", kind.as_str())),
+        }))
+    }
+
+    fn path(&self) -> &Path {
+        &self.state_path
+    }
+
+    fn load(&self) -> KelvinErrorOr<Option<PersistedChannelState>> {
+        if !self.state_path.is_file() {
+            return Ok(None);
+        }
+        let bytes = fs::read(&self.state_path).map_err(|err| {
+            KelvinError::Io(format!(
+                "read persisted channel state '{}': {err}",
+                self.state_path.to_string_lossy()
+            ))
+        })?;
+        let state = serde_json::from_slice::<PersistedChannelState>(&bytes).map_err(|err| {
+            KelvinError::InvalidInput(format!(
+                "invalid persisted channel state '{}': {err}",
+                self.state_path.to_string_lossy()
+            ))
+        })?;
+        Ok(Some(state))
+    }
+
+    fn save(&self, state: &PersistedChannelState) -> KelvinErrorOr<()> {
+        if let Some(parent) = self.state_path.parent() {
+            fs::create_dir_all(parent)
+                .map_err(|err| KelvinError::Io(format!("create channel state parent: {err}")))?;
+        }
+        let tmp_path = self.state_path.with_extension("json.tmp");
+        let bytes = serde_json::to_vec_pretty(state).map_err(|err| {
+            KelvinError::Backend(format!(
+                "serialize channel state '{}': {err}",
+                self.state_path.to_string_lossy()
+            ))
+        })?;
+        fs::write(&tmp_path, bytes).map_err(|err| {
+            KelvinError::Io(format!(
+                "write channel state temp '{}': {err}",
+                tmp_path.to_string_lossy()
+            ))
+        })?;
+        fs::rename(&tmp_path, &self.state_path).map_err(|err| {
+            KelvinError::Io(format!(
+                "commit channel state '{}': {err}",
+                self.state_path.to_string_lossy()
+            ))
+        })?;
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(default)]
+struct PersistedChannelState {
+    paired_accounts: HashSet<String>,
+    pending_pair_codes: HashMap<String, String>,
+    seen_delivery_order: VecDeque<String>,
+    rate_windows: HashMap<String, VecDeque<u128>>,
+    cooldown_until_ms: HashMap<String, u128>,
+    inbox: VecDeque<QueuedEnvelope>,
+    metrics: ChannelMetrics,
 }
 
 #[derive(Debug, Clone)]
@@ -574,10 +657,12 @@ struct TextChannelAdapter {
     cooldown_until_ms: HashMap<String, u128>,
     inbox: VecDeque<QueuedEnvelope>,
     client: reqwest::Client,
+    state_persistence: Option<ChannelStatePersistence>,
     metrics: ChannelMetrics,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(default)]
 struct ChannelMetrics {
     ingest_total: u64,
     deduped_total: u64,
@@ -598,23 +683,30 @@ struct ChannelMetrics {
 }
 
 impl TextChannelAdapter {
-    fn telegram_from_env() -> KelvinErrorOr<Option<Self>> {
-        Self::new(TextChannelConfig::from_env(ChannelKind::Telegram)?)
+    fn telegram_from_env(state_dir: Option<&Path>) -> KelvinErrorOr<Option<Self>> {
+        Self::new(
+            TextChannelConfig::from_env(ChannelKind::Telegram)?,
+            state_dir,
+        )
     }
 
-    fn slack_from_env() -> KelvinErrorOr<Option<Self>> {
-        Self::new(TextChannelConfig::from_env(ChannelKind::Slack)?)
+    fn slack_from_env(state_dir: Option<&Path>) -> KelvinErrorOr<Option<Self>> {
+        Self::new(TextChannelConfig::from_env(ChannelKind::Slack)?, state_dir)
     }
 
-    fn discord_from_env() -> KelvinErrorOr<Option<Self>> {
-        Self::new(TextChannelConfig::from_env(ChannelKind::Discord)?)
+    fn discord_from_env(state_dir: Option<&Path>) -> KelvinErrorOr<Option<Self>> {
+        Self::new(
+            TextChannelConfig::from_env(ChannelKind::Discord)?,
+            state_dir,
+        )
     }
 
-    fn new(config: TextChannelConfig) -> KelvinErrorOr<Option<Self>> {
+    fn new(config: TextChannelConfig, state_dir: Option<&Path>) -> KelvinErrorOr<Option<Self>> {
         if !config.enabled {
             return Ok(None);
         }
-        Ok(Some(Self {
+        let state_persistence = ChannelStatePersistence::for_channel(state_dir, config.kind)?;
+        let mut adapter = Self {
             config,
             paired_accounts: HashSet::new(),
             pending_pair_codes: HashMap::new(),
@@ -624,8 +716,80 @@ impl TextChannelAdapter {
             cooldown_until_ms: HashMap::new(),
             inbox: VecDeque::new(),
             client: reqwest::Client::new(),
+            state_persistence,
             metrics: ChannelMetrics::default(),
-        }))
+        };
+        adapter.load_persisted_state()?;
+        Ok(Some(adapter))
+    }
+
+    fn load_persisted_state(&mut self) -> KelvinErrorOr<()> {
+        let Some(persistence) = &self.state_persistence else {
+            return Ok(());
+        };
+        let Some(state) = persistence.load()? else {
+            return Ok(());
+        };
+        self.apply_persisted_state(state);
+        Ok(())
+    }
+
+    fn apply_persisted_state(&mut self, state: PersistedChannelState) {
+        let now = now_ms();
+        self.paired_accounts = state.paired_accounts;
+        self.pending_pair_codes = state.pending_pair_codes;
+        self.seen_delivery_order = state.seen_delivery_order;
+        while self.seen_delivery_order.len() > self.config.policy.max_seen_delivery_ids {
+            let _ = self.seen_delivery_order.pop_front();
+        }
+        self.seen_delivery_ids = self.seen_delivery_order.iter().cloned().collect();
+        self.rate_windows = state
+            .rate_windows
+            .into_iter()
+            .filter_map(|(sender_id, mut window)| {
+                while let Some(ts) = window.front().copied() {
+                    if now.saturating_sub(ts) > 60_000 {
+                        let _ = window.pop_front();
+                    } else {
+                        break;
+                    }
+                }
+                if window.is_empty() {
+                    None
+                } else {
+                    Some((sender_id, window))
+                }
+            })
+            .collect();
+        self.cooldown_until_ms = state
+            .cooldown_until_ms
+            .into_iter()
+            .filter(|(_, until_ms)| *until_ms > now)
+            .collect();
+        self.inbox = state.inbox;
+        while self.inbox.len() > self.config.policy.max_queue_depth {
+            let _ = self.inbox.pop_back();
+        }
+        self.metrics = state.metrics;
+    }
+
+    fn snapshot_state(&self) -> PersistedChannelState {
+        PersistedChannelState {
+            paired_accounts: self.paired_accounts.clone(),
+            pending_pair_codes: self.pending_pair_codes.clone(),
+            seen_delivery_order: self.seen_delivery_order.clone(),
+            rate_windows: self.rate_windows.clone(),
+            cooldown_until_ms: self.cooldown_until_ms.clone(),
+            inbox: self.inbox.clone(),
+            metrics: self.metrics.clone(),
+        }
+    }
+
+    fn persist_state(&self) -> KelvinErrorOr<()> {
+        let Some(persistence) = &self.state_persistence else {
+            return Ok(());
+        };
+        persistence.save(&self.snapshot_state())
     }
 
     fn status(&self) -> Value {
@@ -633,9 +797,13 @@ impl TextChannelAdapter {
             "enabled": true,
             "kind": self.config.kind.as_str(),
             "pairing_enabled": self.config.pairing_enabled,
+            "state_persistence_enabled": self.state_persistence.is_some(),
+            "state_path": self.state_persistence.as_ref().map(|state| state.path().to_string_lossy().to_string()),
             "paired_accounts": self.paired_accounts.len(),
             "pending_pairings": self.pending_pair_codes.len(),
             "seen_delivery_ids": self.seen_delivery_ids.len(),
+            "rate_window_sender_count": self.rate_windows.len(),
+            "cooldown_account_count": self.cooldown_until_ms.len(),
             "allow_account_size": self.config.policy.allow_accounts.len(),
             "allow_sender_size": self.config.policy.allow_senders.len(),
             "trusted_sender_size": self.config.policy.trusted_senders.len(),
@@ -649,7 +817,12 @@ impl TextChannelAdapter {
             "cooldown_probation_ms": self.config.policy.cooldown_probation_ms,
             "queue_depth": self.inbox.len(),
             "queue_max_depth": self.config.policy.max_queue_depth,
+            "ingress_auth_required": self.config.policy.ingress_token.is_some(),
             "outbound_delivery_enabled": self.config.transport.bot_token.is_some(),
+            "outbound_retry_policy": {
+                "max_retries": self.config.transport.outbound_max_retries,
+                "backoff_ms": self.config.transport.outbound_retry_backoff_ms,
+            },
             "wasm_policy_enabled": self.config.wasm_policy_plugin.is_some(),
             "metrics": {
                 "ingest_total": self.metrics.ingest_total,
@@ -689,6 +862,14 @@ impl TextChannelAdapter {
         };
         self.paired_accounts.insert(account_id.clone());
         self.metrics.pairing_approved_total = self.metrics.pairing_approved_total.saturating_add(1);
+        if let Err(err) = self.persist_state() {
+            self.paired_accounts.remove(&account_id);
+            self.pending_pair_codes
+                .insert(normalized.to_string(), account_id.clone());
+            self.metrics.pairing_approved_total =
+                self.metrics.pairing_approved_total.saturating_sub(1);
+            return Err(err);
+        }
         Ok(json!({
             "approved": true,
             "account_id": account_id,
@@ -720,6 +901,7 @@ impl TextChannelAdapter {
         }
 
         self.verify_ingress_auth(&envelope)?;
+        envelope.auth_token = None;
 
         if self.is_duplicate_delivery(&envelope.delivery_id) {
             self.metrics.deduped_total = self.metrics.deduped_total.saturating_add(1);
@@ -798,6 +980,7 @@ impl TextChannelAdapter {
         if self.inbox.len() >= self.config.policy.max_queue_depth {
             self.metrics.queue_rejected_total = self.metrics.queue_rejected_total.saturating_add(1);
             self.metrics.last_error = Some("channel queue is full".to_string());
+            self.persist_state()?;
             return Err(KelvinError::Backend(format!(
                 "{} channel queue is full",
                 self.config.kind.as_str()
@@ -807,6 +990,7 @@ impl TextChannelAdapter {
         self.metrics.queued_total = self.metrics.queued_total.saturating_add(1);
         let current_delivery_id = envelope.delivery_id.clone();
         self.inbox.push_back(QueuedEnvelope { envelope, route });
+        self.persist_state()?;
         self.process_inbox(runtime, &current_delivery_id).await
     }
 
@@ -909,6 +1093,7 @@ impl TextChannelAdapter {
             );
         }
 
+        self.persist_state()?;
         Ok(sender_tier)
     }
 
@@ -977,6 +1162,10 @@ impl TextChannelAdapter {
         let code = format!("{numeric:06}");
         self.pending_pair_codes
             .insert(code.clone(), account_id.to_string());
+        if let Err(err) = self.persist_state() {
+            self.pending_pair_codes.remove(&code);
+            return Err(err);
+        }
         Ok(Some(code))
     }
 
@@ -987,6 +1176,7 @@ impl TextChannelAdapter {
     ) -> KelvinErrorOr<Value> {
         let mut target_response: Option<Value> = None;
         while let Some(entry) = self.inbox.pop_front() {
+            self.persist_state()?;
             let is_target = entry.envelope.delivery_id == target_delivery_id;
             let result = self.execute_entry(runtime, &entry).await;
             if is_target {
@@ -1054,6 +1244,7 @@ impl TextChannelAdapter {
                     .await?;
                 self.metrics.completed_total = self.metrics.completed_total.saturating_add(1);
                 self.metrics.last_error = None;
+                self.persist_state()?;
 
                 Ok(json!({
                     "status": "completed",
@@ -1070,6 +1261,7 @@ impl TextChannelAdapter {
                 let _ = self
                     .send_message_with_retry(&entry.envelope.account_id, &outbound_text)
                     .await;
+                self.persist_state()?;
                 Ok(json!({
                     "status": "failed",
                     "run_id": accepted.run_id,
@@ -1084,6 +1276,7 @@ impl TextChannelAdapter {
                 let _ = self
                     .send_message_with_retry(&entry.envelope.account_id, "Kelvin run timed out.")
                     .await;
+                self.persist_state()?;
                 Ok(json!({
                     "status": "timeout",
                     "run_id": accepted.run_id,
@@ -1401,7 +1594,7 @@ impl RouteRule {
     }
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct RouteDecision {
     matched_rule_id: Option<String>,
     session_id: String,
@@ -1721,12 +1914,15 @@ mod tests {
             cooldown_until_ms: HashMap::new(),
             inbox: VecDeque::new(),
             client: reqwest::Client::new(),
+            state_persistence: None,
             metrics: ChannelMetrics::default(),
         };
 
         let status = adapter.status();
         assert_eq!(status["kind"], json!("slack"));
         assert_eq!(status["queue_depth"], json!(0));
+        assert_eq!(status["state_persistence_enabled"], json!(false));
+        assert_eq!(status["ingress_auth_required"], json!(true));
         assert!(status["metrics"]["policy_denied_total"].is_number());
         assert!(status["metrics"]["rate_limited_total"].is_number());
     }

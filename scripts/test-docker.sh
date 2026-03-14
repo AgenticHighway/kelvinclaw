@@ -2,13 +2,14 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "${ROOT_DIR}/scripts/lib/docker-cache.sh"
 DOCKERFILE="${KELVIN_DOCKERFILE:-${ROOT_DIR}/docker/Dockerfile.test}"
 RUST_VERSION="${KELVIN_RUST_VERSION:-1.93.1}"
 LANE="${KELVIN_DOCKER_LANE:-full}" # quick | full
 CLEAN="0"
 FINAL="0"
 PROGRESS="${KELVIN_DOCKER_PROGRESS:-plain}"
-CACHE_DIR="${KELVIN_DOCKER_CACHE_DIR:-${ROOT_DIR}/.cache/docker/buildx}"
+CACHE_DIR="${KELVIN_DOCKER_CACHE_DIR:-$(kelvin_docker_buildx_cache_dir "${ROOT_DIR}" "tests")}"
 BUILDER_NAME="${KELVIN_DOCKER_BUILDER:-kelvinclaw-builder}"
 
 usage() {
@@ -114,7 +115,7 @@ build_cmd=(
 if [[ "${CLEAN}" == "1" ]]; then
   build_cmd+=(--no-cache --pull)
 else
-  if [[ -d "${CACHE_DIR}" ]]; then
+  if [[ -f "${CACHE_DIR}/index.json" ]]; then
     build_cmd+=(--cache-from "type=local,src=${CACHE_DIR}")
   fi
 fi

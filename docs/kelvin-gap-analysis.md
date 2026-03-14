@@ -202,3 +202,4 @@ Still open:
 3. Add daemon/service management for `kelvin-gateway` (systemd/launchd docs + scripts).
 4. Add gateway security tests for malformed frames, replay pressure, and auth brute-force throttling.
 5. Add a minimal control UI shell consuming gateway methods.
+6. Keep consolidating Docker layer/cargo cache reuse across developer and CI scripts without letting `.cache/docker` grow unchecked.

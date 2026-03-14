@@ -132,8 +132,7 @@ fn parse_args() -> Result<CliConfig, String> {
     let mut max_frame_size_bytes = env_usize("KELVIN_GATEWAY_MAX_FRAME_BYTES", 16 * 1024)?;
     let mut handshake_timeout_ms = env_u64("KELVIN_GATEWAY_HANDSHAKE_TIMEOUT_MS", 5_000)?;
     let mut auth_failure_threshold = env_u32("KELVIN_GATEWAY_AUTH_FAILURE_THRESHOLD", 3)?;
-    let mut auth_failure_backoff_ms =
-        env_u64("KELVIN_GATEWAY_AUTH_FAILURE_BACKOFF_MS", 1_500)?;
+    let mut auth_failure_backoff_ms = env_u64("KELVIN_GATEWAY_AUTH_FAILURE_BACKOFF_MS", 1_500)?;
     let mut max_outbound_messages_per_connection =
         env_usize("KELVIN_GATEWAY_MAX_OUTBOUND_MESSAGES", 128)?;
 
@@ -204,8 +203,7 @@ fn parse_args() -> Result<CliConfig, String> {
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --allow-insecure-public-bind".to_string())?;
-                allow_insecure_public_bind =
-                    parse_bool(&value, "--allow-insecure-public-bind")?;
+                allow_insecure_public_bind = parse_bool(&value, "--allow-insecure-public-bind")?;
             }
             "--max-connections" => {
                 let value = args
@@ -241,8 +239,7 @@ fn parse_args() -> Result<CliConfig, String> {
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --auth-failure-backoff-ms".to_string())?;
-                auth_failure_backoff_ms =
-                    parse_u64(&value, "--auth-failure-backoff-ms")?;
+                auth_failure_backoff_ms = parse_u64(&value, "--auth-failure-backoff-ms")?;
             }
             "--max-outbound-messages" => {
                 let value = args
