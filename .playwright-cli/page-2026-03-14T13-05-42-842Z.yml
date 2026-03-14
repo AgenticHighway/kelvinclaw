@@ -1,0 +1,1267 @@
+- generic [ref=e2]:
+  - region
+  - generic [ref=e3]:
+    - link "Skip to content" [ref=e4] [cursor=pointer]:
+      - /url: "#start-of-content"
+    - banner [ref=e6]:
+      - heading "Navigation Menu" [level=2] [ref=e7]
+      - generic [ref=e8]:
+        - link "Homepage" [ref=e10] [cursor=pointer]:
+          - /url: /
+          - img [ref=e11]
+        - generic [ref=e13]:
+          - navigation "Global" [ref=e16]:
+            - list [ref=e17]:
+              - listitem [ref=e18]:
+                - button "Platform" [ref=e20] [cursor=pointer]:
+                  - text: Platform
+                  - img [ref=e21]
+              - listitem [ref=e23]:
+                - button "Solutions" [ref=e25] [cursor=pointer]:
+                  - text: Solutions
+                  - img [ref=e26]
+              - listitem [ref=e28]:
+                - button "Resources" [ref=e30] [cursor=pointer]:
+                  - text: Resources
+                  - img [ref=e31]
+              - listitem [ref=e33]:
+                - button "Open Source" [ref=e35] [cursor=pointer]:
+                  - text: Open Source
+                  - img [ref=e36]
+              - listitem [ref=e38]:
+                - button "Enterprise" [ref=e40] [cursor=pointer]:
+                  - text: Enterprise
+                  - img [ref=e41]
+              - listitem [ref=e43]:
+                - link "Pricing" [ref=e44] [cursor=pointer]:
+                  - /url: https://github.com/pricing
+                  - generic [ref=e45]: Pricing
+          - generic [ref=e46]:
+            - button "Search or jump to…" [ref=e49] [cursor=pointer]:
+              - img [ref=e51]
+            - link "Sign in" [ref=e54] [cursor=pointer]:
+              - /url: /login?return_to=https%3A%2F%2Fgithub.com%2FAgenticHighway%2Fkelvinclaw
+            - link "Sign up" [ref=e55] [cursor=pointer]:
+              - /url: /signup?ref_cta=Sign+up&ref_loc=header+logged+out&ref_page=%2F%3Cuser-name%3E%2F%3Crepo-name%3E&source=header-repo&source_repo=AgenticHighway%2Fkelvinclaw
+            - button "Appearance settings" [disabled] [ref=e58]:
+              - img
+  - main [ref=e62]:
+    - generic [ref=e63]:
+      - generic [ref=e64]:
+        - generic [ref=e66]:
+          - img [ref=e67]
+          - link "AgenticHighway" [ref=e70] [cursor=pointer]:
+            - /url: /AgenticHighway
+          - generic [ref=e71]: /
+          - strong [ref=e72]:
+            - link "kelvinclaw" [ref=e73] [cursor=pointer]:
+              - /url: /AgenticHighway/kelvinclaw
+          - generic [ref=e74]: Public
+        - generic [ref=e75]:
+          - list:
+            - listitem [ref=e76]:
+              - link "You must be signed in to change notification settings" [ref=e77] [cursor=pointer]:
+                - /url: /login?return_to=%2FAgenticHighway%2Fkelvinclaw
+                - img [ref=e78]
+                - text: Notifications
+            - listitem [ref=e80]:
+              - link "Fork 1" [ref=e81] [cursor=pointer]:
+                - /url: /login?return_to=%2FAgenticHighway%2Fkelvinclaw
+                - img [ref=e82]
+                - text: Fork
+                - generic "1" [ref=e84]
+            - listitem [ref=e85]:
+              - link "You must be signed in to star a repository" [ref=e87] [cursor=pointer]:
+                - /url: /login?return_to=%2FAgenticHighway%2Fkelvinclaw
+                - img [ref=e88]
+                - text: Star
+                - generic "6 users starred this repository" [ref=e90]: "6"
+      - navigation "Repository" [ref=e91]:
+        - list [ref=e92]:
+          - listitem [ref=e93]:
+            - link "Code" [ref=e94] [cursor=pointer]:
+              - /url: /AgenticHighway/kelvinclaw
+              - img [ref=e95]
+              - generic [ref=e97]: Code
+          - listitem [ref=e98]:
+            - link "Issues" [ref=e99] [cursor=pointer]:
+              - /url: /AgenticHighway/kelvinclaw/issues
+              - img [ref=e100]
+              - generic [ref=e103]: Issues
+          - listitem [ref=e104]:
+            - link "Pull requests" [ref=e105] [cursor=pointer]:
+              - /url: /AgenticHighway/kelvinclaw/pulls
+              - img [ref=e106]
+              - generic [ref=e108]: Pull requests
+          - listitem [ref=e109]:
+            - link "Actions" [ref=e110] [cursor=pointer]:
+              - /url: /AgenticHighway/kelvinclaw/actions
+              - img [ref=e111]
+              - generic [ref=e113]: Actions
+          - listitem [ref=e114]:
+            - link "Projects" [ref=e115] [cursor=pointer]:
+              - /url: /AgenticHighway/kelvinclaw/projects
+              - img [ref=e116]
+              - generic [ref=e118]: Projects
+          - listitem [ref=e119]:
+            - link "Security" [ref=e120] [cursor=pointer]:
+              - /url: /AgenticHighway/kelvinclaw/security
+              - img [ref=e121]
+              - generic [ref=e123]: Security
+          - listitem [ref=e124]:
+            - link "Insights" [ref=e125] [cursor=pointer]:
+              - /url: /AgenticHighway/kelvinclaw/pulse
+              - img [ref=e126]
+              - generic [ref=e128]: Insights
+    - generic [ref=e141]:
+      - heading "AgenticHighway/kelvinclaw" [level=1] [ref=e143]
+      - generic [ref=e144]:
+        - generic [ref=e147]:
+          - generic [ref=e148]:
+            - generic [ref=e149]:
+              - button "main branch" [ref=e151] [cursor=pointer]:
+                - generic [ref=e152]:
+                  - generic [ref=e154]:
+                    - img [ref=e156]
+                    - generic [ref=e159]: main
+                  - generic:
+                    - img
+              - generic [ref=e160]:
+                - link "1 Branch" [ref=e161] [cursor=pointer]:
+                  - /url: /AgenticHighway/kelvinclaw/branches
+                  - generic [ref=e162]:
+                    - generic:
+                      - img
+                    - generic [ref=e164]:
+                      - strong [ref=e165]: "1"
+                      - text: Branch
+                - link "0 Tags" [ref=e166] [cursor=pointer]:
+                  - /url: /AgenticHighway/kelvinclaw/tags
+                  - generic [ref=e167]:
+                    - generic:
+                      - img
+                    - generic [ref=e169]:
+                      - strong [ref=e170]: "0"
+                      - text: Tags
+            - generic [ref=e171]:
+              - generic [ref=e175]:
+                - img [ref=e177]
+                - combobox "Go to file" [ref=e179]
+              - button "Code" [ref=e180] [cursor=pointer]:
+                - generic [ref=e181]:
+                  - generic:
+                    - img
+                  - generic [ref=e182]: Code
+                  - generic:
+                    - img
+          - generic [ref=e183]:
+            - generic [ref=e184]:
+              - heading "Folders and files" [level=2] [ref=e185]
+              - table "Folders and files" [ref=e186]:
+                - rowgroup:
+                  - row "Name Last commit message Last commit date":
+                    - columnheader "Name"
+                    - columnheader "Last commit message":
+                      - generic "Last commit message"
+                    - columnheader "Last commit date":
+                      - generic "Last commit date"
+                - rowgroup [ref=e187]:
+                  - row "Latest commit History 55 Commits" [ref=e188]:
+                    - cell "Latest commit History 55 Commits" [ref=e189]:
+                      - generic [ref=e190]:
+                        - heading "Latest commit" [level=2] [ref=e191]
+                        - generic [ref=e194]:
+                          - heading "History" [level=2] [ref=e195]
+                          - link "55 Commits" [ref=e196] [cursor=pointer]:
+                            - /url: /AgenticHighway/kelvinclaw/commits/main/
+                            - generic [ref=e197]:
+                              - generic:
+                                - img
+                              - generic [ref=e198]: 55 Commits
+                  - row ".github/workflows, (Directory)" [ref=e199]:
+                    - cell ".github/workflows, (Directory)" [ref=e200]:
+                      - generic [ref=e201]:
+                        - img [ref=e202]
+                        - link ".github/workflows, (Directory)" [ref=e207] [cursor=pointer]:
+                          - /url: /AgenticHighway/kelvinclaw/tree/main/.github/workflows
+                          - text: .github/workflows
+                    - cell [ref=e208]
+                    - cell [ref=e210]
+                  - row "apps, (Directory)" [ref=e212]:
+                    - cell "apps, (Directory)" [ref=e213]:
+                      - generic [ref=e214]:
+                        - img [ref=e215]
+                        - link "apps, (Directory)" [ref=e220] [cursor=pointer]:
+                          - /url: /AgenticHighway/kelvinclaw/tree/main/apps
+                          - text: apps
+                    - cell [ref=e221]
+                    - cell [ref=e223]
+                  - row "crates, (Directory)" [ref=e225]:
+                    - cell "crates, (Directory)" [ref=e226]:
+                      - generic [ref=e227]:
+                        - img [ref=e228]
+                        - link "crates, (Directory)" [ref=e233] [cursor=pointer]:
+                          - /url: /AgenticHighway/kelvinclaw/tree/main/crates
+                          - text: crates
+                    - cell [ref=e234]
+                    - cell [ref=e236]
+                  - row "docker, (Directory)" [ref=e238]:
+                    - cell "docker, (Directory)" [ref=e239]:
+                      - generic [ref=e240]:
+                        - img [ref=e241]
+                        - link "docker, (Directory)" [ref=e246] [cursor=pointer]:
+                          - /url: /AgenticHighway/kelvinclaw/tree/main/docker
+                          - text: docker
+                    - cell [ref=e247]
+                    - cell [ref=e249]
+                  - row "docs, (Directory)" [ref=e251]:
+                    - cell "docs, (Directory)" [ref=e252]:
+                      - generic [ref=e253]:
+                        - img [ref=e254]
+                        - link "docs, (Directory)" [ref=e259] [cursor=pointer]:
+                          - /url: /AgenticHighway/kelvinclaw/tree/main/docs
+                          - text: docs
+                    - cell [ref=e260]
+                    - cell [ref=e262]
+                  - row "examples/echo-wasm-skill, (Directory)" [ref=e264]:
+                    - cell "examples/echo-wasm-skill, (Directory)" [ref=e265]:
+                      - generic [ref=e266]:
+                        - img [ref=e267]
+                        - link "examples/echo-wasm-skill, (Directory)" [ref=e272] [cursor=pointer]:
+                          - /url: /AgenticHighway/kelvinclaw/tree/main/examples/echo-wasm-skill
+                          - text: examples/echo-wasm-skill
+                    - cell [ref=e273]
+                    - cell [ref=e275]
+                  - row "scripts, (Directory)" [ref=e277]:
+                    - cell "scripts, (Directory)" [ref=e278]:
+                      - generic [ref=e279]:
+                        - img [ref=e280]
+                        - link "scripts, (Directory)" [ref=e285] [cursor=pointer]:
+                          - /url: /AgenticHighway/kelvinclaw/tree/main/scripts
+                          - text: scripts
+                    - cell [ref=e286]
+                    - cell [ref=e288]
+                  - row "templates/plugin-author-kit, (Directory)" [ref=e290]:
+                    - cell "templates/plugin-author-kit, (Directory)" [ref=e291]:
+                      - generic [ref=e292]:
+                        - img [ref=e293]
+                        - link "templates/plugin-author-kit, (Directory)" [ref=e298] [cursor=pointer]:
+                          - /url: /AgenticHighway/kelvinclaw/tree/main/templates/plugin-author-kit
+                          - text: templates/plugin-author-kit
+                    - cell [ref=e299]
+                    - cell [ref=e301]
+                  - row ".dockerignore, (File)" [ref=e303]:
+                    - cell ".dockerignore, (File)" [ref=e304]:
+                      - generic [ref=e305]:
+                        - img [ref=e306]
+                        - link ".dockerignore, (File)" [ref=e311] [cursor=pointer]:
+                          - /url: /AgenticHighway/kelvinclaw/blob/main/.dockerignore
+                          - text: .dockerignore
+                    - cell [ref=e312]
+                    - cell [ref=e314]
+                  - row ".env.example, (File)" [ref=e316]:
+                    - cell ".env.example, (File)" [ref=e317]:
+                      - generic [ref=e318]:
+                        - img [ref=e319]
+                        - link ".env.example, (File)" [ref=e324] [cursor=pointer]:
+                          - /url: /AgenticHighway/kelvinclaw/blob/main/.env.example
+                          - text: .env.example
+                    - cell [ref=e325]
+                    - cell [ref=e327]
+                  - row ".gitignore, (File)" [ref=e329]:
+                    - cell ".gitignore, (File)" [ref=e330]:
+                      - generic [ref=e331]:
+                        - img [ref=e332]
+                        - link ".gitignore, (File)" [ref=e337] [cursor=pointer]:
+                          - /url: /AgenticHighway/kelvinclaw/blob/main/.gitignore
+                          - text: .gitignore
+                    - cell [ref=e338]
+                    - cell [ref=e340]
+                  - row "AGENTS.md, (File)" [ref=e342]:
+                    - cell "AGENTS.md, (File)" [ref=e343]:
+                      - generic [ref=e344]:
+                        - img [ref=e345]
+                        - link "AGENTS.md, (File)" [ref=e350] [cursor=pointer]:
+                          - /url: /AgenticHighway/kelvinclaw/blob/main/AGENTS.md
+                          - text: AGENTS.md
+                    - cell [ref=e351]
+                    - cell [ref=e353]
+                  - row "Cargo.lock, (File)" [ref=e355]:
+                    - cell "Cargo.lock, (File)" [ref=e356]:
+                      - generic [ref=e357]:
+                        - img [ref=e358]
+                        - link "Cargo.lock, (File)" [ref=e363] [cursor=pointer]:
+                          - /url: /AgenticHighway/kelvinclaw/blob/main/Cargo.lock
+                          - text: Cargo.lock
+                    - cell [ref=e364]
+                    - cell [ref=e366]
+                  - row "Cargo.toml, (File)" [ref=e368]:
+                    - cell "Cargo.toml, (File)" [ref=e369]:
+                      - generic [ref=e370]:
+                        - img [ref=e371]
+                        - link "Cargo.toml, (File)" [ref=e376] [cursor=pointer]:
+                          - /url: /AgenticHighway/kelvinclaw/blob/main/Cargo.toml
+                          - text: Cargo.toml
+                    - cell [ref=e377]
+                    - cell [ref=e379]
+                  - row "LICENSE, (File)" [ref=e381]:
+                    - cell "LICENSE, (File)" [ref=e382]:
+                      - generic [ref=e383]:
+                        - img [ref=e384]
+                        - link "LICENSE, (File)" [ref=e389] [cursor=pointer]:
+                          - /url: /AgenticHighway/kelvinclaw/blob/main/LICENSE
+                          - text: LICENSE
+                    - cell [ref=e390]
+                    - cell [ref=e392]
+                  - row "OVERVIEW.md, (File)" [ref=e394]:
+                    - cell "OVERVIEW.md, (File)" [ref=e395]:
+                      - generic [ref=e396]:
+                        - img [ref=e397]
+                        - link "OVERVIEW.md, (File)" [ref=e402] [cursor=pointer]:
+                          - /url: /AgenticHighway/kelvinclaw/blob/main/OVERVIEW.md
+                          - text: OVERVIEW.md
+                    - cell [ref=e403]
+                    - cell [ref=e405]
+                  - row "README.md, (File)" [ref=e407]:
+                    - cell "README.md, (File)" [ref=e408]:
+                      - generic [ref=e409]:
+                        - img [ref=e410]
+                        - link "README.md, (File)" [ref=e415] [cursor=pointer]:
+                          - /url: /AgenticHighway/kelvinclaw/blob/main/README.md
+                          - text: README.md
+                    - cell [ref=e416]
+                    - cell [ref=e418]
+                  - row "trusted_publishers.example.json, (File)" [ref=e420]:
+                    - cell "trusted_publishers.example.json, (File)" [ref=e421]:
+                      - generic [ref=e422]:
+                        - img [ref=e423]
+                        - link "trusted_publishers.example.json, (File)" [ref=e428] [cursor=pointer]:
+                          - /url: /AgenticHighway/kelvinclaw/blob/main/trusted_publishers.example.json
+                          - text: trusted_publishers.example.json
+                    - cell [ref=e429]
+                    - cell [ref=e431]
+            - generic [ref=e434]:
+              - generic [ref=e435]:
+                - heading "Repository files navigation" [level=2] [ref=e436]
+                - navigation "Repository files" [ref=e437]:
+                  - list [ref=e438]:
+                    - listitem [ref=e439]:
+                      - link "README" [ref=e440] [cursor=pointer]:
+                        - /url: "#"
+                        - img [ref=e442]
+                        - generic [ref=e444]: README
+                    - listitem [ref=e445]:
+                      - link "MIT license" [ref=e446] [cursor=pointer]:
+                        - /url: "#"
+                        - img [ref=e448]
+                        - generic [ref=e450]: MIT license
+                - button "Outline" [ref=e451] [cursor=pointer]:
+                  - img [ref=e452]
+              - article [ref=e455]:
+                - generic [ref=e456]:
+                  - heading "kelvinclaw" [level=1] [ref=e457]
+                  - 'link "Permalink: kelvinclaw" [ref=e458] [cursor=pointer]':
+                    - /url: "#kelvinclaw"
+                    - img [ref=e459]
+                - paragraph [ref=e461]: KelvinClaw is a Secure, Stable, and Modular Runtime for Agentic Workflows. It focuses on predictable runtime behavior, policy-driven extension loading, and a maintainable SDK surface for plugin developers.
+                - paragraph [ref=e462]:
+                  - text: "SDK name:"
+                  - strong [ref=e463]: Kelvin Core
+                  - text: .
+                - paragraph [ref=e464]: "What this project includes:"
+                - list [ref=e465]:
+                  - listitem [ref=e466]:
+                    - text: control plane (
+                    - code [ref=e467]: kelvin
+                    - text: "root + brain): policy, orchestration, lifecycle"
+                  - listitem [ref=e468]:
+                    - text: data plane (
+                    - code [ref=e469]: kelvin-memory-controller
+                    - text: "): RPC memory operations with security checks"
+                  - listitem [ref=e470]:
+                    - text: SDK (
+                    - code [ref=e471]: Kelvin Core
+                    - text: "): stable interfaces for plugins, tools, and runtime integration"
+                  - listitem [ref=e472]: "plugin system: signed package install/verification and policy-based capability enforcement"
+                - paragraph [ref=e473]: For end users, plugins are installed as packages and executed by Kelvin. They do not need to compile the Rust workspace.
+                - generic [ref=e474]:
+                  - heading "Getting Started" [level=2] [ref=e475]
+                  - 'link "Permalink: Getting Started" [ref=e476] [cursor=pointer]':
+                    - /url: "#getting-started"
+                    - img [ref=e477]
+                - paragraph [ref=e479]: "Choose the onboarding path for your experience level:"
+                - list [ref=e480]:
+                  - listitem [ref=e481]:
+                    - link "docs/GETTING_STARTED.md" [ref=e482] [cursor=pointer]:
+                      - /url: /AgenticHighway/kelvinclaw/blob/main/docs/GETTING_STARTED.md
+                - paragraph [ref=e483]: "Canonical quick start commands:"
+                - generic [ref=e484]:
+                  - generic [ref=e485]: scripts/quickstart.sh --mode local scripts/quickstart.sh --mode docker
+                  - button "Copy" [ref=e487] [cursor=pointer]:
+                    - img [ref=e488]
+                - paragraph [ref=e491]: "Verify a specific path:"
+                - generic [ref=e492]:
+                  - generic [ref=e493]: scripts/verify-onboarding.sh --track beginner scripts/verify-onboarding.sh --track rust scripts/verify-onboarding.sh --track wasm scripts/verify-onboarding.sh --track daily
+                  - button "Copy" [ref=e495] [cursor=pointer]:
+                    - img [ref=e496]
+                - generic [ref=e499]:
+                  - heading "Repository Layout" [level=2] [ref=e500]
+                  - 'link "Permalink: Repository Layout" [ref=e501] [cursor=pointer]':
+                    - /url: "#repository-layout"
+                    - img [ref=e502]
+                - list [ref=e504]:
+                  - listitem [ref=e505]:
+                    - code [ref=e506]: apps/kelvin-host
+                    - text: ": thin trusted host executable"
+                  - listitem [ref=e507]:
+                    - code [ref=e508]: apps/kelvin-gateway
+                    - text: ": secure WebSocket control-plane gateway"
+                  - listitem [ref=e509]:
+                    - code [ref=e510]: crates/*
+                    - text: ": core contracts, runtime, SDK, memory API/client/controller, and execution engine"
+                  - listitem [ref=e511]:
+                    - text: "first-party plugin distribution repo:"
+                    - code [ref=e512]: agentichighway/kelvinclaw-plugins
+                  - listitem [ref=e513]:
+                    - code [ref=e514]: examples/
+                    - text: ": sample source crates for developers"
+                - generic [ref=e515]:
+                  - heading "Architecture" [level=2] [ref=e516]
+                  - 'link "Permalink: Architecture" [ref=e517] [cursor=pointer]':
+                    - /url: "#architecture"
+                    - img [ref=e518]
+                - paragraph [ref=e520]: "See:"
+                - list [ref=e521]:
+                  - listitem [ref=e522]:
+                    - link "OVERVIEW.md" [ref=e523] [cursor=pointer]:
+                      - /url: /AgenticHighway/kelvinclaw/blob/main/OVERVIEW.md
+                  - listitem [ref=e524]:
+                    - link "docs/architecture.md" [ref=e525] [cursor=pointer]:
+                      - /url: /AgenticHighway/kelvinclaw/blob/main/docs/architecture.md
+                  - listitem [ref=e526]:
+                    - link "docs/gateway-protocol.md" [ref=e527] [cursor=pointer]:
+                      - /url: /AgenticHighway/kelvinclaw/blob/main/docs/gateway-protocol.md
+                  - listitem [ref=e528]:
+                    - link "docs/GETTING_STARTED.md" [ref=e529] [cursor=pointer]:
+                      - /url: /AgenticHighway/kelvinclaw/blob/main/docs/GETTING_STARTED.md
+                  - listitem [ref=e530]:
+                    - link "docs/kelvin-gap-analysis.md" [ref=e531] [cursor=pointer]:
+                      - /url: /AgenticHighway/kelvinclaw/blob/main/docs/kelvin-gap-analysis.md
+                  - listitem [ref=e532]:
+                    - link "docs/KELVIN_CORE_SDK.md" [ref=e533] [cursor=pointer]:
+                      - /url: /AgenticHighway/kelvinclaw/blob/main/docs/KELVIN_CORE_SDK.md
+                  - listitem [ref=e534]:
+                    - link "docs/SDK_TEST_MATRIX.md" [ref=e535] [cursor=pointer]:
+                      - /url: /AgenticHighway/kelvinclaw/blob/main/docs/SDK_TEST_MATRIX.md
+                  - listitem [ref=e536]:
+                    - link "docs/SDK_OWASP_TOP10_AI_2025.md" [ref=e537] [cursor=pointer]:
+                      - /url: /AgenticHighway/kelvinclaw/blob/main/docs/SDK_OWASP_TOP10_AI_2025.md
+                  - listitem [ref=e538]:
+                    - link "docs/SDK_NIST_AI_RMF_1_0.md" [ref=e539] [cursor=pointer]:
+                      - /url: /AgenticHighway/kelvinclaw/blob/main/docs/SDK_NIST_AI_RMF_1_0.md
+                  - listitem [ref=e540]:
+                    - link "docs/PLUGIN_INSTALL_FLOW.md" [ref=e541] [cursor=pointer]:
+                      - /url: /AgenticHighway/kelvinclaw/blob/main/docs/PLUGIN_INSTALL_FLOW.md
+                  - listitem [ref=e542]:
+                    - link "docs/ROOT_VS_SDK.md" [ref=e543] [cursor=pointer]:
+                      - /url: /AgenticHighway/kelvinclaw/blob/main/docs/ROOT_VS_SDK.md
+                  - listitem [ref=e544]:
+                    - link "docs/CORE_ADMISSION_POLICY.md" [ref=e545] [cursor=pointer]:
+                      - /url: /AgenticHighway/kelvinclaw/blob/main/docs/CORE_ADMISSION_POLICY.md
+                  - listitem [ref=e546]:
+                    - link "docs/SDK_PRINCIPLES.md" [ref=e547] [cursor=pointer]:
+                      - /url: /AgenticHighway/kelvinclaw/blob/main/docs/SDK_PRINCIPLES.md
+                  - listitem [ref=e548]:
+                    - link "docs/trusted-executive-wasm.md" [ref=e549] [cursor=pointer]:
+                      - /url: /AgenticHighway/kelvinclaw/blob/main/docs/trusted-executive-wasm.md
+                  - listitem [ref=e550]:
+                    - link "docs/RUST_DEVELOPER_QUICKSTART.md" [ref=e551] [cursor=pointer]:
+                      - /url: /AgenticHighway/kelvinclaw/blob/main/docs/RUST_DEVELOPER_QUICKSTART.md
+                  - listitem [ref=e552]:
+                    - link "docs/memory-control-data-plane.md" [ref=e553] [cursor=pointer]:
+                      - /url: /AgenticHighway/kelvinclaw/blob/main/docs/memory-control-data-plane.md
+                  - listitem [ref=e554]:
+                    - link "docs/memory-rpc-contract.md" [ref=e555] [cursor=pointer]:
+                      - /url: /AgenticHighway/kelvinclaw/blob/main/docs/memory-rpc-contract.md
+                  - listitem [ref=e556]:
+                    - link "docs/memory-module-sdk.md" [ref=e557] [cursor=pointer]:
+                      - /url: /AgenticHighway/kelvinclaw/blob/main/docs/memory-module-sdk.md
+                  - listitem [ref=e558]:
+                    - link "docs/memory-controller-deployment-profiles.md" [ref=e559] [cursor=pointer]:
+                      - /url: /AgenticHighway/kelvinclaw/blob/main/docs/memory-controller-deployment-profiles.md
+                  - listitem [ref=e560]:
+                    - link "docs/model-plugin-abi.md" [ref=e561] [cursor=pointer]:
+                      - /url: /AgenticHighway/kelvinclaw/blob/main/docs/model-plugin-abi.md
+                  - listitem [ref=e562]:
+                    - link "docs/channel-plugin-abi.md" [ref=e563] [cursor=pointer]:
+                      - /url: /AgenticHighway/kelvinclaw/blob/main/docs/channel-plugin-abi.md
+                  - listitem [ref=e564]:
+                    - link "docs/openai-plugin-install-and-run.md" [ref=e565] [cursor=pointer]:
+                      - /url: /AgenticHighway/kelvinclaw/blob/main/docs/openai-plugin-install-and-run.md
+                  - listitem [ref=e566]:
+                    - link "docs/anthropic-plugin-install-and-run.md" [ref=e567] [cursor=pointer]:
+                      - /url: /AgenticHighway/kelvinclaw/blob/main/docs/anthropic-plugin-install-and-run.md
+                  - listitem [ref=e568]:
+                    - link "docs/runtime-container-first-run.md" [ref=e569] [cursor=pointer]:
+                      - /url: /AgenticHighway/kelvinclaw/blob/main/docs/runtime-container-first-run.md
+                  - listitem [ref=e570]:
+                    - link "docs/plugin-index-schema.md" [ref=e571] [cursor=pointer]:
+                      - /url: /AgenticHighway/kelvinclaw/blob/main/docs/plugin-index-schema.md
+                  - listitem [ref=e572]:
+                    - link "docs/toolpack-sdk-plugins.md" [ref=e573] [cursor=pointer]:
+                      - /url: /AgenticHighway/kelvinclaw/blob/main/docs/toolpack-sdk-plugins.md
+                  - listitem [ref=e574]:
+                    - link "docs/plugin-author-kit.md" [ref=e575] [cursor=pointer]:
+                      - /url: /AgenticHighway/kelvinclaw/blob/main/docs/plugin-author-kit.md
+                  - listitem [ref=e576]:
+                    - link "docs/plugin-quality-tiers.md" [ref=e577] [cursor=pointer]:
+                      - /url: /AgenticHighway/kelvinclaw/blob/main/docs/plugin-quality-tiers.md
+                  - listitem [ref=e578]:
+                    - link "docs/plugin-trust-operations.md" [ref=e579] [cursor=pointer]:
+                      - /url: /AgenticHighway/kelvinclaw/blob/main/docs/plugin-trust-operations.md
+                  - listitem [ref=e580]:
+                    - link "docs/agents-tradeoffs.md" [ref=e581] [cursor=pointer]:
+                      - /url: /AgenticHighway/kelvinclaw/blob/main/docs/agents-tradeoffs.md
+                  - listitem [ref=e582]:
+                    - link "docs/compatibility-contracts.md" [ref=e583] [cursor=pointer]:
+                      - /url: /AgenticHighway/kelvinclaw/blob/main/docs/compatibility-contracts.md
+                - paragraph [ref=e584]: "Workspace crates:"
+                - list [ref=e585]:
+                  - listitem [ref=e586]:
+                    - code [ref=e587]: crates/kelvin-core
+                    - text: ": contracts and shared types"
+                  - listitem [ref=e588]:
+                    - code [ref=e589]: crates/kelvin-memory-api
+                    - text: ": protobuf and gRPC service contracts"
+                  - listitem [ref=e590]:
+                    - code [ref=e591]: crates/kelvin-memory-client
+                    - text: ": root-side RPC adapter implementing"
+                    - code [ref=e592]: MemorySearchManager
+                  - listitem [ref=e593]:
+                    - code [ref=e594]: crates/kelvin-memory-controller
+                    - text: ": memory data plane gRPC server + WASM execution policy"
+                  - listitem [ref=e595]:
+                    - code [ref=e596]: crates/kelvin-memory-module-sdk
+                    - text: ": memory module ABI helpers and WIT contract"
+                  - listitem [ref=e597]:
+                    - code [ref=e598]: crates/kelvin-memory
+                    - text: ": in-process memory backends used by local/test compositions"
+                  - listitem [ref=e599]:
+                    - code [ref=e600]: crates/kelvin-brain
+                    - text: ": agent loop orchestration"
+                  - listitem [ref=e601]:
+                    - code [ref=e602]: crates/kelvin-wasm
+                    - text: ": trusted native executive for untrusted WASM skills"
+                - paragraph [ref=e603]: "Apps:"
+                - list [ref=e604]:
+                  - listitem [ref=e605]:
+                    - code [ref=e606]: apps/kelvin-host
+                    - text: ": thin host executable for Kelvin SDK"
+                  - listitem [ref=e607]:
+                    - code [ref=e608]: apps/kelvin-gateway
+                    - text: ": WebSocket gateway over SDK runtime"
+                - generic [ref=e609]:
+                  - heading "Interface-First Design" [level=2] [ref=e610]
+                  - 'link "Permalink: Interface-First Design" [ref=e611] [cursor=pointer]':
+                    - /url: "#interface-first-design"
+                    - img [ref=e612]
+                - paragraph [ref=e614]: "Main traits:"
+                - list [ref=e615]:
+                  - listitem [ref=e616]:
+                    - code [ref=e617]: Brain
+                  - listitem [ref=e618]:
+                    - code [ref=e619]: MemorySearchManager
+                  - listitem [ref=e620]:
+                    - code [ref=e621]: ModelProvider
+                  - listitem [ref=e622]:
+                    - code [ref=e623]: SessionStore
+                  - listitem [ref=e624]:
+                    - code [ref=e625]: Tool
+                    - text: /
+                    - code [ref=e626]: ToolRegistry
+                  - listitem [ref=e627]:
+                    - code [ref=e628]: EventSink
+                  - listitem [ref=e629]:
+                    - code [ref=e630]: PluginFactory
+                    - text: /
+                    - code [ref=e631]: PluginRegistry
+                    - text: (Kelvin Core SDK)
+                  - listitem [ref=e632]:
+                    - code [ref=e633]: CoreRuntime
+                    - text: /
+                    - code [ref=e634]: RunRegistry
+                    - text: (core lifecycle state machine)
+                - paragraph [ref=e635]: Everything in the runtime is composed with trait objects so concrete implementations can be swapped.
+                - generic [ref=e636]:
+                  - heading "SDK Runtime Integration" [level=2] [ref=e637]
+                  - 'link "Permalink: SDK Runtime Integration" [ref=e638] [cursor=pointer]':
+                    - /url: "#sdk-runtime-integration"
+                    - img [ref=e639]
+                - paragraph [ref=e641]: "The runtime integrates through the Kelvin Core SDK path:"
+                - list [ref=e642]:
+                  - listitem [ref=e643]:
+                    - code [ref=e644]: WasmSkillPlugin
+                    - text: (plugin manifest + tool factory)
+                  - listitem [ref=e645]:
+                    - code [ref=e646]: InMemoryPluginRegistry
+                    - text: (policy-gated registration)
+                  - listitem [ref=e647]:
+                    - code [ref=e648]: SdkToolRegistry
+                    - text: (validated tool projection for runtime wiring)
+                  - listitem [ref=e649]:
+                    - code [ref=e650]: SdkModelProviderRegistry
+                    - text: (validated model-provider projection)
+                  - listitem [ref=e651]:
+                    - code [ref=e652]: kelvin_cli
+                    - text: (CLI plugin executed before each run)
+                  - listitem [ref=e653]:
+                    - code [ref=e654]: kelvin.openai
+                    - text: (first-party OpenAI model plugin, optional)
+                  - listitem [ref=e655]:
+                    - code [ref=e656]: kelvin.anthropic
+                    - text: (first-party Anthropic model plugin, optional)
+                  - listitem [ref=e657]:
+                    - text: Kelvin Core tool-pack plugins (
+                    - code [ref=e658]: fs_safe_read
+                    - text: ","
+                    - code [ref=e659]: fs_safe_write
+                    - text: ","
+                    - code [ref=e660]: web_fetch_safe
+                    - text: ","
+                    - code [ref=e661]: schedule_cron
+                    - text: ","
+                    - code [ref=e662]: session_tools
+                    - text: )
+                - generic [ref=e663]:
+                  - heading "Trusted Executive + Untrusted Skills" [level=2] [ref=e664]
+                  - 'link "Permalink: Trusted Executive + Untrusted Skills" [ref=e665] [cursor=pointer]':
+                    - /url: "#trusted-executive--untrusted-skills"
+                    - img [ref=e666]
+                - paragraph [ref=e668]: "Kelvin now supports the split model:"
+                - list [ref=e669]:
+                  - listitem [ref=e670]:
+                    - text: trusted native Rust host (
+                    - code [ref=e671]: kelvin-wasm
+                    - text: ) with system keys
+                  - listitem [ref=e672]: untrusted WASM skills loaded at runtime
+                  - listitem [ref=e673]:
+                    - text: explicit host ABIs (
+                    - code [ref=e674]: claw::*
+                    - text: for tools,
+                    - code [ref=e675]: kelvin_model_host_v1
+                    - text: for model providers)
+                  - listitem [ref=e676]: sandbox policy gates that deny disallowed capabilities at module instantiation
+                - paragraph [ref=e677]:
+                  - text: Key types in
+                  - code [ref=e678]: kelvin-wasm
+                  - text: ":"
+                - list [ref=e679]:
+                  - listitem [ref=e680]:
+                    - code [ref=e681]: WasmSkillHost
+                  - listitem [ref=e682]:
+                    - code [ref=e683]: SandboxPolicy
+                  - listitem [ref=e684]:
+                    - code [ref=e685]: ClawCall
+                  - listitem [ref=e686]:
+                    - code [ref=e687]: SandboxPreset
+                - paragraph [ref=e688]:
+                  - text: Run a
+                  - code [ref=e689]: .wasm
+                  - text: "skill with the native executive:"
+                - generic [ref=e690]:
+                  - generic [ref=e691]: cargo run -p kelvin-wasm --bin kelvin-wasm-runner -- --wasm path/to/skill.wasm --policy-preset locked_down
+                  - button "Copy" [ref=e693] [cursor=pointer]:
+                    - img [ref=e694]
+                - paragraph [ref=e697]: "Model-provider ABI reference:"
+                - list [ref=e698]:
+                  - listitem [ref=e699]:
+                    - link "docs/model-plugin-abi.md" [ref=e700] [cursor=pointer]:
+                      - /url: /AgenticHighway/kelvinclaw/blob/main/docs/model-plugin-abi.md
+                - generic [ref=e701]:
+                  - heading "Memory Backend Swapping" [level=2] [ref=e702]
+                  - 'link "Permalink: Memory Backend Swapping" [ref=e703] [cursor=pointer]':
+                    - /url: "#memory-backend-swapping"
+                    - img [ref=e704]
+                - paragraph [ref=e706]:
+                  - code [ref=e707]: kelvin-memory::MemoryFactory
+                  - text: "supports:"
+                - list [ref=e708]:
+                  - listitem [ref=e709]:
+                    - code [ref=e710]: Markdown
+                  - listitem [ref=e711]:
+                    - code [ref=e712]: InMemoryVector
+                  - listitem [ref=e713]:
+                    - code [ref=e714]: InMemoryWithMarkdownFallback
+                - paragraph [ref=e715]: The fallback manager mimics KelvinClaw's primary->fallback behavior.
+                - generic [ref=e716]:
+                  - heading "CLI Example" [level=2] [ref=e717]
+                  - 'link "Permalink: CLI Example" [ref=e718] [cursor=pointer]':
+                    - /url: "#cli-example"
+                    - img [ref=e719]
+                - generic [ref=e721]:
+                  - generic [ref=e722]:
+                    - text: scripts/install-kelvin-cli-plugin.sh KELVIN_PLUGIN_HOME=.kelvin/plugins \ KELVIN_TRUST_POLICY_PATH=.kelvin/trusted_publishers.json \ CARGO_TARGET_DIR=target/try-kelvin-cli cargo run -p kelvin-host -- --prompt
+                    - generic [ref=e723]: "\"hello\""
+                    - text: "--workspace /path/to/workspace --memory fallback"
+                  - button "Copy" [ref=e725] [cursor=pointer]:
+                    - img [ref=e726]
+                - paragraph [ref=e729]: "OpenAI provider path:"
+                - generic [ref=e730]:
+                  - generic [ref=e731]:
+                    - text: scripts/install-kelvin-openai-plugin.sh OPENAI_API_KEY=<your_key> \ KELVIN_PLUGIN_HOME=.kelvin/plugins \ KELVIN_TRUST_POLICY_PATH=.kelvin/trusted_publishers.json \ CARGO_TARGET_DIR=target/try-kelvin-cli cargo run -p kelvin-host -- --prompt
+                    - generic [ref=e732]: "\"hello\""
+                    - text: "--model-provider kelvin.openai --workspace /path/to/workspace --memory fallback"
+                  - button "Copy" [ref=e734] [cursor=pointer]:
+                    - img [ref=e735]
+                - paragraph [ref=e738]: "Anthropic provider path:"
+                - generic [ref=e739]:
+                  - generic [ref=e740]:
+                    - text: scripts/install-kelvin-anthropic-plugin.sh ANTHROPIC_API_KEY=<your_key> \ KELVIN_PLUGIN_HOME=.kelvin/plugins \ KELVIN_TRUST_POLICY_PATH=.kelvin/trusted_publishers.json \ CARGO_TARGET_DIR=target/try-kelvin-cli cargo run -p kelvin-host -- --prompt
+                    - generic [ref=e741]: "\"hello\""
+                    - text: "--model-provider kelvin.anthropic --workspace /path/to/workspace --memory fallback"
+                  - button "Copy" [ref=e743] [cursor=pointer]:
+                    - img [ref=e744]
+                - paragraph [ref=e747]:
+                  - text: The CLI executable is only a thin launcher. Runtime behavior is composed in
+                  - code [ref=e748]: kelvin-sdk
+                  - text: ", and the CLI path executes through an installed plugin ("
+                  - code [ref=e749]: kelvin_cli
+                  - text: ) loaded through the same secure installed-plugin path as third-party plugins.
+                - paragraph [ref=e750]: "Quick run:"
+                - generic [ref=e751]:
+                  - generic [ref=e752]:
+                    - text: scripts/try-kelvin.sh
+                    - generic [ref=e753]: "\"hello\""
+                  - button "Copy" [ref=e755] [cursor=pointer]:
+                    - img [ref=e756]
+                - paragraph [ref=e759]: "Interactive mode:"
+                - generic [ref=e760]:
+                  - generic [ref=e761]: cargo run -p kelvin-host -- --interactive --workspace /path/to/workspace --state-dir /path/to/workspace/.kelvin/state
+                  - button "Copy" [ref=e763] [cursor=pointer]:
+                    - img [ref=e764]
+                - generic [ref=e767]:
+                  - heading "Gateway Example" [level=2] [ref=e768]
+                  - 'link "Permalink: Gateway Example" [ref=e769] [cursor=pointer]':
+                    - /url: "#gateway-example"
+                    - img [ref=e770]
+                - paragraph [ref=e772]: "Run the gateway with connect-token auth:"
+                - generic [ref=e773]:
+                  - generic [ref=e774]: KELVIN_GATEWAY_TOKEN=change-me \ CARGO_TARGET_DIR=target/try-kelvin-gateway cargo run -p kelvin-gateway -- \ --bind 127.0.0.1:34617 \ --workspace /path/to/workspace
+                  - button "Copy" [ref=e776] [cursor=pointer]:
+                    - img [ref=e777]
+                - paragraph [ref=e780]: "Optional direct platform ingress can run on a separate HTTP listener:"
+                - generic [ref=e781]:
+                  - generic [ref=e782]: KELVIN_GATEWAY_TOKEN=change-me \ KELVIN_GATEWAY_INGRESS_BIND=127.0.0.1:34618 \ KELVIN_TELEGRAM_WEBHOOK_SECRET_TOKEN=telegram-secret \ KELVIN_SLACK_SIGNING_SECRET=slack-signing-secret \ KELVIN_DISCORD_INTERACTIONS_PUBLIC_KEY=<hex-public-key> \ CARGO_TARGET_DIR=target/try-kelvin-gateway cargo run -p kelvin-gateway -- \ --bind 127.0.0.1:34617 \ --workspace /path/to/workspace
+                  - button "Copy" [ref=e784] [cursor=pointer]:
+                    - img [ref=e785]
+                - paragraph [ref=e788]: "Direct ingress routes:"
+                - list [ref=e789]:
+                  - listitem [ref=e790]:
+                    - code [ref=e791]: POST /ingress/telegram
+                  - listitem [ref=e792]:
+                    - code [ref=e793]: POST /ingress/slack
+                  - listitem [ref=e794]:
+                    - code [ref=e795]: POST /ingress/discord
+                - paragraph [ref=e796]: "Operator console on the same HTTP listener:"
+                - list [ref=e797]:
+                  - listitem [ref=e798]:
+                    - code [ref=e799]: GET /operator/
+                - paragraph [ref=e800]: "Methods available over the socket:"
+                - list [ref=e801]:
+                  - listitem [ref=e802]:
+                    - code [ref=e803]: connect
+                  - listitem [ref=e804]:
+                    - code [ref=e805]: health
+                  - listitem [ref=e806]:
+                    - code [ref=e807]: agent
+                    - text: /
+                    - code [ref=e808]: run.submit
+                  - listitem [ref=e809]:
+                    - code [ref=e810]: agent.wait
+                    - text: /
+                    - code [ref=e811]: run.wait
+                  - listitem [ref=e812]:
+                    - code [ref=e813]: agent.state
+                    - text: /
+                    - code [ref=e814]: run.state
+                  - listitem [ref=e815]:
+                    - code [ref=e816]: agent.outcome
+                    - text: /
+                    - code [ref=e817]: run.outcome
+                  - listitem [ref=e818]:
+                    - code [ref=e819]: channel.telegram.ingest
+                  - listitem [ref=e820]:
+                    - code [ref=e821]: channel.telegram.pair.approve
+                  - listitem [ref=e822]:
+                    - code [ref=e823]: channel.telegram.status
+                  - listitem [ref=e824]:
+                    - code [ref=e825]: channel.slack.ingest
+                  - listitem [ref=e826]:
+                    - code [ref=e827]: channel.slack.status
+                  - listitem [ref=e828]:
+                    - code [ref=e829]: channel.discord.ingest
+                  - listitem [ref=e830]:
+                    - code [ref=e831]: channel.discord.status
+                  - listitem [ref=e832]:
+                    - code [ref=e833]: channel.route.inspect
+                  - listitem [ref=e834]:
+                    - code [ref=e835]: operator.runs.list
+                  - listitem [ref=e836]:
+                    - code [ref=e837]: operator.sessions.list
+                  - listitem [ref=e838]:
+                    - code [ref=e839]: operator.session.get
+                  - listitem [ref=e840]:
+                    - code [ref=e841]: operator.plugins.inspect
+                  - listitem [ref=e842]:
+                    - code [ref=e843]: schedule.list
+                  - listitem [ref=e844]:
+                    - code [ref=e845]: schedule.history
+                - paragraph [ref=e846]: "Operational scripts:"
+                - list [ref=e847]:
+                  - listitem [ref=e848]:
+                    - code [ref=e849]: scripts/kelvin-gateway-daemon.sh start|stop|status|logs|health
+                  - listitem [ref=e850]:
+                    - code [ref=e851]: scripts/kelvin-gateway-service.sh render-systemd-user|install-systemd-user|render-launchd|install-launchd
+                  - listitem [ref=e852]:
+                    - code [ref=e853]: scripts/kelvin-gateway-service-run.sh
+                  - listitem [ref=e854]:
+                    - code [ref=e855]: scripts/kelvin-local-profile.sh start|stop|status|doctor
+                  - listitem [ref=e856]:
+                    - code [ref=e857]: scripts/quickstart.sh --mode local|docker
+                  - listitem [ref=e858]:
+                    - code [ref=e859]: scripts/docker-cache-prune.sh [--dry-run]
+                  - listitem [ref=e860]:
+                    - code [ref=e861]: scripts/kelvin-doctor.sh
+                  - listitem [ref=e862]:
+                    - code [ref=e863]: scripts/kelvin-webchat.sh [port]
+                - paragraph [ref=e864]:
+                  - code [ref=e865]: kelvin-doctor
+                  - text: and gateway
+                  - code [ref=e866]: "--doctor"
+                  - text: output machine-readable checks with remediation hints.
+                - generic [ref=e867]:
+                  - heading "Runtime Container (No Rust Toolchain Required)" [level=2] [ref=e868]
+                  - 'link "Permalink: Runtime Container (No Rust Toolchain Required)" [ref=e869] [cursor=pointer]':
+                    - /url: "#runtime-container-no-rust-toolchain-required"
+                    - img [ref=e870]
+                - paragraph [ref=e872]: "For end users, run the minimal runtime container and complete first-time setup interactively:"
+                - generic [ref=e873]:
+                  - generic [ref=e874]: scripts/run-runtime-container.sh
+                  - button "Copy" [ref=e876] [cursor=pointer]:
+                    - img [ref=e877]
+                - paragraph [ref=e880]:
+                  - text: This opens a setup wizard in-container, installs required plugins from the remote plugin index, and prepares a persistent runtime home under
+                  - code [ref=e881]: .kelvin/
+                  - text: .
+                - paragraph [ref=e882]: "After setup:"
+                - generic [ref=e883]:
+                  - generic [ref=e884]:
+                    - text: kelvin-host --prompt
+                    - generic [ref=e885]: "\"What is KelvinClaw?\""
+                    - text: "--timeout-ms 3000"
+                  - button "Copy" [ref=e887] [cursor=pointer]:
+                    - img [ref=e888]
+                - paragraph [ref=e891]: "Reference docs:"
+                - list [ref=e892]:
+                  - listitem [ref=e893]:
+                    - link "docs/runtime-container-first-run.md" [ref=e894] [cursor=pointer]:
+                      - /url: /AgenticHighway/kelvinclaw/blob/main/docs/runtime-container-first-run.md
+                  - listitem [ref=e895]:
+                    - link "docs/plugin-index-schema.md" [ref=e896] [cursor=pointer]:
+                      - /url: /AgenticHighway/kelvinclaw/blob/main/docs/plugin-index-schema.md
+                - paragraph [ref=e897]: "Tool-trigger pattern for the default model provider:"
+                - generic [ref=e898]:
+                  - code [ref=e900]: "[[tool:time]] [[tool:hello_tool {\"foo\":\"bar\"}]]"
+                  - button "Copy" [ref=e902] [cursor=pointer]:
+                    - img [ref=e903]
+                - generic [ref=e906]:
+                  - heading "Remote Build and Test (Optional)" [level=2] [ref=e907]
+                  - 'link "Permalink: Remote Build and Test (Optional)" [ref=e908] [cursor=pointer]':
+                    - /url: "#remote-build-and-test-optional"
+                    - img [ref=e909]
+                - paragraph [ref=e911]: Remote testing is optional. Public clones can run local Docker tests without any private host setup.
+                - paragraph [ref=e912]: "Privacy-conscious remote setup:"
+                - generic [ref=e913]:
+                  - generic [ref=e914]: cp .env.example .env $EDITOR .env scripts/remote-test.sh --docker
+                  - button "Copy" [ref=e916] [cursor=pointer]:
+                    - img [ref=e917]
+                - paragraph [ref=e920]: "Additional variants:"
+                - generic [ref=e921]:
+                  - generic [ref=e922]:
+                    - text: REMOTE_TEST_HOST=your-user@your-host scripts/remote-test.sh REMOTE_TEST_REMOTE_DIR=~/work/kelvinclaw scripts/remote-test.sh --native scripts/remote-test.sh --docker scripts/remote-test.sh --host your-user@your-host --cargo-args
+                    - generic [ref=e923]: "'-- --nocapture'"
+                  - button "Copy" [ref=e925] [cursor=pointer]:
+                    - img [ref=e926]
+                - paragraph [ref=e929]: "Notes:"
+                - list [ref=e930]:
+                  - listitem [ref=e931]:
+                    - code [ref=e932]: .env
+                    - text: and
+                    - code [ref=e933]: .env.local
+                    - text: are gitignored; keep personal hosts/IPs there only.
+                  - listitem [ref=e934]:
+                    - code [ref=e935]: scripts/remote-test.sh
+                    - text: reads
+                    - code [ref=e936]: REMOTE_TEST_HOST
+                    - text: ","
+                    - code [ref=e937]: REMOTE_TEST_REMOTE_DIR
+                    - text: ", and"
+                    - code [ref=e938]: REMOTE_TEST_DOCKER_IMAGE
+                    - text: from
+                    - code [ref=e939]: .env
+                    - text: /
+                    - code [ref=e940]: .env.local
+                    - text: .
+                  - listitem [ref=e941]:
+                    - code [ref=e942]: .env
+                    - text: files are parsed as key/value data and are not executed as shell code.
+                - generic [ref=e943]:
+                  - heading "Plugin Install (No Build Required)" [level=2] [ref=e944]
+                  - 'link "Permalink: Plugin Install (No Build Required)" [ref=e945] [cursor=pointer]':
+                    - /url: "#plugin-install-no-build-required"
+                    - img [ref=e946]
+                - paragraph [ref=e948]: "Install Kelvin's first-party CLI plugin package:"
+                - generic [ref=e949]:
+                  - generic [ref=e950]: scripts/install-kelvin-cli-plugin.sh
+                  - button "Copy" [ref=e952] [cursor=pointer]:
+                    - img [ref=e953]
+                - paragraph [ref=e956]: "Install optional browser automation plugin profile:"
+                - generic [ref=e957]:
+                  - generic [ref=e958]: scripts/install-kelvin-browser-plugin.sh
+                  - button "Copy" [ref=e960] [cursor=pointer]:
+                    - img [ref=e961]
+                - paragraph [ref=e964]: "Default index:"
+                - list [ref=e965]:
+                  - listitem [ref=e966]:
+                    - code [ref=e967]: https://raw.githubusercontent.com/agentichighway/kelvinclaw-plugins/main/index.json
+                - paragraph [ref=e968]: "Install a prebuilt plugin package:"
+                - generic [ref=e969]:
+                  - generic [ref=e970]: scripts/plugin-install.sh --package ./dist/acme.echo-1.0.0.tar.gz
+                  - button "Copy" [ref=e972] [cursor=pointer]:
+                    - img [ref=e973]
+                - paragraph [ref=e976]: "List installed plugins:"
+                - generic [ref=e977]:
+                  - generic [ref=e978]: scripts/plugin-list.sh scripts/plugin-list.sh --json
+                  - button "Copy" [ref=e980] [cursor=pointer]:
+                    - img [ref=e981]
+                - paragraph [ref=e984]: "Uninstall plugin:"
+                - generic [ref=e985]:
+                  - generic [ref=e986]: scripts/plugin-uninstall.sh --id acme.echo --version 1.0.0 scripts/plugin-uninstall.sh --id acme.echo --purge
+                  - button "Copy" [ref=e988] [cursor=pointer]:
+                    - img [ref=e989]
+                - paragraph [ref=e992]: "Run installer tests:"
+                - generic [ref=e993]:
+                  - generic [ref=e994]: scripts/test-plugin-install.sh scripts/test-cli-plugin-integration.sh
+                  - button "Copy" [ref=e996] [cursor=pointer]:
+                    - img [ref=e997]
+                - paragraph [ref=e1000]: "Plugin discovery:"
+                - generic [ref=e1001]:
+                  - generic [ref=e1002]: scripts/plugin-discovery.sh scripts/plugin-discovery.sh --plugin kelvin.cli scripts/plugin-update-check.sh --json
+                  - button "Copy" [ref=e1004] [cursor=pointer]:
+                    - img [ref=e1005]
+                - paragraph [ref=e1008]: "Hosted registry service:"
+                - generic [ref=e1009]:
+                  - generic [ref=e1010]: cargo run -p kelvin-registry -- \ --index ./index.json \ --bind 127.0.0.1:34718 scripts/plugin-discovery.sh --registry-url http://127.0.0.1:34718 scripts/plugin-update-check.sh --registry-url http://127.0.0.1:34718 --json
+                  - button "Copy" [ref=e1012] [cursor=pointer]:
+                    - img [ref=e1013]
+                - generic [ref=e1016]:
+                  - heading "Installed Plugin Runtime (Secure Loader)" [level=2] [ref=e1017]
+                  - 'link "Permalink: Installed Plugin Runtime (Secure Loader)" [ref=e1018] [cursor=pointer]':
+                    - /url: "#installed-plugin-runtime-secure-loader"
+                    - img [ref=e1019]
+                - paragraph [ref=e1021]:
+                  - code [ref=e1022]: kelvin-brain
+                  - text: "can load installed SDK plugin packages and project them into runtime tool/model providers with policy enforcement:"
+                - list [ref=e1023]:
+                  - listitem [ref=e1024]:
+                    - text: signed manifest verification (
+                    - code [ref=e1025]: plugin.sig
+                    - text: ", Ed25519 trusted publishers)"
+                  - listitem [ref=e1026]:
+                    - text: manifest integrity validation (
+                    - code [ref=e1027]: entrypoint_sha256
+                    - text: )
+                  - listitem [ref=e1028]:
+                    - text: capability scopes (
+                    - code [ref=e1029]: fs_read_paths
+                    - text: ","
+                    - code [ref=e1030]: network_allow_hosts
+                    - text: )
+                  - listitem [ref=e1031]: operational controls (timeout, retries, rate limit, circuit breaker)
+                  - listitem [ref=e1032]:
+                    - text: runtime kind checks (
+                    - code [ref=e1033]: wasm_tool_v1
+                    - text: ","
+                    - code [ref=e1034]: wasm_model_v1
+                    - text: )
+                  - listitem [ref=e1035]:
+                    - text: model-plugin import allowlist checks (
+                    - code [ref=e1036]: kelvin_model_host_v1
+                    - text: imports only)
+                - paragraph [ref=e1037]:
+                  - text: "Source:"
+                  - code [ref=e1038]: crates/kelvin-brain/src/installed_plugins.rs
+                - paragraph [ref=e1039]: "Default boot helpers:"
+                - list [ref=e1040]:
+                  - listitem [ref=e1041]:
+                    - code [ref=e1042]: load_installed_plugins_default(core_version, security_policy)
+                  - listitem [ref=e1043]:
+                    - code [ref=e1044]: load_installed_tool_plugins_default(core_version, security_policy)
+                  - listitem [ref=e1045]:
+                    - code [ref=e1046]: default_plugin_home()
+                  - listitem [ref=e1047]:
+                    - code [ref=e1048]: default_trust_policy_path()
+                - paragraph [ref=e1049]: "Default paths:"
+                - list [ref=e1050]:
+                  - listitem [ref=e1051]:
+                    - text: "plugin home:"
+                    - code [ref=e1052]: ~/.kelvinclaw/plugins
+                    - text: (or
+                    - code [ref=e1053]: KELVIN_PLUGIN_HOME
+                    - text: )
+                  - listitem [ref=e1054]:
+                    - text: "trust policy:"
+                    - code [ref=e1055]: ~/.kelvinclaw/trusted_publishers.json
+                    - text: (or
+                    - code [ref=e1056]: KELVIN_TRUST_POLICY_PATH
+                    - text: )
+                - generic [ref=e1057]:
+                  - heading "Publisher Signing" [level=2] [ref=e1058]
+                  - 'link "Permalink: Publisher Signing" [ref=e1059] [cursor=pointer]':
+                    - /url: "#publisher-signing"
+                    - img [ref=e1060]
+                - paragraph [ref=e1062]:
+                  - text: Sign a package manifest and generate
+                  - code [ref=e1063]: plugin.sig
+                  - text: ":"
+                - generic [ref=e1064]:
+                  - generic [ref=e1065]: scripts/plugin-sign.sh \ --manifest ~/.kelvinclaw/plugins/acme.echo/1.0.0/plugin.json \ --private-key ~/.kelvinclaw/keys/acme-ed25519-private.pem \ --publisher-id acme \ --trust-policy-out ./trusted_publishers.acme.json
+                  - button "Copy" [ref=e1067] [cursor=pointer]:
+                    - img [ref=e1068]
+                - paragraph [ref=e1071]: "Trust policy operations:"
+                - generic [ref=e1072]:
+                  - generic [ref=e1073]: scripts/plugin-trust.sh show scripts/plugin-trust.sh rotate-key --publisher acme --public-key <base64> scripts/plugin-trust.sh revoke --publisher acme scripts/plugin-trust.sh pin --plugin acme.echo --publisher acme
+                  - button "Copy" [ref=e1075] [cursor=pointer]:
+                    - img [ref=e1076]
+                - paragraph [ref=e1079]: "Plugin author workflow:"
+                - generic [ref=e1080]:
+                  - generic [ref=e1081]:
+                    - text: export PATH=
+                    - generic [ref=e1082]: "\"$PWD/scripts:$PATH\""
+                    - text: kelvin plugin new --id acme.echo --name
+                    - generic [ref=e1083]: "\"Acme Echo\""
+                    - text: "--runtime wasm_tool_v1 kelvin plugin test --manifest ./plugin-acme.echo/plugin.json kelvin plugin pack --manifest ./plugin-acme.echo/plugin.json kelvin plugin verify --package ./plugin-acme.echo/dist/acme.echo-0.1.0.tar.gz"
+                  - button "Copy" [ref=e1085] [cursor=pointer]:
+                    - img [ref=e1086]
+                - paragraph [ref=e1089]: "Trust policy template:"
+                - list [ref=e1090]:
+                  - listitem [ref=e1091]:
+                    - code [ref=e1092]: trusted_publishers.example.json
+                - paragraph [ref=e1093]: "Host boot behavior:"
+                - list [ref=e1094]:
+                  - listitem [ref=e1095]:
+                    - code [ref=e1096]: apps/kelvin-host
+                    - text: calls
+                    - code [ref=e1097]: kelvin_sdk::run_with_sdk(...)
+                    - text: only.
+                  - listitem [ref=e1098]:
+                    - code [ref=e1099]: kelvin-sdk
+                    - text: requires installed
+                    - code [ref=e1100]: kelvin_cli
+                    - text: and auto-loads installed SDK plugins with
+                    - code [ref=e1101]: load_installed_plugins_default(...)
+                    - text: .
+                - generic [ref=e1102]:
+                  - heading "Local Test" [level=2] [ref=e1103]
+                  - 'link "Permalink: Local Test" [ref=e1104] [cursor=pointer]':
+                    - /url: "#local-test"
+                    - img [ref=e1105]
+                - generic [ref=e1107]:
+                  - generic [ref=e1108]: cargo test --workspace
+                  - button "Copy" [ref=e1110] [cursor=pointer]:
+                    - img [ref=e1111]
+                - paragraph [ref=e1114]: "SDK certification lane:"
+                - generic [ref=e1115]:
+                  - generic [ref=e1116]: scripts/test-sdk.sh
+                  - button "Copy" [ref=e1118] [cursor=pointer]:
+                    - img [ref=e1119]
+                - paragraph [ref=e1122]: "Docker:"
+                - generic [ref=e1123]:
+                  - generic [ref=e1124]: scripts/test-docker.sh
+                  - button "Copy" [ref=e1126] [cursor=pointer]:
+                    - img [ref=e1127]
+                - paragraph [ref=e1130]: "Clean rebuild from zero (recommended before final pushes):"
+                - generic [ref=e1131]:
+                  - generic [ref=e1132]: scripts/test-docker.sh --final
+                  - button "Copy" [ref=e1134] [cursor=pointer]:
+                    - img [ref=e1135]
+                - paragraph [ref=e1138]: "Build the sample Rust WASM skill:"
+                - generic [ref=e1139]:
+                  - generic [ref=e1140]: cargo build --target wasm32-unknown-unknown --manifest-path examples/echo-wasm-skill/Cargo.toml
+                  - button "Copy" [ref=e1142] [cursor=pointer]:
+                    - img [ref=e1143]
+                - paragraph [ref=e1146]: "Run the sample skill:"
+                - generic [ref=e1147]:
+                  - generic [ref=e1148]: cargo run -p kelvin-wasm --bin kelvin-wasm-runner -- --wasm examples/echo-wasm-skill/target/wasm32-unknown-unknown/debug/echo_wasm_skill.wasm
+                  - button "Copy" [ref=e1150] [cursor=pointer]:
+                    - img [ref=e1151]
+        - generic [ref=e1157]:
+          - generic [ref=e1160]:
+            - heading "About" [level=2] [ref=e1161]
+            - paragraph [ref=e1162]: A Security focused, Stable, Reliable, Modular, Claw.
+            - heading "Topics" [level=3] [ref=e1163]
+            - generic [ref=e1165]:
+              - link "plugin" [ref=e1166] [cursor=pointer]:
+                - /url: /topics/plugin
+              - link "rust" [ref=e1167] [cursor=pointer]:
+                - /url: /topics/rust
+              - link "modular" [ref=e1168] [cursor=pointer]:
+                - /url: /topics/modular
+              - link "skills" [ref=e1169] [cursor=pointer]:
+                - /url: /topics/skills
+              - link "wasm" [ref=e1170] [cursor=pointer]:
+                - /url: /topics/wasm
+              - link "crate" [ref=e1171] [cursor=pointer]:
+                - /url: /topics/crate
+              - link "claw" [ref=e1172] [cursor=pointer]:
+                - /url: /topics/claw
+              - link "openclaw" [ref=e1173] [cursor=pointer]:
+                - /url: /topics/openclaw
+              - link "picoclaw" [ref=e1174] [cursor=pointer]:
+                - /url: /topics/picoclaw
+              - link "zeroclaw" [ref=e1175] [cursor=pointer]:
+                - /url: /topics/zeroclaw
+              - link "ironclaw" [ref=e1176] [cursor=pointer]:
+                - /url: /topics/ironclaw
+            - heading "Resources" [level=3] [ref=e1177]
+            - link "Readme" [ref=e1179] [cursor=pointer]:
+              - /url: "#readme-ov-file"
+              - img [ref=e1180]
+              - text: Readme
+            - heading "License" [level=3] [ref=e1182]
+            - link "MIT license" [ref=e1184] [cursor=pointer]:
+              - /url: "#MIT-1-ov-file"
+              - img [ref=e1185]
+              - text: MIT license
+            - link "Activity" [ref=e1188] [cursor=pointer]:
+              - /url: /AgenticHighway/kelvinclaw/activity
+              - img [ref=e1189]
+              - text: Activity
+            - link "Custom properties" [ref=e1192] [cursor=pointer]:
+              - /url: /AgenticHighway/kelvinclaw/custom-properties
+              - img [ref=e1193]
+              - text: Custom properties
+            - heading "Stars" [level=3] [ref=e1195]
+            - link "6 stars" [ref=e1197] [cursor=pointer]:
+              - /url: /AgenticHighway/kelvinclaw/stargazers
+              - img [ref=e1198]
+              - strong [ref=e1200]: "6"
+              - text: stars
+            - heading "Watchers" [level=3] [ref=e1201]
+            - link "0 watching" [ref=e1203] [cursor=pointer]:
+              - /url: /AgenticHighway/kelvinclaw/watchers
+              - img [ref=e1204]
+              - strong [ref=e1206]: "0"
+              - text: watching
+            - heading "Forks" [level=3] [ref=e1207]
+            - link "1 fork" [ref=e1209] [cursor=pointer]:
+              - /url: /AgenticHighway/kelvinclaw/forks
+              - img [ref=e1210]
+              - strong [ref=e1212]: "1"
+              - text: fork
+            - link "Report repository" [ref=e1214] [cursor=pointer]:
+              - /url: /contact/report-content?content_url=https%3A%2F%2Fgithub.com%2FAgenticHighway%2Fkelvinclaw&report=AgenticHighway+%28user%29
+          - generic [ref=e1216]:
+            - heading "Releases" [level=2] [ref=e1217]:
+              - link "Releases" [ref=e1218] [cursor=pointer]:
+                - /url: /AgenticHighway/kelvinclaw/releases
+            - generic [ref=e1219]: No releases published
+          - generic [ref=e1221]:
+            - heading "Packages" [level=2] [ref=e1222]:
+              - link "Packages" [ref=e1223] [cursor=pointer]:
+                - /url: /orgs/AgenticHighway/packages?repo_name=kelvinclaw
+            - generic [ref=e1224]: No packages published
+          - generic [ref=e1226]:
+            - heading "Contributors 2" [level=2] [ref=e1227]:
+              - link "Contributors 2" [ref=e1228] [cursor=pointer]:
+                - /url: /AgenticHighway/kelvinclaw/graphs/contributors
+                - text: Contributors
+                - generic "2" [ref=e1229]
+            - list [ref=e1230]:
+              - listitem [ref=e1231]:
+                - link "@willsarg" [ref=e1232] [cursor=pointer]:
+                  - /url: https://github.com/willsarg
+                  - img "@willsarg" [ref=e1233]
+                - link "willsarg Will Sarg" [ref=e1235] [cursor=pointer]:
+                  - /url: https://github.com/willsarg
+                  - strong [ref=e1236]: willsarg
+                  - text: Will Sarg
+              - listitem [ref=e1237]:
+                - link "@Copilot" [ref=e1238] [cursor=pointer]:
+                  - /url: https://github.com/apps/github-copilot-cli
+                  - img "@Copilot" [ref=e1239]
+                - link "Copilot" [ref=e1241] [cursor=pointer]:
+                  - /url: https://github.com/apps/github-copilot-cli
+                  - strong [ref=e1242]: Copilot
+          - generic [ref=e1244]:
+            - heading "Languages" [level=2] [ref=e1245]
+            - list [ref=e1252]:
+              - listitem [ref=e1253]:
+                - link "Rust 83.4%" [ref=e1254] [cursor=pointer]:
+                  - /url: /AgenticHighway/kelvinclaw/search?l=rust
+                  - img [ref=e1255]
+                  - generic [ref=e1257]: Rust
+                  - generic [ref=e1258]: 83.4%
+              - listitem [ref=e1259]:
+                - link "Shell 13.0%" [ref=e1260] [cursor=pointer]:
+                  - /url: /AgenticHighway/kelvinclaw/search?l=shell
+                  - img [ref=e1261]
+                  - generic [ref=e1263]: Shell
+                  - generic [ref=e1264]: 13.0%
+              - listitem [ref=e1265]:
+                - link "JavaScript 2.4%" [ref=e1266] [cursor=pointer]:
+                  - /url: /AgenticHighway/kelvinclaw/search?l=javascript
+                  - img [ref=e1267]
+                  - generic [ref=e1269]: JavaScript
+                  - generic [ref=e1270]: 2.4%
+              - listitem [ref=e1271]:
+                - generic [ref=e1272]:
+                  - img [ref=e1273]
+                  - generic [ref=e1275]: Other
+                  - generic [ref=e1276]: 1.2%
+  - contentinfo [ref=e1278]:
+    - heading "Footer" [level=2] [ref=e1279]
+    - generic [ref=e1280]:
+      - generic [ref=e1281]:
+        - link "GitHub Homepage" [ref=e1282] [cursor=pointer]:
+          - /url: https://github.com
+          - img [ref=e1283]
+        - generic [ref=e1285]: © 2026 GitHub, Inc.
+      - navigation "Footer" [ref=e1286]:
+        - heading "Footer navigation" [level=3] [ref=e1287]
+        - list "Footer navigation" [ref=e1288]:
+          - listitem [ref=e1289]:
+            - link "Terms" [ref=e1290] [cursor=pointer]:
+              - /url: https://docs.github.com/site-policy/github-terms/github-terms-of-service
+          - listitem [ref=e1291]:
+            - link "Privacy" [ref=e1292] [cursor=pointer]:
+              - /url: https://docs.github.com/site-policy/privacy-policies/github-privacy-statement
+          - listitem [ref=e1293]:
+            - link "Security" [ref=e1294] [cursor=pointer]:
+              - /url: https://github.com/security
+          - listitem [ref=e1295]:
+            - link "Status" [ref=e1296] [cursor=pointer]:
+              - /url: https://www.githubstatus.com/
+          - listitem [ref=e1297]:
+            - link "Community" [ref=e1298] [cursor=pointer]:
+              - /url: https://github.community/
+          - listitem [ref=e1299]:
+            - link "Docs" [ref=e1300] [cursor=pointer]:
+              - /url: https://docs.github.com/
+          - listitem [ref=e1301]:
+            - link "Contact" [ref=e1302] [cursor=pointer]:
+              - /url: https://support.github.com?tags=dotcom-footer
+          - listitem [ref=e1303]:
+            - button "Manage cookies" [ref=e1305] [cursor=pointer]
+          - listitem [ref=e1306]:
+            - button "Do not share my personal information" [ref=e1308] [cursor=pointer]
