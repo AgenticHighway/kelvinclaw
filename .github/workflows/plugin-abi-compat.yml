@@ -1,42 +1,43 @@
 name: Plugin ABI Compat
 
 on:
-  workflow_dispatch:
+    workflow_dispatch:
 
 permissions:
-  contents: read
+    contents: read
 
 jobs:
-  compat:
-    name: ABI Compat (${{ matrix.plugin }})
-    runs-on: blacksmith-2vcpu-ubuntu-2404
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        plugin:
-          - kelvin.cli
-          - kelvin.openai
-          - kelvin.anthropic
-    steps:
-      - name: Checkout
-        uses: useblacksmith/checkout@41cdeedae8edb2e684ba22896a5fd2a3cb85db6b
-        with:
-          persist-credentials: false
+    compat:
+        name: ABI Compat (${{ matrix.plugin }})
+        runs-on: blacksmith-2vcpu-ubuntu-2404
+        timeout-minutes: 30
+        strategy:
+            fail-fast: false
+            matrix:
+                plugin:
+                    - kelvin.cli
+                    - kelvin.openai
+                    - kelvin.anthropic
+                    - kelvin.openrouter
+        steps:
+            - name: Checkout
+              uses: useblacksmith/checkout@41cdeedae8edb2e684ba22896a5fd2a3cb85db6b
+              with:
+                  persist-credentials: false
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9
-        with:
-          toolchain: stable
+            - name: Setup Rust
+              uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9
+              with:
+                  toolchain: stable
 
-      - name: Restore Rust cache
-        uses: useblacksmith/rust-cache@f53e7f127245d2a269b3d90879ccf259876842d5
-        with:
-          workspaces: . -> target
-          key: plugin-abi-${{ matrix.plugin }}
+            - name: Restore Rust cache
+              uses: useblacksmith/rust-cache@f53e7f127245d2a269b3d90879ccf259876842d5
+              with:
+                  workspaces: . -> target
+                  key: plugin-abi-${{ matrix.plugin }}
 
-      - name: Install Rust components
-        run: rustup component add rustfmt clippy
+            - name: Install Rust components
+              run: rustup component add rustfmt clippy
 
-      - name: Verify external plugin ABI compatibility
-        run: scripts/test-plugin-abi-compat.sh --plugin "${{ matrix.plugin }}"
+            - name: Verify external plugin ABI compatibility
+              run: scripts/test-plugin-abi-compat.sh --plugin "${{ matrix.plugin }}"
