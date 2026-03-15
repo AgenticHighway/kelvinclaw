@@ -1,48 +1,48 @@
 name: Memory KMS Smoke
 
 on:
-  workflow_dispatch:
+    workflow_dispatch:
 
 permissions:
-  contents: read
-  id-token: write
+    contents: read
+    id-token: write
 
 concurrency:
-  group: memory-kms-smoke-${{ github.ref }}
-  cancel-in-progress: true
+    group: memory-kms-smoke-${{ github.ref }}
+    cancel-in-progress: true
 
 jobs:
-  smoke:
-    name: Memory KMS Smoke
-    runs-on: blacksmith-2vcpu-ubuntu-2404
-    timeout-minutes: 30
-    env:
-      AWS_REGION: us-east-1
-      AWS_ROLE_ARN: ${{ vars.MEMORY_KMS_ROLE_ARN }}
-      KELVIN_TEST_AWS_KMS_MEMORY_KEY_ID: ${{ vars.MEMORY_KMS_KEY_ID }}
-      KELVIN_TEST_AWS_KMS_MEMORY_REGION: us-east-1
-    steps:
-      - name: Checkout
-        uses: useblacksmith/checkout@41cdeedae8edb2e684ba22896a5fd2a3cb85db6b
-        with:
-          persist-credentials: false
+    smoke:
+        name: Memory KMS Smoke
+        runs-on: blacksmith-2vcpu-ubuntu-2404
+        timeout-minutes: 30
+        env:
+            AWS_REGION: us-east-1
+            AWS_ROLE_ARN: ${{ vars.MEMORY_KMS_ROLE_ARN }}
+            KELVIN_TEST_AWS_KMS_MEMORY_KEY_ID: ${{ vars.MEMORY_KMS_KEY_ID }}
+            KELVIN_TEST_AWS_KMS_MEMORY_REGION: us-east-1
+        steps:
+            - name: Checkout
+              uses: useblacksmith/checkout@41cdeedae8edb2e684ba22896a5fd2a3cb85db6b
+              with:
+                  persist-credentials: false
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7
-        with:
-          role-to-assume: ${{ env.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
+            - name: Configure AWS credentials
+              uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7
+              with:
+                  role-to-assume: ${{ env.AWS_ROLE_ARN }}
+                  aws-region: ${{ env.AWS_REGION }}
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9
-        with:
-          toolchain: stable
+            - name: Setup Rust
+              uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9
+              with:
+                  toolchain: stable
 
-      - name: Restore Rust cache
-        uses: useblacksmith/rust-cache@f53e7f127245d2a269b3d90879ccf259876842d5
-        with:
-          workspaces: . -> target
-          key: memory-kms-smoke
+            - name: Restore Rust cache
+              uses: useblacksmith/rust-cache@f53e7f127245d2a269b3d90879ccf259876842d5
+              with:
+                  workspaces: . -> target
+                  key: memory-kms-smoke
 
-      - name: Run live KMS memory signer smoke
-        run: cargo test -p kelvin-memory-client rpc_memory_manager_kms_signing_roundtrip -- --nocapture
+            - name: Run live KMS memory signer smoke
+              run: cargo test -p kelvin-memory-client rpc_memory_manager_kms_signing_roundtrip -- --nocapture
