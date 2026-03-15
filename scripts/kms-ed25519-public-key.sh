@@ -24,17 +24,17 @@ Optional:
   -h, --help               Show this help
 
 Examples:
-  AWS_PROFILE=REDACTED_AWS_PROFILE scripts/kms-ed25519-public-key.sh \
-    --kms-key-id REDACTED_KMS_ALIAS \
+  scripts/kms-ed25519-public-key.sh \
+    --kms-key-id alias/my-kms-key \
     --kms-region us-east-1 \
     --format raw-base64
 
-  AWS_PROFILE=REDACTED_AWS_PROFILE scripts/kms-ed25519-public-key.sh \
-    --kms-key-id REDACTED_KMS_ALIAS \
+  scripts/kms-ed25519-public-key.sh \
+    --kms-key-id alias/my-kms-key \
     --kms-region us-east-1 \
     --format trust-policy \
-    --publisher-id kelvin_firstparty_aws_v1 \
-    --output ./trusted_publishers.kelvin.json
+    --publisher-id my_publisher_id \
+    --output ./trusted_publishers.json
 USAGE
 }
 

@@ -18,8 +18,8 @@ jobs:
     timeout-minutes: 30
     env:
       AWS_REGION: us-east-1
-      AWS_ROLE_ARN: arn:aws:iam::REDACTED_ACCOUNT_ID:role/REDACTED_MEMORY_ROLE_NAME
-      KELVIN_TEST_AWS_KMS_MEMORY_KEY_ID: REDACTED_MEMORY_KMS_ALIAS
+      AWS_ROLE_ARN: ${{ vars.MEMORY_KMS_ROLE_ARN }}
+      KELVIN_TEST_AWS_KMS_MEMORY_KEY_ID: ${{ vars.MEMORY_KMS_KEY_ID }}
       KELVIN_TEST_AWS_KMS_MEMORY_REGION: us-east-1
     steps:
       - name: Checkout

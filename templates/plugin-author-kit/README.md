@@ -41,7 +41,7 @@ them to load from a local plugin home.
 Signing and trust policy:
 
 ```bash
-AWS_PROFILE=REDACTED_AWS_PROFILE scripts/plugin-sign.sh --manifest ./plugin.json --kms-key-id REDACTED_KMS_ALIAS --kms-region us-east-1 --publisher-id acme --trust-policy-out ./trusted_publishers.acme.json
+scripts/plugin-sign.sh --manifest ./plugin.json --private-key /path/to/ed25519-private.pem --publisher-id acme --trust-policy-out ./trusted_publishers.acme.json
 ```
 
-Community publishers can continue using `--private-key /path/to/private.pem` instead of `--kms-key-id`.
+KMS-backed signing is also supported via `--kms-key-id` (see internal runbook).

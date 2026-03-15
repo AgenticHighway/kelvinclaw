@@ -102,17 +102,6 @@ local plugin home, auto-installs `kelvin.cli` if needed, and then runs
 `<ENV> is required` failure is treated as a successful no-key smoke.
 
 ```bash
-AWS_PROFILE=REDACTED_AWS_PROFILE scripts/plugin-sign.sh \
-  --manifest ./plugin-acme.echo/plugin.json \
-  --kms-key-id REDACTED_KMS_ALIAS \
-  --kms-region us-east-1 \
-  --publisher-id acme \
-  --trust-policy-out ./trusted_publishers.acme.json
-```
-
-For non-AgenticHighway publishers, the local PEM flow remains available:
-
-```bash
 scripts/plugin-sign.sh \
   --manifest ./plugin-acme.echo/plugin.json \
   --private-key /path/to/ed25519-private.pem \

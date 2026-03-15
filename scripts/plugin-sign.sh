@@ -28,17 +28,17 @@ Optional:
   --trust-policy-out <path>Write trusted_publishers.json snippet with derived public key
   -h, --help               Show this help
 
-Example:
-  AWS_PROFILE=REDACTED_AWS_PROFILE scripts/plugin-sign.sh \
+Examples:
+  scripts/plugin-sign.sh \
     --manifest ~/.kelvinclaw/plugins/acme.echo/1.0.0/plugin.json \
-    --kms-key-id REDACTED_KMS_ALIAS \
-    --kms-region us-east-1 \
+    --private-key ~/.kelvinclaw/keys/acme-ed25519-private.pem \
     --publisher-id acme \
     --trust-policy-out ./trusted_publishers.acme.json
 
   scripts/plugin-sign.sh \
     --manifest ~/.kelvinclaw/plugins/acme.echo/1.0.0/plugin.json \
-    --private-key ~/.kelvinclaw/keys/acme-ed25519-private.pem \
+    --kms-key-id alias/my-kms-key \
+    --kms-region us-east-1 \
     --publisher-id acme \
     --trust-policy-out ./trusted_publishers.acme.json
 USAGE
