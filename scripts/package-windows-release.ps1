@@ -1,5 +1,3 @@
-$ErrorActionPreference = "Stop"
-
 param(
     [Parameter(Mandatory = $true)]
     [string]$Target,
@@ -7,6 +5,8 @@ param(
     [string]$TargetDir = "",
     [string]$Version = ""
 )
+
+$ErrorActionPreference = "Stop"
 
 $RootDir = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $OutputDir = if ($OutputDir) { $OutputDir } else { Join-Path $PSScriptRoot "..\\dist\\releases" }
