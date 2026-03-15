@@ -39,7 +39,15 @@ jobs:
           toolchain: stable
 
       - name: Restore Rust cache
-        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4
+        uses: useblacksmith/cache@71c7c918062ba3861252d84b07fe5ab2a6b467a6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: rust-${{ github.workflow }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'apps/**/Cargo.toml', 'crates/**/Cargo.toml') }}
+          restore-keys: |
+            rust-${{ github.workflow }}-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Run live KMS memory signer smoke
         run: cargo test -p kelvin-memory-client rpc_memory_manager_kms_signing_roundtrip -- --nocapture
