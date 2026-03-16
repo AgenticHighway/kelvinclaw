@@ -27,7 +27,7 @@ use operator::{
     OperatorPluginsInspectParams, OperatorRunsListParams, OperatorSessionGetParams,
     OperatorSessionsListParams,
 };
-use scheduler::{GatewayScheduler, ScheduleHistoryParams, ScheduleListParams};
+use scheduler::{RuntimeScheduler, ScheduleHistoryParams, ScheduleListParams};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -131,7 +131,7 @@ struct GatewayState {
     started_at: Instant,
     idempotency: Arc<Mutex<IdempotencyCache>>,
     channels: Arc<Mutex<ChannelEngine>>,
-    scheduler: Arc<GatewayScheduler>,
+    scheduler: Arc<RuntimeScheduler>,
     auth_failures: Arc<Mutex<AuthFailureTracker>>,
     connection_semaphore: Arc<Semaphore>,
 }
@@ -678,7 +678,7 @@ pub async fn run_gateway_with_listener_secure_and_ingress(
     )
     .map_err(|err| format!("initialize channel engine: {err}"))?;
     let channels = Arc::new(Mutex::new(channels));
-    let scheduler = Arc::new(GatewayScheduler::new(runtime.scheduler_store()));
+    let scheduler = Arc::new(RuntimeScheduler::new(runtime.scheduler_store()));
     scheduler.start(runtime.clone(), channels.clone());
 
     let state = GatewayState {
