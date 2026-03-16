@@ -50,7 +50,7 @@ build_release_binaries() {
     -p kelvin-gateway \
     -p kelvin-registry \
     -p kelvin-memory-controller \
-    --features kelvin-gateway/memory_rpc
+    --features kelvin-gateway/memory_rpc,kelvin-host/memory_legacy_fallback
 }
 
 target_architecture() {
