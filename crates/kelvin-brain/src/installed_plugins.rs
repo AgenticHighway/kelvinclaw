@@ -264,6 +264,14 @@ impl PublisherTrustPolicy {
         }
 
         if quality_tier == "unsigned_local" && !has_signature {
+            if let Some(publisher) = manifest.publisher.as_deref() {
+                if self.trusted_publishers.contains_key(publisher) {
+                    return Err(KelvinError::InvalidInput(format!(
+                        "plugin '{}' is missing required plugin.sig",
+                        manifest.id
+                    )));
+                }
+            }
             return Ok(());
         }
 
