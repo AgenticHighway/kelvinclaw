@@ -19,7 +19,7 @@ use kelvin_core::{
     InMemoryPluginRegistry, KelvinError, KelvinResult, ModelInput, ModelOutput, ModelProvider,
     ModelProviderProfile, ModelProviderProtocolFamily, PluginCapability, PluginFactory,
     PluginManifest, PluginRegistry, PluginSecurityPolicy, SdkModelProviderRegistry,
-    SdkToolRegistry, Tool, ToolCallInput, ToolCallResult,
+    SdkToolRegistry, Tool, ToolCall, ToolCallInput, ToolCallResult,
 };
 use kelvin_wasm::{
     model_abi, ClawCall, ModelSandboxPolicy, SandboxPolicy, WasmModelHost, WasmSkillHost,
@@ -264,6 +264,14 @@ impl PublisherTrustPolicy {
         }
 
         if quality_tier == "unsigned_local" && !has_signature {
+            if let Some(publisher) = manifest.publisher.as_deref() {
+                if self.trusted_publishers.contains_key(publisher) {
+                    return Err(KelvinError::InvalidInput(format!(
+                        "plugin '{}' is missing required plugin.sig",
+                        manifest.id
+                    )));
+                }
+            }
             return Ok(());
         }
 
@@ -880,7 +888,8 @@ fn adapt_provider_response(profile: &ModelProviderProfile, value: &Value) -> Opt
 }
 
 fn adapt_openai_response(value: &Value) -> Option<ModelOutput> {
-    let assistant_text = value
+    let mut tool_calls = Vec::new();
+    let output_text = value
         .get("output_text")
         .and_then(Value::as_str)
         .map(str::to_owned)
@@ -888,10 +897,33 @@ fn adapt_openai_response(value: &Value) -> Option<ModelOutput> {
             let output = value.get("output")?.as_array()?;
             let mut parts = Vec::new();
             for item in output {
-                if item.get("type").and_then(Value::as_str) != Some("message") {
+                let item_type = item.get("type").and_then(Value::as_str);
+                if item_type == Some("function_call") {
+                    let id = item
+                        .get("call_id")
+                        .and_then(Value::as_str)
+                        .unwrap_or("")
+                        .to_string();
+                    let name = item
+                        .get("name")
+                        .and_then(Value::as_str)
+                        .unwrap_or("")
+                        .to_string();
+                    let arguments = item
+                        .get("arguments")
+                        .and_then(Value::as_str)
+                        .and_then(|s| serde_json::from_str(s).ok())
+                        .unwrap_or_else(|| serde_json::json!({}));
+                    tool_calls.push(ToolCall { id, name, arguments });
                     continue;
                 }
-                let content = item.get("content")?.as_array()?;
+                if item_type != Some("message") {
+                    continue;
+                }
+                let content = match item.get("content")?.as_array() {
+                    Some(c) => c,
+                    None => continue,
+                };
                 for block in content {
                     if block.get("type").and_then(Value::as_str) == Some("output_text") {
                         if let Some(text) = block.get("text").and_then(Value::as_str) {
@@ -905,7 +937,12 @@ fn adapt_openai_response(value: &Value) -> Option<ModelOutput> {
             } else {
                 Some(parts.join("\n"))
             }
-        })?;
+        });
+
+    let assistant_text = output_text.unwrap_or_default();
+    if assistant_text.is_empty() && tool_calls.is_empty() {
+        return None;
+    }
 
     let usage = value.get("usage").and_then(adapt_usage);
     let stop_reason = value
@@ -916,7 +953,7 @@ fn adapt_openai_response(value: &Value) -> Option<ModelOutput> {
     Some(ModelOutput {
         assistant_text,
         stop_reason,
-        tool_calls: Vec::new(),
+        tool_calls,
         usage,
     })
 }
@@ -924,14 +961,35 @@ fn adapt_openai_response(value: &Value) -> Option<ModelOutput> {
 fn adapt_anthropic_response(value: &Value) -> Option<ModelOutput> {
     let content = value.get("content")?.as_array()?;
     let mut parts = Vec::new();
+    let mut tool_calls = Vec::new();
     for block in content {
-        if block.get("type").and_then(Value::as_str) == Some("text") {
-            if let Some(text) = block.get("text").and_then(Value::as_str) {
-                parts.push(text.to_string());
+        match block.get("type").and_then(Value::as_str) {
+            Some("text") => {
+                if let Some(text) = block.get("text").and_then(Value::as_str) {
+                    parts.push(text.to_string());
+                }
             }
+            Some("tool_use") => {
+                let id = block
+                    .get("id")
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .to_string();
+                let name = block
+                    .get("name")
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .to_string();
+                let arguments = block
+                    .get("input")
+                    .cloned()
+                    .unwrap_or_else(|| serde_json::json!({}));
+                tool_calls.push(ToolCall { id, name, arguments });
+            }
+            _ => {}
         }
     }
-    if parts.is_empty() {
+    if parts.is_empty() && tool_calls.is_empty() {
         return None;
     }
 
@@ -944,7 +1002,7 @@ fn adapt_anthropic_response(value: &Value) -> Option<ModelOutput> {
     Some(ModelOutput {
         assistant_text: parts.join("\n"),
         stop_reason,
-        tool_calls: Vec::new(),
+        tool_calls,
         usage,
     })
 }
@@ -953,9 +1011,10 @@ fn adapt_openrouter_response(value: &Value) -> Option<ModelOutput> {
     let choices = value.get("choices")?.as_array()?;
     let first_choice = choices.first()?;
     let message = first_choice.get("message")?;
-    let assistant_text = match message.get("content")? {
-        Value::String(text) => text.clone(),
-        Value::Array(parts) => {
+
+    let assistant_text = match message.get("content") {
+        Some(Value::String(text)) => text.clone(),
+        Some(Value::Array(parts)) => {
             let mut text_parts = Vec::new();
             for part in parts {
                 if part.get("type").and_then(Value::as_str) == Some("text") {
@@ -964,13 +1023,36 @@ fn adapt_openrouter_response(value: &Value) -> Option<ModelOutput> {
                     }
                 }
             }
-            if text_parts.is_empty() {
-                return None;
-            }
             text_parts.join("\n")
         }
+        // null content is normal when the response only contains tool calls
+        Some(Value::Null) | None => String::new(),
         _ => return None,
     };
+
+    let mut tool_calls = Vec::new();
+    if let Some(tc_array) = message.get("tool_calls").and_then(Value::as_array) {
+        for tc in tc_array {
+            let id = tc.get("id").and_then(Value::as_str).unwrap_or("").to_string();
+            let function = tc.get("function");
+            let name = function
+                .and_then(|f| f.get("name"))
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .to_string();
+            let arguments = function
+                .and_then(|f| f.get("arguments"))
+                .and_then(Value::as_str)
+                .and_then(|s| serde_json::from_str(s).ok())
+                .unwrap_or_else(|| serde_json::json!({}));
+            tool_calls.push(ToolCall { id, name, arguments });
+        }
+    }
+
+    if assistant_text.is_empty() && tool_calls.is_empty() {
+        return None;
+    }
+
     let usage = value.get("usage").and_then(adapt_openrouter_usage);
     let stop_reason = first_choice
         .get("finish_reason")
@@ -980,7 +1062,7 @@ fn adapt_openrouter_response(value: &Value) -> Option<ModelOutput> {
     Some(ModelOutput {
         assistant_text,
         stop_reason,
-        tool_calls: Vec::new(),
+        tool_calls,
         usage,
     })
 }

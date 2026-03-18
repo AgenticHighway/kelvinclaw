@@ -7,6 +7,13 @@ use serde_json::Value;
 use crate::KelvinResult;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ToolDefinition {
+    pub name: String,
+    pub description: String,
+    pub input_schema: Value,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ToolCallInput {
     pub run_id: String,
     pub session_id: String,
@@ -26,6 +33,14 @@ pub struct ToolCallResult {
 pub trait Tool: Send + Sync {
     fn name(&self) -> &str;
 
+    fn description(&self) -> &str {
+        ""
+    }
+
+    fn input_schema(&self) -> Value {
+        serde_json::json!({"type": "object"})
+    }
+
     async fn call(&self, input: ToolCallInput) -> KelvinResult<ToolCallResult>;
 }
 
@@ -33,4 +48,18 @@ pub trait ToolRegistry: Send + Sync {
     fn get(&self, name: &str) -> Option<Arc<dyn Tool>>;
 
     fn names(&self) -> Vec<String>;
+
+    fn definitions(&self) -> Vec<ToolDefinition> {
+        self.names()
+            .into_iter()
+            .filter_map(|name| {
+                let tool = self.get(&name)?;
+                Some(ToolDefinition {
+                    name: tool.name().to_string(),
+                    description: tool.description().to_string(),
+                    input_schema: tool.input_schema(),
+                })
+            })
+            .collect()
+    }
 }

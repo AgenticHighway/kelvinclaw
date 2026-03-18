@@ -197,7 +197,7 @@ fn render_model_prompt(input: &ModelInput) -> String {
 }
 
 fn model_input_to_openai_request(input: &ModelInput, model_name: &str) -> Value {
-    json!({
+    let mut payload = json!({
         "model": model_name,
         "instructions": input.system_prompt,
         "input": render_model_prompt(input),
@@ -205,7 +205,23 @@ fn model_input_to_openai_request(input: &ModelInput, model_name: &str) -> Value 
             "run_id": input.run_id,
             "session_id": input.session_id
         }
-    })
+    });
+    if !input.tools.is_empty() {
+        let tools: Vec<Value> = input
+            .tools
+            .iter()
+            .map(|t| {
+                json!({
+                    "type": "function",
+                    "name": t.name,
+                    "description": t.description,
+                    "parameters": t.input_schema
+                })
+            })
+            .collect();
+        payload["tools"] = Value::Array(tools);
+    }
+    payload
 }
 
 fn model_input_to_anthropic_request(input: &ModelInput, model_name: &str) -> Value {
@@ -224,6 +240,21 @@ fn model_input_to_anthropic_request(input: &ModelInput, model_name: &str) -> Val
         payload["system"] = Value::String(input.system_prompt.clone());
     }
 
+    if !input.tools.is_empty() {
+        let tools: Vec<Value> = input
+            .tools
+            .iter()
+            .map(|t| {
+                json!({
+                    "name": t.name,
+                    "description": t.description,
+                    "input_schema": t.input_schema
+                })
+            })
+            .collect();
+        payload["tools"] = Value::Array(tools);
+    }
+
     payload
 }
 
@@ -240,10 +271,30 @@ fn model_input_to_openai_chat_completions_request(input: &ModelInput, model_name
         "content": render_model_prompt(input)
     }));
 
-    json!({
+    let mut payload = json!({
         "model": model_name,
         "messages": messages
-    })
+    });
+
+    if !input.tools.is_empty() {
+        let tools: Vec<Value> = input
+            .tools
+            .iter()
+            .map(|t| {
+                json!({
+                    "type": "function",
+                    "function": {
+                        "name": t.name,
+                        "description": t.description,
+                        "parameters": t.input_schema
+                    }
+                })
+            })
+            .collect();
+        payload["tools"] = Value::Array(tools);
+    }
+
+    payload
 }
 
 fn normalize_openai_request(mut request: Value) -> Value {

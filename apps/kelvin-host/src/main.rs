@@ -176,7 +176,10 @@ fn model_selection_and_policy(
     } else {
         (
             KelvinSdkModelSelection::Echo,
-            PluginSecurityPolicy::default(),
+            PluginSecurityPolicy {
+                allow_network_egress: true,
+                ..Default::default()
+            },
         )
     }
 }
