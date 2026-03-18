@@ -3,9 +3,9 @@ use std::fs::{self, File};
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use async_trait::async_trait;
+use chrono::Local;
 use semver::Version;
 use serde_json::json;
 use sha2::{Digest, Sha256};
@@ -84,6 +84,7 @@ pub struct KelvinSdkConfig {
     pub persist_runs: bool,
     pub max_session_history_messages: usize,
     pub compact_to_messages: usize,
+    pub max_tool_iterations: usize,
 }
 
 impl KelvinSdkConfig {
@@ -121,6 +122,7 @@ impl KelvinSdkConfig {
             persist_runs: true,
             max_session_history_messages: 128,
             compact_to_messages: 64,
+            max_tool_iterations: 10,
         }
     }
 }
@@ -167,6 +169,7 @@ pub struct KelvinSdkRuntimeConfig {
     pub persist_runs: bool,
     pub max_session_history_messages: usize,
     pub compact_to_messages: usize,
+    pub max_tool_iterations: usize,
 }
 
 impl KelvinSdkRuntimeConfig {
@@ -203,6 +206,7 @@ impl KelvinSdkRuntimeConfig {
             persist_runs: config.persist_runs,
             max_session_history_messages: config.max_session_history_messages,
             compact_to_messages: config.compact_to_messages,
+            max_tool_iterations: config.max_tool_iterations,
         }
     }
 }
@@ -900,14 +904,17 @@ impl Tool for TimeTool {
     }
 
     async fn call(&self, _input: ToolCallInput) -> KelvinResult<ToolCallResult> {
-        let now_ms = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map(|duration| duration.as_millis())
-            .unwrap_or_default();
+        let now = Local::now();
+        let formatted = now.format("%Y-%m-%d %H:%M:%S%.3f %Z").to_string();
+        let iso8601 = now.to_rfc3339();
+        let output = json!({
+            "human": formatted.clone(),
+            "iso8601": iso8601,
+        });
         Ok(ToolCallResult {
             summary: "timestamp generated".to_string(),
-            output: Some(now_ms.to_string()),
-            visible_text: Some(format!("Current unix epoch millis: {now_ms}")),
+            output: Some(output.to_string()),
+            visible_text: Some(formatted),
             is_error: false,
         })
     }
@@ -1122,13 +1129,10 @@ impl KelvinSdkRuntime {
             &installed_models,
             config.load_installed_plugins,
         )?;
-        let brain = Arc::new(KelvinBrain::new(
-            session_store,
-            memory,
-            model,
-            tools,
-            event_sink,
-        ));
+        let brain = Arc::new(
+            KelvinBrain::new(session_store, memory, model, tools, event_sink)
+                .with_max_tool_iterations(config.max_tool_iterations),
+        );
         let runtime = CoreRuntime::new(brain);
         Ok(Self {
             runtime,
@@ -1211,6 +1215,7 @@ impl KelvinSdkRuntime {
                 extra_system_prompt: system_prompt,
                 timeout_ms: Some(timeout_ms),
                 memory_query: request.memory_query,
+                max_tool_iterations: None,
             })
             .await?;
 
@@ -1504,6 +1509,7 @@ mod tests {
             persist_runs: false,
             max_session_history_messages: 128,
             compact_to_messages: 64,
+            max_tool_iterations: 10,
         };
         let err = cfg.validate().expect_err("duplicate ids should fail");
         assert!(err
@@ -2436,6 +2442,7 @@ mod tests {
             persist_runs: true,
             max_session_history_messages: 128,
             compact_to_messages: 64,
+            max_tool_iterations: 10,
         })
         .await
         .expect("initialize runtime");
@@ -2484,6 +2491,7 @@ mod tests {
             persist_runs: false,
             max_session_history_messages: 6,
             compact_to_messages: 3,
+            max_tool_iterations: 10,
         })
         .await
         .expect("initialize runtime");
@@ -2542,6 +2550,7 @@ mod tests {
             persist_runs: false,
             max_session_history_messages: 32,
             compact_to_messages: 16,
+            max_tool_iterations: 10,
         })
         .await
         .expect("runtime should recover from corrupt descriptor");
@@ -2599,6 +2608,7 @@ mod tests {
             persist_runs: false,
             max_session_history_messages: 32,
             compact_to_messages: 16,
+            max_tool_iterations: 10,
         })
         .await
         .expect("runtime should recover from corrupt messages");

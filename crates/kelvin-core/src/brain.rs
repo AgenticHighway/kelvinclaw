@@ -13,6 +13,7 @@ pub struct AgentRunRequest {
     pub extra_system_prompt: Option<String>,
     pub timeout_ms: Option<u64>,
     pub memory_query: Option<String>,
+    pub max_tool_iterations: Option<usize>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -28,6 +29,7 @@ pub struct AgentRunMeta {
     pub model: String,
     pub stop_reason: Option<String>,
     pub error: Option<String>,
+    pub tool_iterations: usize,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

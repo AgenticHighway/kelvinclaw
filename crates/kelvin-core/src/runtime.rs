@@ -388,6 +388,7 @@ mod tests {
                     model: "test".to_string(),
                     stop_reason: Some("completed".to_string()),
                     error: None,
+                    tool_iterations: 0,
                 },
             })
         }
@@ -415,6 +416,7 @@ mod tests {
                     model: "test".to_string(),
                     stop_reason: Some("completed".to_string()),
                     error: None,
+                    tool_iterations: 0,
                 },
             })
         }
@@ -440,6 +442,7 @@ mod tests {
             extra_system_prompt: None,
             timeout_ms: None,
             memory_query: None,
+            max_tool_iterations: None,
         }
     }
 
@@ -592,7 +595,14 @@ mod tests {
                 let meta = &result_json["meta"];
                 assert_object_keys(
                     meta,
-                    &["duration_ms", "provider", "model", "stop_reason", "error"],
+                    &[
+                        "duration_ms",
+                        "provider",
+                        "model",
+                        "stop_reason",
+                        "error",
+                        "tool_iterations",
+                    ],
                 );
             }
             _ => panic!("expected completed outcome"),

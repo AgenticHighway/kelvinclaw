@@ -81,6 +81,7 @@ async fn start_gateway_with_ingress(
         persist_runs: true,
         max_session_history_messages: 128,
         compact_to_messages: 64,
+        max_tool_iterations: 10,
     })
     .await
     .expect("initialize runtime");

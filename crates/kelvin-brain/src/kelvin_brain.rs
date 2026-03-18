@@ -11,8 +11,8 @@ use tokio::time;
 use kelvin_core::{
     now_ms, AgentEvent, AgentPayload, AgentRunMeta, AgentRunRequest, AgentRunResult, Brain,
     EventSink, KelvinError, KelvinResult, LifecyclePhase, MemorySearchManager, MemorySearchOptions,
-    ModelInput, ModelProvider, SessionDescriptor, SessionMessage, SessionStore, ToolCallInput,
-    ToolPhase, ToolRegistry,
+    ModelInput, ModelProvider, SessionDescriptor, SessionMessage, SessionStore, ToolCall,
+    ToolCallInput, ToolPhase, ToolRegistry,
 };
 
 #[derive(Clone)]
@@ -23,6 +23,7 @@ pub struct KelvinBrain {
     tools: Arc<dyn ToolRegistry>,
     events: Arc<dyn EventSink>,
     seq: Arc<AtomicU64>,
+    max_tool_iterations: usize,
 }
 
 struct ToolReceipt<'a> {
@@ -50,7 +51,13 @@ impl KelvinBrain {
             tools,
             events,
             seq: Arc::new(AtomicU64::new(0)),
+            max_tool_iterations: 10,
         }
+    }
+
+    pub fn with_max_tool_iterations(mut self, max: usize) -> Self {
+        self.max_tool_iterations = max;
+        self
     }
 
     fn next_seq(&self) -> u64 {
@@ -119,101 +126,12 @@ impl KelvinBrain {
         println!("{line}");
     }
 
-    async fn run_inner(&self, req: AgentRunRequest) -> KelvinResult<AgentRunResult> {
-        if req.prompt.trim().is_empty() {
-            return Err(KelvinError::InvalidInput(
-                "prompt must not be empty".to_string(),
-            ));
-        }
-
-        let started_at = now_ms();
-        self.emit_lifecycle(&req.run_id, LifecyclePhase::Start, None)
-            .await?;
-
-        self.session_store
-            .upsert_session(SessionDescriptor {
-                session_id: req.session_id.clone(),
-                session_key: req.session_key.clone(),
-                workspace_dir: req.workspace_dir.clone(),
-            })
-            .await?;
-
-        self.session_store
-            .append_message(&req.session_id, SessionMessage::user(req.prompt.clone()))
-            .await?;
-
-        let history = self
-            .session_store
-            .history(&req.session_id)
-            .await?
-            .into_iter()
-            .map(|message| format!("{:?}: {}", message.role, message.content))
-            .collect::<Vec<_>>();
-
-        let memory_query = req
-            .memory_query
-            .clone()
-            .unwrap_or_else(|| req.prompt.clone());
-        let memory_hits = self
-            .memory
-            .search(&memory_query, MemorySearchOptions::default())
-            .await
-            .unwrap_or_default();
-        let memory_snippets = memory_hits
-            .iter()
-            .map(|item| {
-                format!(
-                    "{}#{}-{}: {}",
-                    item.path, item.start_line, item.end_line, item.snippet
-                )
-            })
-            .collect::<Vec<_>>();
-
-        let system_prompt = req
-            .extra_system_prompt
-            .clone()
-            .unwrap_or_else(|| "KelvinClaw-style Kelvin brain".to_string());
-
-        let model_input = ModelInput {
-            run_id: req.run_id.clone(),
-            session_id: req.session_id.clone(),
-            system_prompt: system_prompt.clone(),
-            user_prompt: req.prompt.clone(),
-            memory_snippets: memory_snippets.clone(),
-            history,
-            tools: self.tools.definitions(),
-        };
-
-        let model_output = self.model.infer(model_input).await?;
-        let mut stop_reason = model_output.stop_reason.clone();
-        let tool_calls = model_output.tool_calls;
-        let assistant_text = model_output.assistant_text.trim().to_string();
-
+    async fn execute_tool_calls(
+        &self,
+        req: &AgentRunRequest,
+        tool_calls: &[ToolCall],
+    ) -> KelvinResult<Vec<AgentPayload>> {
         let mut payloads = Vec::new();
-        let ran_tools = !tool_calls.is_empty();
-
-        if !assistant_text.is_empty() && assistant_text != "NO_REPLY" {
-            self.emit_assistant(&req.run_id, &assistant_text, true)
-                .await?;
-            // Only add to payloads if no tools will run; otherwise the followup response replaces this
-            if !ran_tools {
-                payloads.push(AgentPayload {
-                    text: assistant_text.clone(),
-                    is_error: false,
-                });
-            }
-        }
-
-        // Append pre-tool assistant text now so session ordering is correct:
-        // user → assistant (decided to call tool) → tool → assistant (final)
-        if !assistant_text.is_empty() && ran_tools {
-            self.session_store
-                .append_message(
-                    &req.session_id,
-                    SessionMessage::assistant(assistant_text.clone()),
-                )
-                .await?;
-        }
 
         for tool_call in tool_calls {
             let started_tool_at = now_ms();
@@ -357,10 +275,67 @@ impl KelvinBrain {
             }
         }
 
-        if ran_tools {
-            // Re-fetch history now that tool results are appended, then ask the model
-            // to interpret the results and produce a final response.
-            let updated_history = self
+        Ok(payloads)
+    }
+
+    async fn run_inner(&self, req: AgentRunRequest) -> KelvinResult<AgentRunResult> {
+        if req.prompt.trim().is_empty() {
+            return Err(KelvinError::InvalidInput(
+                "prompt must not be empty".to_string(),
+            ));
+        }
+
+        let started_at = now_ms();
+        self.emit_lifecycle(&req.run_id, LifecyclePhase::Start, None)
+            .await?;
+
+        self.session_store
+            .upsert_session(SessionDescriptor {
+                session_id: req.session_id.clone(),
+                session_key: req.session_key.clone(),
+                workspace_dir: req.workspace_dir.clone(),
+            })
+            .await?;
+
+        self.session_store
+            .append_message(&req.session_id, SessionMessage::user(req.prompt.clone()))
+            .await?;
+
+        let memory_query = req
+            .memory_query
+            .clone()
+            .unwrap_or_else(|| req.prompt.clone());
+        let memory_hits = self
+            .memory
+            .search(&memory_query, MemorySearchOptions::default())
+            .await
+            .unwrap_or_default();
+        let memory_snippets = memory_hits
+            .iter()
+            .map(|item| {
+                format!(
+                    "{}#{}-{}: {}",
+                    item.path, item.start_line, item.end_line, item.snippet
+                )
+            })
+            .collect::<Vec<_>>();
+
+        let system_prompt = req
+            .extra_system_prompt
+            .clone()
+            .unwrap_or_else(|| {
+                "KelvinClaw-style Kelvin brain\n\nIMPORTANT: Do not call the same tool multiple times with identical or nearly identical inputs. If a tool call did not achieve the desired outcome, either try a different tool, modify your approach, or ask the user for clarification instead of retrying."
+                    .to_string()
+            });
+
+        let max_iter = req.max_tool_iterations.unwrap_or(self.max_tool_iterations);
+        let mut iteration = 0usize;
+        let mut payloads: Vec<AgentPayload> = Vec::new();
+        #[allow(unused_assignments)]
+        let mut stop_reason: Option<String> = None;
+
+        loop {
+            let history = self
                 .session_store
                 .history(&req.session_id)
                 .await?
@@ -368,39 +343,90 @@ impl KelvinBrain {
                 .map(|message| format!("{:?}: {}", message.role, message.content))
                 .collect::<Vec<_>>();
 
-            let followup_input = ModelInput {
+            let model_input = ModelInput {
                 run_id: req.run_id.clone(),
                 session_id: req.session_id.clone(),
                 system_prompt: system_prompt.clone(),
-                user_prompt: "Tool calls completed. Based on the results in the conversation history above, respond to the user's original request.".to_string(),
-                memory_snippets,
-                history: updated_history,
+                user_prompt: req.prompt.clone(),
+                memory_snippets: memory_snippets.clone(),
+                history,
                 tools: self.tools.definitions(),
             };
 
-            let followup_output = self.model.infer(followup_input).await?;
-            stop_reason = followup_output.stop_reason.clone();
-            let followup_text = followup_output.assistant_text.trim().to_string();
+            let output = self.model.infer(model_input).await?;
+            stop_reason = output.stop_reason.clone();
+            let text = output.assistant_text.trim().to_string();
+            let has_tools = !output.tool_calls.is_empty();
 
-            if !followup_text.is_empty() && followup_text != "NO_REPLY" {
-                self.emit_assistant(&req.run_id, &followup_text, true)
-                    .await?;
-                payloads.push(AgentPayload {
-                    text: followup_text.clone(),
-                    is_error: false,
-                });
+            if !text.is_empty() && text != "NO_REPLY" {
+                self.emit_assistant(&req.run_id, &text, !has_tools).await?;
                 self.session_store
                     .append_message(
                         &req.session_id,
-                        SessionMessage::assistant(followup_text),
+                        SessionMessage::assistant(text.clone()),
                     )
                     .await?;
+                if !has_tools {
+                    payloads.push(AgentPayload {
+                        text,
+                        is_error: false,
+                    });
+                }
             }
-        } else if !assistant_text.is_empty() {
-            // No tools ran: the first response is the final one, save it to session now.
-            self.session_store
-                .append_message(&req.session_id, SessionMessage::assistant(assistant_text))
+
+            if !has_tools {
+                break;
+            }
+
+            let tool_payloads = self.execute_tool_calls(&req, &output.tool_calls).await?;
+            payloads.extend(tool_payloads);
+
+            iteration += 1;
+            if iteration >= max_iter {
+                self.emit_lifecycle(
+                    &req.run_id,
+                    LifecyclePhase::Warning,
+                    Some(format!("max tool iterations ({max_iter}) reached")),
+                )
                 .await?;
+
+                let final_history = self
+                    .session_store
+                    .history(&req.session_id)
+                    .await?
+                    .into_iter()
+                    .map(|message| format!("{:?}: {}", message.role, message.content))
+                    .collect::<Vec<_>>();
+
+                let final_input = ModelInput {
+                    run_id: req.run_id.clone(),
+                    session_id: req.session_id.clone(),
+                    system_prompt: system_prompt.clone(),
+                    user_prompt: req.prompt.clone(),
+                    memory_snippets: memory_snippets.clone(),
+                    history: final_history,
+                    tools: vec![],
+                };
+
+                let final_output = self.model.infer(final_input).await?;
+                stop_reason = final_output.stop_reason.clone();
+                let final_text = final_output.assistant_text.trim().to_string();
+
+                if !final_text.is_empty() && final_text != "NO_REPLY" {
+                    self.emit_assistant(&req.run_id, &final_text, true).await?;
+                    self.session_store
+                        .append_message(
+                            &req.session_id,
+                            SessionMessage::assistant(final_text.clone()),
+                        )
+                        .await?;
+                    payloads.push(AgentPayload {
+                        text: final_text,
+                        is_error: false,
+                    });
+                }
+                break;
+            }
         }
 
         self.emit_lifecycle(&req.run_id, LifecyclePhase::End, None)
@@ -415,6 +441,7 @@ impl KelvinBrain {
                 model: self.model.model_name().to_string(),
                 stop_reason,
                 error: None,
+                tool_iterations: iteration,
             },
         })
     }

@@ -508,6 +508,7 @@ async fn main() {
                 persist_runs: config.persist_runs,
                 max_session_history_messages: config.max_session_history_messages,
                 compact_to_messages: config.compact_to_messages,
+                max_tool_iterations: 10,
             };
             let gateway_config = GatewayConfig {
                 bind_addr: config.bind_addr,
