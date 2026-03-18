@@ -15,6 +15,8 @@ use kelvin_core::{
     ToolCallInput, ToolPhase, ToolRegistry,
 };
 
+use crate::tool_loop_detector::{LoopDetectionResult, ToolLoopDetector};
+
 #[derive(Clone)]
 pub struct KelvinBrain {
     session_store: Arc<dyn SessionStore>,
@@ -130,7 +132,7 @@ impl KelvinBrain {
         &self,
         req: &AgentRunRequest,
         tool_calls: &[ToolCall],
-    ) -> KelvinResult<Vec<AgentPayload>> {
+    ) -> KelvinResult<Vec<(ToolCall, AgentPayload)>> {
         let mut payloads = Vec::new();
 
         for tool_call in tool_calls {
@@ -163,10 +165,13 @@ impl KelvinBrain {
                     reason: &summary,
                     latency_ms: now_ms().saturating_sub(started_tool_at),
                 });
-                payloads.push(AgentPayload {
-                    text: summary,
-                    is_error: true,
-                });
+                payloads.push((
+                    tool_call.clone(),
+                    AgentPayload {
+                        text: summary,
+                        is_error: true,
+                    }
+                ));
                 continue;
             };
 
@@ -213,10 +218,13 @@ impl KelvinBrain {
                         reason: &summary,
                         latency_ms: now_ms().saturating_sub(started_tool_at),
                     });
-                    payloads.push(AgentPayload {
-                        text: summary,
-                        is_error: true,
-                    });
+                    payloads.push((
+                        tool_call.clone(),
+                        AgentPayload {
+                            text: summary,
+                            is_error: true,
+                        }
+                    ));
                     continue;
                 }
             };
@@ -268,10 +276,13 @@ impl KelvinBrain {
             });
 
             if let Some(visible_text) = result.visible_text {
-                payloads.push(AgentPayload {
-                    text: visible_text,
-                    is_error: result.is_error,
-                });
+                payloads.push((
+                    tool_call.clone(),
+                    AgentPayload {
+                        text: visible_text,
+                        is_error: result.is_error,
+                    }
+                ));
             }
         }
 
@@ -334,6 +345,8 @@ impl KelvinBrain {
         #[allow(unused_assignments)]
         let mut stop_reason: Option<String> = None;
 
+        let mut loop_detector = ToolLoopDetector::new();
+
         loop {
             let history = self
                 .session_store
@@ -384,15 +397,30 @@ impl KelvinBrain {
                 break;
             }
 
-            let tool_payloads = self.execute_tool_calls(&req, &output.tool_calls).await?;
-            payloads.extend(tool_payloads);
+            let tool_results = self.execute_tool_calls(&req, &output.tool_calls).await?;
 
+            let tool_calls: Vec<_> = tool_results.iter()
+                .map(|(tc,tp)| (tc.name.clone(), &tc.arguments, tp.is_error))
+                .collect();
+
+            let loop_detection = loop_detector.record_call(&tool_calls);
+
+            payloads.extend(tool_results.into_iter().map(|(_,tc)| tc).collect::<Vec<_>>());
             iteration += 1;
-            if iteration >= max_iter {
+
+            let force_reason = if iteration >= max_iter {
+                Some(format!("max tool iterations ({max_iter}) reached"))
+            } else if let LoopDetectionResult::SuspectedLoop { tool_name, repeat_count, is_all_errors } = loop_detection {
+                Some(format!("loop detector triggered with (name=\"{tool_name}\", repeat_count={repeat_count}, is_all_errors={is_all_errors})"))
+            } else {
+                None
+            };
+
+            if let Some(reason) = force_reason {
                 self.emit_lifecycle(
                     &req.run_id,
                     LifecyclePhase::Warning,
-                    Some(format!("max tool iterations ({max_iter}) reached")),
+                    Some(reason),
                 )
                 .await?;
 
