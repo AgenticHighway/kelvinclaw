@@ -357,12 +357,23 @@ impl Tool for SafeFsWriteTool {
                     "enum": ["overwrite", "append"],
                     "description": "Write mode: 'overwrite' (default) replaces the file, 'append' adds to it."
                 },
-                "approval_reason": {
-                    "type": "string",
-                    "description": "Human-readable reason why this write is necessary (required for approval)."
+                "approval": {
+                    "type": "object",
+                    "description": "Approval object required for this sensitive operation.",
+                    "properties": {
+                        "granted": {
+                            "type": "boolean",
+                            "description": "Must be true to authorize the operation."
+                        },
+                        "reason": {
+                            "type": "string",
+                            "description": "Human-readable reason explaining why this write operation is necessary (1-256 characters, no control characters)."
+                        }
+                    },
+                    "required": ["granted", "reason"]
                 }
             },
-            "required": ["path", "content", "approval_reason"]
+            "required": ["path", "content", "approval"]
         })
     }
 
@@ -476,12 +487,24 @@ impl Tool for SafeWebFetchTool {
                     "type": "integer",
                     "description": "Request timeout in milliseconds (100–30000). Defaults to 10000."
                 },
-                "approval_reason": {
-                    "type": "string",
-                    "description": "Human-readable reason why this fetch is necessary (required for approval)."
+                
+                "approval": {
+                    "type": "object",
+                    "description": "Approval object required for this sensitive operation.",
+                    "properties": {
+                        "granted": {
+                            "type": "boolean",
+                            "description": "Must be true to authorize the operation."
+                        },
+                        "reason": {
+                            "type": "string",
+                            "description": "Human-readable reason explaining why this write operation is necessary (1-256 characters, no control characters)."
+                        }
+                    },
+                    "required": ["granted", "reason"]
                 }
             },
-            "required": ["url", "approval_reason"]
+            "required": ["url", "approval"]
         })
     }
 
@@ -616,12 +639,23 @@ impl Tool for SchedulerTool {
                     "type": "string",
                     "description": "Task identifier. Auto-generated for 'add'; required for 'remove'."
                 },
-                "approval_reason": {
-                    "type": "string",
-                    "description": "Human-readable reason for mutating the schedule (required for 'add'/'remove')."
+                "approval": {
+                    "type": "object",
+                    "description": "Approval object required for this sensitive operation.",
+                    "properties": {
+                        "granted": {
+                            "type": "boolean",
+                            "description": "Must be true to authorize the operation."
+                        },
+                        "reason": {
+                            "type": "string",
+                            "description": "Human-readable reason explaining why this write operation is necessary (1-256 characters, no control characters)."
+                        }
+                    },
+                    "required": ["granted", "reason"]
                 }
             },
-            "required": []
+            "required": ["approval"]
         })
     }
 
@@ -778,12 +812,23 @@ impl Tool for SessionToolsTool {
                     "type": "string",
                     "description": "The note text to append (required for 'append_note')."
                 },
-                "approval_reason": {
-                    "type": "string",
-                    "description": "Human-readable reason for clearing notes (required for 'clear_notes')."
+                "approval": {
+                    "type": "object",
+                    "description": "Approval object required for this sensitive operation.",
+                    "properties": {
+                        "granted": {
+                            "type": "boolean",
+                            "description": "Must be true to authorize the operation."
+                        },
+                        "reason": {
+                            "type": "string",
+                            "description": "Human-readable reason explaining why this write operation is necessary (1-256 characters, no control characters)."
+                        }
+                    },
+                    "required": ["granted", "reason"]
                 }
             },
-            "required": []
+            "required": ["approval"]
         })
     }
 
