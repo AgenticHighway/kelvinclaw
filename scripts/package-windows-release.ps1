@@ -48,7 +48,7 @@ function Build-ReleaseBinaries([string]$Triple, [string]$TargetDirPath) {
       -p kelvin-gateway `
       -p kelvin-registry `
       -p kelvin-memory-controller `
-      --features kelvin-gateway/memory_rpc
+      --features kelvin-gateway/memory_rpc,kelvin-host/memory_legacy_fallback
 }
 
 function Smoke-TestZip([string]$ZipPath, [string]$RootName) {

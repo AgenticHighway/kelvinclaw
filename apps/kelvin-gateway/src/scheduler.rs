@@ -33,7 +33,7 @@ struct SchedulerMetrics {
 }
 
 #[derive(Clone)]
-pub(crate) struct GatewayScheduler {
+pub(crate) struct RuntimeScheduler {
     store: Arc<SchedulerStore>,
     metrics: Arc<Mutex<SchedulerMetrics>>,
     tick_ms: u64,
@@ -49,7 +49,7 @@ pub(crate) struct ScheduleHistoryParams {
     pub limit: Option<usize>,
 }
 
-impl GatewayScheduler {
+impl RuntimeScheduler {
     pub(crate) fn new(store: Arc<SchedulerStore>) -> Self {
         Self {
             store,
