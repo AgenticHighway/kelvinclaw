@@ -852,6 +852,7 @@ impl InstalledWasmModelProvider {
                 self.plugin_id
             ))
         })?;
+
         if let Some(message) = value
             .get("error")
             .and_then(|error| error.get("message"))
@@ -862,28 +863,280 @@ impl InstalledWasmModelProvider {
                 self.plugin_id, self.plugin_version, message
             )));
         }
+
         if let Ok(output) = serde_json::from_value::<ModelOutput>(value.clone()) {
+            if let Err(validation_err) = validate_model_output_schema(&value) {
+                return Err(KelvinError::InvalidInput(format!(
+                    "model plugin '{}' returned invalid ModelOutput schema: {validation_err}",
+                    self.plugin_id
+                )));
+            }
             return Ok(output);
         }
+
         if let Some(profile) = self.provider_profile.as_ref() {
             if let Some(output) = adapt_provider_response(profile, &value) {
                 return Ok(output);
             }
+            return Err(KelvinError::InvalidInput(format!(
+                "model plugin '{}' returned response that doesn't match {:?} protocol format",
+                self.plugin_id, profile.protocol_family
+            )));
         }
-        serde_json::from_value::<ModelOutput>(value).map_err(|err| {
-            KelvinError::InvalidInput(format!(
-                "model plugin '{}' returned invalid model output: {err}",
-                self.plugin_id
-            ))
-        })
+
+        Err(KelvinError::InvalidInput(format!(
+            "model plugin '{}' returned response that is neither valid ModelOutput nor mapped to a known protocol family",
+            self.plugin_id
+        )))
     }
+}
+
+/// Helper to get the JSON type name for error messages.
+fn json_type_name(value: &Value) -> &'static str {
+    match value {
+        Value::Null => "null",
+        Value::Bool(_) => "boolean",
+        Value::Number(_) => "number",
+        Value::String(_) => "string",
+        Value::Array(_) => "array",
+        Value::Object(_) => "object",
+    }
+}
+
+/// Validates that a JSON value matches the expected ModelOutput schema.
+fn validate_model_output_schema(value: &Value) -> Result<(), String> {
+    let obj = value.as_object().ok_or("response is not a JSON object")?;
+
+    let assistant_text = obj
+        .get("assistant_text")
+        .ok_or("missing required field: assistant_text")?;
+    if !assistant_text.is_string() {
+        return Err("field 'assistant_text' must be a string".to_string());
+    }
+
+    let tool_calls = obj
+        .get("tool_calls")
+        .ok_or("missing required field: tool_calls")?;
+    let tool_calls_array = tool_calls
+        .as_array()
+        .ok_or("field 'tool_calls' must be an array")?;
+
+    for (idx, tool_call) in tool_calls_array.iter().enumerate() {
+        let tc_obj = tool_call.as_object().ok_or_else(|| {
+            format!("tool_calls[{idx}] is not a JSON object")
+        })?;
+
+        let id = tc_obj
+            .get("id")
+            .ok_or_else(|| format!("tool_calls[{idx}] missing required field: id"))?;
+        if !id.is_string() {
+            return Err(format!("tool_calls[{idx}].id must be a string"));
+        }
+
+        let name = tc_obj
+            .get("name")
+            .ok_or_else(|| format!("tool_calls[{idx}] missing required field: name"))?;
+        if !name.is_string() {
+            return Err(format!("tool_calls[{idx}].name must be a string"));
+        }
+
+        let arguments = tc_obj
+            .get("arguments")
+            .ok_or_else(|| format!("tool_calls[{idx}] missing required field: arguments"))?;
+        if !arguments.is_object() {
+            return Err(format!(
+                "tool_calls[{idx}].arguments must be a JSON object, got {}",
+                json_type_name(arguments)
+            ));
+        }
+
+        if name.as_str().unwrap_or("").trim().is_empty() {
+            return Err(format!("tool_calls[{idx}].name must not be empty"));
+        }
+    }
+
+    if let Some(stop_reason) = obj.get("stop_reason") {
+        if !stop_reason.is_string() && !stop_reason.is_null() {
+            return Err("field 'stop_reason' must be a string or null".to_string());
+        }
+    }
+
+    if let Some(usage) = obj.get("usage") {
+        if !usage.is_object() && !usage.is_null() {
+            return Err("field 'usage' must be an object or null".to_string());
+        }
+    }
+
+    Ok(())
+}
+
+/// Validates OpenAI Responses format before adaptation.
+fn validate_openai_response_schema(value: &Value) -> Result<(), String> {
+    let obj = value.as_object().ok_or("response is not a JSON object")?;
+
+    let has_output_text = obj
+        .get("output_text")
+        .map(|v| v.is_string())
+        .unwrap_or(false);
+    let has_output = obj
+        .get("output")
+        .map(|v| v.is_array())
+        .unwrap_or(false);
+
+    if !has_output_text && !has_output {
+        return Err("OpenAI Responses: must have 'output_text' (string) or 'output' (array)".to_string());
+    }
+
+    if let Some(output_array) = obj.get("output").and_then(Value::as_array) {
+        for (idx, item) in output_array.iter().enumerate() {
+            let item_obj = item.as_object().ok_or_else(|| {
+                format!("OpenAI Responses output[{idx}] is not a JSON object")
+            })?;
+
+            let item_type = item_obj
+                .get("type")
+                .and_then(Value::as_str)
+                .ok_or_else(|| format!("OpenAI Responses output[{idx}] missing field: type"))?;
+
+            match item_type {
+                "message" => {
+                    let content = item_obj.get("content").ok_or_else(|| {
+                        format!("OpenAI Responses output[{idx}] (type=message) missing field: content")
+                    })?;
+                    if !content.is_array() {
+                        return Err(format!(
+                            "OpenAI Responses output[{idx}].content must be an array"
+                        ));
+                    }
+                }
+                "function_call" => {
+                    if !item_obj.contains_key("call_id") && !item_obj.contains_key("name") {
+                        return Err(format!(
+                            "OpenAI Responses output[{idx}] (type=function_call) must have 'call_id' or 'name'"
+                        ));
+                    }
+                }
+                _ => {
+                    return Err(format!(
+                        "OpenAI Responses output[{idx}] has unknown type: {item_type}"
+                    ))
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// Validates Anthropic Messages format before adaptation.
+fn validate_anthropic_response_schema(value: &Value) -> Result<(), String> {
+    let obj = value.as_object().ok_or("response is not a JSON object")?;
+
+    let content = obj
+        .get("content")
+        .ok_or("Anthropic Messages: missing required field: content")?;
+    let content_array = content
+        .as_array()
+        .ok_or("Anthropic Messages: field 'content' must be an array")?;
+
+    for (idx, block) in content_array.iter().enumerate() {
+        let block_obj = block.as_object().ok_or_else(|| {
+            format!("Anthropic Messages content[{idx}] is not a JSON object")
+        })?;
+
+        let block_type = block_obj
+            .get("type")
+            .and_then(Value::as_str)
+            .ok_or_else(|| {
+                format!("Anthropic Messages content[{idx}] missing field: type")
+            })?;
+
+        match block_type {
+            "text" => {
+                if !block_obj.contains_key("text") {
+                    return Err(format!(
+                        "Anthropic Messages content[{idx}] (type=text) missing field: text"
+                    ));
+                }
+            }
+            "tool_use" => {
+                for required_field in &["id", "name", "input"] {
+                    if !block_obj.contains_key(*required_field) {
+                        return Err(format!(
+                            "Anthropic Messages content[{idx}] (type=tool_use) missing field: {required_field}"
+                        ));
+                    }
+                }
+            }
+            _ => {
+                return Err(format!(
+                    "Anthropic Messages content[{idx}] has unknown type: {block_type}"
+                ))
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// Validates OpenAI Chat Completions format before adaptation.
+fn validate_openai_chat_completions_schema(value: &Value) -> Result<(), String> {
+    let obj = value.as_object().ok_or("response is not a JSON object")?;
+
+    let choices = obj
+        .get("choices")
+        .ok_or("OpenAI Chat Completions: missing required field: choices")?;
+    let choices_array = choices.as_array().ok_or(
+        "OpenAI Chat Completions: field 'choices' must be an array",
+    )?;
+
+    if choices_array.is_empty() {
+        return Err("OpenAI Chat Completions: choices array must not be empty".to_string());
+    }
+
+    let first_choice = choices_array[0]
+        .as_object()
+        .ok_or("OpenAI Chat Completions: choices[0] is not a JSON object")?;
+
+    let message = first_choice
+        .get("message")
+        .ok_or("OpenAI Chat Completions: choices[0] missing field: message")?;
+    let message_obj = message.as_object().ok_or(
+        "OpenAI Chat Completions: choices[0].message must be a JSON object",
+    )?;
+
+    if !message_obj.contains_key("role") {
+        return Err(
+            "OpenAI Chat Completions: choices[0].message missing field: role".to_string(),
+        );
+    }
+
+    if let Some(tool_calls) = message_obj.get("tool_calls") {
+        if !tool_calls.is_array() && !tool_calls.is_null() {
+            return Err(
+                "OpenAI Chat Completions: choices[0].message.tool_calls must be an array or null"
+                    .to_string(),
+            );
+        }
+    }
+
+    Ok(())
 }
 
 fn adapt_provider_response(profile: &ModelProviderProfile, value: &Value) -> Option<ModelOutput> {
     match profile.protocol_family {
-        ModelProviderProtocolFamily::OpenAiResponses => adapt_openai_response(value),
-        ModelProviderProtocolFamily::AnthropicMessages => adapt_anthropic_response(value),
-        ModelProviderProtocolFamily::OpenAiChatCompletions => adapt_openrouter_response(value),
+        ModelProviderProtocolFamily::OpenAiResponses => {
+            validate_openai_response_schema(value).ok()?;
+            adapt_openai_response(value)
+        }
+        ModelProviderProtocolFamily::AnthropicMessages => {
+            validate_anthropic_response_schema(value).ok()?;
+            adapt_anthropic_response(value)
+        }
+        ModelProviderProtocolFamily::OpenAiChatCompletions => {
+            validate_openai_chat_completions_schema(value).ok()?;
+            adapt_openrouter_response(value)
+        }
     }
 }
 
@@ -2636,5 +2889,371 @@ mod tests {
             Err(err) => err,
         };
         assert!(err.to_string().contains("does not match pinned publisher"));
+    }
+}
+
+#[cfg(test)]
+mod schema_validation_tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn validates_valid_model_output_schema() {
+        let valid_output = json!({
+            "assistant_text": "Hello, world!",
+            "tool_calls": [],
+            "stop_reason": "completed",
+            "usage": null
+        });
+        assert!(validate_model_output_schema(&valid_output).is_ok());
+    }
+
+    #[test]
+    fn validates_model_output_with_tool_calls() {
+        let output_with_tools = json!({
+            "assistant_text": "I'll help you schedule a task.",
+            "tool_calls": [
+                {
+                    "id": "call-1",
+                    "name": "schedule_cron",
+                    "arguments": {
+                        "cron": "0 9 * * *",
+                        "prompt": "daily reminder"
+                    }
+                }
+            ],
+            "stop_reason": "tool_calls",
+            "usage": {
+                "input_tokens": 100,
+                "output_tokens": 50
+            }
+        });
+        assert!(validate_model_output_schema(&output_with_tools).is_ok());
+    }
+
+    #[test]
+    fn rejects_missing_assistant_text() {
+        let invalid = json!({
+            "tool_calls": [],
+            "stop_reason": "completed"
+        });
+        let result = validate_model_output_schema(&invalid);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("assistant_text"));
+    }
+
+    #[test]
+    fn rejects_non_string_assistant_text() {
+        let invalid = json!({
+            "assistant_text": 123,
+            "tool_calls": [],
+            "stop_reason": "completed"
+        });
+        let result = validate_model_output_schema(&invalid);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("assistant_text"));
+    }
+
+    #[test]
+    fn rejects_missing_tool_calls_array() {
+        let invalid = json!({
+            "assistant_text": "Hello",
+            "stop_reason": "completed"
+        });
+        let result = validate_model_output_schema(&invalid);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("tool_calls"));
+    }
+
+    #[test]
+    fn rejects_tool_calls_not_array() {
+        let invalid = json!({
+            "assistant_text": "Hello",
+            "tool_calls": "not an array",
+            "stop_reason": "completed"
+        });
+        let result = validate_model_output_schema(&invalid);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("tool_calls"));
+    }
+
+    #[test]
+    fn rejects_tool_call_missing_id() {
+        let invalid = json!({
+            "assistant_text": "Hello",
+            "tool_calls": [
+                {
+                    "name": "schedule_cron",
+                    "arguments": {}
+                }
+            ],
+            "stop_reason": "completed"
+        });
+        let err = validate_model_output_schema(&invalid).unwrap_err();
+        assert!(err.contains("tool_calls[0]"));
+        assert!(err.contains("id"));
+    }
+
+    #[test]
+    fn rejects_tool_call_missing_name() {
+        let invalid = json!({
+            "assistant_text": "Hello",
+            "tool_calls": [
+                {
+                    "id": "call-1",
+                    "arguments": {}
+                }
+            ],
+            "stop_reason": "completed"
+        });
+        let err = validate_model_output_schema(&invalid).unwrap_err();
+        assert!(err.contains("tool_calls[0]"));
+        assert!(err.contains("name"));
+    }
+
+    #[test]
+    fn rejects_tool_call_with_empty_name() {
+        let invalid = json!({
+            "assistant_text": "Hello",
+            "tool_calls": [
+                {
+                    "id": "call-1",
+                    "name": "   ",
+                    "arguments": {}
+                }
+            ],
+            "stop_reason": "completed"
+        });
+        let result = validate_model_output_schema(&invalid);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("name"));
+    }
+
+    #[test]
+    fn rejects_tool_call_missing_arguments() {
+        let invalid = json!({
+            "assistant_text": "Hello",
+            "tool_calls": [
+                {
+                    "id": "call-1",
+                    "name": "schedule_cron"
+                }
+            ],
+            "stop_reason": "completed"
+        });
+        let err = validate_model_output_schema(&invalid).unwrap_err();
+        assert!(err.contains("tool_calls[0]"));
+        assert!(err.contains("arguments"));
+    }
+
+    #[test]
+    fn rejects_tool_call_arguments_not_object() {
+        let invalid = json!({
+            "assistant_text": "Hello",
+            "tool_calls": [
+                {
+                    "id": "call-1",
+                    "name": "schedule_cron",
+                    "arguments": "string instead of object"
+                }
+            ],
+            "stop_reason": "completed"
+        });
+        let err = validate_model_output_schema(&invalid).unwrap_err();
+        assert!(err.contains("arguments"));
+        assert!(err.contains("object"));
+    }
+
+    #[test]
+    fn validates_valid_anthropic_response() {
+        let valid_anthropic = json!({
+            "content": [
+                {
+                    "type": "text",
+                    "text": "I'll schedule that for you."
+                },
+                {
+                    "type": "tool_use",
+                    "id": "call-1",
+                    "name": "schedule_cron",
+                    "input": {
+                        "cron": "0 9 * * *",
+                        "prompt": "reminder"
+                    }
+                }
+            ]
+        });
+        assert!(validate_anthropic_response_schema(&valid_anthropic).is_ok());
+    }
+
+    #[test]
+    fn rejects_anthropic_missing_content() {
+        let invalid = json!({});
+        let result = validate_anthropic_response_schema(&invalid);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("content"));
+    }
+
+    #[test]
+    fn rejects_anthropic_content_not_array() {
+        let invalid = json!({
+            "content": "not an array"
+        });
+        let result = validate_anthropic_response_schema(&invalid);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("array"));
+    }
+
+    #[test]
+    fn rejects_anthropic_tool_use_missing_input() {
+        let invalid = json!({
+            "content": [
+                {
+                    "type": "tool_use",
+                    "id": "call-1",
+                    "name": "schedule_cron"
+                }
+            ]
+        });
+        let result = validate_anthropic_response_schema(&invalid);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("input"));
+    }
+
+    #[test]
+    fn validates_valid_openai_responses_format() {
+        let valid_openai = json!({
+            "output": [
+                {
+                    "type": "message",
+                    "content": [
+                        {
+                            "type": "output_text",
+                            "text": "I'll help you schedule."
+                        }
+                    ]
+                },
+                {
+                    "type": "function_call",
+                    "call_id": "call-1",
+                    "name": "schedule_cron",
+                    "arguments": "{\"cron\":\"0 9 * * *\"}"
+                }
+            ]
+        });
+        assert!(validate_openai_response_schema(&valid_openai).is_ok());
+    }
+
+    #[test]
+    fn validates_openai_responses_with_output_text() {
+        let valid = json!({
+            "output_text": "Direct text output"
+        });
+        assert!(validate_openai_response_schema(&valid).is_ok());
+    }
+
+    #[test]
+    fn rejects_openai_responses_missing_both_output_forms() {
+        let invalid = json!({
+            "status": "success"
+        });
+        let err = validate_openai_response_schema(&invalid).unwrap_err();
+        assert!(
+            err.contains("output_text") ||
+            err.contains("output")
+        );
+    }
+
+    #[test]
+    fn rejects_openai_responses_output_not_array() {
+        let invalid = json!({
+            "output": "not an array"
+        });
+        let result = validate_openai_response_schema(&invalid);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn validates_valid_openai_chat_completions() {
+        let valid_chat = json!({
+            "choices": [
+                {
+                    "message": {
+                        "role": "assistant",
+                        "content": "I'll schedule that for you.",
+                        "tool_calls": [
+                            {
+                                "id": "call-1",
+                                "function": {
+                                    "name": "schedule_cron",
+                                    "arguments": "{\"cron\":\"0 9 * * *\"}"
+                                }
+                            }
+                        ]
+                    }
+                }
+            ]
+        });
+        assert!(validate_openai_chat_completions_schema(&valid_chat).is_ok());
+    }
+
+    #[test]
+    fn rejects_openai_chat_completions_missing_choices() {
+        let invalid = json!({
+            "id": "chatcmpl-123"
+        });
+        let result = validate_openai_chat_completions_schema(&invalid);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("choices"));
+    }
+
+    #[test]
+    fn rejects_openai_chat_completions_empty_choices() {
+        let invalid = json!({
+            "choices": []
+        });
+        let result = validate_openai_chat_completions_schema(&invalid);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("choices"));
+    }
+
+    #[test]
+    fn rejects_openai_chat_completions_missing_message() {
+        let invalid = json!({
+            "choices": [
+                {
+                    "finish_reason": "stop"
+                }
+            ]
+        });
+        let result = validate_openai_chat_completions_schema(&invalid);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("message"));
+    }
+
+    #[test]
+    fn rejects_openai_chat_completions_message_missing_role() {
+        let invalid = json!({
+            "choices": [
+                {
+                    "message": {
+                        "content": "Hello"
+                    }
+                }
+            ]
+        });
+        let result = validate_openai_chat_completions_schema(&invalid);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("role"));
+    }
+
+    #[test]
+    fn validates_json_type_names() {
+        assert_eq!(json_type_name(&json!(null)), "null");
+        assert_eq!(json_type_name(&json!(true)), "boolean");
+        assert_eq!(json_type_name(&json!(42)), "number");
+        assert_eq!(json_type_name(&json!("text")), "string");
+        assert_eq!(json_type_name(&json!([])), "array");
+        assert_eq!(json_type_name(&json!({})), "object");
     }
 }
