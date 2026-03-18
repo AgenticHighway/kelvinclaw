@@ -179,6 +179,7 @@ impl KelvinBrain {
             user_prompt: req.prompt.clone(),
             memory_snippets,
             history,
+            tools: self.tools.definitions(),
         };
 
         let model_output = self.model.infer(model_input).await?;

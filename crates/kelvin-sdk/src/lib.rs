@@ -2331,6 +2331,7 @@ mod tests {
                 user_prompt: "hello".to_string(),
                 memory_snippets: Vec::new(),
                 history: Vec::new(),
+                tools: Vec::new(),
             })
             .await
             .expect("failover output");
@@ -2370,6 +2371,7 @@ mod tests {
                 user_prompt: "hello".to_string(),
                 memory_snippets: Vec::new(),
                 history: Vec::new(),
+                tools: Vec::new(),
             })
             .await
             .expect_err("invalid input should fail closed");

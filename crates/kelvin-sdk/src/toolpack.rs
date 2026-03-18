@@ -235,6 +235,27 @@ impl Tool for SafeFsReadTool {
         "fs_safe_read"
     }
 
+    fn description(&self) -> &str {
+        "Read a file from the workspace. Path must be workspace-relative. Sensitive paths (.env, .git/, .kelvin/plugins/) are denied."
+    }
+
+    fn input_schema(&self) -> serde_json::Value {
+        serde_json::json!({
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Workspace-relative path to the file to read."
+                },
+                "max_bytes": {
+                    "type": "integer",
+                    "description": "Maximum number of bytes to read. Defaults to policy limit."
+                }
+            },
+            "required": ["path"]
+        })
+    }
+
     async fn call(&self, input: ToolCallInput) -> KelvinResult<ToolCallResult> {
         let args = args_object(&input.arguments, self.name())?;
         let path = normalize_workspace_relative_path(
@@ -313,6 +334,36 @@ impl SafeFsWriteTool {
 impl Tool for SafeFsWriteTool {
     fn name(&self) -> &str {
         "fs_safe_write"
+    }
+
+    fn description(&self) -> &str {
+        "Write content to a file in the workspace. Only .kelvin/sandbox/, memory/, and notes/ roots are permitted. Requires sensitive approval."
+    }
+
+    fn input_schema(&self) -> serde_json::Value {
+        serde_json::json!({
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Workspace-relative path to write. Must be under .kelvin/sandbox/, memory/, or notes/."
+                },
+                "content": {
+                    "type": "string",
+                    "description": "Content to write to the file."
+                },
+                "mode": {
+                    "type": "string",
+                    "enum": ["overwrite", "append"],
+                    "description": "Write mode: 'overwrite' (default) replaces the file, 'append' adds to it."
+                },
+                "approval_reason": {
+                    "type": "string",
+                    "description": "Human-readable reason why this write is necessary (required for approval)."
+                }
+            },
+            "required": ["path", "content", "approval_reason"]
+        })
     }
 
     async fn call(&self, input: ToolCallInput) -> KelvinResult<ToolCallResult> {
@@ -403,6 +454,35 @@ impl SafeWebFetchTool {
 impl Tool for SafeWebFetchTool {
     fn name(&self) -> &str {
         "web_fetch_safe"
+    }
+
+    fn description(&self) -> &str {
+        "Fetch a URL over HTTP or HTTPS. Only hosts in the configured allowlist are permitted. Requires sensitive approval."
+    }
+
+    fn input_schema(&self) -> serde_json::Value {
+        serde_json::json!({
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string",
+                    "description": "The HTTP or HTTPS URL to fetch."
+                },
+                "max_bytes": {
+                    "type": "integer",
+                    "description": "Maximum number of response bytes to return. Defaults to policy limit."
+                },
+                "timeout_ms": {
+                    "type": "integer",
+                    "description": "Request timeout in milliseconds (100–30000). Defaults to 10000."
+                },
+                "approval_reason": {
+                    "type": "string",
+                    "description": "Human-readable reason why this fetch is necessary (required for approval)."
+                }
+            },
+            "required": ["url", "approval_reason"]
+        })
     }
 
     async fn call(&self, input: ToolCallInput) -> KelvinResult<ToolCallResult> {
@@ -509,6 +589,40 @@ struct SchedulerTool {
 impl Tool for SchedulerTool {
     fn name(&self) -> &str {
         "schedule_cron"
+    }
+
+    fn description(&self) -> &str {
+        "Manage cron-scheduled tasks. Use action 'list' to see all tasks, 'add' to create a new scheduled task, or 'remove' to delete one by id."
+    }
+
+    fn input_schema(&self) -> serde_json::Value {
+        serde_json::json!({
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["list", "add", "remove"],
+                    "description": "The operation to perform. Defaults to 'list'."
+                },
+                "cron": {
+                    "type": "string",
+                    "description": "Cron expression for the schedule (required for 'add')."
+                },
+                "prompt": {
+                    "type": "string",
+                    "description": "The task/prompt to run on the schedule (required for 'add')."
+                },
+                "id": {
+                    "type": "string",
+                    "description": "Task identifier. Auto-generated for 'add'; required for 'remove'."
+                },
+                "approval_reason": {
+                    "type": "string",
+                    "description": "Human-readable reason for mutating the schedule (required for 'add'/'remove')."
+                }
+            },
+            "required": []
+        })
     }
 
     async fn call(&self, input: ToolCallInput) -> KelvinResult<ToolCallResult> {
@@ -645,6 +759,32 @@ impl SessionToolsTool {
 impl Tool for SessionToolsTool {
     fn name(&self) -> &str {
         "session_tools"
+    }
+
+    fn description(&self) -> &str {
+        "Manage session-local notes. Use 'list_notes' to retrieve notes, 'append_note' to add a note, or 'clear_notes' to delete all notes for this session."
+    }
+
+    fn input_schema(&self) -> serde_json::Value {
+        serde_json::json!({
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["list_notes", "append_note", "clear_notes"],
+                    "description": "The operation to perform. Defaults to 'list_notes'."
+                },
+                "note": {
+                    "type": "string",
+                    "description": "The note text to append (required for 'append_note')."
+                },
+                "approval_reason": {
+                    "type": "string",
+                    "description": "Human-readable reason for clearing notes (required for 'clear_notes')."
+                }
+            },
+            "required": []
+        })
     }
 
     async fn call(&self, input: ToolCallInput) -> KelvinResult<ToolCallResult> {
