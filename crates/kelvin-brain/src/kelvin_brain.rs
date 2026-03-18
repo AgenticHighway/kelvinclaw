@@ -169,32 +169,50 @@ impl KelvinBrain {
             })
             .collect::<Vec<_>>();
 
+        let system_prompt = req
+            .extra_system_prompt
+            .clone()
+            .unwrap_or_else(|| "KelvinClaw-style Kelvin brain".to_string());
+
         let model_input = ModelInput {
             run_id: req.run_id.clone(),
             session_id: req.session_id.clone(),
-            system_prompt: req
-                .extra_system_prompt
-                .clone()
-                .unwrap_or_else(|| "KelvinClaw-style Kelvin brain".to_string()),
+            system_prompt: system_prompt.clone(),
             user_prompt: req.prompt.clone(),
-            memory_snippets,
+            memory_snippets: memory_snippets.clone(),
             history,
             tools: self.tools.definitions(),
         };
 
         let model_output = self.model.infer(model_input).await?;
-        let stop_reason = model_output.stop_reason.clone();
+        let mut stop_reason = model_output.stop_reason.clone();
         let tool_calls = model_output.tool_calls;
         let assistant_text = model_output.assistant_text.trim().to_string();
 
         let mut payloads = Vec::new();
+        let ran_tools = !tool_calls.is_empty();
+
         if !assistant_text.is_empty() && assistant_text != "NO_REPLY" {
             self.emit_assistant(&req.run_id, &assistant_text, true)
                 .await?;
-            payloads.push(AgentPayload {
-                text: assistant_text.clone(),
-                is_error: false,
-            });
+            // Only add to payloads if no tools will run; otherwise the followup response replaces this
+            if !ran_tools {
+                payloads.push(AgentPayload {
+                    text: assistant_text.clone(),
+                    is_error: false,
+                });
+            }
+        }
+
+        // Append pre-tool assistant text now so session ordering is correct:
+        // user → assistant (decided to call tool) → tool → assistant (final)
+        if !assistant_text.is_empty() && ran_tools {
+            self.session_store
+                .append_message(
+                    &req.session_id,
+                    SessionMessage::assistant(assistant_text.clone()),
+                )
+                .await?;
         }
 
         for tool_call in tool_calls {
@@ -259,7 +277,7 @@ impl KelvinBrain {
                         .append_message(
                             &req.session_id,
                             SessionMessage::tool(
-                                summary.clone(),
+                                format!("{}\n\nError:\n{}", summary, err),
                                 json!({
                                     "tool": tool.name(),
                                     "is_error": true,
@@ -299,11 +317,15 @@ impl KelvinBrain {
             )
             .await?;
 
+            let tool_content = match &result.output {
+                Some(output) => format!("{}\n\nOutput:\n{}", result.summary, output),
+                None => result.summary.clone(),
+            };
             self.session_store
                 .append_message(
                     &req.session_id,
                     SessionMessage::tool(
-                        result.summary.clone(),
+                        tool_content,
                         json!({
                             "tool": tool.name(),
                             "is_error": result.is_error,
@@ -335,7 +357,47 @@ impl KelvinBrain {
             }
         }
 
-        if !assistant_text.is_empty() {
+        if ran_tools {
+            // Re-fetch history now that tool results are appended, then ask the model
+            // to interpret the results and produce a final response.
+            let updated_history = self
+                .session_store
+                .history(&req.session_id)
+                .await?
+                .into_iter()
+                .map(|message| format!("{:?}: {}", message.role, message.content))
+                .collect::<Vec<_>>();
+
+            let followup_input = ModelInput {
+                run_id: req.run_id.clone(),
+                session_id: req.session_id.clone(),
+                system_prompt: system_prompt.clone(),
+                user_prompt: "Tool calls completed. Based on the results in the conversation history above, respond to the user's original request.".to_string(),
+                memory_snippets,
+                history: updated_history,
+                tools: self.tools.definitions(),
+            };
+
+            let followup_output = self.model.infer(followup_input).await?;
+            stop_reason = followup_output.stop_reason.clone();
+            let followup_text = followup_output.assistant_text.trim().to_string();
+
+            if !followup_text.is_empty() && followup_text != "NO_REPLY" {
+                self.emit_assistant(&req.run_id, &followup_text, true)
+                    .await?;
+                payloads.push(AgentPayload {
+                    text: followup_text.clone(),
+                    is_error: false,
+                });
+                self.session_store
+                    .append_message(
+                        &req.session_id,
+                        SessionMessage::assistant(followup_text),
+                    )
+                    .await?;
+            }
+        } else if !assistant_text.is_empty() {
+            // No tools ran: the first response is the final one, save it to session now.
             self.session_store
                 .append_message(&req.session_id, SessionMessage::assistant(assistant_text))
                 .await?;

@@ -270,12 +270,14 @@ async fn e2e_events_are_complete_and_ordered_and_tool_execution_is_deterministic
         .iter()
         .map(|item| item.text.clone())
         .collect::<Vec<_>>();
+    // Tool outputs come before the final assistant response (which is produced by the
+    // second inference call that sees the tool results in its history).
     assert_eq!(
         payload_text,
         vec![
-            "assistant-response".to_string(),
             "first-output".to_string(),
             "second-output".to_string(),
+            "assistant-response".to_string(),
         ]
     );
 
@@ -289,12 +291,17 @@ async fn e2e_events_are_complete_and_ordered_and_tool_execution_is_deterministic
         .history("session-1")
         .await
         .expect("session history");
-    assert_eq!(history.len(), 4);
+    // user → assistant (pre-tool) → tool → tool → assistant (followup)
+    assert_eq!(history.len(), 5);
     assert!(matches!(history[0].role, kelvin_core::SessionRole::User));
-    assert!(matches!(history[1].role, kelvin_core::SessionRole::Tool));
-    assert!(matches!(history[2].role, kelvin_core::SessionRole::Tool));
     assert!(matches!(
-        history[3].role,
+        history[1].role,
+        kelvin_core::SessionRole::Assistant
+    ));
+    assert!(matches!(history[2].role, kelvin_core::SessionRole::Tool));
+    assert!(matches!(history[3].role, kelvin_core::SessionRole::Tool));
+    assert!(matches!(
+        history[4].role,
         kelvin_core::SessionRole::Assistant
     ));
 
