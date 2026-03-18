@@ -343,11 +343,17 @@ impl KelvinBrain {
                 .map(|message| format!("{:?}: {}", message.role, message.content))
                 .collect::<Vec<_>>();
 
+            let user_prompt = if iteration == 0 {
+                req.prompt.clone()
+            } else {
+                "Tool calls completed. Based on the results in the conversation history above, respond to the user's original request.".to_string()
+            };
+
             let model_input = ModelInput {
                 run_id: req.run_id.clone(),
                 session_id: req.session_id.clone(),
                 system_prompt: system_prompt.clone(),
-                user_prompt: req.prompt.clone(),
+                user_prompt,
                 memory_snippets: memory_snippets.clone(),
                 history,
                 tools: self.tools.definitions(),
@@ -402,7 +408,7 @@ impl KelvinBrain {
                     run_id: req.run_id.clone(),
                     session_id: req.session_id.clone(),
                     system_prompt: system_prompt.clone(),
-                    user_prompt: req.prompt.clone(),
+                    user_prompt: "Tool calls completed. Based on the results in the conversation history above, respond to the user's original request.".to_string(),
                     memory_snippets: memory_snippets.clone(),
                     history: final_history,
                     tools: vec![],
