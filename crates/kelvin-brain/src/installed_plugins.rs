@@ -27,7 +27,7 @@ use kelvin_wasm::{
 
 const DEFAULT_TOOL_RUNTIME_KIND: &str = "wasm_tool_v1";
 const DEFAULT_MODEL_RUNTIME_KIND: &str = "wasm_model_v1";
-const DEFAULT_TIMEOUT_MS: u64 = 2_000;
+const DEFAULT_TIMEOUT_MS: u64 = 30_000;
 const DEFAULT_MAX_RETRIES: u32 = 0;
 const DEFAULT_MAX_CALLS_PER_MINUTE: usize = 120;
 const DEFAULT_CIRCUIT_BREAKER_FAILURES: u32 = 3;

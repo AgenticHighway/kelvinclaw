@@ -28,7 +28,7 @@ pub mod model_abi {
 
 const DEFAULT_MAX_REQUEST_BYTES: usize = 256 * 1024;
 const DEFAULT_MAX_RESPONSE_BYTES: usize = 1024 * 1024;
-const DEFAULT_TIMEOUT_MS: u64 = 10_000;
+const DEFAULT_TIMEOUT_MS: u64 = 30_000;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ModelSandboxPolicy {
