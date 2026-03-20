@@ -107,6 +107,7 @@ async fn start_gateway_with_security(
         persist_runs: true,
         max_session_history_messages: 128,
         compact_to_messages: 64,
+        max_tool_iterations: 10,
     })
     .await
     .expect("initialize runtime");
@@ -364,6 +365,7 @@ async fn gateway_exposes_scheduler_list_and_history() {
         persist_runs: true,
         max_session_history_messages: 128,
         compact_to_messages: 64,
+        max_tool_iterations: 10,
     })
     .await
     .expect("initialize runtime");
@@ -515,6 +517,7 @@ async fn gateway_exposes_operator_run_session_and_plugin_views() {
         persist_runs: true,
         max_session_history_messages: 128,
         compact_to_messages: 64,
+        max_tool_iterations: 10,
     })
     .await
     .expect("initialize runtime");

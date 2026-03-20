@@ -11,6 +11,7 @@ pub enum LifecyclePhase {
     Start,
     End,
     Error,
+    Warning,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

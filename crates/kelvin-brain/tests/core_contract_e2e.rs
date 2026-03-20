@@ -1,5 +1,8 @@
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{
+    atomic::{AtomicUsize, Ordering},
+    Arc,
+};
 use std::time::Duration;
 
 use async_trait::async_trait;
@@ -119,10 +122,38 @@ impl MemorySearchManager for StaticMemory {
     }
 }
 
-#[derive(Clone)]
 struct StubModelProvider {
     delay_ms: u64,
-    output: ModelOutput,
+    call_count: AtomicUsize,
+    first_output: ModelOutput,
+    subsequent_output: ModelOutput,
+}
+
+impl StubModelProvider {
+    /// Convenience constructor: always returns the same output regardless of call count.
+    fn single(output: ModelOutput) -> Self {
+        Self {
+            delay_ms: 0,
+            call_count: AtomicUsize::new(0),
+            subsequent_output: output.clone(),
+            first_output: output,
+        }
+    }
+
+    /// First call returns `first_output`; all subsequent calls return `subsequent_output`.
+    fn two_phase(first_output: ModelOutput, subsequent_output: ModelOutput) -> Self {
+        Self {
+            delay_ms: 0,
+            call_count: AtomicUsize::new(0),
+            first_output,
+            subsequent_output,
+        }
+    }
+
+    fn with_delay(mut self, delay_ms: u64) -> Self {
+        self.delay_ms = delay_ms;
+        self
+    }
 }
 
 #[async_trait]
@@ -139,7 +170,12 @@ impl ModelProvider for StubModelProvider {
         if self.delay_ms > 0 {
             tokio::time::sleep(Duration::from_millis(self.delay_ms)).await;
         }
-        Ok(self.output.clone())
+        let count = self.call_count.fetch_add(1, Ordering::SeqCst);
+        if count == 0 {
+            Ok(self.first_output.clone())
+        } else {
+            Ok(self.subsequent_output.clone())
+        }
     }
 }
 
@@ -200,6 +236,40 @@ impl Tool for RecordingTool {
     }
 }
 
+/// A stub that cycles through a list of outputs, returning the last one for all
+/// calls beyond the end of the list.
+struct MultiPhaseStubModelProvider {
+    outputs: Vec<ModelOutput>,
+    call_count: AtomicUsize,
+}
+
+impl MultiPhaseStubModelProvider {
+    fn new(outputs: Vec<ModelOutput>) -> Self {
+        assert!(!outputs.is_empty(), "must provide at least one output");
+        Self {
+            outputs,
+            call_count: AtomicUsize::new(0),
+        }
+    }
+}
+
+#[async_trait]
+impl ModelProvider for MultiPhaseStubModelProvider {
+    fn provider_name(&self) -> &str {
+        "stub"
+    }
+
+    fn model_name(&self) -> &str {
+        "stub-model"
+    }
+
+    async fn infer(&self, _input: ModelInput) -> KelvinResult<ModelOutput> {
+        let idx = self.call_count.fetch_add(1, Ordering::SeqCst);
+        let clamped = idx.min(self.outputs.len() - 1);
+        Ok(self.outputs[clamped].clone())
+    }
+}
+
 fn request(prompt: &str, timeout_ms: Option<u64>) -> AgentRunRequest {
     AgentRunRequest {
         run_id: "run-1".to_string(),
@@ -210,6 +280,7 @@ fn request(prompt: &str, timeout_ms: Option<u64>) -> AgentRunRequest {
         extra_system_prompt: None,
         timeout_ms,
         memory_query: None,
+        max_tool_iterations: None,
     }
 }
 
@@ -240,9 +311,8 @@ async fn e2e_events_are_complete_and_ordered_and_tool_execution_is_deterministic
         )),
     ]));
 
-    let model = Arc::new(StubModelProvider {
-        delay_ms: 0,
-        output: ModelOutput {
+    let model = Arc::new(StubModelProvider::two_phase(
+        ModelOutput {
             assistant_text: "assistant-response".to_string(),
             stop_reason: Some("tool_calls".to_string()),
             tool_calls: vec![
@@ -251,7 +321,13 @@ async fn e2e_events_are_complete_and_ordered_and_tool_execution_is_deterministic
             ],
             usage: None,
         },
-    });
+        ModelOutput {
+            assistant_text: "assistant-response".to_string(),
+            stop_reason: Some("completed".to_string()),
+            tool_calls: vec![],
+            usage: None,
+        },
+    ));
 
     let brain = KelvinBrain::new(
         session_store.clone(),
@@ -356,15 +432,15 @@ async fn e2e_timeout_produces_typed_error_and_lifecycle_error_event() {
     let brain = KelvinBrain::new(
         Arc::new(InMemorySessionStore::default()),
         Arc::new(StaticMemory),
-        Arc::new(StubModelProvider {
-            delay_ms: 120,
-            output: ModelOutput {
+        Arc::new(
+            StubModelProvider::single(ModelOutput {
                 assistant_text: "late-response".to_string(),
                 stop_reason: Some("completed".to_string()),
                 tool_calls: Vec::new(),
                 usage: None,
-            },
-        }),
+            })
+            .with_delay(120),
+        ),
         Arc::new(MapToolRegistry::from_tools(Vec::new())),
         event_sink.clone(),
     );
@@ -398,15 +474,12 @@ async fn e2e_invalid_prompt_returns_typed_input_error() {
     let brain = KelvinBrain::new(
         Arc::new(InMemorySessionStore::default()),
         Arc::new(StaticMemory),
-        Arc::new(StubModelProvider {
-            delay_ms: 0,
-            output: ModelOutput {
-                assistant_text: String::new(),
-                stop_reason: Some("completed".to_string()),
-                tool_calls: Vec::new(),
-                usage: None,
-            },
-        }),
+        Arc::new(StubModelProvider::single(ModelOutput {
+            assistant_text: String::new(),
+            stop_reason: Some("completed".to_string()),
+            tool_calls: Vec::new(),
+            usage: None,
+        })),
         Arc::new(MapToolRegistry::from_tools(Vec::new())),
         event_sink.clone(),
     );
@@ -426,4 +499,175 @@ async fn e2e_invalid_prompt_returns_typed_input_error() {
             ..
         }
     ));
+}
+
+#[tokio::test]
+async fn e2e_multi_iteration_tool_calls() {
+    // Model: call 1 → tools A, call 2 → tools B, call 3 → final text
+    let tool_out = |name: &str| tool_call(name, name, json!({}));
+    let session_store = Arc::new(InMemorySessionStore::default());
+    let tool_calls_log = Arc::new(Mutex::new(Vec::<String>::new()));
+
+    let tools = Arc::new(MapToolRegistry::from_tools(vec![
+        Arc::new(RecordingTool::new("alpha", "alpha-out", tool_calls_log.clone())),
+        Arc::new(RecordingTool::new("beta", "beta-out", tool_calls_log.clone())),
+    ]));
+
+    let model = Arc::new(MultiPhaseStubModelProvider::new(vec![
+        ModelOutput {
+            assistant_text: "thinking".to_string(),
+            stop_reason: Some("tool_calls".to_string()),
+            tool_calls: vec![tool_out("alpha")],
+            usage: None,
+        },
+        ModelOutput {
+            assistant_text: "more-thinking".to_string(),
+            stop_reason: Some("tool_calls".to_string()),
+            tool_calls: vec![tool_out("beta")],
+            usage: None,
+        },
+        ModelOutput {
+            assistant_text: "final-answer".to_string(),
+            stop_reason: Some("completed".to_string()),
+            tool_calls: vec![],
+            usage: None,
+        },
+    ]));
+
+    let brain = KelvinBrain::new(
+        session_store.clone(),
+        Arc::new(StaticMemory),
+        model,
+        tools,
+        Arc::new(RecordingEventSink::default()),
+    );
+
+    let result = brain
+        .run(request("multi-step", None))
+        .await
+        .expect("multi-iteration run");
+
+    // tool visible outputs + final text
+    let texts: Vec<_> = result.payloads.iter().map(|p| p.text.as_str()).collect();
+    assert_eq!(texts, vec!["alpha-out", "beta-out", "final-answer"]);
+    assert_eq!(result.meta.tool_iterations, 2);
+
+    let history = session_store.history("session-1").await.expect("history");
+    // user → assistant1 → tool(alpha) → assistant2 → tool(beta) → assistant3
+    assert_eq!(history.len(), 6);
+    assert!(matches!(history[0].role, kelvin_core::SessionRole::User));
+    assert!(matches!(history[1].role, kelvin_core::SessionRole::Assistant));
+    assert!(matches!(history[2].role, kelvin_core::SessionRole::Tool));
+    assert!(matches!(history[3].role, kelvin_core::SessionRole::Assistant));
+    assert!(matches!(history[4].role, kelvin_core::SessionRole::Tool));
+    assert!(matches!(history[5].role, kelvin_core::SessionRole::Assistant));
+}
+
+#[tokio::test]
+async fn e2e_max_iterations_cap_is_enforced() {
+    // Stub always returns tool calls; brain should stop after max_tool_iterations=2
+    // and emit a Warning lifecycle event, then a forced final text.
+    let tool_calls_log = Arc::new(Mutex::new(Vec::<String>::new()));
+    let event_sink = Arc::new(RecordingEventSink::default());
+
+    let tools = Arc::new(MapToolRegistry::from_tools(vec![Arc::new(
+        RecordingTool::new("looper", "loop-out", tool_calls_log.clone()),
+    )]));
+
+    // Always returns a tool call
+    let looping_output = ModelOutput {
+        assistant_text: String::new(),
+        stop_reason: Some("tool_calls".to_string()),
+        tool_calls: vec![tool_call("tc", "looper", json!({}))],
+        usage: None,
+    };
+    // Final forced inference (no tools offered) → text
+    let final_output = ModelOutput {
+        assistant_text: "forced-final".to_string(),
+        stop_reason: Some("completed".to_string()),
+        tool_calls: vec![],
+        usage: None,
+    };
+    let model = Arc::new(MultiPhaseStubModelProvider::new(vec![
+        looping_output.clone(),
+        looping_output.clone(),
+        final_output,
+    ]));
+
+    let brain = KelvinBrain::new(
+        Arc::new(InMemorySessionStore::default()),
+        Arc::new(StaticMemory),
+        model,
+        tools,
+        event_sink.clone(),
+    );
+
+    let mut req = request("loop forever", None);
+    req.max_tool_iterations = Some(2);
+
+    let result = brain.run(req).await.expect("capped run");
+
+    // Warning lifecycle event must appear
+    let events = event_sink.all().await;
+    let has_warning = events.iter().any(|e| {
+        matches!(
+            &e.data,
+            AgentEventData::Lifecycle {
+                phase: LifecyclePhase::Warning,
+                ..
+            }
+        )
+    });
+    assert!(has_warning, "expected a Warning lifecycle event");
+
+    // Final payload is the forced response
+    let last_payload = result.payloads.last().expect("at least one payload");
+    assert_eq!(last_payload.text, "forced-final");
+    assert_eq!(result.meta.tool_iterations, 2);
+}
+
+#[tokio::test]
+async fn e2e_per_request_max_overrides_brain_default() {
+    // Brain default = 10; request override = 1. Only 1 tool iteration should run.
+    let tool_calls_log = Arc::new(Mutex::new(Vec::<String>::new()));
+    let event_sink = Arc::new(RecordingEventSink::default());
+
+    let tools = Arc::new(MapToolRegistry::from_tools(vec![Arc::new(
+        RecordingTool::new("t", "t-out", tool_calls_log.clone()),
+    )]));
+
+    let always_tool = ModelOutput {
+        assistant_text: String::new(),
+        stop_reason: Some("tool_calls".to_string()),
+        tool_calls: vec![tool_call("tc", "t", json!({}))],
+        usage: None,
+    };
+    let final_output = ModelOutput {
+        assistant_text: "override-final".to_string(),
+        stop_reason: Some("completed".to_string()),
+        tool_calls: vec![],
+        usage: None,
+    };
+    let model = Arc::new(MultiPhaseStubModelProvider::new(vec![
+        always_tool.clone(),
+        final_output,
+    ]));
+
+    let brain = KelvinBrain::new(
+        Arc::new(InMemorySessionStore::default()),
+        Arc::new(StaticMemory),
+        model,
+        tools,
+        event_sink.clone(),
+    )
+    .with_max_tool_iterations(10);
+
+    let mut req = request("override test", None);
+    req.max_tool_iterations = Some(1);
+
+    let result = brain.run(req).await.expect("override run");
+
+    assert_eq!(result.meta.tool_iterations, 1);
+    let last = result.payloads.last().expect("payload");
+    assert_eq!(last.text, "override-final");
 }

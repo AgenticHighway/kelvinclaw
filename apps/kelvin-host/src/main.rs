@@ -206,6 +206,7 @@ fn runtime_config_from_cli(config: &CliConfig) -> KelvinSdkRuntimeConfig {
         persist_runs: config.persist_runs,
         max_session_history_messages: config.max_session_history_messages,
         compact_to_messages: config.compact_to_messages,
+        max_tool_iterations: 10,
     }
 }
 
@@ -229,6 +230,7 @@ async fn run_single(config: CliConfig) -> Result<(), KelvinError> {
         persist_runs: config.persist_runs,
         max_session_history_messages: config.max_session_history_messages,
         compact_to_messages: config.compact_to_messages,
+        max_tool_iterations: 10,
     })
     .await?;
 

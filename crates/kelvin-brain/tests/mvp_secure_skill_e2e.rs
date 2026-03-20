@@ -121,6 +121,9 @@ fn request(run_id: &str, workspace: &Path, prompt: &str) -> AgentRunRequest {
         extra_system_prompt: None,
         timeout_ms: Some(2_000),
         memory_query: None,
+        // EchoModelProvider replays the original prompt's tool calls each iteration;
+        // cap at 1 to avoid looping until max_tool_iterations.
+        max_tool_iterations: Some(1),
     }
 }
 

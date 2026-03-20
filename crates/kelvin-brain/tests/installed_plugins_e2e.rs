@@ -103,6 +103,89 @@ fn sha256_hex(bytes: &[u8]) -> String {
     out
 }
 
+fn write_installed_v2_plugin(
+    plugin_home: &Path,
+    plugin_id: &str,
+    version: &str,
+    include_signature: bool,
+    signing_key: &SigningKey,
+) {
+    let version_dir = plugin_home.join(plugin_id).join(version);
+    let payload_dir = version_dir.join("payload");
+    std::fs::create_dir_all(&payload_dir).expect("create payload dir");
+
+    // A v2 echo WASM: exports handle_tool_call that echoes input JSON back
+    let wasm_bytes = wat::parse_str(
+        r#"
+        (module
+          (memory (export "memory") 2)
+          (global $next_off (mut i32) (i32.const 1024))
+          (func $alloc (export "alloc") (param $len i32) (result i32)
+            (local $ptr i32)
+            (local.set $ptr (global.get $next_off))
+            (global.set $next_off (i32.add (global.get $next_off) (local.get $len)))
+            (local.get $ptr)
+          )
+          (func (export "dealloc") (param i32 i32))
+          (func (export "handle_tool_call") (param $ptr i32) (param $len i32) (result i64)
+            (local $out_ptr i32)
+            (local.set $out_ptr (call $alloc (local.get $len)))
+            (memory.copy (local.get $out_ptr) (local.get $ptr) (local.get $len))
+            (i64.or
+              (i64.shl (i64.extend_i32_u (local.get $out_ptr)) (i64.const 32))
+              (i64.extend_i32_u (local.get $len))
+            )
+          )
+          (func (export "run") (result i32) i32.const 0)
+        )
+        "#,
+    )
+    .expect("compile v2 echo wat");
+    std::fs::write(payload_dir.join("echo_v2.wasm"), &wasm_bytes).expect("write v2 wasm");
+
+    let manifest = json!({
+        "id": plugin_id,
+        "name": "Installed Echo V2 Plugin",
+        "version": version,
+        "api_version": "1.0.0",
+        "description": "v2 echo plugin",
+        "capabilities": ["tool_provider"],
+        "experimental": false,
+        "runtime": "wasm_tool_v1",
+        "tool_name": "installed_echo_v2",
+        "entrypoint": "echo_v2.wasm",
+        "entrypoint_sha256": sha256_hex(&wasm_bytes),
+        "publisher": "acme",
+        "tool_input_schema": {
+            "type": "object",
+            "properties": {
+                "message": { "type": "string" }
+            },
+            "required": ["message"]
+        },
+        "capability_scopes": {
+            "fs_read_paths": [],
+            "network_allow_hosts": []
+        },
+        "operational_controls": {
+            "timeout_ms": 2000,
+            "max_retries": 0,
+            "max_calls_per_minute": 30,
+            "circuit_breaker_failures": 2,
+            "circuit_breaker_cooldown_ms": 1000
+        }
+    });
+    let manifest_bytes = serde_json::to_vec_pretty(&manifest).expect("manifest bytes");
+    std::fs::write(version_dir.join("plugin.json"), &manifest_bytes).expect("write manifest");
+
+    if include_signature {
+        let signature = signing_key.sign(&manifest_bytes);
+        let signature_base64 =
+            base64::engine::general_purpose::STANDARD.encode(signature.to_bytes());
+        std::fs::write(version_dir.join("plugin.sig"), signature_base64).expect("write signature");
+    }
+}
+
 fn write_installed_plugin(
     plugin_home: &Path,
     plugin_id: &str,
@@ -177,6 +260,9 @@ fn request(workspace: &Path, prompt: &str) -> AgentRunRequest {
         extra_system_prompt: None,
         timeout_ms: Some(2_000),
         memory_query: None,
+        // EchoModelProvider always replays the original prompt's tool calls; cap at 1
+        // so we don't loop until the default max_tool_iterations.
+        max_tool_iterations: Some(1),
     }
 }
 
@@ -333,6 +419,62 @@ fn default_loader_uses_env_paths_and_enforces_missing_explicit_trust_policy() {
         std::env::remove_var("KELVIN_PLUGIN_HOME");
         std::env::remove_var("KELVIN_TRUST_POLICY_PATH");
     }
+}
+
+#[test]
+fn v2_plugin_echoes_arguments_through_handle_tool_call() {
+    let workspace = unique_workspace("v2-echo");
+    let plugin_home = workspace.join("plugins");
+
+    let signing_key = SigningKey::from_bytes(&[20_u8; 32]);
+    write_installed_v2_plugin(&plugin_home, "acme.echo_v2", "1.0.0", true, &signing_key);
+    let public_key =
+        base64::engine::general_purpose::STANDARD.encode(signing_key.verifying_key().to_bytes());
+    let trust_policy = PublisherTrustPolicy::default()
+        .with_publisher_key("acme", &public_key)
+        .expect("publisher key");
+
+    let loaded = load_installed_tool_plugins(InstalledPluginLoaderConfig {
+        plugin_home,
+        core_version: "0.1.0".to_string(),
+        security_policy: PluginSecurityPolicy::default(),
+        trust_policy,
+    })
+    .expect("load v2 installed plugins");
+    assert_eq!(loaded.loaded_plugins.len(), 1);
+
+    let tool = loaded
+        .tool_registry
+        .get("installed_echo_v2")
+        .expect("v2 echo tool registered");
+
+    // Verify description and input_schema are surfaced
+    assert_eq!(tool.description(), "v2 echo plugin");
+    let schema = tool.input_schema();
+    assert_eq!(schema["type"], "object");
+    assert!(schema["properties"]["message"].is_object());
+
+    // Call the tool and verify it echoes the arguments back as output_json
+    let args = json!({"message": "hello from e2e"});
+    let call_input = kelvin_core::ToolCallInput {
+        run_id: "run-v2-test".to_string(),
+        session_id: "sess-v2-test".to_string(),
+        workspace_dir: workspace.to_string_lossy().to_string(),
+        arguments: args.clone(),
+    };
+    let result = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap()
+        .block_on(tool.call(call_input))
+        .expect("v2 tool call");
+
+    assert!(!result.is_error);
+    // The output should be the JSON-serialized arguments echoed back
+    let output_str = result.output.expect("output present");
+    let output_val: serde_json::Value =
+        serde_json::from_str(&output_str).expect("output is valid JSON");
+    assert_eq!(output_val["message"], "hello from e2e");
 }
 
 #[test]

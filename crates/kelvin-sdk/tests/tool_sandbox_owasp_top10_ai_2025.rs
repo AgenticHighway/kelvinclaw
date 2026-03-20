@@ -40,6 +40,7 @@ async fn runtime_for(workspace: &PathBuf) -> KelvinSdkRuntime {
         persist_runs: false,
         max_session_history_messages: 128,
         compact_to_messages: 64,
+        max_tool_iterations: 10,
     })
     .await
     .expect("init runtime")
