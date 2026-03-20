@@ -365,6 +365,8 @@ struct InstalledPluginPackageManifest {
     capability_scopes: CapabilityScopesManifest,
     #[serde(default)]
     operational_controls: OperationalControlsManifest,
+    #[serde(default)]
+    tool_input_schema: Option<Value>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -579,6 +581,8 @@ struct InstalledWasmTool {
     plugin_id: String,
     plugin_version: String,
     tool_name: String,
+    tool_description: String,
+    tool_input_schema: Value,
     entrypoint_abs: PathBuf,
     host: Arc<WasmSkillHost>,
     sandbox_policy: SandboxPolicy,
@@ -593,6 +597,8 @@ impl InstalledWasmTool {
         plugin_id: String,
         plugin_version: String,
         tool_name: String,
+        tool_description: String,
+        tool_input_schema: Value,
         entrypoint_abs: PathBuf,
         host: Arc<WasmSkillHost>,
         sandbox_policy: SandboxPolicy,
@@ -603,6 +609,8 @@ impl InstalledWasmTool {
             plugin_id,
             plugin_version,
             tool_name,
+            tool_description,
+            tool_input_schema,
             entrypoint_abs,
             host,
             sandbox_policy,
@@ -703,12 +711,20 @@ impl InstalledWasmTool {
         }
     }
 
-    async fn execute_once(&self) -> KelvinResult<kelvin_wasm::SkillExecution> {
+    async fn execute_once(&self, arguments: &Value) -> KelvinResult<kelvin_wasm::SkillExecution> {
         let host = self.host.clone();
         let entrypoint = self.entrypoint_abs.clone();
         let policy = self.sandbox_policy;
+        let input_json = serde_json::to_string(arguments).map_err(|err| {
+            KelvinError::InvalidInput(format!(
+                "serialize tool arguments for plugin '{}': {err}",
+                self.plugin_id
+            ))
+        })?;
 
-        let mut task = tokio::task::spawn_blocking(move || host.run_file(entrypoint, policy));
+        let mut task = tokio::task::spawn_blocking(move || {
+            host.run_file_with_input(entrypoint, &input_json, policy)
+        });
         match time::timeout(Duration::from_millis(self.controls.timeout_ms), &mut task).await {
             Ok(join_result) => join_result
                 .map_err(|err| KelvinError::Backend(format!("tool task join failure: {err}")))?,
@@ -1370,13 +1386,21 @@ impl Tool for InstalledWasmTool {
         &self.tool_name
     }
 
+    fn description(&self) -> &str {
+        &self.tool_description
+    }
+
+    fn input_schema(&self) -> Value {
+        self.tool_input_schema.clone()
+    }
+
     async fn call(&self, input: ToolCallInput) -> KelvinResult<ToolCallResult> {
         self.enforce_scoped_arguments(&input.arguments)?;
         self.reserve_call_budget().await?;
 
         let mut last_error = None;
         for attempt in 0..=self.controls.max_retries {
-            match self.execute_once().await {
+            match self.execute_once(&input.arguments).await {
                 Ok(execution) => {
                     self.mark_success().await;
                     let summary = format!(
@@ -1387,6 +1411,18 @@ impl Tool for InstalledWasmTool {
                         self.plugin_id,
                         self.plugin_version
                     );
+
+                    // v2: use output_json directly if the module produced structured output
+                    if let Some(ref output_json) = execution.output_json {
+                        return Ok(ToolCallResult {
+                            summary: summary.clone(),
+                            output: Some(output_json.clone()),
+                            visible_text: Some(summary),
+                            is_error: false,
+                        });
+                    }
+
+                    // v1 fallback: format the calls list
                     let calls = execution
                         .calls
                         .iter()
@@ -1695,10 +1731,20 @@ fn load_one_plugin(
 
         let tool_name = package_manifest.resolved_tool_name()?;
         let sandbox_policy = sandbox_from_manifest(&package_manifest)?;
+        let tool_description = package_manifest
+            .description
+            .clone()
+            .unwrap_or_default();
+        let tool_input_schema = package_manifest
+            .tool_input_schema
+            .clone()
+            .unwrap_or_else(|| json!({"type": "object"}));
         tool = Some(Arc::new(InstalledWasmTool::new(
             package_manifest.id.clone(),
             package_manifest.version.clone(),
             tool_name,
+            tool_description,
+            tool_input_schema,
             entrypoint_abs.clone(),
             skill_host,
             sandbox_policy,

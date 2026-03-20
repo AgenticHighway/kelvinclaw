@@ -22,6 +22,7 @@ fn run() -> Result<i32, String> {
     let mut allow_network_send: Option<bool> = None;
     let mut max_module_bytes: Option<usize> = None;
     let mut fuel_budget: Option<u64> = None;
+    let mut input_json: Option<String> = None;
 
     let args = env::args().skip(1).collect::<Vec<_>>();
     let mut idx = 0usize;
@@ -79,6 +80,13 @@ fn run() -> Result<i32, String> {
                 );
                 idx += 2;
             }
+            "--input-json" => {
+                let value = args
+                    .get(idx + 1)
+                    .ok_or_else(|| "missing value for --input-json".to_string())?;
+                input_json = Some(value.clone());
+                idx += 2;
+            }
             unknown => {
                 return Err(format!("unknown argument '{unknown}'"));
             }
@@ -104,16 +112,23 @@ fn run() -> Result<i32, String> {
     }
 
     let host = WasmSkillHost::try_new().map_err(|err| err.to_string())?;
-    let execution = host
-        .run_file(&wasm_path, policy)
-        .map_err(|err| format!("{err}"))?;
+    let execution = if let Some(ref json) = input_json {
+        host.run_file_with_input(&wasm_path, json, policy)
+            .map_err(|err| format!("{err}"))?
+    } else {
+        host.run_file(&wasm_path, policy)
+            .map_err(|err| format!("{err}"))?
+    };
 
     println!("kelvin_abi_version={}", claw_abi::ABI_VERSION);
     println!("policy_preset={}", preset.name());
     println!("exit_code={}", execution.exit_code);
     println!("calls={}", execution.calls.len());
-    for call in execution.calls {
+    for call in &execution.calls {
         println!("call={call:?}");
+    }
+    if let Some(ref json) = execution.output_json {
+        println!("output_json={json}");
     }
 
     Ok(execution.exit_code)
@@ -130,4 +145,5 @@ fn print_usage() {
     println!("  --allow-network-send");
     println!("  --max-module-bytes <usize>");
     println!("  --fuel-budget <u64>");
+    println!("  --input-json <string>   Pass JSON arguments to v2 handle_tool_call export");
 }
