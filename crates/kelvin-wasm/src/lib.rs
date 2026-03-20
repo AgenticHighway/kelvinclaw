@@ -495,7 +495,7 @@ fn skill_read_guest_bytes(
     }
     let mut bytes = vec![0_u8; len];
     memory
-        .read(store, usize::try_from(ptr).unwrap_or_default(), &mut bytes)
+        .read(store, ptr as usize, &mut bytes)
         .map_err(|err| KelvinError::InvalidInput(format!("{context}: memory read failed: {err}")))?;
     Ok(bytes)
 }
@@ -513,7 +513,7 @@ fn skill_write_guest_bytes(
         )));
     }
     memory
-        .write(store, usize::try_from(ptr).unwrap_or_default(), bytes)
+        .write(store, ptr as usize, bytes)
         .map_err(|err| KelvinError::InvalidInput(format!("{context}: memory write failed: {err}")))
 }
 
