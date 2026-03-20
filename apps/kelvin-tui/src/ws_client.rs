@@ -47,7 +47,6 @@ pub struct WsClient {
 
 impl WsClient {
     pub async fn connect(url: &str, auth_token: Option<String>, tui_tx: mpsc::Sender<TuiEvent>) -> Result<Self, String> {
-        // 1A: Connection timeout
         let (ws_stream, _) = timeout(Duration::from_secs(10), connect_async(url))
             .await
             .map_err(|_| "WebSocket connect timed out".to_string())?
@@ -59,20 +58,17 @@ impl WsClient {
         let pending: PendingMap = Arc::new(Mutex::new(HashMap::new()));
         let pending_clone = pending.clone();
         let tui_tx_clone = tui_tx.clone();
-        let tui_tx_writer = tui_tx.clone(); // 1C
+        let tui_tx_writer = tui_tx.clone();
 
-        // Writer task
         tokio::spawn(async move {
             while let Some(msg) = frame_rx.recv().await {
                 if ws_write.send(Message::Text(msg.into())).await.is_err() {
-                    // 1C: notify TUI on write failure
                     let _ = tui_tx_writer.send(TuiEvent::WsStatus(WsStatus::Disconnected)).await;
                     break;
                 }
             }
         });
 
-        // Reader task
         tokio::spawn(async move {
             while let Some(msg) = ws_read.next().await {
                 match msg {
@@ -98,7 +94,6 @@ impl WsClient {
                                             let _ = tui_tx_clone.send(TuiEvent::Agent(ev)).await;
                                         }
                                         Err(e) => {
-                                            // 1D: route parse errors to TUI instead of stderr
                                             let _ = tui_tx_clone.send(TuiEvent::WsStatus(
                                                 WsStatus::Error(format!("failed to parse agent event: {e}"))
                                             )).await;
@@ -107,7 +102,6 @@ impl WsClient {
                                 }
                             }
                             Err(e) => {
-                                // 1D: route parse errors to TUI instead of stderr
                                 let _ = tui_tx_clone.send(TuiEvent::WsStatus(
                                     WsStatus::Error(format!("failed to parse server frame: {e}"))
                                 )).await;
@@ -128,7 +122,6 @@ impl WsClient {
             pending,
         };
 
-        // Send connect handshake
         let connect_params = if let Some(token) = auth_token {
             json!({ "auth": { "token": token }, "client_id": "kelvin-tui" })
         } else {
@@ -157,7 +150,6 @@ impl WsClient {
 
         self.sender.send(text).await.map_err(|_| "sender closed".to_string())?;
 
-        // 1B: Request timeout with pending cleanup on expiry
         match timeout(Duration::from_secs(30), rx).await {
             Ok(result) => result.map_err(|_| "response channel closed".to_string())?,
             Err(_) => {
@@ -182,7 +174,7 @@ impl WsClient {
             .ok_or_else(|| "missing run_id in response".to_string())
     }
 
-    #[allow(dead_code)] // 1E
+    #[allow(dead_code)]
     pub async fn health(&self) -> Result<Value, String> {
         self.call("health", json!({})).await
     }

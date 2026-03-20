@@ -27,7 +27,7 @@ fn input_line_count(input: &str, inner_width: u16) -> u16 {
     }
 }
 
-pub fn render(f: &mut Frame, app: &App) {
+pub fn render(f: &mut Frame, app: &mut App) {
     let area = f.area();
     let inner_width = area.width.saturating_sub(2);
     let display = app.display_input();
@@ -44,8 +44,10 @@ pub fn render(f: &mut Frame, app: &App) {
         ])
         .split(area);
 
+    app.chat_area = chunks[0];
+    app.tools_area = chunks[1];
     chat::render(f, app, chunks[0]);
     tools::render(f, app, chunks[1]);
-    input::render(f, app, chunks[2]);
-    status::render(f, app, chunks[3]);
+    input::render(f, &*app, chunks[2]);
+    status::render(f, &*app, chunks[3]);
 }

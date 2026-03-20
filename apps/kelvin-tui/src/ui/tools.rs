@@ -3,12 +3,12 @@ use ratatui::{
     layout::{Constraint, Rect},
     style::{Color, Modifier, Style},
     text::Span,
-    widgets::{Block, Borders, Row, Table},
+    widgets::{Block, Borders, Row, Table, TableState},
 };
 
 use crate::app::{App, ToolPhase};
 
-pub fn render(f: &mut Frame, app: &App, area: Rect) {
+pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     let rows: Vec<Row> = app.tools.iter().map(|entry| {
         let (phase_str, phase_color) = match entry.phase {
             ToolPhase::Start => ("running", Color::Yellow),
@@ -29,6 +29,16 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
         ])
     }).collect();
 
+    // 2 borders + 1 header row
+    let inner_height = area.height.saturating_sub(3) as usize;
+    app.tools_max_scroll = app.tools.len().saturating_sub(inner_height);
+
+    let offset = if app.tools_pinned {
+        app.tools_max_scroll
+    } else {
+        app.tools_scroll.min(app.tools_max_scroll)
+    };
+
     let table = Table::new(rows, [
         Constraint::Percentage(30),
         Constraint::Percentage(10),
@@ -39,5 +49,8 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
         .style(Style::default().add_modifier(Modifier::UNDERLINED)))
     .block(Block::default().borders(Borders::ALL).title(" Tools "));
 
-    f.render_widget(table, area);
+    let mut state = TableState::default();
+    *state.offset_mut() = offset;
+    f.render_stateful_widget(table, area, &mut state);
+    *app.tools_table_state.offset_mut() = offset;
 }

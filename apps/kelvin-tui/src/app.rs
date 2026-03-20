@@ -2,20 +2,18 @@ use std::time::{Duration, Instant};
 
 use crossterm::{
     cursor::SetCursorStyle,
-    event::{DisableBracketedPaste, EnableBracketedPaste, Event, EventStream, KeyCode, KeyEvent,
-            KeyModifiers},
+    event::{DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste, EnableMouseCapture,
+            Event, EventStream, KeyCode, KeyEvent, KeyModifiers, MouseEventKind},
     execute,
     terminal::{enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use futures_util::StreamExt;
-use ratatui::{backend::CrosstermBackend, Terminal};
+use ratatui::{backend::CrosstermBackend, layout::Rect, widgets::TableState, Terminal};
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 use tokio::time::interval;
 
 use crate::{ui, ws_client::WsClient, CliConfig};
-
-// ── Data types ────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct AgentEvent {
@@ -73,19 +71,16 @@ pub enum WsStatus {
     Error(String),
 }
 
-// ── TUI event ─────────────────────────────────────────────────────────────────
-
 pub enum TuiEvent {
     Key(KeyEvent),
     Paste(String),
     Agent(AgentEvent),
     WsStatus(WsStatus),
     #[allow(dead_code)]
-    Resize(u16, u16), // 4A
+    Resize(u16, u16),
+    Mouse(crossterm::event::MouseEvent),
     Tick,
 }
-
-// ── Chat message ──────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone)]
 pub enum ChatMessage {
@@ -93,8 +88,6 @@ pub enum ChatMessage {
     Assistant { text: String, complete: bool },
     System(String),
 }
-
-// ── Tool execution entry ──────────────────────────────────────────────────────
 
 #[derive(Debug, Clone)]
 pub struct ToolEntry {
@@ -105,15 +98,11 @@ pub struct ToolEntry {
     pub ended_ms: Option<u64>,
 }
 
-// ── Paste marker ──────────────────────────────────────────────────────────────
-
-/// Marks a byte range in `App::input` that is displayed as a compact label.
-/// The actual text (for submission) lives in `input[start..end]`.
 #[derive(Debug, Clone)]
 pub struct PasteMarker {
-    pub start: usize,  // byte start in input (inclusive)
-    pub end: usize,    // byte end in input (exclusive)
-    pub label: String, // e.g. "[pasted 7 lines · 412 B]"
+    pub start: usize,
+    pub end: usize,
+    pub label: String,
 }
 
 const PASTE_THRESHOLD_LINES: usize = 3;
@@ -135,9 +124,6 @@ fn paste_label(text: &str) -> String {
     format!("[pasted {lines} lines · {size}]")
 }
 
-// ── Display / cursor helpers ──────────────────────────────────────────────────
-
-/// Build the display string: paste regions are replaced with their labels.
 pub fn build_display(input: &str, markers: &[PasteMarker]) -> String {
     let mut out = String::with_capacity(input.len());
     let mut i = 0;
@@ -150,7 +136,6 @@ pub fn build_display(input: &str, markers: &[PasteMarker]) -> String {
     out
 }
 
-/// Map an actual byte position in `input` to a position in the display string.
 pub fn actual_to_display(pos: usize, markers: &[PasteMarker]) -> usize {
     let mut disp = 0;
     let mut i = 0;
@@ -160,7 +145,6 @@ pub fn actual_to_display(pos: usize, markers: &[PasteMarker]) -> usize {
         }
         disp += m.start.saturating_sub(i);
         if pos < m.end {
-            // Inside the region: snap to end of label
             return disp + m.label.len();
         }
         disp += m.label.len();
@@ -169,7 +153,6 @@ pub fn actual_to_display(pos: usize, markers: &[PasteMarker]) -> usize {
     disp + pos.saturating_sub(i)
 }
 
-/// Map a display position back to an actual byte position in `input`.
 pub fn display_to_actual(disp_pos: usize, markers: &[PasteMarker]) -> usize {
     let mut disp = 0;
     let mut i = 0;
@@ -181,7 +164,6 @@ pub fn display_to_actual(disp_pos: usize, markers: &[PasteMarker]) -> usize {
         disp += before;
         let llen = m.label.len();
         if disp_pos <= disp + llen {
-            // Inside label: snap to end of paste region
             return m.end;
         }
         disp += llen;
@@ -189,8 +171,6 @@ pub fn display_to_actual(disp_pos: usize, markers: &[PasteMarker]) -> usize {
     }
     i + disp_pos.saturating_sub(disp)
 }
-
-// ── App state ─────────────────────────────────────────────────────────────────
 
 pub struct App {
     pub chat: Vec<ChatMessage>,
@@ -204,14 +184,20 @@ pub struct App {
     pub gateway_url: String,
     pub last_error: Option<String>,
     pub chat_scroll: usize,
+    pub chat_pinned: bool,
+    pub chat_max_scroll: usize,
+    pub tools_scroll: usize,
+    pub tools_pinned: bool,
+    pub tools_max_scroll: usize,
+    pub chat_area: Rect,
+    pub tools_area: Rect,
+    pub tools_table_state: TableState,
     pub should_quit: bool,
     pub last_ctrl_c: Option<Instant>,
-    // Input history
     pub input_history: Vec<String>,
     pub history_idx: Option<usize>,
     pub history_saved: String,
-    // Visual line width of the input box inner area (updated each draw)
-    pub input_inner_width: usize,
+    pub input_inner_width: usize, // updated each frame
 }
 
 impl App {
@@ -228,6 +214,14 @@ impl App {
             gateway_url,
             last_error: None,
             chat_scroll: 0,
+            chat_pinned: true,
+            chat_max_scroll: 0,
+            tools_scroll: 0,
+            tools_pinned: true,
+            tools_max_scroll: 0,
+            chat_area: Rect::default(),
+            tools_area: Rect::default(),
+            tools_table_state: TableState::default(),
             should_quit: false,
             last_ctrl_c: None,
             input_history: Vec::new(),
@@ -237,20 +231,15 @@ impl App {
         }
     }
 
-    /// The string that should be rendered in the input widget.
     pub fn display_input(&self) -> String {
         build_display(&self.input, &self.paste_markers)
     }
 
-    /// Cursor position within the display string.
     pub fn display_cursor(&self) -> usize {
         actual_to_display(self.cursor_pos, &self.paste_markers)
     }
 
-    /// Insert pasted text at the current cursor position.
-    /// Creates a PasteMarker if the text exceeds the threshold.
     pub fn do_paste(&mut self, text: String) {
-        // Remove any markers that overlap the insertion point
         self.paste_markers.retain(|m| m.end <= self.cursor_pos || m.start >= self.cursor_pos);
 
         let start = self.cursor_pos;
@@ -259,7 +248,6 @@ impl App {
         if is_large_paste(&text) {
             let label = paste_label(&text);
             self.input.insert_str(start, &text);
-            // Shift existing markers that come after
             for m in &mut self.paste_markers {
                 if m.start >= start {
                     m.start += len;
@@ -283,18 +271,15 @@ impl App {
         assert_markers_valid(&self.input, &self.paste_markers);
     }
 
-    /// Backspace at the current cursor position, treating paste regions atomically.
     pub fn do_backspace(&mut self) {
         if self.cursor_pos == 0 {
             return;
         }
-        // Check if we're right at the end of a paste marker
         if let Some(idx) = self.paste_markers.iter().position(|m| m.end == self.cursor_pos) {
             let m = self.paste_markers.remove(idx);
             let removed = m.end - m.start;
             self.input.drain(m.start..m.end);
             self.cursor_pos = m.start;
-            // Shift subsequent markers
             for later in &mut self.paste_markers {
                 if later.start >= m.end {
                     later.start -= removed;
@@ -302,7 +287,6 @@ impl App {
                 }
             }
         } else {
-            // 3C: find previous char boundary
             let mut prev = self.cursor_pos - 1;
             while prev > 0 && !self.input.is_char_boundary(prev) {
                 prev -= 1;
@@ -310,7 +294,6 @@ impl App {
             let removed_len = self.cursor_pos - prev;
             self.input.drain(prev..self.cursor_pos);
             self.cursor_pos = prev;
-            // Shift markers after deletion point
             for m in &mut self.paste_markers {
                 if m.start > prev {
                     m.start -= removed_len;
@@ -322,13 +305,11 @@ impl App {
         assert_markers_valid(&self.input, &self.paste_markers);
     }
 
-    /// Move cursor left, jumping over paste regions atomically.
     pub fn move_left(&mut self) {
         if self.cursor_pos == 0 { return; }
         if let Some(m) = self.paste_markers.iter().find(|m| m.end == self.cursor_pos) {
             self.cursor_pos = m.start;
         } else {
-            // 3A: find previous char boundary
             let mut new_pos = self.cursor_pos - 1;
             while new_pos > 0 && !self.input.is_char_boundary(new_pos) {
                 new_pos -= 1;
@@ -337,13 +318,11 @@ impl App {
         }
     }
 
-    /// Move cursor right, jumping over paste regions atomically.
     pub fn move_right(&mut self) {
         if self.cursor_pos >= self.input.len() { return; }
         if let Some(m) = self.paste_markers.iter().find(|m| m.start == self.cursor_pos) {
             self.cursor_pos = m.end;
         } else {
-            // 3B: find next char boundary
             let mut new_pos = self.cursor_pos + 1;
             while new_pos < self.input.len() && !self.input.is_char_boundary(new_pos) {
                 new_pos += 1;
@@ -352,7 +331,6 @@ impl App {
         }
     }
 
-    /// Compact chat to at most MAX_CHAT_MESSAGES, prepending an omission notice.
     fn compact_chat(&mut self) {
         const MAX_CHAT_MESSAGES: usize = 1000;
         if self.chat.len() <= MAX_CHAT_MESSAGES { return; }
@@ -392,7 +370,7 @@ impl App {
                     text: delta,
                     complete: final_chunk,
                 });
-                self.chat_scroll = usize::MAX;
+                self.chat_pinned = true;
             }
             AgentEventData::Tool { tool_name, phase, summary, ts_ms, .. } => {
                 if let ToolPhase::Start = phase {
@@ -449,22 +427,20 @@ impl App {
     }
 }
 
-// ── Input movement helpers ────────────────────────────────────────────────────
+fn in_rect(col: u16, row: u16, r: Rect) -> bool {
+    col >= r.x && col < r.x + r.width && row >= r.y && row < r.y + r.height
+}
 
-// 3D: char-based word detection (handles non-ASCII)
 fn is_word_char(c: char) -> bool {
     c.is_alphanumeric() || c == '_'
 }
 
-/// Jump left to the start of the previous word (stops at any non-word boundary).
 fn word_left(s: &str, pos: usize) -> usize {
     let mut current = pos;
-    // Skip non-word chars
     for c in s[..current].chars().rev() {
         if is_word_char(c) { break; }
         current -= c.len_utf8();
     }
-    // Skip word chars
     for c in s[..current].chars().rev() {
         if !is_word_char(c) { break; }
         current -= c.len_utf8();
@@ -472,15 +448,12 @@ fn word_left(s: &str, pos: usize) -> usize {
     current
 }
 
-/// Jump right to the end of the current/next word.
 fn word_right(s: &str, pos: usize) -> usize {
     let mut current = pos;
-    // Skip non-word chars
     for c in s[current..].chars() {
         if is_word_char(c) { break; }
         current += c.len_utf8();
     }
-    // Skip word chars
     for c in s[current..].chars() {
         if !is_word_char(c) { break; }
         current += c.len_utf8();
@@ -488,7 +461,6 @@ fn word_right(s: &str, pos: usize) -> usize {
     current
 }
 
-// 5B: debug assertion to verify paste markers are valid
 #[cfg(debug_assertions)]
 fn assert_markers_valid(input: &str, markers: &[PasteMarker]) {
     for i in 0..markers.len() {
@@ -504,7 +476,6 @@ fn assert_markers_valid(input: &str, markers: &[PasteMarker]) {
     }
 }
 
-/// Start of the visual line containing `display_pos` in the display string.
 fn visual_line_start(display_pos: usize, inner_width: usize) -> usize {
     if inner_width < 3 { return 0; }
     let prefix = 2;
@@ -517,7 +488,6 @@ fn visual_line_start(display_pos: usize, inner_width: usize) -> usize {
     }
 }
 
-/// End of the visual line containing `display_pos` (clamped to `display_len`).
 fn visual_line_end(display_pos: usize, display_len: usize, inner_width: usize) -> usize {
     if inner_width < 3 { return display_len; }
     let prefix = 2;
@@ -531,15 +501,11 @@ fn visual_line_end(display_pos: usize, display_len: usize, inner_width: usize) -
     end.min(display_len)
 }
 
-// ── Terminal cleanup guard ────────────────────────────────────────────────────
-
-/// Restores the terminal to its original state.  Implemented as a `Drop` guard
-/// so cleanup runs even if the code panics or returns early via `?`.
+// cleanup runs even on panic
 struct TerminalGuard;
 
 impl Drop for TerminalGuard {
     fn drop(&mut self) {
-        // Each step is independent — a failure in one must not skip the rest.
         if let Err(e) = crossterm::terminal::disable_raw_mode() {
             eprintln!("warn: disable_raw_mode failed: {e}");
         }
@@ -547,6 +513,7 @@ impl Drop for TerminalGuard {
             std::io::stdout(),
             LeaveAlternateScreen,
             DisableBracketedPaste,
+            DisableMouseCapture,
             crossterm::cursor::Show,
         ) {
             eprintln!("warn: terminal restore failed: {e}");
@@ -554,19 +521,16 @@ impl Drop for TerminalGuard {
     }
 }
 
-// ── Main run loop ─────────────────────────────────────────────────────────────
-
 pub async fn run(config: CliConfig) -> Result<(), String> {
     let (tui_tx, mut tui_rx) = mpsc::channel::<TuiEvent>(256);
 
     enable_raw_mode().map_err(|e| format!("enable raw mode: {e}"))?;
     let mut stdout = std::io::stdout();
-    // 6A: set cursor style once at startup (not per-frame)
     execute!(stdout, EnterAlternateScreen, EnableBracketedPaste, SetCursorStyle::SteadyBlock)
         .map_err(|e| format!("enter alt screen: {e}"))?;
+    // best-effort: mouse scroll still works without this on some terminals
+    let _ = execute!(stdout, EnableMouseCapture);
 
-    // Guard is created immediately after raw mode is enabled.
-    // It will restore the terminal when it is dropped for any reason.
     let _guard = TerminalGuard;
 
     let backend = CrosstermBackend::new(std::io::stdout());
@@ -590,7 +554,6 @@ pub async fn run(config: CliConfig) -> Result<(), String> {
         }
     };
 
-    // Keyboard/paste event task — keep the handle so we can abort it before cleanup.
     let tui_tx_key = tui_tx.clone();
     let key_task = tokio::spawn(async move {
         let mut reader = EventStream::new();
@@ -598,13 +561,13 @@ pub async fn run(config: CliConfig) -> Result<(), String> {
             match event {
                 Event::Key(key) => { let _ = tui_tx_key.send(TuiEvent::Key(key)).await; }
                 Event::Paste(text) => { let _ = tui_tx_key.send(TuiEvent::Paste(text)).await; }
-                Event::Resize(w, h) => { let _ = tui_tx_key.send(TuiEvent::Resize(w, h)).await; } // 4A
+                Event::Resize(w, h) => { let _ = tui_tx_key.send(TuiEvent::Resize(w, h)).await; }
+                Event::Mouse(e) => { let _ = tui_tx_key.send(TuiEvent::Mouse(e)).await; }
                 _ => {}
             }
         }
     });
 
-    // Tick timer
     let tui_tx_tick = tui_tx.clone();
     let tick_task = tokio::spawn(async move {
         let mut ticker = interval(Duration::from_millis(100));
@@ -618,17 +581,10 @@ pub async fn run(config: CliConfig) -> Result<(), String> {
 
     let result = run_loop(&mut terminal, &mut app, &mut tui_rx, ws_client, &config.session_id).await;
 
-    // Abort background tasks before restoring the terminal.  The event-reader
-    // task owns crossterm's EventStream; aborting it first prevents any race
-    // where the stream touches terminal state concurrently with our cleanup.
     key_task.abort();
     tick_task.abort();
-    // Drop the terminal explicitly so its backend (stdout) is released before
-    // the TerminalGuard runs its Drop impl.
     drop(terminal);
 
-    // _guard is dropped here, running TerminalGuard::drop() which restores
-    // raw mode, exits alt screen, disables bracketed paste, and shows cursor.
     result
 }
 
@@ -654,7 +610,6 @@ async fn run_loop(
 
             TuiEvent::Key(key) => {
                 match key.code {
-                    // ── Exit ────────────────────────────────────────────────
                     KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                         let now = Instant::now();
                         if app.last_ctrl_c.map_or(false, |t| now.duration_since(t) < Duration::from_millis(500)) {
@@ -663,12 +618,10 @@ async fn run_loop(
                             app.last_ctrl_c = Some(now);
                         }
                     }
-                    // ── Submit ───────────────────────────────────────────────
                     KeyCode::Enter => {
-                        if !app.input.trim().is_empty() { // 5A: reject whitespace-only
+                        if !app.input.trim().is_empty() {
                             let prompt = app.input.clone();
                             app.input_history.push(prompt.clone());
-                            // 2B: cap input history at 500 entries
                             const MAX_INPUT_HISTORY: usize = 500;
                             if app.input_history.len() > MAX_INPUT_HISTORY {
                                 app.input_history.drain(0..app.input_history.len() - MAX_INPUT_HISTORY);
@@ -676,11 +629,13 @@ async fn run_loop(
                             app.history_idx = None;
                             app.history_saved.clear();
                             app.chat.push(ChatMessage::User(prompt.clone()));
-                            app.chat_scroll = usize::MAX;
+                            app.chat_pinned = true;
                             app.input.clear();
                             app.cursor_pos = 0;
                             app.paste_markers.clear();
                             app.tools.clear();
+                            app.tools_pinned = true;
+                            app.tools_scroll = 0;
                             app.run_phase = None;
 
                             if let Some(ref client) = ws_client {
@@ -696,9 +651,7 @@ async fn run_loop(
                             }
                         }
                     }
-                    // ── Character insert ─────────────────────────────────────
                     KeyCode::Char(c) => {
-                        // Shift any markers after insertion point
                         for m in &mut app.paste_markers {
                             if m.start >= app.cursor_pos {
                                 m.start += c.len_utf8();
@@ -708,17 +661,13 @@ async fn run_loop(
                         app.input.insert(app.cursor_pos, c);
                         app.cursor_pos += c.len_utf8();
                         #[cfg(debug_assertions)]
-                        assert_markers_valid(&app.input, &app.paste_markers); // 5B
+                        assert_markers_valid(&app.input, &app.paste_markers);
                     }
-                    // ── Backspace ─────────────────────────────────────────────
                     KeyCode::Backspace => {
                         app.do_backspace();
                     }
-                    // ── Horizontal movement ──────────────────────────────────
                     KeyCode::Left if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                        // Word left on actual input, but snap out of any paste region
                         let new_pos = word_left(&app.input, app.cursor_pos);
-                        // If we landed inside a marker, jump to its start
                         app.cursor_pos = app.paste_markers.iter()
                             .find(|m| new_pos > m.start && new_pos < m.end)
                             .map_or(new_pos, |m| m.start);
@@ -742,21 +691,37 @@ async fn run_loop(
                         let disp_end = visual_line_end(disp, disp_len, app.input_inner_width);
                         app.cursor_pos = display_to_actual(disp_end, &app.paste_markers);
                     }
-                    // ── Chat scroll ──────────────────────────────────────────
-                    // 4B: modifier-based scroll keys (must be before plain Up/Down)
+                    // shift+up/down/pgup/pgdown scroll chat; must appear before plain Up/Down
                     KeyCode::Up if key.modifiers.contains(KeyModifiers::SHIFT) => {
-                        app.chat_scroll = app.chat_scroll.saturating_sub(3);
+                        let current = if app.chat_pinned { app.chat_max_scroll } else { app.chat_scroll };
+                        app.chat_pinned = false;
+                        app.chat_scroll = current.saturating_sub(3);
                     }
                     KeyCode::Down if key.modifiers.contains(KeyModifiers::SHIFT) => {
-                        app.chat_scroll = app.chat_scroll.saturating_add(3);
+                        let current = if app.chat_pinned { app.chat_max_scroll } else { app.chat_scroll };
+                        let next = current.saturating_add(3);
+                        if next >= app.chat_max_scroll {
+                            app.chat_pinned = true;
+                        } else {
+                            app.chat_pinned = false;
+                            app.chat_scroll = next;
+                        }
                     }
                     KeyCode::PageUp => {
-                        app.chat_scroll = app.chat_scroll.saturating_sub(10);
+                        let current = if app.chat_pinned { app.chat_max_scroll } else { app.chat_scroll };
+                        app.chat_pinned = false;
+                        app.chat_scroll = current.saturating_sub(10);
                     }
                     KeyCode::PageDown => {
-                        app.chat_scroll = app.chat_scroll.saturating_add(10);
+                        let current = if app.chat_pinned { app.chat_max_scroll } else { app.chat_scroll };
+                        let next = current.saturating_add(10);
+                        if next >= app.chat_max_scroll {
+                            app.chat_pinned = true;
+                        } else {
+                            app.chat_pinned = false;
+                            app.chat_scroll = next;
+                        }
                     }
-                    // ── History navigation ───────────────────────────────────
                     KeyCode::Up => {
                         if !app.input_history.is_empty() {
                             let next_idx = match app.history_idx {
@@ -794,11 +759,46 @@ async fn run_loop(
                 }
             }
 
+            TuiEvent::Mouse(ev) => {
+                match ev.kind {
+                    MouseEventKind::ScrollUp => {
+                        if in_rect(ev.column, ev.row, app.chat_area) {
+                            let current = if app.chat_pinned { app.chat_max_scroll } else { app.chat_scroll };
+                            app.chat_pinned = false;
+                            app.chat_scroll = current.saturating_sub(3);
+                        } else if in_rect(ev.column, ev.row, app.tools_area) {
+                            let current = if app.tools_pinned { app.tools_max_scroll } else { app.tools_scroll };
+                            app.tools_pinned = false;
+                            app.tools_scroll = current.saturating_sub(1);
+                        }
+                    }
+                    MouseEventKind::ScrollDown => {
+                        if in_rect(ev.column, ev.row, app.chat_area) {
+                            let current = if app.chat_pinned { app.chat_max_scroll } else { app.chat_scroll };
+                            let next = current.saturating_add(3);
+                            if next >= app.chat_max_scroll {
+                                app.chat_pinned = true;
+                            } else {
+                                app.chat_scroll = next;
+                            }
+                        } else if in_rect(ev.column, ev.row, app.tools_area) {
+                            let current = if app.tools_pinned { app.tools_max_scroll } else { app.tools_scroll };
+                            let next = current.saturating_add(1);
+                            if next >= app.tools_max_scroll {
+                                app.tools_pinned = true;
+                            } else {
+                                app.tools_scroll = next;
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+
             TuiEvent::Agent(ev) => {
                 app.handle_agent_event(ev);
             }
             TuiEvent::WsStatus(status) => {
-                // Group 7: consistent error routing
                 match &status {
                     WsStatus::Disconnected => {
                         app.chat.push(ChatMessage::System("Disconnected from gateway".into()));
@@ -811,10 +811,9 @@ async fn run_loop(
                 }
                 app.ws_status = status;
             }
-            TuiEvent::Resize(_, _) => {} // 4A: redraw happens on next loop iteration
+            TuiEvent::Resize(_, _) => {}
         }
 
-        // 2A: compact chat to bounded size after every event
         app.compact_chat();
 
         if app.should_quit {

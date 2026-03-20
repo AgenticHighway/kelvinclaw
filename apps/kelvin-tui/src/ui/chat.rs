@@ -8,14 +8,12 @@ use ratatui::{
 
 use crate::app::{App, ChatMessage};
 
-pub fn render(f: &mut Frame, app: &App, area: Rect) {
+pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     let mut lines: Vec<Line> = Vec::new();
 
     for msg in &app.chat {
         match msg {
             ChatMessage::User(text) => {
-                // Split on newlines so each source line becomes a ratatui Line,
-                // with the "You: " prefix only on the first.
                 let mut first = true;
                 for src_line in text.lines() {
                     if first {
@@ -68,20 +66,26 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
                 ]));
             }
         }
-        // Blank line between messages
         lines.push(Line::default());
     }
 
-    // Inner height (excluding borders) for scroll clamping
+    let inner_width = area.width.saturating_sub(2);
     let inner_height = area.height.saturating_sub(2) as usize;
-    // Each source line may wrap, but use line count as a rough scroll unit
-    let total_lines = lines.len();
-    let scroll = app.chat_scroll.min(total_lines.saturating_sub(inner_height)) as u16;
 
     let paragraph = Paragraph::new(Text::from(lines))
         .block(Block::default().borders(Borders::ALL).title(" Chat (PgUp/PgDn to scroll) "))
-        .wrap(Wrap { trim: false })
-        .scroll((scroll, 0));
+        .wrap(Wrap { trim: false });
 
-    f.render_widget(paragraph, area);
+    // line_count gives the exact visual line count after word-wrap at this width
+    let total_visual_lines = paragraph.line_count(inner_width);
+    let max_scroll = total_visual_lines.saturating_sub(inner_height);
+    app.chat_max_scroll = max_scroll;
+
+    let scroll = if app.chat_pinned {
+        max_scroll
+    } else {
+        app.chat_scroll.min(max_scroll)
+    };
+
+    f.render_widget(paragraph.scroll((scroll as u16, 0)), area);
 }
