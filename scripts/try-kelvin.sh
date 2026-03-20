@@ -5,7 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/lib/rust-toolchain-path.sh"
 source "${ROOT_DIR}/scripts/lib/docker-cache.sh"
 PROMPT="${1:-hello kelvin}"
-TIMEOUT_MS="${KELVIN_TRY_TIMEOUT_MS:-5000}"
+TIMEOUT_MS="${KELVIN_TRY_TIMEOUT_MS:-30000}"
 MODE="${KELVIN_TRY_MODE:-auto}" # auto | local | docker
 TARGET_DIR="${KELVIN_TRY_TARGET_DIR:-${ROOT_DIR}/target}"
 PLUGIN_HOME="${KELVIN_PLUGIN_HOME:-${ROOT_DIR}/.kelvin/plugins}"

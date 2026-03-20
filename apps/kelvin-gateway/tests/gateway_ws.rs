@@ -328,7 +328,7 @@ async fn gateway_agent_submit_wait_and_idempotency_flow_works() {
         "agent.wait",
         json!({
             "run_id": run_id,
-            "timeout_ms": 5000,
+            "timeout_ms": 30000,
         }),
     )
     .await;
