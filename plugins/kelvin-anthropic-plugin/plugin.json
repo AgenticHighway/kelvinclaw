@@ -1,0 +1,55 @@
+{
+  "id": "kelvin.anthropic",
+  "name": "Kelvin Anthropic Model Plugin",
+  "version": "0.1.0",
+  "api_version": "1.0.0",
+  "description": "First-party Anthropic model plugin using Kelvin's provider_profile host routing.",
+  "homepage": "https://github.com/agentichighway/kelvinclaw/tree/main/plugins/kelvin-anthropic-plugin",
+  "capabilities": [
+    "model_provider",
+    "network_egress"
+  ],
+  "experimental": false,
+  "min_core_version": "0.1.0",
+  "max_core_version": null,
+  "runtime": "wasm_model_v1",
+  "provider_name": "anthropic",
+  "provider_profile": {
+    "id": "anthropic.messages",
+    "provider_name": "anthropic",
+    "protocol_family": "anthropic_messages",
+    "api_key_env": "ANTHROPIC_API_KEY",
+    "base_url_env": "ANTHROPIC_BASE_URL",
+    "default_base_url": "https://api.anthropic.com",
+    "endpoint_path": "v1/messages",
+    "auth_header": "x-api-key",
+    "auth_scheme": "raw",
+    "static_headers": [
+      {
+        "name": "anthropic-version",
+        "value": "2023-06-01"
+      }
+    ],
+    "default_allow_hosts": [
+      "api.anthropic.com"
+    ]
+  },
+  "model_name": "claude-haiku-4-5-20251001",
+  "entrypoint": "plugin.wasm",
+  "entrypoint_sha256": "82d6b34bc30027c9b8e59a0f91163da41a4b20b4aa7b76c99079dec35f71432a",
+  "publisher": null,
+  "quality_tier": "unsigned_local",
+  "capability_scopes": {
+    "fs_read_paths": [],
+    "network_allow_hosts": [
+      "api.anthropic.com"
+    ]
+  },
+  "operational_controls": {
+    "timeout_ms": 30000,
+    "max_retries": 0,
+    "max_calls_per_minute": 120,
+    "circuit_breaker_failures": 3,
+    "circuit_breaker_cooldown_ms": 30000
+  }
+}

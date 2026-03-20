@@ -74,13 +74,13 @@ default allowlist hosts.
 
 The maintained example source crate is:
 
-- `examples/kelvin-anthropic-plugin`
-- `examples/kelvin-openrouter-plugin`
+- `plugins/kelvin-anthropic-plugin`
+- `plugins/kelvin-openrouter-plugin`
 
 Use the example in Docker with:
 
 ```bash
-scripts/plugin-author-docker.sh -- bash -lc 'cd examples/kelvin-anthropic-plugin && ./build.sh'
+scripts/plugin-author-docker.sh -- bash -lc 'cd plugins/kelvin-anthropic-plugin && ./build.sh'
 ```
 
 ## Signing

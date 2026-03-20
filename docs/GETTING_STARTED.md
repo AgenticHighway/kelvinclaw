@@ -203,7 +203,7 @@ Steps:
 ```bash
 git clone <repo-url>
 cd kelvinclaw
-CARGO_TARGET_DIR=target/echo-wasm-skill cargo build --target wasm32-unknown-unknown --manifest-path examples/echo-wasm-skill/Cargo.toml
+CARGO_TARGET_DIR=target/echo-wasm-skill cargo build --target wasm32-unknown-unknown --manifest-path plugins/examples/echo-wasm-skill/Cargo.toml
 cargo run -p kelvin-wasm --bin kelvin-wasm-runner -- --wasm target/echo-wasm-skill/wasm32-unknown-unknown/debug/echo_wasm_skill.wasm --policy-preset locked_down
 export PATH="$PWD/scripts:$PATH"
 kelvin plugin new --id acme.echo --name "Acme Echo" --runtime wasm_tool_v1
@@ -213,8 +213,8 @@ kelvin plugin test --manifest ./plugin-acme.echo/plugin.json
 For the supported model-plugin contributor path, use:
 
 - `docs/build-a-model-plugin.md`
-- `examples/kelvin-anthropic-plugin`
-- `examples/kelvin-openrouter-plugin`
+- `plugins/kelvin-anthropic-plugin`
+- `plugins/kelvin-openrouter-plugin`
 
 Docker-first authoring shortcut:
 

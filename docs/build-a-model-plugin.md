@@ -71,8 +71,8 @@ scripts/plugin-author-docker.sh -- bash -lc '
 
 The canonical first-party model-plugin example is:
 
-- `examples/kelvin-anthropic-plugin`
-- `examples/kelvin-openrouter-plugin`
+- `plugins/kelvin-anthropic-plugin`
+- `plugins/kelvin-openrouter-plugin`
 
 You can copy it, rename the manifest fields, and adjust:
 

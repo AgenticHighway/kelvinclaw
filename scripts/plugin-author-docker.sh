@@ -47,7 +47,7 @@ preinstalled Rust ${RUST_VERSION} toolchain and wasm target.
 Examples:
   scripts/plugin-author-docker.sh
   scripts/plugin-author-docker.sh -- scripts/test-plugin-author-kit.sh
-  scripts/plugin-author-docker.sh -- bash -lc 'cd examples/kelvin-anthropic-plugin && ./build.sh'
+  scripts/plugin-author-docker.sh -- bash -lc 'cd plugins/kelvin-anthropic-plugin && ./build.sh'
 USAGE
 }
 

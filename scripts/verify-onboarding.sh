@@ -134,7 +134,7 @@ MSG
   (
     cd "${ROOT_DIR}"
     CARGO_TARGET_DIR="${TARGET_DIR}/wasm-build" \
-      cargo build --target wasm32-unknown-unknown --manifest-path examples/echo-wasm-skill/Cargo.toml
+      cargo build --target wasm32-unknown-unknown --manifest-path plugins/examples/echo-wasm-skill/Cargo.toml
   )
 
   local wasm_path="${TARGET_DIR}/wasm-build/wasm32-unknown-unknown/debug/echo_wasm_skill.wasm"
