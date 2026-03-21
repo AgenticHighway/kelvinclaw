@@ -62,7 +62,7 @@ Focus:
 ## Scope Notes
 
 - This is SDK-lane coverage, not full application/runtime governance.
-- Root-lane integrations remain outside SDK safety guarantees by design (`docs/ROOT_VS_SDK.md`).
+- Root-lane integrations remain outside SDK safety guarantees by design ([root-vs-sdk.md](../architecture/root-vs-sdk.md)).
 
 ## Data Plane Extension
 

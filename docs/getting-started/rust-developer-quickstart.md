@@ -86,6 +86,6 @@ cargo test -p kelvin-memory-controller --test memory_controller_nist_ai_rmf_1_0
 
 For architecture details, see:
 
-- `docs/architecture.md`
-- `docs/memory-control-data-plane.md`
-- `docs/PLUGIN_INSTALL_FLOW.md`
+- [../architecture/architecture.md](../architecture/architecture.md)
+- [../memory/memory-control-data-plane.md](../memory/memory-control-data-plane.md)
+- [../plugins/plugin-install-flow.md](../plugins/plugin-install-flow.md)

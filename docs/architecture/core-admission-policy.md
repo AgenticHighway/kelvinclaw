@@ -13,7 +13,7 @@ Kelvin core exists to provide stable contracts and deterministic orchestration p
 
 Core should remain small, readable, and hard to break.
 
-The SDK identity for these contracts is **Kelvin Core** (see `docs/KELVIN_CORE_SDK.md`).
+The SDK identity for these contracts is **Kelvin Core** (see [kelvin-core-sdk.md](kelvin-core-sdk.md)).
 
 ## Hard Admission Gate
 

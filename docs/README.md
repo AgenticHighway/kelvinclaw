@@ -13,9 +13,9 @@ Welcome to KelvinClaw. This documentation is organized by audience and topic.
 ### Understanding the System
 
 - [Architecture Overview](architecture/architecture.md) — Core design and execution flow
-- [Core Admission Policy](architecture/CORE_ADMISSION_POLICY.md) — What belongs in core vs. extensions
-- [SDK Principles](architecture/SDK_PRINCIPLES.md) — Plugin and extension contracts
-- [Root vs. SDK Trust Model](architecture/ROOT_VS_SDK.md) — Two extension lanes explained
+- [Core Admission Policy](architecture/core-admission-policy.md) — What belongs in core vs. extensions
+- [SDK Principles](architecture/sdk-principles.md) — Plugin and extension contracts
+- [Root vs. SDK Trust Model](architecture/root-vs-sdk.md) — Two extension lanes explained
 - [Compatibility Contracts](architecture/compatibility-contracts.md) — Public integration stability guarantees
 - [Design Tradeoffs](architecture/agents-tradeoffs.md) — Intentional design decisions
 - [Gap Analysis](architecture/kelvin-gap-analysis.md) — Feature completeness tracking
@@ -24,7 +24,7 @@ Welcome to KelvinClaw. This documentation is organized by audience and topic.
 
 - [Plugin Author Kit](plugins/plugin-author-kit.md) — Plugin development workflow
 - [Building Model Plugins](plugins/build-a-model-plugin.md) — Custom model provider walkthrough
-- [Plugin Installation Flow](plugins/PLUGIN_INSTALL_FLOW.md) — Package format and installation
+- [Plugin Installation Flow](plugins/plugin-install-flow.md) — Package format and installation
 - [Plugin Trust & Quality](plugins/plugin-trust-operations.md) — Signing, verification, and tiers
 - [Model Plugin ABI](plugins/model-plugin-abi.md) — `wasm_model_v1` technical spec
 - [Tool Pack Reference](plugins/toolpack-sdk-plugins.md) — Built-in SDK tools
@@ -49,9 +49,9 @@ Welcome to KelvinClaw. This documentation is organized by audience and topic.
 
 ### Security & Compliance
 
-- [Test Matrix](security/SDK_TEST_MATRIX.md) — Test coverage overview
-- [OWASP Top 10 AI Coverage](security/SDK_OWASP_TOP10_AI_2025.md) — Security test mapping
-- [NIST AI RMF Coverage](security/SDK_NIST_AI_RMF_1_0.md) — Compliance test mapping
+- [Test Matrix](security/sdk-test-matrix.md) — Test coverage overview
+- [OWASP Top 10 AI Coverage](security/sdk-owasp-top10-ai-2025.md) — Security test mapping
+- [NIST AI RMF Coverage](security/sdk-nist-ai-rmf-1-0.md) — Compliance test mapping
 
 ## 📚 Reference & Operations
 
@@ -64,7 +64,7 @@ Welcome to KelvinClaw. This documentation is organized by audience and topic.
 
 ### Other Resources
 
-- [Kelvin Core SDK](architecture/KELVIN_CORE_SDK.md) — SDK versioning and plugin manifest schema
+- [Kelvin Core SDK](architecture/kelvin-core-sdk.md) — SDK versioning and plugin manifest schema
 - [Trusted Executive + WASM](architecture/trusted-executive-wasm.md) — WASM skill sandboxing
 - [Plugin Index Schema](plugins/plugin-index-schema.md) — Remote registry format
 

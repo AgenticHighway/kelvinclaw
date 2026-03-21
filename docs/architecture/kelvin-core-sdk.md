@@ -112,17 +112,17 @@ Source: `crates/kelvin-core/src/sdk.rs` (`#[cfg(test)]`)
 
 SDK operation is governed by:
 
-- `docs/CORE_ADMISSION_POLICY.md`
-- `docs/SDK_PRINCIPLES.md`
+- [core-admission-policy.md](core-admission-policy.md)
+- [sdk-principles.md](sdk-principles.md)
 
 This keeps Kelvin small and stable while making plugin development predictable and safe.
 
 Detailed security/stability test coverage matrix:
 
-- `docs/SDK_TEST_MATRIX.md`
-- `docs/SDK_OWASP_TOP10_AI_2025.md`
-- `docs/SDK_NIST_AI_RMF_1_0.md`
-- `docs/ROOT_VS_SDK.md`
+- [../security/sdk-test-matrix.md](../security/sdk-test-matrix.md)
+- [../security/sdk-owasp-top10-ai-2025.md](../security/sdk-owasp-top10-ai-2025.md)
+- [../security/sdk-nist-ai-rmf-1-0.md](../security/sdk-nist-ai-rmf-1-0.md)
+- [root-vs-sdk.md](root-vs-sdk.md)
 
 SDK certification command:
 
