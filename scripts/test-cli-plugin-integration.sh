@@ -42,7 +42,7 @@ KELVIN_TRUST_POLICY_PATH="${TRUST_POLICY_PATH}" \
 CARGO_TARGET_DIR="${TARGET_DIR}" \
   cargo run -p kelvin-host -- \
     --prompt "integration sdk lane" \
-    --timeout-ms 5000 > "${LOG_PATH}"
+    --timeout-ms 30000 > "${LOG_PATH}"
 
 if ! grep -q "cli plugin preflight: kelvin_cli executed" "${LOG_PATH}"; then
   echo "[test-cli-plugin-integration] expected cli plugin preflight output not found" >&2

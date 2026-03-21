@@ -20,8 +20,8 @@ scripts/kelvin-plugin.sh smoke --manifest ./plugin.json
 
 For working model-plugin source, also see:
 
-- `examples/kelvin-anthropic-plugin`
-- `examples/kelvin-openrouter-plugin`
+- `plugins/kelvin-anthropic-plugin`
+- `plugins/kelvin-openrouter-plugin`
 - `docs/build-a-model-plugin.md`
 
 Template manifests:

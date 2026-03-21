@@ -23,3 +23,9 @@ skills/*/Cargo.lock
 .kelvin/
 .bench/
 .cache/docker/
+
+# Plugin build artifacts
+plugins/**/dist/
+plugins/**/target/
+plugins/**/payload/*.wasm
+plugins/**/.kelvin/

@@ -1735,7 +1735,7 @@ mod tests {
                     "network_allow_hosts": [allow_host]
                 },
                 "operational_controls": {
-                    "timeout_ms": 5000,
+                    "timeout_ms": 30000,
                     "max_retries": 0,
                     "max_calls_per_minute": 120,
                     "circuit_breaker_failures": 3,

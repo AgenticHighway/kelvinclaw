@@ -805,7 +805,7 @@ cmd_new() {
       model_name="$(protocol_family_default_model_name "${protocol_family}" "${provider_name}")"
     fi
     network_allow_hosts="$(printf '%s\n' "${allow_hosts[@]}" | jq -R . | jq -s .)"
-    timeout_ms="5000"
+    timeout_ms="30000"
     capabilities='["model_provider","network_egress"]'
     provider_profile_json="$(jq -cn \
       --arg id "${provider_profile_id}" \

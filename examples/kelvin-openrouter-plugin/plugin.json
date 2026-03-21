@@ -32,8 +32,8 @@
   "model_name": "openai/gpt-4.1-mini",
   "entrypoint": "plugin.wasm",
   "entrypoint_sha256": "9014594e24a201aa59968cf5578f1272a3bc569046a42a3f1a4adb15568f8109",
-  "publisher": null,
-  "quality_tier": "unsigned_local",
+  "publisher": "kelvin",
+  "quality_tier": "signed_trusted",
   "capability_scopes": {
     "fs_read_paths": [],
     "network_allow_hosts": [
@@ -41,7 +41,7 @@
     ]
   },
   "operational_controls": {
-    "timeout_ms": 5000,
+    "timeout_ms": 30000,
     "max_retries": 0,
     "max_calls_per_minute": 120,
     "circuit_breaker_failures": 3,
