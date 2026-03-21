@@ -79,6 +79,8 @@ pub enum TuiEvent {
     #[allow(dead_code)]
     Resize(u16, u16),
     Mouse(crossterm::event::MouseEvent),
+    SubmitResult(Result<String, String>),
+    Reconnected(Result<WsClient, String>),
     Tick,
 }
 
@@ -182,6 +184,8 @@ pub struct App {
     pub run_phase: Option<LifecyclePhase>,
     pub current_run_id: Option<String>,
     pub gateway_url: String,
+    pub auth_token: Option<String>,
+    pub reconnecting: bool,
     pub last_error: Option<String>,
     pub chat_scroll: usize,
     pub chat_pinned: bool,
@@ -212,6 +216,8 @@ impl App {
             run_phase: None,
             current_run_id: None,
             gateway_url,
+            auth_token: None,
+            reconnecting: false,
             last_error: None,
             chat_scroll: 0,
             chat_pinned: true,
@@ -537,6 +543,7 @@ pub async fn run(config: CliConfig) -> Result<(), String> {
     let mut terminal = Terminal::new(backend).map_err(|e| format!("terminal: {e}"))?;
 
     let mut app = App::new(config.gateway_url.clone());
+    app.auth_token = config.auth_token.clone();
 
     let ws_result = WsClient::connect(&config.gateway_url, config.auth_token.clone(), tui_tx.clone()).await;
     let ws_client = match ws_result {
@@ -579,7 +586,7 @@ pub async fn run(config: CliConfig) -> Result<(), String> {
         }
     });
 
-    let result = run_loop(&mut terminal, &mut app, &mut tui_rx, ws_client, &config.session_id).await;
+    let result = run_loop(&mut terminal, &mut app, &mut tui_rx, tui_tx.clone(), ws_client, &config.session_id).await;
 
     key_task.abort();
     tick_task.abort();
@@ -592,9 +599,11 @@ async fn run_loop(
     terminal: &mut Terminal<CrosstermBackend<std::io::Stdout>>,
     app: &mut App,
     tui_rx: &mut mpsc::Receiver<TuiEvent>,
+    tui_tx: mpsc::Sender<TuiEvent>,
     ws_client: Option<WsClient>,
     session_id: &str,
 ) -> Result<(), String> {
+    let mut ws_client = ws_client;
     loop {
         let frame = terminal.draw(|f| ui::render(f, app)).map_err(|e| format!("draw: {e}"))?;
         app.input_inner_width = frame.area.width.saturating_sub(2) as usize;
@@ -638,16 +647,18 @@ async fn run_loop(
                             app.tools_scroll = 0;
                             app.run_phase = None;
 
-                            if let Some(ref client) = ws_client {
-                                match client.submit_prompt(&prompt, session_id).await {
-                                    Ok(run_id) => { app.current_run_id = Some(run_id); }
-                                    Err(e) => {
-                                        app.last_error = Some(e.clone());
-                                        app.chat.push(ChatMessage::System(format!("Error: {e}")));
-                                    }
-                                }
+                            if app.ws_status != WsStatus::Connected {
+                                app.chat.push(ChatMessage::System("not connected to gateway".to_string()));
+                            } else if let Some(ref client) = ws_client {
+                                let client = client.clone();
+                                let session_id = session_id.to_string();
+                                let tx = tui_tx.clone();
+                                tokio::spawn(async move {
+                                    let result = client.submit_prompt(&prompt, &session_id).await;
+                                    let _ = tx.send(TuiEvent::SubmitResult(result)).await;
+                                });
                             } else {
-                                app.chat.push(ChatMessage::System("Not connected to gateway".to_string()));
+                                app.chat.push(ChatMessage::System("not connected to gateway".to_string()));
                             }
                         }
                     }
@@ -795,21 +806,69 @@ async fn run_loop(
                 }
             }
 
+            TuiEvent::SubmitResult(result) => {
+                match result {
+                    Ok(run_id) => { app.current_run_id = Some(run_id); }
+                    Err(e) => {
+                        app.last_error = Some(e.clone());
+                        app.chat.push(ChatMessage::System(format!("error: {e}")));
+                    }
+                }
+            }
+
             TuiEvent::Agent(ev) => {
                 app.handle_agent_event(ev);
             }
             TuiEvent::WsStatus(status) => {
                 match &status {
-                    WsStatus::Disconnected => {
-                        app.chat.push(ChatMessage::System("Disconnected from gateway".into()));
-                    }
-                    WsStatus::Error(e) => {
-                        app.last_error = Some(e.clone());
-                        app.chat.push(ChatMessage::System(format!("WS error: {e}")));
+                    WsStatus::Disconnected | WsStatus::Error(_) => {
+                        if let WsStatus::Error(e) = &status {
+                            app.last_error = Some(e.clone());
+                            app.chat.push(ChatMessage::System(format!("WS error: {e}")));
+                        } else {
+                            app.chat.push(ChatMessage::System("disconnected from gateway".into()));
+                        }
+                        ws_client = None;
+                        if !app.reconnecting {
+                            app.reconnecting = true;
+                            let gateway_url = app.gateway_url.clone();
+                            let auth_token = app.auth_token.clone();
+                            let tx = tui_tx.clone();
+                            tokio::spawn(async move {
+                                let mut backoff = Duration::from_millis(250);
+                                loop {
+                                    tokio::time::sleep(backoff).await;
+                                    match WsClient::connect(&gateway_url, auth_token.clone(), tx.clone()).await {
+                                        Ok(client) => {
+                                            let _ = tx.send(TuiEvent::Reconnected(Ok(client))).await;
+                                            return;
+                                        }
+                                        Err(e) => {
+                                            let _ = tx.send(TuiEvent::Reconnected(Err(e))).await;
+                                            backoff = (backoff * 2).min(Duration::from_secs(2));
+                                        }
+                                    }
+                                }
+                            });
+                        }
                     }
                     _ => {}
                 }
                 app.ws_status = status;
+            }
+
+            TuiEvent::Reconnected(result) => {
+                match result {
+                    Ok(client) => {
+                        ws_client = Some(client);
+                        app.reconnecting = false;
+                        app.ws_status = WsStatus::Connected;
+                        app.chat.push(ChatMessage::System(format!("reconnected to {}", app.gateway_url)));
+                    }
+                    Err(_) => {
+                        // reconnect task is still running with backoff, nothing to do here
+                    }
+                }
             }
             TuiEvent::Resize(_, _) => {}
         }
