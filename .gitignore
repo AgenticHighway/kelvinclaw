@@ -23,6 +23,7 @@ skills/*/Cargo.lock
 .kelvin/
 .bench/
 .cache/docker/
+.claude/
 
 # Plugin build artifacts
 plugins/**/dist/
