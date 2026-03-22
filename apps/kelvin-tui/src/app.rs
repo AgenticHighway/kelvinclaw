@@ -277,6 +277,38 @@ impl App {
         assert_markers_valid(&self.input, &self.paste_markers);
     }
 
+    pub fn do_delete(&mut self) {
+        if self.cursor_pos >= self.input.len() {
+            return;
+        }
+        if let Some(idx) = self.paste_markers.iter().position(|m| m.start == self.cursor_pos) {
+            let m = self.paste_markers.remove(idx);
+            let removed = m.end - m.start;
+            self.input.drain(m.start..m.end);
+            for later in &mut self.paste_markers {
+                if later.start >= m.end {
+                    later.start -= removed;
+                    later.end -= removed;
+                }
+            }
+        } else {
+            let mut next = self.cursor_pos + 1;
+            while next < self.input.len() && !self.input.is_char_boundary(next) {
+                next += 1;
+            }
+            let removed_len = next - self.cursor_pos;
+            self.input.drain(self.cursor_pos..next);
+            for m in &mut self.paste_markers {
+                if m.start > self.cursor_pos {
+                    m.start -= removed_len;
+                    m.end -= removed_len;
+                }
+            }
+        }
+        #[cfg(debug_assertions)]
+        assert_markers_valid(&self.input, &self.paste_markers);
+    }
+
     pub fn do_backspace(&mut self) {
         if self.cursor_pos == 0 {
             return;
@@ -676,6 +708,9 @@ async fn run_loop(
                     }
                     KeyCode::Backspace => {
                         app.do_backspace();
+                    }
+                    KeyCode::Delete => {
+                        app.do_delete();
                     }
                     KeyCode::Left if key.modifiers.contains(KeyModifiers::CONTROL) => {
                         let new_pos = word_left(&app.input, app.cursor_pos);
