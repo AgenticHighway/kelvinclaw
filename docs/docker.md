@@ -11,7 +11,7 @@ This repository includes Docker Compose configuration for running KelvinClaw ser
 cp .env.example .env
 
 # Build and start kelvin-host
-docker-compose up kelvin-host
+docker compose up kelvin-host
 ```
 
 This starts the main `kelvin-host` service, which provides the core runtime.
@@ -65,13 +65,13 @@ KELVIN_PLUGIN_REGISTRY_PORT=34718   # Change registry port
 ### Start kelvin-host in the foreground
 
 ```bash
-docker-compose up kelvin-host
+docker compose up kelvin-host
 ```
 
 ### Start all services in the background
 
 ```bash
-docker-compose --profile full up -d
+docker compose --profile full up -d
 ```
 
 ### Start the TUI client
@@ -84,25 +84,25 @@ docker-compose --profile tui run --rm kelvin-tui
 
 ```bash
 # All services
-docker-compose logs -f
+docker compose logs -f
 
 # Specific service
-docker-compose logs -f kelvin-host
+docker compose logs -f kelvin-host
 
 # Follow new logs
-docker-compose logs -f --tail=50
+docker compose logs -f --tail=50
 ```
 
 ### Stop services
 
 ```bash
-docker-compose down
+docker compose down
 ```
 
 ### Remove volumes (clean slate)
 
 ```bash
-docker-compose down -v
+docker compose down -v
 ```
 
 ### Run tests in container
@@ -125,7 +125,7 @@ docker-compose build kelvin-test
 ### Interactive shell in running container
 
 ```bash
-docker-compose exec kelvin-host bash
+docker compose exec kelvin-host bash
 ```
 
 ## Development Workflow
@@ -136,10 +136,10 @@ For development, you can mount your local source and rebuild:
 
 ```bash
 # Build fresh (without cache)
-docker-compose build --no-cache kelvin-host
+docker compose build --no-cache kelvin-host
 
 # Rebuild and start
-docker-compose up --build kelvin-host
+docker compose up --build kelvin-host
 ```
 
 ### Volumes
@@ -153,7 +153,7 @@ docker-compose up --build kelvin-host
 
 Check logs:
 ```bash
-docker-compose logs kelvin-host
+docker compose logs kelvin-host
 ```
 
 ### Port already in use
@@ -168,15 +168,15 @@ KELVIN_GATEWAY_INGRESS_PORT=34620  # Use 34620 instead of 34618
 
 Increase Docker's memory limit in Docker Desktop settings, or use:
 ```bash
-docker-compose build --memory 4g kelvin-host
+docker compose build --memory 4g kelvin-host
 ```
 
 ### Clear everything and start fresh
 
 ```bash
-docker-compose down -v --remove-orphans
+docker compose down -v --remove-orphans
 docker system prune -a
-docker-compose up --build kelvin-host
+docker compose up --build kelvin-host
 ```
 
 ## Network
