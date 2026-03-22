@@ -70,6 +70,29 @@ services:
       - registry
       - full
 
+  # TUI client — connects to kelvin-gateway over the internal Docker network
+  # Usage: docker compose run --rm kelvin-tui
+  kelvin-tui:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.tui
+    container_name: kelvin-tui
+    stdin_open: true
+    tty: true
+    environment:
+      KELVIN_GATEWAY_TOKEN: ${KELVIN_GATEWAY_TOKEN:-}
+    command:
+      - --gateway-url
+      - "ws://kelvin-gateway:34617"
+      - --auth-token
+      - "${KELVIN_GATEWAY_TOKEN}"
+    networks:
+      - kelvin-network
+    depends_on:
+      - kelvin-gateway
+    profiles:
+      - tui
+
   # Test runner — tests execute during docker build, not at container runtime
   # Usage: docker compose build kelvin-test
   # To run quick lane: KELVIN_TEST_LANE=quick docker compose build kelvin-test

@@ -1,0 +1,24 @@
+# syntax=docker/dockerfile:1.7
+ARG RUST_VERSION=1.93.1
+ARG DEBIAN_FLAVOR=bookworm
+
+FROM rust:${RUST_VERSION}-${DEBIAN_FLAVOR} AS builder
+WORKDIR /work
+
+COPY Cargo.toml Cargo.lock ./
+COPY crates ./crates
+COPY apps ./apps
+RUN cargo build --release -p kelvin-tui
+
+FROM debian:${DEBIAN_FLAVOR}-slim AS runtime
+WORKDIR /opt/kelvin
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /work/target/release/kelvin-tui /usr/local/bin/kelvin-tui
+
+RUN chmod +x /usr/local/bin/kelvin-tui
+
+ENTRYPOINT ["kelvin-tui"]
