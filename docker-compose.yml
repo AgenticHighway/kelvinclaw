@@ -27,7 +27,7 @@ services:
       KELVIN_HOME: /kelvin
       KELVIN_PLUGIN_HOME: /kelvin/plugins
       KELVIN_TRUST_POLICY_PATH: /kelvin/trusted_publishers.json
-      KELVIN_GATEWAY_TOKEN: ${KELVIN_GATEWAY_TOKEN:-}
+      KELVIN_GATEWAY_TOKEN: ${KELVIN_GATEWAY_TOKEN:?KELVIN_GATEWAY_TOKEN must be set (see .env.example)}
       KELVIN_GATEWAY_INGRESS_BIND: "0.0.0.0:34618"
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       RUST_LOG: ${RUST_LOG:-info}
@@ -44,8 +44,8 @@ services:
       - kelvin-home:/kelvin
       - kelvin-workspace:/kelvin/workspace
     ports:
-      - "${KELVIN_GATEWAY_WS_PORT:-34617}:34617"
-      - "${KELVIN_GATEWAY_INGRESS_PORT:-34618}:34618"
+      - "127.0.0.1:${KELVIN_GATEWAY_WS_PORT:-34617}:34617"
+      - "127.0.0.1:${KELVIN_GATEWAY_INGRESS_PORT:-34618}:34618"
     networks:
       - kelvin-network
     restart: unless-stopped
@@ -83,7 +83,7 @@ services:
     stdin_open: true
     tty: true
     environment:
-      KELVIN_GATEWAY_TOKEN: ${KELVIN_GATEWAY_TOKEN:-}
+      KELVIN_GATEWAY_TOKEN: ${KELVIN_GATEWAY_TOKEN:?KELVIN_GATEWAY_TOKEN must be set (see .env.example)}
     command:
       - --gateway-url
       - "ws://kelvin-gateway:34617"
