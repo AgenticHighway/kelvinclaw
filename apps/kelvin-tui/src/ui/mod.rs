@@ -62,6 +62,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
             .split(area);
 
         app.chat_area = chunks[0];
+        app.tools_area = ratatui::layout::Rect::default();
         chat::render(f, app, chunks[0]);
         input::render(f, &*app, chunks[1]);
         status::render(f, &*app, chunks[2]);
