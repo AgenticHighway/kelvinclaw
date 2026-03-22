@@ -17,6 +17,27 @@ services:
     networks:
       - kelvin-network
 
+  # Init container — installs required plugins into the shared kelvin-home volume
+  # before the gateway starts. Uses KELVIN_MODEL_PROVIDER (default: kelvin.echo).
+  # Set KELVIN_MODEL_PROVIDER=kelvin.anthropic and ANTHROPIC_API_KEY to use Anthropic.
+  kelvin-init:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.runtime
+    container_name: kelvin-init
+    environment:
+      KELVIN_HOME: /kelvin
+      KELVIN_PLUGIN_HOME: /kelvin/plugins
+      KELVIN_TRUST_POLICY_PATH: /kelvin/trusted_publishers.json
+      KELVIN_MODEL_PROVIDER: ${KELVIN_MODEL_PROVIDER:-kelvin.echo}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      RUST_LOG: ${RUST_LOG:-info}
+    entrypoint: ["/opt/kelvin/scripts/gateway-plugin-init.sh"]
+    volumes:
+      - kelvin-home:/kelvin
+    networks:
+      - kelvin-network
+
   # WebSocket gateway — long-running service for agent channel ingress
   kelvin-gateway:
     build:
@@ -39,7 +60,7 @@ services:
       - --allow-insecure-public-bind
       - "true"
       - --model-provider
-      - kelvin.anthropic
+      - ${KELVIN_MODEL_PROVIDER:-kelvin.echo}
     volumes:
       - kelvin-home:/kelvin
       - kelvin-workspace:/kelvin/workspace
@@ -48,6 +69,9 @@ services:
       - "127.0.0.1:${KELVIN_GATEWAY_INGRESS_PORT:-34618}:34618"
     networks:
       - kelvin-network
+    depends_on:
+      kelvin-init:
+        condition: service_completed_successfully
     restart: unless-stopped
 
   # Plugin registry — optional HTTP service for plugin discovery

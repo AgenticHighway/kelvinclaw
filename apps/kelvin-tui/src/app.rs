@@ -1018,7 +1018,7 @@ async fn run_loop(
                             let current = if app.chat_pinned { app.chat_max_scroll } else { app.chat_scroll };
                             app.chat_pinned = false;
                             app.chat_scroll = current.saturating_sub(3);
-                        } else if in_rect(ev.column, ev.row, app.tools_area) {
+                        } else if app.tools_visible && in_rect(ev.column, ev.row, app.tools_area) {
                             let current = if app.tools_pinned { app.tools_max_scroll } else { app.tools_scroll };
                             app.tools_pinned = false;
                             app.tools_scroll = current.saturating_sub(1);
@@ -1033,7 +1033,7 @@ async fn run_loop(
                             } else {
                                 app.chat_scroll = next;
                             }
-                        } else if in_rect(ev.column, ev.row, app.tools_area) {
+                        } else if app.tools_visible && in_rect(ev.column, ev.row, app.tools_area) {
                             let current = if app.tools_pinned { app.tools_max_scroll } else { app.tools_scroll };
                             let next = current.saturating_add(1);
                             if next >= app.tools_max_scroll {

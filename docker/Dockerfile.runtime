@@ -25,6 +25,7 @@ COPY --from=builder /work/target/release/kelvin-host /usr/local/bin/kelvin-host
 COPY scripts/plugin-install.sh /opt/kelvin/scripts/plugin-install.sh
 COPY scripts/plugin-index-install.sh /opt/kelvin/scripts/plugin-index-install.sh
 COPY scripts/kelvin-setup.sh /opt/kelvin/scripts/kelvin-setup.sh
+COPY scripts/gateway-plugin-init.sh /opt/kelvin/scripts/gateway-plugin-init.sh
 COPY scripts/runtime-entrypoint.sh /opt/kelvin/scripts/runtime-entrypoint.sh
 
 RUN chmod +x /usr/local/bin/kelvin-host /opt/kelvin/scripts/*.sh
