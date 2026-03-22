@@ -107,6 +107,44 @@ Run modes:
 - interactive chat: `kelvin-host --interactive`
 - daemon mode: `scripts/kelvin-local-profile.sh start` (gateway + memory controller background services)
 
+## Terminal UI (`kelvin-tui`)
+
+`kelvin-tui` is a full-featured terminal interface that connects to a running gateway and
+provides a live chat and tool-monitoring experience. It is the recommended way to interact
+with KelvinClaw when the local profile is running.
+
+Start the local profile, then launch the TUI:
+
+```bash
+scripts/kelvin-local-profile.sh start
+cargo run -p kelvin-tui
+```
+
+Or with a release binary:
+
+```bash
+scripts/kelvin-local-profile.sh start
+./kelvin-tui
+```
+
+Key capabilities:
+
+- Stream assistant responses and tool calls in real time
+- Click and drag to select text in the chat; `Ctrl+C` copies to clipboard via OSC 52
+  (works inside Docker — no clipboard daemon required)
+- `Ctrl+T` toggles the tools panel
+- Input history (`Up` / `Down`), word-jump (`Ctrl+Left` / `Ctrl+Right`), and large-paste
+  collapsing are all built in
+- Auto-reconnects to the gateway with exponential backoff on disconnect
+
+Connect to a non-default gateway or session:
+
+```bash
+kelvin-tui --gateway-url ws://my-server:34617 --auth-token $TOKEN --session my-session
+```
+
+Full reference: [`docs/gateway/terminal-ui.md`](../gateway/terminal-ui.md)
+
 ## Track 1: Docker-Only (No Rust/WASM Experience Required)
 
 Use this if you want to run KelvinClaw without installing Rust locally.

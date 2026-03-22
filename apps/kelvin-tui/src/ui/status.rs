@@ -45,6 +45,11 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
         },
     ];
 
+    spans.push(Span::styled(
+        if app.tools_visible { "  ^T hide tools" } else { "  ^T show tools" },
+        Style::default().fg(Color::DarkGray),
+    ));
+
     if show_exit_hint {
         spans.push(Span::styled(
             "  ^C again to exit",

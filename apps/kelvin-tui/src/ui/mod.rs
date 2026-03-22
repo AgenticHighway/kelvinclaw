@@ -34,20 +34,37 @@ pub fn render(f: &mut Frame, app: &mut App) {
     let content_lines = input_line_count(&display, inner_width);
     let input_height = content_lines + 2; // + 2 for borders
 
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Min(0),           // chat gets remaining space
-            Constraint::Percentage(25),
-            Constraint::Length(input_height),
-            Constraint::Length(1),
-        ])
-        .split(area);
+    if app.tools_visible {
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Min(0),
+                Constraint::Percentage(25),
+                Constraint::Length(input_height),
+                Constraint::Length(1),
+            ])
+            .split(area);
 
-    app.chat_area = chunks[0];
-    app.tools_area = chunks[1];
-    chat::render(f, app, chunks[0]);
-    tools::render(f, app, chunks[1]);
-    input::render(f, &*app, chunks[2]);
-    status::render(f, &*app, chunks[3]);
+        app.chat_area = chunks[0];
+        app.tools_area = chunks[1];
+        chat::render(f, app, chunks[0]);
+        tools::render(f, app, chunks[1]);
+        input::render(f, &*app, chunks[2]);
+        status::render(f, &*app, chunks[3]);
+    } else {
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Min(0),
+                Constraint::Length(input_height),
+                Constraint::Length(1),
+            ])
+            .split(area);
+
+        app.chat_area = chunks[0];
+        app.tools_area = ratatui::layout::Rect::default();
+        chat::render(f, app, chunks[0]);
+        input::render(f, &*app, chunks[1]);
+        status::render(f, &*app, chunks[2]);
+    }
 }

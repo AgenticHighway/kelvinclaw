@@ -1,0 +1,143 @@
+services:
+  # Interactive runtime container — use with: docker compose run kelvin-host kelvin-host --prompt "..."
+  kelvin-host:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.runtime
+    container_name: kelvin-host
+    stdin_open: true
+    tty: true
+    environment:
+      KELVIN_HOME: /kelvin
+      KELVIN_PLUGIN_HOME: /kelvin/plugins
+      KELVIN_TRUST_POLICY_PATH: /kelvin/trusted_publishers.json
+      RUST_LOG: ${RUST_LOG:-info}
+    volumes:
+      - kelvin-home:/kelvin
+    networks:
+      - kelvin-network
+
+  # Init container — installs required plugins into the shared kelvin-home volume
+  # before the gateway starts. Uses KELVIN_MODEL_PROVIDER (default: kelvin.echo).
+  # Set KELVIN_MODEL_PROVIDER=kelvin.anthropic and ANTHROPIC_API_KEY to use Anthropic.
+  kelvin-init:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.runtime
+    container_name: kelvin-init
+    environment:
+      KELVIN_HOME: /kelvin
+      KELVIN_PLUGIN_HOME: /kelvin/plugins
+      KELVIN_TRUST_POLICY_PATH: /kelvin/trusted_publishers.json
+      KELVIN_MODEL_PROVIDER: ${KELVIN_MODEL_PROVIDER:-kelvin.echo}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      RUST_LOG: ${RUST_LOG:-info}
+    entrypoint: ["/opt/kelvin/scripts/gateway-plugin-init.sh"]
+    volumes:
+      - kelvin-home:/kelvin
+    networks:
+      - kelvin-network
+
+  # WebSocket gateway — long-running service for agent channel ingress
+  kelvin-gateway:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.gateway
+    container_name: kelvin-gateway
+    environment:
+      KELVIN_HOME: /kelvin
+      KELVIN_PLUGIN_HOME: /kelvin/plugins
+      KELVIN_TRUST_POLICY_PATH: /kelvin/trusted_publishers.json
+      KELVIN_GATEWAY_TOKEN: ${KELVIN_GATEWAY_TOKEN:?KELVIN_GATEWAY_TOKEN must be set (see .env.example)}
+      KELVIN_GATEWAY_INGRESS_BIND: "0.0.0.0:34618"
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      RUST_LOG: ${RUST_LOG:-info}
+    command:
+      - --bind
+      - "0.0.0.0:34617"
+      - --workspace
+      - /kelvin/workspace
+      - --allow-insecure-public-bind
+      - "true"
+      - --model-provider
+      - ${KELVIN_MODEL_PROVIDER:-kelvin.echo}
+    volumes:
+      - kelvin-home:/kelvin
+      - kelvin-workspace:/kelvin/workspace
+    ports:
+      - "127.0.0.1:${KELVIN_GATEWAY_WS_PORT:-34617}:34617"
+      - "127.0.0.1:${KELVIN_GATEWAY_INGRESS_PORT:-34618}:34618"
+    networks:
+      - kelvin-network
+    depends_on:
+      kelvin-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # Plugin registry — optional HTTP service for plugin discovery
+  kelvin-registry:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.registry
+    container_name: kelvin-registry
+    environment:
+      KELVIN_PLUGIN_REGISTRY_BIND: "0.0.0.0:34718"
+      KELVIN_PLUGIN_REGISTRY_INDEX: /opt/kelvin/index.json
+      KELVIN_PLUGIN_REGISTRY_TRUST_POLICY: /opt/kelvin/trusted_publishers.json
+      RUST_LOG: ${RUST_LOG:-info}
+    volumes:
+      - ./index.json:/opt/kelvin/index.json:ro
+      - ./trusted_publishers.example.json:/opt/kelvin/trusted_publishers.json:ro
+    ports:
+      - "${KELVIN_PLUGIN_REGISTRY_PORT:-34718}:34718"
+    networks:
+      - kelvin-network
+    restart: unless-stopped
+    profiles:
+      - registry
+      - full
+
+  # TUI client — connects to kelvin-gateway over the internal Docker network
+  # Usage: docker compose run --rm kelvin-tui
+  kelvin-tui:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.tui
+    container_name: kelvin-tui
+    stdin_open: true
+    tty: true
+    environment:
+      KELVIN_GATEWAY_TOKEN: ${KELVIN_GATEWAY_TOKEN:?KELVIN_GATEWAY_TOKEN must be set (see .env.example)}
+    command:
+      - --gateway-url
+      - "ws://kelvin-gateway:34617"
+      - --auth-token
+      - "${KELVIN_GATEWAY_TOKEN}"
+    networks:
+      - kelvin-network
+    depends_on:
+      - kelvin-gateway
+    profiles:
+      - tui
+
+  # Test runner — tests execute during docker build, not at container runtime
+  # Usage: docker compose build kelvin-test
+  # To run quick lane: KELVIN_TEST_LANE=quick docker compose build kelvin-test
+  kelvin-test:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.test
+      target: ${KELVIN_TEST_LANE:-full}
+    image: kelvin-test:${KELVIN_TEST_LANE:-full}
+    profiles:
+      - test
+
+volumes:
+  kelvin-home:
+    driver: local
+  kelvin-workspace:
+    driver: local
+
+networks:
+  kelvin-network:
+    driver: bridge

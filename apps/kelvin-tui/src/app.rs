@@ -3,7 +3,7 @@ use std::time::{Duration, Instant};
 use crossterm::{
     cursor::SetCursorStyle,
     event::{DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste, EnableMouseCapture,
-            Event, EventStream, KeyCode, KeyEvent, KeyModifiers, MouseEventKind},
+            Event, EventStream, KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEventKind},
     execute,
     terminal::{enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -12,6 +12,8 @@ use ratatui::{backend::CrosstermBackend, layout::Rect, widgets::TableState, Term
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 use tokio::time::interval;
+
+use unicode_width::UnicodeWidthChar;
 
 use crate::{ui, ws_client::WsClient, CliConfig};
 
@@ -107,6 +109,39 @@ pub struct PasteMarker {
     pub label: String,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SelectionTarget { Chat, Tools }
+
+/// A position in the flat Vec<Line> built by chat::render.
+/// `col` is a display-column offset within the full content line (including prefix spans).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ChatPos { pub line_idx: usize, pub col: usize }
+
+#[derive(Debug, Clone)]
+pub struct Selection {
+    pub target: SelectionTarget,
+    pub anchor: ChatPos,
+    pub extent: ChatPos,
+}
+
+impl Selection {
+    pub fn normalized(&self) -> (ChatPos, ChatPos) {
+        let (a, b) = (self.anchor, self.extent);
+        if a.line_idx < b.line_idx || (a.line_idx == b.line_idx && a.col <= b.col) {
+            (a, b)
+        } else {
+            (b, a)
+        }
+    }
+}
+
+/// Per-content-line metadata, rebuilt each frame by chat::render.
+#[derive(Debug, Clone, Default)]
+pub struct ChatLineInfo {
+    pub prefix_width: usize,
+    pub is_separator: bool,
+}
+
 const PASTE_THRESHOLD_LINES: usize = 3;
 const PASTE_THRESHOLD_BYTES: usize = 200;
 
@@ -190,6 +225,7 @@ pub struct App {
     pub chat_scroll: usize,
     pub chat_pinned: bool,
     pub chat_max_scroll: usize,
+    pub tools_visible: bool,
     pub tools_scroll: usize,
     pub tools_pinned: bool,
     pub tools_max_scroll: usize,
@@ -202,6 +238,11 @@ pub struct App {
     pub history_idx: Option<usize>,
     pub history_saved: String,
     pub input_inner_width: usize, // updated each frame
+    // Selection (chat_line_* rebuilt each frame by chat::render)
+    pub selection: Option<Selection>,
+    pub chat_line_map: Vec<(usize, usize)>, // visual_row -> (content_line_idx, char_start_col)
+    pub chat_line_info: Vec<ChatLineInfo>,
+    pub chat_line_texts: Vec<String>,       // per content line, prefix stripped (empty for separators)
 }
 
 impl App {
@@ -222,6 +263,7 @@ impl App {
             chat_scroll: 0,
             chat_pinned: true,
             chat_max_scroll: 0,
+            tools_visible: true,
             tools_scroll: 0,
             tools_pinned: true,
             tools_max_scroll: 0,
@@ -234,6 +276,10 @@ impl App {
             history_idx: None,
             history_saved: String::new(),
             input_inner_width: 0,
+            selection: None,
+            chat_line_map: Vec::new(),
+            chat_line_info: Vec::new(),
+            chat_line_texts: Vec::new(),
         }
     }
 
@@ -273,6 +319,38 @@ impl App {
         }
 
         self.cursor_pos = start + len;
+        #[cfg(debug_assertions)]
+        assert_markers_valid(&self.input, &self.paste_markers);
+    }
+
+    pub fn do_delete(&mut self) {
+        if self.cursor_pos >= self.input.len() {
+            return;
+        }
+        if let Some(idx) = self.paste_markers.iter().position(|m| m.start == self.cursor_pos) {
+            let m = self.paste_markers.remove(idx);
+            let removed = m.end - m.start;
+            self.input.drain(m.start..m.end);
+            for later in &mut self.paste_markers {
+                if later.start >= m.end {
+                    later.start -= removed;
+                    later.end -= removed;
+                }
+            }
+        } else {
+            let mut next = self.cursor_pos + 1;
+            while next < self.input.len() && !self.input.is_char_boundary(next) {
+                next += 1;
+            }
+            let removed_len = next - self.cursor_pos;
+            self.input.drain(self.cursor_pos..next);
+            for m in &mut self.paste_markers {
+                if m.start > self.cursor_pos {
+                    m.start -= removed_len;
+                    m.end -= removed_len;
+                }
+            }
+        }
         #[cfg(debug_assertions)]
         assert_markers_valid(&self.input, &self.paste_markers);
     }
@@ -358,6 +436,7 @@ impl App {
         } else {
             self.chat.insert(0, ChatMessage::System(format!("[{total} earlier messages omitted]")));
         }
+        self.selection = None; // line indices shifted
     }
 
     pub fn handle_agent_event(&mut self, ev: AgentEvent) {
@@ -435,6 +514,107 @@ impl App {
 
 fn in_rect(col: u16, row: u16, r: Rect) -> bool {
     col >= r.x && col < r.x + r.width && row >= r.y && row < r.y + r.height
+}
+
+fn screen_to_chat_pos(col: u16, row: u16, app: &App) -> Option<ChatPos> {
+    let inner_x = app.chat_area.x + 1;
+    let inner_y = app.chat_area.y + 1;
+    if col < inner_x || row < inner_y { return None; }
+    let rel_col = (col - inner_x) as usize;
+    let rel_row = (row - inner_y) as usize;
+    let scroll = if app.chat_pinned { app.chat_max_scroll } else { app.chat_scroll.min(app.chat_max_scroll) };
+    let abs_row = rel_row + scroll;
+    let &(line_idx, char_start_col) = app.chat_line_map.get(abs_row)?;
+    Some(ChatPos { line_idx, col: char_start_col + rel_col })
+}
+
+fn screen_to_tools_row(row: u16, app: &App) -> Option<usize> {
+    let header_row = app.tools_area.y + 2; // top border + header row
+    if row < header_row { return None; }
+    let rel_row = (row - header_row) as usize;
+    let offset = if app.tools_pinned { app.tools_max_scroll } else { app.tools_scroll.min(app.tools_max_scroll) };
+    let idx = rel_row + offset;
+    if idx < app.tools.len() { Some(idx) } else { None }
+}
+
+fn extract_selected_text(app: &App) -> String {
+    match &app.selection {
+        None => String::new(),
+        Some(sel) if sel.target == SelectionTarget::Tools => {
+            let idx = sel.anchor.line_idx;
+            if let Some(e) = app.tools.get(idx) {
+                let phase = match e.phase { ToolPhase::Start => "running", ToolPhase::End => "done", ToolPhase::Error => "error" };
+                let summary = e.summary.as_deref().unwrap_or("");
+                let dur = e.ended_ms.map_or("...".into(), |end| format!("{}ms", end.saturating_sub(e.started_ms)));
+                format!("{}\t{}\t{}\t{}", e.tool_name, phase, summary, dur)
+            } else { String::new() }
+        }
+        Some(sel) => {
+            let (start, end) = sel.normalized();
+            let n = app.chat_line_texts.len();
+            if start.line_idx >= n { return String::new(); }
+            // If the drag ended at column 0, the cursor is before that line — exclude it.
+            let end_idx = if end.col == 0 && end.line_idx > start.line_idx {
+                end.line_idx - 1
+            } else {
+                end.line_idx.min(n.saturating_sub(1))
+            };
+            let mut result = String::new();
+            for idx in start.line_idx..=end_idx {
+                let info = &app.chat_line_info[idx];
+                if info.is_separator { continue; }
+                let clean = &app.chat_line_texts[idx];
+                let sel_start = if idx == start.line_idx { start.col } else { 0 };
+                let sel_end = if idx == end_idx { end.col } else { usize::MAX };
+                let text_start = sel_start.saturating_sub(info.prefix_width);
+                let text_end = if sel_end == usize::MAX {
+                    clean.len()
+                } else {
+                    let t = sel_end.saturating_sub(info.prefix_width);
+                    // Selection lands within the prefix — include the full line.
+                    if t == 0 && sel_end > 0 { clean.len() } else { t }
+                };
+                let byte_start = display_col_to_byte(clean, text_start);
+                let byte_end = display_col_to_byte(clean, text_end).max(byte_start).min(clean.len());
+                let slice = &clean[byte_start..byte_end];
+                if !result.is_empty() { result.push('\n'); }
+                result.push_str(slice);
+            }
+            result
+        }
+    }
+}
+
+fn display_col_to_byte(s: &str, col: usize) -> usize {
+    let mut width = 0usize;
+    for (byte_idx, ch) in s.char_indices() {
+        if width >= col { return byte_idx; }
+        width += ch.width().unwrap_or(0);
+    }
+    s.len()
+}
+
+fn copy_osc52(text: &str) {
+    use std::io::Write;
+    let encoded = base64_encode(text.as_bytes());
+    let _ = write!(std::io::stdout(), "\x1b]52;c;{}\x07", encoded);
+    let _ = std::io::stdout().flush();
+}
+
+fn base64_encode(data: &[u8]) -> String {
+    const T: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::with_capacity((data.len() + 2) / 3 * 4);
+    for chunk in data.chunks(3) {
+        let b0 = chunk[0] as u32;
+        let b1 = chunk.get(1).copied().unwrap_or(0) as u32;
+        let b2 = chunk.get(2).copied().unwrap_or(0) as u32;
+        let n = (b0 << 16) | (b1 << 8) | b2;
+        out.push(T[((n >> 18) & 0x3f) as usize] as char);
+        out.push(T[((n >> 12) & 0x3f) as usize] as char);
+        out.push(if chunk.len() > 1 { T[((n >> 6) & 0x3f) as usize] as char } else { '=' });
+        out.push(if chunk.len() > 2 { T[(n & 0x3f) as usize] as char } else { '=' });
+    }
+    out
 }
 
 fn is_word_char(c: char) -> bool {
@@ -619,13 +799,27 @@ async fn run_loop(
 
             TuiEvent::Key(key) => {
                 match key.code {
+                    KeyCode::Char('t') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                        app.tools_visible = !app.tools_visible;
+                    }
                     KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                        let now = Instant::now();
-                        if app.last_ctrl_c.map_or(false, |t| now.duration_since(t) < Duration::from_millis(500)) {
-                            app.should_quit = true;
+                        if app.selection.is_some() {
+                            let text = extract_selected_text(app);
+                            if !text.is_empty() {
+                                copy_osc52(&text);
+                            }
+                            app.selection = None;
                         } else {
-                            app.last_ctrl_c = Some(now);
+                            let now = Instant::now();
+                            if app.last_ctrl_c.map_or(false, |t| now.duration_since(t) < Duration::from_millis(500)) {
+                                app.should_quit = true;
+                            } else {
+                                app.last_ctrl_c = Some(now);
+                            }
                         }
+                    }
+                    KeyCode::Esc => {
+                        app.selection = None;
                     }
                     KeyCode::Enter => {
                         if !app.input.trim().is_empty() {
@@ -642,7 +836,6 @@ async fn run_loop(
                             app.input.clear();
                             app.cursor_pos = 0;
                             app.paste_markers.clear();
-                            app.tools.clear();
                             app.tools_pinned = true;
                             app.tools_scroll = 0;
                             app.run_phase = None;
@@ -676,6 +869,9 @@ async fn run_loop(
                     }
                     KeyCode::Backspace => {
                         app.do_backspace();
+                    }
+                    KeyCode::Delete => {
+                        app.do_delete();
                     }
                     KeyCode::Left if key.modifiers.contains(KeyModifiers::CONTROL) => {
                         let new_pos = word_left(&app.input, app.cursor_pos);
@@ -772,12 +968,57 @@ async fn run_loop(
 
             TuiEvent::Mouse(ev) => {
                 match ev.kind {
+                    MouseEventKind::Down(MouseButton::Left) => {
+                        if in_rect(ev.column, ev.row, app.chat_area) {
+                            match screen_to_chat_pos(ev.column, ev.row, app) {
+                                Some(pos) => {
+                                    app.selection = Some(Selection {
+                                        target: SelectionTarget::Chat,
+                                        anchor: pos,
+                                        extent: pos,
+                                    });
+                                }
+                                None => { app.selection = None; }
+                            }
+                        } else if app.tools_visible && in_rect(ev.column, ev.row, app.tools_area) {
+                            match screen_to_tools_row(ev.row, app) {
+                                Some(row_idx) => {
+                                    app.selection = Some(Selection {
+                                        target: SelectionTarget::Tools,
+                                        anchor: ChatPos { line_idx: row_idx, col: 0 },
+                                        extent: ChatPos { line_idx: row_idx, col: usize::MAX },
+                                    });
+                                }
+                                None => { app.selection = None; }
+                            }
+                        } else {
+                            app.selection = None;
+                        }
+                    }
+                    MouseEventKind::Drag(MouseButton::Left) => {
+                        if in_rect(ev.column, ev.row, app.chat_area) {
+                            let is_chat_sel = matches!(&app.selection, Some(s) if s.target == SelectionTarget::Chat);
+                            if is_chat_sel {
+                                let pos = screen_to_chat_pos(ev.column, ev.row, app);
+                                if let (Some(pos), Some(ref mut sel)) = (pos, app.selection.as_mut()) {
+                                    sel.extent = pos;
+                                }
+                            }
+                        }
+                    }
+                    MouseEventKind::Up(MouseButton::Left) => {
+                        if let Some(ref sel) = app.selection {
+                            if sel.anchor == sel.extent {
+                                app.selection = None;
+                            }
+                        }
+                    }
                     MouseEventKind::ScrollUp => {
                         if in_rect(ev.column, ev.row, app.chat_area) {
                             let current = if app.chat_pinned { app.chat_max_scroll } else { app.chat_scroll };
                             app.chat_pinned = false;
                             app.chat_scroll = current.saturating_sub(3);
-                        } else if in_rect(ev.column, ev.row, app.tools_area) {
+                        } else if app.tools_visible && in_rect(ev.column, ev.row, app.tools_area) {
                             let current = if app.tools_pinned { app.tools_max_scroll } else { app.tools_scroll };
                             app.tools_pinned = false;
                             app.tools_scroll = current.saturating_sub(1);
@@ -792,7 +1033,7 @@ async fn run_loop(
                             } else {
                                 app.chat_scroll = next;
                             }
-                        } else if in_rect(ev.column, ev.row, app.tools_area) {
+                        } else if app.tools_visible && in_rect(ev.column, ev.row, app.tools_area) {
                             let current = if app.tools_pinned { app.tools_max_scroll } else { app.tools_scroll };
                             let next = current.saturating_add(1);
                             if next >= app.tools_max_scroll {
