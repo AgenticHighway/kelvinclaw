@@ -6,7 +6,7 @@ Each track has a verification command so the setup can be validated immediately.
 ## Release Quickstart (Validated Public Onboarding)
 
 Use this if you want the fastest path from a public release bundle to a real
-model-backed run. Choose your preferred provider: OpenAI or Anthropic.
+model-backed run.
 
 Validated path:
 
@@ -63,39 +63,11 @@ printf 'OPENAI_API_KEY=%s\n' '<your_key>' > .env
 ./kelvin
 ```
 
-### Anthropic Setup
-
-Example for Linux arm64 with Anthropic:
-
-```bash
-apt-get update && apt-get install -y curl ca-certificates
-curl -fsSL -O https://github.com/AgenticHighway/kelvinclaw/releases/download/v0.1.8/kelvinclaw-0.1.8-linux-arm64.tar.gz
-curl -fsSL -O https://github.com/AgenticHighway/kelvinclaw/releases/download/v0.1.8/kelvinclaw-0.1.8-linux-arm64.tar.gz.sha256
-sha256sum -c kelvinclaw-0.1.8-linux-arm64.tar.gz.sha256
-tar -xzf kelvinclaw-0.1.8-linux-arm64.tar.gz
-cd kelvinclaw-0.1.8-linux-arm64
-printf 'ANTHROPIC_API_KEY=%s\n' '<your_key>' > .env
-./kelvin
-```
-
-Example for Linux x86_64 with Anthropic:
-
-```bash
-apt-get update && apt-get install -y curl ca-certificates
-curl -fsSL -O https://github.com/AgenticHighway/kelvinclaw/releases/download/v0.1.8/kelvinclaw-0.1.8-linux-x86_64.tar.gz
-curl -fsSL -O https://github.com/AgenticHighway/kelvinclaw/releases/download/v0.1.8/kelvinclaw-0.1.8-linux-x86_64.tar.gz.sha256
-sha256sum -c kelvinclaw-0.1.8-linux-x86_64.tar.gz.sha256
-tar -xzf kelvinclaw-0.1.8-linux-x86_64.tar.gz
-cd kelvinclaw-0.1.8-linux-x86_64
-printf 'ANTHROPIC_API_KEY=%s\n' '<your_key>' > .env
-./kelvin
-```
-
 ### Expected Result
 
 - `./kelvin` fetches the official trust policy
 - `kelvin.cli@0.1.1` installs automatically
-- Model provider plugin (OpenAI or Anthropic) installs automatically when the corresponding API key is available
+- Model provider plugin (OpenAI) installs automatically when the OPENAI_API_KEY variable is available
 - the no-args run completes with your chosen provider and model
 
 ### Supported Key Inputs
@@ -104,12 +76,6 @@ For **OpenAI**:
 - export `OPENAI_API_KEY` in the shell before running `./kelvin`
 - put `OPENAI_API_KEY=...` in `./.env.local`
 - put `OPENAI_API_KEY=...` in `~/.kelvinclaw/.env` or `~/.kelvinclaw/.env.local`
-- in an interactive terminal, `./kelvin` prompts once if no key is configured
-
-For **Anthropic**:
-- export `ANTHROPIC_API_KEY` in the shell before running `./kelvin`
-- put `ANTHROPIC_API_KEY=...` in `./.env.local`
-- put `ANTHROPIC_API_KEY=...` in `~/.kelvinclaw/.env` or `~/.kelvinclaw/.env.local`
 - in an interactive terminal, `./kelvin` prompts once if no key is configured
 
 ## Canonical Quick Start (Daily Driver MVP)
