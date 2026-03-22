@@ -190,6 +190,7 @@ pub struct App {
     pub chat_scroll: usize,
     pub chat_pinned: bool,
     pub chat_max_scroll: usize,
+    pub tools_visible: bool,
     pub tools_scroll: usize,
     pub tools_pinned: bool,
     pub tools_max_scroll: usize,
@@ -222,6 +223,7 @@ impl App {
             chat_scroll: 0,
             chat_pinned: true,
             chat_max_scroll: 0,
+            tools_visible: true,
             tools_scroll: 0,
             tools_pinned: true,
             tools_max_scroll: 0,
@@ -651,6 +653,9 @@ async fn run_loop(
 
             TuiEvent::Key(key) => {
                 match key.code {
+                    KeyCode::Char('t') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                        app.tools_visible = !app.tools_visible;
+                    }
                     KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                         let now = Instant::now();
                         if app.last_ctrl_c.map_or(false, |t| now.duration_since(t) < Duration::from_millis(500)) {
@@ -674,7 +679,6 @@ async fn run_loop(
                             app.input.clear();
                             app.cursor_pos = 0;
                             app.paste_markers.clear();
-                            app.tools.clear();
                             app.tools_pinned = true;
                             app.tools_scroll = 0;
                             app.run_phase = None;
