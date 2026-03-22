@@ -19,43 +19,45 @@ This starts the main `kelvin-host` service, which provides the core runtime.
 ### Full Setup (All Services)
 
 ```bash
-# Start all services including memory API, gateway, and registry
-docker compose --profile full up
+# Start gateway, host, and registry
+docker-compose --profile full up
 ```
 
 ## Services
 
-### Core Service
+### Core Services (always started)
 
-- **kelvin-host**: The main Kelvin agent runtime. Handles request execution, memory management, and plugin loading.
-  - Port: `8080` (configurable via `HOST_PORT`)
-  - Health check: `GET /health`
+- **kelvin-host**: The main Kelvin agent runtime. Interactive CLI — invoke with `docker-compose run kelvin-host kelvin-host --prompt "..."`. Not an HTTP service; exposes no ports.
 
-### Additional Services (Profile: `full`)
+- **kelvin-gateway**: WebSocket gateway for agent channel ingress.
+  - Port: `34617` (WebSocket, configurable via `KELVIN_GATEWAY_WS_PORT`)
+  - Port: `34618` (ingress bind, configurable via `KELVIN_GATEWAY_INGRESS_PORT`)
 
-- **kelvin-memory-api**: gRPC API for the memory backend
-  - Port: `50051` (configurable via `MEMORY_API_PORT`)
+### Optional Services (Profile: `registry` or `full`)
 
-- **kelvin-gateway**: Multi-channel ingress gateway (Discord, Telegram, Slack, UI)
-  - Port: `3000` (configurable via `GATEWAY_PORT`)
+- **kelvin-registry**: HTTP plugin registry for plugin discovery.
+  - Port: `34718` (configurable via `KELVIN_PLUGIN_REGISTRY_PORT`)
 
-- **kelvin-registry**: Plugin registry service
-  - Port: `8888` (configurable via `REGISTRY_PORT`)
+### TUI Client (Profile: `tui`)
 
-### Development Service (Profile: `test`)
+- **kelvin-tui**: Terminal UI client that connects to `kelvin-gateway` over the internal Docker network.
+  - Usage: `docker-compose --profile tui run --rm kelvin-tui`
 
-- **kelvin-test**: Runs tests in a containerized environment
-  - Mounts workspace for live test execution
+### Test Runner (Profile: `test`)
+
+- **kelvin-test**: Tests execute during `docker-compose build`, not at container runtime.
+  - Build: `docker-compose build kelvin-test`
+  - Quick lane: `KELVIN_TEST_LANE=quick docker-compose build kelvin-test`
 
 ## Configuration
 
 Edit `.env` to customize:
 
 ```bash
-RUST_LOG=debug           # Set logging level (debug, info, warn, error)
-HOST_PORT=8080          # Change host port
-GATEWAY_PORT=3000       # Change gateway port
-REGISTRY_PORT=8888      # Change registry port
+RUST_LOG=debug                      # Set logging level (debug, info, warn, error)
+KELVIN_GATEWAY_WS_PORT=34617        # Change gateway WebSocket port
+KELVIN_GATEWAY_INGRESS_PORT=34618   # Change gateway ingress port
+KELVIN_PLUGIN_REGISTRY_PORT=34718   # Change registry port
 ```
 
 ## Common Commands
@@ -70,6 +72,12 @@ docker compose up kelvin-host
 
 ```bash
 docker compose --profile full up -d
+```
+
+### Start the TUI client
+
+```bash
+docker-compose --profile tui run --rm kelvin-tui
 ```
 
 ### View logs
@@ -100,7 +108,18 @@ docker compose down -v
 ### Run tests in container
 
 ```bash
-docker compose run --rm kelvin-test cargo test
+docker-compose build kelvin-test
+```
+
+### Quick test lane
+
+```bash
+# Inline:
+KELVIN_TEST_LANE=quick docker-compose build kelvin-test
+
+# Or export first:
+export KELVIN_TEST_LANE=quick
+docker-compose build kelvin-test
 ```
 
 ### Interactive shell in running container
@@ -126,9 +145,7 @@ docker compose up --build kelvin-host
 ### Volumes
 
 - `kelvin-home`: Persistent plugin and configuration data
-- `kelvin-plugins`: Plugin storage
-- `memory-storage`: Memory backend data (if using persistent storage)
-- `cargo-cache`: Cargo dependency cache (for test service)
+- `kelvin-workspace`: Agent workspace data
 
 ## Troubleshooting
 
@@ -143,7 +160,8 @@ docker compose logs kelvin-host
 
 Change the port mapping in `.env`:
 ```bash
-HOST_PORT=8081  # Use 8081 instead of 8080
+KELVIN_GATEWAY_WS_PORT=34619       # Use 34619 instead of 34617
+KELVIN_GATEWAY_INGRESS_PORT=34620  # Use 34620 instead of 34618
 ```
 
 ### Memory issues during build
@@ -164,10 +182,9 @@ docker compose up --build kelvin-host
 ## Network
 
 Services are connected via the `kelvin-network` bridge network, allowing them to communicate using service names:
-- `kelvin-host:8080`
-- `kelvin-gateway:3000`
-- `kelvin-registry:8888`
-- `kelvin-memory-api:50051`
+- `kelvin-gateway:34617` (WebSocket)
+- `kelvin-gateway:34618` (ingress)
+- `kelvin-registry:34718`
 
 ## Building Without Compose
 
@@ -182,7 +199,6 @@ To run it:
 ```bash
 docker run -it --rm \
   -e RUST_LOG=info \
-  -p 8080:8080 \
   -v kelvin-home:/kelvin \
-  kelvin-host:latest
+  kelvin-host:latest kelvin-host --prompt "hello"
 ```
