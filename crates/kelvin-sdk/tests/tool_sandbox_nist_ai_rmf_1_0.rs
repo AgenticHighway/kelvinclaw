@@ -87,6 +87,40 @@ async fn map_explicit_approved_fs_write_persists_in_allowed_scope() {
 }
 
 #[tokio::test]
+async fn map_fs_write_allows_newlines_in_content() {
+    let workspace = unique_workspace("map-write-newlines");
+    let runtime = runtime_for(&workspace).await;
+    let payloads = run_prompt(
+        &runtime,
+        r#"[[tool:fs_safe_write {"path":"memory/lines.md","content":"line1\nline2\nline3","approval":{"granted":true,"reason":"test-newlines"}}]]"#,
+    )
+    .await;
+    assert!(
+        payloads.iter().any(|text| text.contains("fs_safe_write wrote")),
+        "expected write to succeed, got: {payloads:?}"
+    );
+    let text = std::fs::read_to_string(workspace.join("memory/lines.md")).expect("read output");
+    assert_eq!(text, "line1\nline2\nline3");
+}
+
+#[tokio::test]
+async fn map_fs_write_allows_tabs_and_mixed_control_chars_in_content() {
+    let workspace = unique_workspace("map-write-tabs");
+    let runtime = runtime_for(&workspace).await;
+    let payloads = run_prompt(
+        &runtime,
+        r#"[[tool:fs_safe_write {"path":"memory/tabbed.md","content":"col1\tcol2\nrow2col1\trow2col2","approval":{"granted":true,"reason":"test-tabs"}}]]"#,
+    )
+    .await;
+    assert!(
+        payloads.iter().any(|text| text.contains("fs_safe_write wrote")),
+        "expected write to succeed, got: {payloads:?}"
+    );
+    let text = std::fs::read_to_string(workspace.join("memory/tabbed.md")).expect("read output");
+    assert_eq!(text, "col1\tcol2\nrow2col1\trow2col2");
+}
+
+#[tokio::test]
 async fn measure_scheduler_state_is_deterministic() {
     let workspace = unique_workspace("measure-scheduler");
     let runtime = runtime_for(&workspace).await;

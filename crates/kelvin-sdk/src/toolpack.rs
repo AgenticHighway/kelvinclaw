@@ -110,6 +110,24 @@ fn required_string(
     Ok(trimmed.to_string())
 }
 
+/// Like `required_string` but allows control characters (newlines, tabs, etc.).
+/// Use this for content fields where arbitrary text is expected (file contents, notes).
+fn required_string_content(
+    args: &serde_json::Map<String, Value>,
+    field: &str,
+    tool_name: &str,
+) -> KelvinResult<String> {
+    let value = args.get(field).and_then(Value::as_str).ok_or_else(|| {
+        KelvinError::InvalidInput(format!("{tool_name} requires string argument '{field}'"))
+    })?;
+    if value.is_empty() {
+        return Err(KelvinError::InvalidInput(format!(
+            "{tool_name} argument '{field}' must not be empty"
+        )));
+    }
+    Ok(value.to_string())
+}
+
 fn optional_u64(
     args: &serde_json::Map<String, Value>,
     field: &str,
@@ -398,7 +416,7 @@ impl Tool for SafeFsWriteTool {
                 path
             )));
         }
-        let content = required_string(args, "content", self.name())?;
+        let content = required_string_content(args, "content", self.name())?;
         let mode = optional_string(args, "mode", self.name())?
             .unwrap_or_else(|| "overwrite".to_string())
             .to_ascii_lowercase();
@@ -857,7 +875,7 @@ impl Tool for SessionToolsTool {
         match action.as_str() {
             "list_notes" => {}
             "append_note" => {
-                let note = required_string(args, "note", self.name())?;
+                let note = required_string_content(args, "note", self.name())?;
                 let notes = state
                     .get_mut("notes")
                     .and_then(Value::as_array_mut)
