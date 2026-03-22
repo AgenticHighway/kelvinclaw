@@ -29,6 +29,7 @@ services:
       KELVIN_TRUST_POLICY_PATH: /kelvin/trusted_publishers.json
       KELVIN_GATEWAY_TOKEN: ${KELVIN_GATEWAY_TOKEN:-}
       KELVIN_GATEWAY_INGRESS_BIND: "0.0.0.0:34618"
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       RUST_LOG: ${RUST_LOG:-info}
     command:
       - --bind
@@ -37,6 +38,8 @@ services:
       - /kelvin/workspace
       - --allow-insecure-public-bind
       - "true"
+      - --model-provider
+      - kelvin.anthropic
     volumes:
       - kelvin-home:/kelvin
       - kelvin-workspace:/kelvin/workspace
