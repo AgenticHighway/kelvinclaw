@@ -145,9 +145,6 @@ install_required_plugins() {
       --plugin-home "${PLUGIN_HOME}" \
       --trust-policy-path "${TRUST_POLICY_PATH}"
   fi
-  if [[ -z "${OPENAI_API_KEY:-}" ]]; then
-    echo "[kelvin-local-profile] OPENAI_API_KEY not set; gateway defaults to echo provider until key is configured"
-  fi
 
   if [[ "${KELVIN_INSTALL_BROWSER_PLUGIN:-0}" == "1" ]]; then
     if [[ -d "${PLUGIN_HOME}/kelvin.browser.automation/current" ]]; then
@@ -224,7 +221,13 @@ start_gateway() {
       ;;
   esac
   if [[ -n "${OPENAI_API_KEY:-}" ]]; then
+    echo "[kelvin-local-profile] using model provider: kelvin.openai" >&2
     gateway_args+=(--model-provider "kelvin.openai")
+  elif [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
+    echo "[kelvin-local-profile] using model provider: kelvin.anthropic" >&2
+    gateway_args+=(--model-provider "kelvin.anthropic")
+  else
+    echo "[kelvin-local-profile] no model provider set, gateway will default to echo" >&2
   fi
 
   (

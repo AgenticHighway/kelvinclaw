@@ -1,5 +1,6 @@
 [workspace]
 members = [
+  "apps/kelvin-tui",
   "apps/kelvin-gateway",
   "apps/kelvin-host",
   "apps/kelvin-registry",

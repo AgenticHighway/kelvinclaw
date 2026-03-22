@@ -23,14 +23,14 @@ The intent is to keep the "brains" (orchestration and contracts) stable while en
 
 ## Governance Documents
 
-- [docs/KELVIN_CORE_SDK.md](docs/KELVIN_CORE_SDK.md)
-- [docs/CORE_ADMISSION_POLICY.md](docs/CORE_ADMISSION_POLICY.md)
-- [docs/SDK_PRINCIPLES.md](docs/SDK_PRINCIPLES.md)
-- [docs/trusted-executive-wasm.md](docs/trusted-executive-wasm.md)
-- [docs/memory-control-data-plane.md](docs/memory-control-data-plane.md)
-- [docs/memory-rpc-contract.md](docs/memory-rpc-contract.md)
-- [docs/memory-module-sdk.md](docs/memory-module-sdk.md)
-- [docs/memory-controller-deployment-profiles.md](docs/memory-controller-deployment-profiles.md)
+- [kelvin-core-sdk.md](kelvin-core-sdk.md)
+- [core-admission-policy.md](core-admission-policy.md)
+- [sdk-principles.md](sdk-principles.md)
+- [trusted-executive-wasm.md](trusted-executive-wasm.md)
+- [../memory/memory-control-data-plane.md](../memory/memory-control-data-plane.md)
+- [../memory/memory-rpc-contract.md](../memory/memory-rpc-contract.md)
+- [../memory/memory-module-sdk.md](../memory/memory-module-sdk.md)
+- [../memory/memory-controller-deployment-profiles.md](../memory/memory-controller-deployment-profiles.md)
 
 Use these as merge criteria when deciding whether logic belongs in core or in extensions.
 

@@ -51,7 +51,7 @@ Test suite:
 ## Scope Notes
 
 - These are SDK-lane controls, not full runtime/LLM behavior controls.
-- Root-lane integrations remain outside SDK trust guarantees by design (`docs/ROOT_VS_SDK.md`).
+- Root-lane integrations remain outside SDK trust guarantees by design ([root-vs-sdk.md](../architecture/root-vs-sdk.md)).
 
 ## Data Plane Extension
 
