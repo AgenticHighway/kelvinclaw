@@ -11,7 +11,7 @@ This repository includes Docker Compose configuration for running KelvinClaw ser
 cp .env.example .env
 
 # Build and start kelvin-host
-docker-compose up kelvin-host
+docker compose up kelvin-host
 ```
 
 This starts the main `kelvin-host` service, which provides the core runtime.
@@ -20,7 +20,7 @@ This starts the main `kelvin-host` service, which provides the core runtime.
 
 ```bash
 # Start all services including memory API, gateway, and registry
-docker-compose --profile full up
+docker compose --profile full up
 ```
 
 ## Services
@@ -63,50 +63,50 @@ REGISTRY_PORT=8888      # Change registry port
 ### Start kelvin-host in the foreground
 
 ```bash
-docker-compose up kelvin-host
+docker compose up kelvin-host
 ```
 
 ### Start all services in the background
 
 ```bash
-docker-compose --profile full up -d
+docker compose --profile full up -d
 ```
 
 ### View logs
 
 ```bash
 # All services
-docker-compose logs -f
+docker compose logs -f
 
 # Specific service
-docker-compose logs -f kelvin-host
+docker compose logs -f kelvin-host
 
 # Follow new logs
-docker-compose logs -f --tail=50
+docker compose logs -f --tail=50
 ```
 
 ### Stop services
 
 ```bash
-docker-compose down
+docker compose down
 ```
 
 ### Remove volumes (clean slate)
 
 ```bash
-docker-compose down -v
+docker compose down -v
 ```
 
 ### Run tests in container
 
 ```bash
-docker-compose run --rm kelvin-test cargo test
+docker compose run --rm kelvin-test cargo test
 ```
 
 ### Interactive shell in running container
 
 ```bash
-docker-compose exec kelvin-host bash
+docker compose exec kelvin-host bash
 ```
 
 ## Development Workflow
@@ -117,10 +117,10 @@ For development, you can mount your local source and rebuild:
 
 ```bash
 # Build fresh (without cache)
-docker-compose build --no-cache kelvin-host
+docker compose build --no-cache kelvin-host
 
 # Rebuild and start
-docker-compose up --build kelvin-host
+docker compose up --build kelvin-host
 ```
 
 ### Volumes
@@ -136,7 +136,7 @@ docker-compose up --build kelvin-host
 
 Check logs:
 ```bash
-docker-compose logs kelvin-host
+docker compose logs kelvin-host
 ```
 
 ### Port already in use
@@ -150,15 +150,15 @@ HOST_PORT=8081  # Use 8081 instead of 8080
 
 Increase Docker's memory limit in Docker Desktop settings, or use:
 ```bash
-docker-compose build --memory 4g kelvin-host
+docker compose build --memory 4g kelvin-host
 ```
 
 ### Clear everything and start fresh
 
 ```bash
-docker-compose down -v --remove-orphans
+docker compose down -v --remove-orphans
 docker system prune -a
-docker-compose up --build kelvin-host
+docker compose up --build kelvin-host
 ```
 
 ## Network
