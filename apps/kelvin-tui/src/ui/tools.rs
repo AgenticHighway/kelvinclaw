@@ -6,10 +6,14 @@ use ratatui::{
     widgets::{Block, Borders, Row, Table, TableState},
 };
 
-use crate::app::{App, ToolPhase};
+use crate::app::{App, SelectionTarget, ToolPhase};
 
 pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
-    let rows: Vec<Row> = app.tools.iter().map(|entry| {
+    let selected_row = app.selection.as_ref()
+        .filter(|s| s.target == SelectionTarget::Tools)
+        .map(|s| s.anchor.line_idx);
+
+    let rows: Vec<Row> = app.tools.iter().enumerate().map(|(idx, entry)| {
         let (phase_str, phase_color) = match entry.phase {
             ToolPhase::Start => ("running", Color::Yellow),
             ToolPhase::End => ("done", Color::Green),
@@ -21,12 +25,18 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
             None => "…".to_string(),
         };
 
-        Row::new(vec![
+        let row = Row::new(vec![
             ratatui::text::Text::from(Span::raw(entry.tool_name.clone())),
             ratatui::text::Text::from(Span::styled(phase_str, Style::default().fg(phase_color).add_modifier(Modifier::BOLD))),
             ratatui::text::Text::from(Span::raw(entry.summary.clone().unwrap_or_default())),
             ratatui::text::Text::from(Span::raw(duration)),
-        ])
+        ]);
+
+        if selected_row == Some(idx) {
+            row.style(Style::default().bg(Color::Indexed(238)))
+        } else {
+            row
+        }
     }).collect();
 
     // 2 borders + 1 header row
