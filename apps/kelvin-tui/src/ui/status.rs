@@ -36,6 +36,11 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
     let mut spans = vec![
         Span::raw(format!(" {} ", app.gateway_url)),
         Span::raw("| "),
+        Span::styled(
+            format!("session:{} ", app.session_id),
+            Style::default().fg(Color::Cyan),
+        ),
+        Span::raw("| "),
         Span::styled(status_str, Style::default().fg(status_color)),
         Span::raw(run_phase_str),
         if !error_str.is_empty() {

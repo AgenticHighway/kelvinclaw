@@ -62,4 +62,6 @@ pub trait SessionStore: Send + Sync {
     async fn append_message(&self, session_id: &str, message: SessionMessage) -> KelvinResult<()>;
 
     async fn history(&self, session_id: &str) -> KelvinResult<Vec<SessionMessage>>;
+
+    async fn clear_history(&self, session_id: &str) -> KelvinResult<()>;
 }

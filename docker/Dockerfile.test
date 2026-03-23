@@ -20,15 +20,15 @@ RUN cargo chef prepare --recipe-path recipe.json
 
 FROM toolchain AS deps
 COPY --from=planner /work/recipe.json /work/recipe.json
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/usr/local/cargo/git \
+RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,target=/usr/local/cargo/git,sharing=locked \
     --mount=type=cache,target=/work/target \
     cargo chef cook --workspace --tests --recipe-path /work/recipe.json
 
 FROM deps AS quick
 COPY . .
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/usr/local/cargo/git \
+RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,target=/usr/local/cargo/git,sharing=locked \
     --mount=type=cache,target=/work/target \
     scripts/test-sdk.sh
 
@@ -36,8 +36,8 @@ FROM deps AS full
 COPY . .
 # Keep memory usage bounded in Docker Desktop/link-heavy test builds.
 ENV CARGO_BUILD_JOBS=1
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/usr/local/cargo/git \
+RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,target=/usr/local/cargo/git,sharing=locked \
     --mount=type=cache,target=/work/target \
     cargo fmt --all -- --check && \
     cargo clippy --all -- -D warnings && \

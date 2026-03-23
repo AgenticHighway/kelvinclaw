@@ -74,7 +74,7 @@ kelvin-tui --session project-alpha
 │  Input (Enter=submit, ^C^C=quit)                    │
 │  > _                                                │
 ├─────────────────────────────────────────────────────┤
-│  ws://127.0.0.1:34617  connected  ·  ^T hide tools  │
+│  ws://127.0.0.1:34617  | session:main | connected  ·  ^T hide tools  │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -88,8 +88,8 @@ Messages are separated by a horizontal rule.
 **Input box** — multi-line text entry. The cursor is always visible. Long pastes are
 automatically collapsed to a compact label.
 
-**Status bar** — shows the gateway URL, connection state, active run phase, and contextual
-hints.
+**Status bar** — shows the gateway URL, active session ID, connection state, active run
+phase, and contextual hints.
 
 ---
 
@@ -106,7 +106,7 @@ hints.
 | `Ctrl+Left` / `Ctrl+Right` | Jump to previous / next word boundary |
 | `Home` | Move to start of visual line |
 | `End` | Move to end of visual line |
-| `Up` / `Down` | Browse input history |
+| `Up` / `Down` | Navigate autocomplete list (when open); otherwise browse input history |
 
 ### Scrolling
 
@@ -167,6 +167,56 @@ The TUI keeps the last 500 submitted prompts in an in-memory history.
 - `Up` / `Down` arrows navigate backward and forward through history.
 - The current (unsaved) input is preserved and restored when you reach the end of history.
 - History is per-session and not persisted between runs.
+
+---
+
+## Slash Commands
+
+Type `/` in the input box to open the command autocomplete popup. The popup appears above
+the input box and filters the list as you type.
+
+### Autocomplete Navigation
+
+| Key | Action |
+|---|---|
+| Any character after `/` | Filter the command list |
+| `Up` / `Down` or `Tab` / `Shift+Tab` | Move selection up / down |
+| `Enter` | Execute the selected command immediately |
+| `Esc` | Dismiss the popup |
+
+### Built-in Commands
+
+#### Local (work offline)
+
+| Command | Description |
+|---|---|
+| `/help` | List all available commands with descriptions |
+| `/clear` | Clear the chat display **and** erase server-side session history for the active session |
+| `/new [name]` | Create a new session. Generates a UUID if no name is given. Clears the chat display and switches the active session immediately. The new session is registered on the gateway so it appears in `/session` output |
+| `/session [id]` | With no argument: list available sessions. With an id: switch to that session and clear the chat display |
+| `/quit` | Exit the TUI |
+
+#### Gateway built-ins (require connection)
+
+| Command | Description |
+|---|---|
+| `/sessions` | List recent sessions with message counts and workspace paths |
+| `/tools` | List all tools available to the agent |
+| `/plugins` | List installed plugins (loaded count + version per plugin) |
+
+Output from gateway commands is rendered as a bulleted list in the chat panel.
+
+### Session Management
+
+The active session ID is always visible in the status bar (`session:<id>`). Every prompt
+submitted and every `/clear` applies to the active session only.
+
+- `/new` registers the session on the gateway immediately (before the first prompt), so it
+  appears in `/session` output right away.
+- `/session <id>` switches to an existing session but does **not** replay prior history into
+  the chat display (history replay is planned for a future release).
+- The `--session` CLI flag sets the initial session on startup. Session switches via `/new`
+  or `/session` persist for the lifetime of the TUI process only.
 
 ---
 
@@ -246,3 +296,6 @@ The binary has no runtime dependencies beyond the terminal itself.
   boundaries are accurate for standard Unicode but may be off by one for unusual combining
   sequences.
 - **History** — input history is in-memory only and does not persist across restarts.
+- **Session history on switch** — `/session <id>` switches the active session but does not
+  load prior conversation history into the chat panel. Only messages sent after switching
+  are shown.

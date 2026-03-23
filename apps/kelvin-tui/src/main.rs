@@ -1,8 +1,9 @@
 use std::env;
 
 mod app;
-mod ws_client;
+mod commands;
 mod ui;
+mod ws_client;
 
 #[derive(Debug, Clone)]
 pub struct CliConfig {

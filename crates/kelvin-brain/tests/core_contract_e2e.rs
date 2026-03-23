@@ -76,6 +76,11 @@ impl SessionStore for InMemorySessionStore {
             .cloned()
             .unwrap_or_default())
     }
+
+    async fn clear_history(&self, session_id: &str) -> KelvinResult<()> {
+        self.messages.write().await.remove(session_id);
+        Ok(())
+    }
 }
 
 #[derive(Default)]
