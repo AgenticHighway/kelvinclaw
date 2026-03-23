@@ -254,10 +254,11 @@ pub struct App {
     pub autocomplete_visible: bool,
     pub autocomplete_items: Vec<CompletionItem>,
     pub autocomplete_selected: usize,
+    pub session_id: String,
 }
 
 impl App {
-    pub fn new(gateway_url: String) -> Self {
+    pub fn new(gateway_url: String, session_id: String) -> Self {
         Self {
             chat: vec![ChatMessage::System("Connecting to gateway…".to_string())],
             tools: Vec::new(),
@@ -295,6 +296,7 @@ impl App {
             autocomplete_visible: false,
             autocomplete_items: Vec::new(),
             autocomplete_selected: 0,
+            session_id,
         }
     }
 
@@ -708,6 +710,14 @@ fn format_command_result(payload: &serde_json::Value) -> String {
             lines.join("\n")
         }
         "clear" => "Session history cleared.".to_string(),
+        "new" => {
+            let sid = payload.get("session_id").and_then(|v| v.as_str()).unwrap_or("?");
+            format!("New session created: {sid}")
+        }
+        "switch" => {
+            let sid = payload.get("session_id").and_then(|v| v.as_str()).unwrap_or("?");
+            format!("Switched to session: {sid}")
+        }
         _ => serde_json::to_string_pretty(payload).unwrap_or_else(|_| format!("{payload}")),
     }
 }
@@ -813,7 +823,7 @@ pub async fn run(config: CliConfig) -> Result<(), String> {
     let backend = CrosstermBackend::new(std::io::stdout());
     let mut terminal = Terminal::new(backend).map_err(|e| format!("terminal: {e}"))?;
 
-    let mut app = App::new(config.gateway_url.clone());
+    let mut app = App::new(config.gateway_url.clone(), config.session_id.clone());
     app.auth_token = config.auth_token.clone();
 
     let ws_result = WsClient::connect(&config.gateway_url, config.auth_token.clone(), tui_tx.clone()).await;
@@ -864,7 +874,7 @@ pub async fn run(config: CliConfig) -> Result<(), String> {
         }
     });
 
-    let result = run_loop(&mut terminal, &mut app, &mut tui_rx, tui_tx.clone(), ws_client, &config.session_id).await;
+    let result = run_loop(&mut terminal, &mut app, &mut tui_rx, tui_tx.clone(), ws_client).await;
 
     key_task.abort();
     tick_task.abort();
@@ -879,7 +889,6 @@ async fn run_loop(
     tui_rx: &mut mpsc::Receiver<TuiEvent>,
     tui_tx: mpsc::Sender<TuiEvent>,
     ws_client: Option<WsClient>,
-    session_id: &str,
 ) -> Result<(), String> {
     let mut ws_client = ws_client;
     loop {
@@ -967,7 +976,7 @@ async fn run_loop(
                                         if app.ws_status == WsStatus::Connected {
                                             if let Some(ref client) = ws_client {
                                                 let client = client.clone();
-                                                let sid = session_id.to_string();
+                                                let sid = app.session_id.clone();
                                                 let tx = tui_tx.clone();
                                                 tokio::spawn(async move {
                                                     let result = client.exec_command(
@@ -989,6 +998,91 @@ async fn run_loop(
                                         let text = app.command_registry.help_text();
                                         app.chat.push(ChatMessage::System(text));
                                     }
+                                    Some(SlashCommand::Local(LocalCommand::New)) => {
+                                        let new_id = if args.trim().is_empty() {
+                                            uuid::Uuid::new_v4().to_string()
+                                        } else {
+                                            args.trim().to_string()
+                                        };
+                                        app.session_id = new_id.clone();
+                                        app.chat.clear();
+                                        app.tools.clear();
+                                        app.chat.push(ChatMessage::System(
+                                            format!("Switched to new session: {new_id}")
+                                        ));
+                                        if app.ws_status == WsStatus::Connected {
+                                            if let Some(ref client) = ws_client {
+                                                let client = client.clone();
+                                                let sid = new_id.clone();
+                                                let tx = tui_tx.clone();
+                                                tokio::spawn(async move {
+                                                    let result = client.exec_command(
+                                                        "new",
+                                                        serde_json::json!({ "session_id": sid }),
+                                                        &sid,
+                                                    ).await;
+                                                    if let Err(e) = result {
+                                                        let _ = tx.send(TuiEvent::CommandResult(
+                                                            Err(format!("/new failed on gateway: {e}"))
+                                                        )).await;
+                                                    }
+                                                });
+                                            }
+                                        }
+                                    }
+                                    Some(SlashCommand::Local(LocalCommand::Session)) => {
+                                        if args.trim().is_empty() {
+                                            // No args: list sessions.
+                                            app.chat.push(ChatMessage::User(prompt.clone()));
+                                            if app.ws_status == WsStatus::Connected {
+                                                if let Some(ref client) = ws_client {
+                                                    let client = client.clone();
+                                                    let sid = app.session_id.clone();
+                                                    let tx = tui_tx.clone();
+                                                    tokio::spawn(async move {
+                                                        let result = client.exec_command(
+                                                            "sessions",
+                                                            serde_json::Value::Null,
+                                                            &sid,
+                                                        ).await;
+                                                        let _ = tx.send(TuiEvent::CommandResult(result)).await;
+                                                    });
+                                                }
+                                            } else {
+                                                app.chat.push(ChatMessage::System(
+                                                    "not connected to gateway".to_string()
+                                                ));
+                                            }
+                                        } else {
+                                            // With args: switch to named session.
+                                            let target_id = args.trim().to_string();
+                                            app.session_id = target_id.clone();
+                                            app.chat.clear();
+                                            app.tools.clear();
+                                            app.chat.push(ChatMessage::System(
+                                                format!("Switched to session: {target_id}")
+                                            ));
+                                            if app.ws_status == WsStatus::Connected {
+                                                if let Some(ref client) = ws_client {
+                                                    let client = client.clone();
+                                                    let sid = target_id.clone();
+                                                    let tx = tui_tx.clone();
+                                                    tokio::spawn(async move {
+                                                        let result = client.exec_command(
+                                                            "switch",
+                                                            serde_json::json!({ "session_id": sid }),
+                                                            &sid,
+                                                        ).await;
+                                                        if let Err(e) = result {
+                                                            let _ = tx.send(TuiEvent::CommandResult(
+                                                                Err(format!("/session switch failed: {e}"))
+                                                            )).await;
+                                                        }
+                                                    });
+                                                }
+                                            }
+                                        }
+                                    }
                                     Some(SlashCommand::Remote { name }) => {
                                         app.chat.push(ChatMessage::User(prompt.clone()));
                                         app.tools_pinned = true;
@@ -998,7 +1092,7 @@ async fn run_loop(
                                             app.chat.push(ChatMessage::System("not connected to gateway".to_string()));
                                         } else if let Some(ref client) = ws_client {
                                             let client = client.clone();
-                                            let session_id = session_id.to_string();
+                                            let session_id = app.session_id.clone();
                                             let tx = tui_tx.clone();
                                             let args_value = if args.is_empty() {
                                                 serde_json::Value::Null
@@ -1027,7 +1121,7 @@ async fn run_loop(
                                     app.chat.push(ChatMessage::System("not connected to gateway".to_string()));
                                 } else if let Some(ref client) = ws_client {
                                     let client = client.clone();
-                                    let session_id = session_id.to_string();
+                                    let session_id = app.session_id.clone();
                                     let tx = tui_tx.clone();
                                     tokio::spawn(async move {
                                         let result = client.submit_prompt(&prompt, &session_id).await;

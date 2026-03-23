@@ -1172,6 +1172,14 @@ impl KelvinSdkRuntime {
         self.session_store.clear_history(session_id).await
     }
 
+    pub async fn upsert_session(&self, session: SessionDescriptor) -> KelvinResult<()> {
+        self.session_store.upsert_session(session).await
+    }
+
+    pub fn default_workspace_dir(&self) -> &Path {
+        &self.default_workspace_dir
+    }
+
     pub fn state_dir(&self) -> Option<&Path> {
         self.persistence.state_dir.as_deref()
     }

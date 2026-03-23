@@ -19,7 +19,7 @@ use channels::{
 };
 use futures_util::{SinkExt, StreamExt};
 pub use ingress::GatewayIngressConfig;
-use kelvin_core::{now_ms, KelvinError, RunOutcome, SlashCommandMeta};
+use kelvin_core::{now_ms, KelvinError, RunOutcome, SessionDescriptor, SlashCommandMeta};
 use kelvin_sdk::{
     KelvinSdkAcceptedRun, KelvinSdkRunRequest, KelvinSdkRuntime, KelvinSdkRuntimeConfig,
 };
@@ -1307,6 +1307,12 @@ struct CommandExecParams {
 fn builtin_commands() -> Vec<SlashCommandMeta> {
     vec![
         SlashCommandMeta {
+            name: "new".to_string(),
+            description: "Create a new session".to_string(),
+            usage: Some("[name]".to_string()),
+            category: "session".to_string(),
+        },
+        SlashCommandMeta {
             name: "clear".to_string(),
             description: "Clear session history".to_string(),
             usage: None,
@@ -1351,6 +1357,20 @@ async fn command_exec_payload(
 ) -> Result<Value, KelvinError> {
     let name = params.command.trim().trim_start_matches('/');
     match name {
+        "new" => {
+            let session_id = params.session_id.as_deref().unwrap_or("main");
+            let workspace_dir = runtime.default_workspace_dir().to_string_lossy().to_string();
+            runtime.upsert_session(SessionDescriptor {
+                session_id: session_id.to_string(),
+                session_key: session_id.to_string(),
+                workspace_dir,
+            }).await?;
+            Ok(json!({ "command": "new", "session_id": session_id }))
+        }
+        "switch" => {
+            let session_id = params.session_id.as_deref().unwrap_or("main");
+            Ok(json!({ "command": "switch", "session_id": session_id }))
+        }
         "clear" => {
             let session_id = params.session_id.as_deref().unwrap_or("main");
             runtime.clear_session_history(session_id).await?;

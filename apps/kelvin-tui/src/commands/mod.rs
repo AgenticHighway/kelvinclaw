@@ -23,6 +23,8 @@ pub enum LocalCommand {
     Quit,
     Clear,
     Help,
+    New,
+    Session,
 }
 
 /// A resolved command ready for dispatch.
@@ -88,6 +90,24 @@ impl Default for MergedCommandRegistry {
                     description: "Clear session history and chat display".to_string(),
                     usage: None,
                     category: "system".to_string(),
+                },
+            ),
+            (
+                LocalCommand::New,
+                CompletionItem {
+                    name: "new".to_string(),
+                    description: "Create a new session".to_string(),
+                    usage: Some("[name]".to_string()),
+                    category: "session".to_string(),
+                },
+            ),
+            (
+                LocalCommand::Session,
+                CompletionItem {
+                    name: "session".to_string(),
+                    description: "List or switch sessions".to_string(),
+                    usage: Some("[id]".to_string()),
+                    category: "session".to_string(),
                 },
             ),
             (
@@ -210,7 +230,7 @@ mod tests {
     #[test]
     fn completions_empty_prefix_returns_all_local() {
         let reg = MergedCommandRegistry::default();
-        assert_eq!(reg.completions("").len(), 3); // help, clear, quit
+        assert_eq!(reg.completions("").len(), 5); // help, clear, new, session, quit
     }
 
     #[test]
@@ -218,6 +238,20 @@ mod tests {
         let reg = MergedCommandRegistry::default();
         let cmd = reg.resolve("quit");
         assert!(matches!(cmd, Some(SlashCommand::Local(LocalCommand::Quit))));
+    }
+
+    #[test]
+    fn resolve_local_new() {
+        let reg = MergedCommandRegistry::default();
+        let cmd = reg.resolve("new");
+        assert!(matches!(cmd, Some(SlashCommand::Local(LocalCommand::New))));
+    }
+
+    #[test]
+    fn resolve_local_session() {
+        let reg = MergedCommandRegistry::default();
+        let cmd = reg.resolve("session");
+        assert!(matches!(cmd, Some(SlashCommand::Local(LocalCommand::Session))));
     }
 
     #[test]
