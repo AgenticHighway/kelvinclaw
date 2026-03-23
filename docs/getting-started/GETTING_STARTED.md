@@ -24,7 +24,7 @@ cp .env.example .env
 
 Open `.env` and configure your settings.
 
-We recommned generating a gateway token using `openssl rand -hex 32`
+We recommend generating a gateway token using `openssl rand -hex 32`
 
 ```bash
 KELVIN_GATEWAY_TOKEN=<a-secret-token-you-choose>
