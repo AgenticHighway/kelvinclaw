@@ -32,8 +32,7 @@ pub extern "C" fn dealloc(_ptr: i32, _len: i32) {}
 #[no_mangle]
 pub extern "C" fn infer(req_ptr: i32, req_len: i32) -> i64 {
     let input = unsafe {
-        let ptr = core::ptr::addr_of!(HEAP).cast::<u8>().add(req_ptr as usize);
-        core::slice::from_raw_parts(ptr, req_len as usize)
+        core::slice::from_raw_parts(req_ptr as *const u8, req_len as usize)
     };
 
     let prompt = extract_str_field(input, b"user_prompt").unwrap_or(b"(no prompt)");
@@ -43,8 +42,7 @@ pub extern "C" fn infer(req_ptr: i32, req_len: i32) -> i64 {
     let out_ptr = alloc(out.len() as i32);
     if out_ptr == 0 { return 0; }
     unsafe {
-        let dst = core::ptr::addr_of_mut!(HEAP).cast::<u8>().add(out_ptr as usize);
-        core::ptr::copy_nonoverlapping(out.as_ptr(), dst, out.len());
+        core::ptr::copy_nonoverlapping(out.as_ptr(), out_ptr as *mut u8, out.len());
     }
     ((out_ptr as i64) << 32) | (out.len() as i64)
 }
@@ -57,7 +55,7 @@ fn extract_str_field<'a>(json: &'a [u8], field: &[u8]) -> Option<&'a [u8]> {
     needle[ni] = b'"'; ni += 1;
     needle[ni] = b':'; ni += 1;
     needle[ni] = b'"'; ni += 1;
-    let needle = &needle[..ni + 1];
+    let needle = &needle[..ni];
 
     let pos = find_bytes(json, needle)?;
     let start = pos + needle.len();
@@ -83,7 +81,7 @@ fn build_output(prompt_bytes: &[u8]) -> &'static [u8] {
     let ptr = alloc(total as i32) as usize;
 
     unsafe {
-        let base = core::ptr::addr_of_mut!(HEAP).cast::<u8>().add(ptr);
+        let base = ptr as *mut u8;
         let mut offset = 0;
         core::ptr::copy_nonoverlapping(TEMPLATE_PRE.as_ptr(), base.add(offset), TEMPLATE_PRE.len());
         offset += TEMPLATE_PRE.len();
