@@ -124,6 +124,13 @@ Successful `connect` responses include:
   - params: `session_id`, optional `limit`
 - `operator.plugins.inspect`
   - params: none
+- `commands.list`
+  - params: none
+  - returns: `commands` array of `{name, description, usage, category}`
+- `command.exec`
+  - params: `command` (name without leading `/`), optional `args`, optional `session_id`
+  - executes a named gateway built-in command and returns a command-specific payload
+  - built-in commands: `new`, `switch`, `clear`, `tools`, `sessions`, `plugins`
 - `schedule.list`
   - params: none
 - `schedule.history`
