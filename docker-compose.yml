@@ -16,6 +16,9 @@ services:
       - kelvin-home:/kelvin
     networks:
       - kelvin-network
+    depends_on:
+      kelvin-init:
+        condition: service_completed_successfully
 
   # Init container — installs required plugins into the shared kelvin-home volume
   # before the gateway starts. Uses KELVIN_MODEL_PROVIDER (default: kelvin.echo).
