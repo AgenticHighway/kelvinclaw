@@ -1300,6 +1300,7 @@ fn is_supported_method(method: &str) -> bool {
 struct CommandExecParams {
     command: String,
     #[serde(default)]
+    #[allow(dead_code)] // reserved for parameterized commands (e.g. /model <provider>)
     args: Value,
     session_id: Option<String>,
 }

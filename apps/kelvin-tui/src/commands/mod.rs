@@ -7,11 +7,13 @@ pub struct CompletionItem {
     pub name: String,
     pub description: String,
     pub usage: Option<String>,
+    #[allow(dead_code)] // reserved for grouped autocomplete UI
     pub category: String,
 }
 
 impl CompletionItem {
     /// Display label shown in the popup: "/name – description".
+    #[allow(dead_code)] // reserved for autocomplete rendering
     pub fn label(&self) -> String {
         format!("/{} – {}", self.name, self.description)
     }
