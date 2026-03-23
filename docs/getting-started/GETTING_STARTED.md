@@ -3,80 +3,58 @@
 KelvinClaw supports three onboarding tracks based on user experience level.
 Each track has a verification command so the setup can be validated immediately.
 
-## Release Quickstart (Validated Public Onboarding)
+## Docker Compose Setup (Validated Onboarding)
 
-Use this if you want the fastest path from a public release bundle to a real
-model-backed run.
-
-Validated path:
-
-- fresh `ubuntu:24.04`
-- install `curl` and `ca-certificates`
-- download the public GitHub Release bundle
-- put your provider API key in `./.env`
-- run `./kelvin`
+The validated method for running KelvinClaw is Docker Compose.
 
 Prerequisites:
 
-- `curl`
-- `tar`
-- `awk`
-- `ca-certificates` on minimal Linux images
+- `git`
+- `docker` (with Compose v2)
 
-Release artifact types:
-
-- Linux: `.tar.gz` bundles and `.deb` packages
-- macOS: `.tar.gz` bundles
-- Windows: `.zip` bundles
-
-The fully validated onboarding flow today is Linux-based.
-
-Current public release page:
-
-- [GitHub Releases](https://github.com/AgenticHighway/kelvinclaw/releases/latest)
-
-### OpenAI Setup
-
-Example for Linux arm64 with OpenAI:
+Steps:
 
 ```bash
-apt-get update && apt-get install -y curl ca-certificates
-curl -fsSL -O https://github.com/AgenticHighway/kelvinclaw/releases/download/v0.1.8/kelvinclaw-0.1.8-linux-arm64.tar.gz
-curl -fsSL -O https://github.com/AgenticHighway/kelvinclaw/releases/download/v0.1.8/kelvinclaw-0.1.8-linux-arm64.tar.gz.sha256
-sha256sum -c kelvinclaw-0.1.8-linux-arm64.tar.gz.sha256
-tar -xzf kelvinclaw-0.1.8-linux-arm64.tar.gz
-cd kelvinclaw-0.1.8-linux-arm64
-printf 'OPENAI_API_KEY=%s\n' '<your_key>' > .env
-./kelvin
+git clone https://github.com/AgenticHighway/kelvinclaw.git
+cd kelvinclaw
+cp .env.example .env
 ```
 
-Example for Linux x86_64 with OpenAI:
+### Minimum `.env`
+
+Open `.env` and configure your settings.
+
+We recommned generating a gateway token using `openssl rand -hex 32`
 
 ```bash
-apt-get update && apt-get install -y curl ca-certificates
-curl -fsSL -O https://github.com/AgenticHighway/kelvinclaw/releases/download/v0.1.8/kelvinclaw-0.1.8-linux-x86_64.tar.gz
-curl -fsSL -O https://github.com/AgenticHighway/kelvinclaw/releases/download/v0.1.8/kelvinclaw-0.1.8-linux-x86_64.tar.gz.sha256
-sha256sum -c kelvinclaw-0.1.8-linux-x86_64.tar.gz.sha256
-tar -xzf kelvinclaw-0.1.8-linux-x86_64.tar.gz
-cd kelvinclaw-0.1.8-linux-x86_64
-printf 'OPENAI_API_KEY=%s\n' '<your_key>' > .env
-./kelvin
+KELVIN_GATEWAY_TOKEN=<a-secret-token-you-choose>
 ```
 
-### Expected Result
+For OpenAI:
 
-- `./kelvin` fetches the official trust policy
-- `kelvin.cli@0.1.1` installs automatically
-- Model provider plugin (OpenAI) installs automatically when the OPENAI_API_KEY variable is available
-- the no-args run completes with your chosen provider and model
+```bash
+KELVIN_MODEL_PROVIDER=kelvin.openai
+OPENAI_API_KEY=<your-key>
+```
 
-### Supported Key Inputs
+For Anthropic:
 
-For **OpenAI**:
-- export `OPENAI_API_KEY` in the shell before running `./kelvin`
-- put `OPENAI_API_KEY=...` in `./.env.local`
-- put `OPENAI_API_KEY=...` in `~/.kelvinclaw/.env` or `~/.kelvinclaw/.env.local`
-- in an interactive terminal, `./kelvin` prompts once if no key is configured
+```bash
+KELVIN_MODEL_PROVIDER=kelvin.anthropic
+ANTHROPIC_API_KEY=<your-key>
+```
+
+Start the host and gateway:
+
+```bash
+docker compose up -d
+```
+
+Launch the TUI:
+
+```bash
+docker compose run kelvin-tui
+```
 
 ## Canonical Quick Start (Daily Driver MVP)
 

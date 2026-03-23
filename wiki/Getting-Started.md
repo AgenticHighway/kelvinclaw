@@ -2,6 +2,43 @@
 
 KelvinClaw supports three practical onboarding tracks: daily-driver operator use, Rust runtime development, and Rust plus WASM plugin authoring.
 
+## Docker Compose Setup (Validated Onboarding)
+
+The validated method for running KelvinClaw is Docker Compose.
+
+Prerequisites:
+
+- `git`
+- `docker` (with Compose v2)
+
+Steps:
+
+```bash
+git clone https://github.com/AgenticHighway/kelvinclaw.git
+cd kelvinclaw
+cp .env.example .env
+```
+
+Open `.env` and configure your settings. At minimum:
+
+```bash
+KELVIN_GATEWAY_TOKEN=<a-secret-token-you-choose>
+KELVIN_MODEL_PROVIDER=kelvin.anthropic   # or kelvin.echo for no-API testing
+ANTHROPIC_API_KEY=<your-key>             # required if using kelvin.anthropic
+```
+
+Start the host and gateway:
+
+```bash
+docker compose up -d
+```
+
+Launch the TUI:
+
+```bash
+docker compose run kelvin-tui
+```
+
 ## Quick Start Paths
 
 Daily-driver local profile:
