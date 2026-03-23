@@ -4,6 +4,8 @@ use std::sync::{Arc, RwLock};
 use semver::Version;
 use serde::{Deserialize, Serialize};
 
+use serde_json::Value;
+
 use crate::{
     EventSink, KelvinError, KelvinResult, MemorySearchManager, ModelProvider, SessionStore, Tool,
     ToolRegistry,
@@ -29,6 +31,41 @@ pub enum PluginCapability {
     FsWrite,
     NetworkEgress,
     CommandExecution,
+    CommandProvider,
+}
+
+/// Metadata describing a single slash command provided by the gateway or a plugin.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct SlashCommandMeta {
+    pub name: String,
+    pub description: String,
+    pub usage: Option<String>,
+    pub category: String,
+}
+
+/// Context passed to a command handler during execution.
+#[derive(Debug, Clone)]
+pub struct CommandContext {
+    pub session_id: String,
+    pub workspace_dir: String,
+}
+
+/// The result returned by a command execution.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CommandOutput {
+    pub message: String,
+    pub data: Option<Value>,
+}
+
+/// Trait implemented by plugins that provide slash commands.
+pub trait CommandProvider: Send + Sync {
+    fn list_commands(&self) -> Vec<SlashCommandMeta>;
+    fn execute_command(
+        &self,
+        name: &str,
+        args: Value,
+        ctx: CommandContext,
+    ) -> KelvinResult<CommandOutput>;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -374,6 +411,10 @@ pub trait PluginFactory: Send + Sync {
     }
 
     fn event_sink(&self) -> Option<Arc<dyn EventSink>> {
+        None
+    }
+
+    fn command_provider(&self) -> Option<Arc<dyn CommandProvider>> {
         None
     }
 }

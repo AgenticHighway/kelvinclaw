@@ -1020,6 +1020,7 @@ pub struct KelvinSdkRuntime {
     event_tx: broadcast::Sender<AgentEvent>,
     persistence: RuntimePersistence,
     scheduler_store: Arc<SchedulerStore>,
+    tool_registry: Arc<dyn ToolRegistry>,
 }
 
 impl KelvinSdkRuntime {
@@ -1130,7 +1131,7 @@ impl KelvinSdkRuntime {
             config.load_installed_plugins,
         )?;
         let brain = Arc::new(
-            KelvinBrain::new(session_store, memory, model, tools, event_sink)
+            KelvinBrain::new(session_store, memory, model, tools.clone(), event_sink)
                 .with_max_tool_iterations(config.max_tool_iterations),
         );
         let runtime = CoreRuntime::new(brain);
@@ -1145,11 +1146,16 @@ impl KelvinSdkRuntime {
             event_tx,
             persistence,
             scheduler_store,
+            tool_registry: tools,
         })
     }
 
     pub fn loaded_installed_plugins(&self) -> usize {
         self.loaded_installed_plugins
+    }
+
+    pub fn tool_definitions(&self) -> Vec<kelvin_core::ToolDefinition> {
+        self.tool_registry.definitions()
     }
 
     pub fn state_dir(&self) -> Option<&Path> {

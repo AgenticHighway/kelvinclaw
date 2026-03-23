@@ -5,10 +5,11 @@ use ratatui::{
 
 use crate::app::App;
 
+mod autocomplete;
 mod chat;
-mod tools;
 mod input;
 mod status;
+mod tools;
 
 /// How many visual lines the current input occupies inside the box.
 /// `inner_width` = box width minus 2 border columns.
@@ -51,6 +52,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
         tools::render(f, app, chunks[1]);
         input::render(f, &*app, chunks[2]);
         status::render(f, &*app, chunks[3]);
+        autocomplete::render(f, &*app, chunks[2]);
     } else {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
@@ -66,5 +68,6 @@ pub fn render(f: &mut Frame, app: &mut App) {
         chat::render(f, app, chunks[0]);
         input::render(f, &*app, chunks[1]);
         status::render(f, &*app, chunks[2]);
+        autocomplete::render(f, &*app, chunks[1]);
     }
 }

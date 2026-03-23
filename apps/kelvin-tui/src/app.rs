@@ -15,7 +15,12 @@ use tokio::time::interval;
 
 use unicode_width::UnicodeWidthChar;
 
-use crate::{ui, ws_client::WsClient, CliConfig};
+use crate::{
+    commands::{CompletionItem, LocalCommand, MergedCommandRegistry, SlashCommand},
+    ui,
+    ws_client::WsClient,
+    CliConfig,
+};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct AgentEvent {
@@ -83,6 +88,8 @@ pub enum TuiEvent {
     Mouse(crossterm::event::MouseEvent),
     SubmitResult(Result<String, String>),
     Reconnected(Result<WsClient, String>),
+    CommandsLoaded(Result<serde_json::Value, String>),
+    CommandResult(Result<serde_json::Value, String>),
     Tick,
 }
 
@@ -243,6 +250,10 @@ pub struct App {
     pub chat_line_map: Vec<(usize, usize)>, // visual_row -> (content_line_idx, char_start_col)
     pub chat_line_info: Vec<ChatLineInfo>,
     pub chat_line_texts: Vec<String>,       // per content line, prefix stripped (empty for separators)
+    pub command_registry: MergedCommandRegistry,
+    pub autocomplete_visible: bool,
+    pub autocomplete_items: Vec<CompletionItem>,
+    pub autocomplete_selected: usize,
 }
 
 impl App {
@@ -280,6 +291,10 @@ impl App {
             chat_line_map: Vec::new(),
             chat_line_info: Vec::new(),
             chat_line_texts: Vec::new(),
+            command_registry: MergedCommandRegistry::default(),
+            autocomplete_visible: false,
+            autocomplete_items: Vec::new(),
+            autocomplete_selected: 0,
         }
     }
 
@@ -621,6 +636,51 @@ fn is_word_char(c: char) -> bool {
     c.is_alphanumeric() || c == '_'
 }
 
+/// Update the autocomplete popup based on the current input.
+fn update_autocomplete(app: &mut App) {
+    // Only trigger if input starts with '/' and cursor is still in the command name
+    // (i.e., no space has been typed yet after the command name).
+    if app.input.starts_with('/') {
+        let after_slash = &app.input[1..];
+        if !after_slash.contains(' ') {
+            let items = app.command_registry.completions(after_slash);
+            app.autocomplete_visible = !items.is_empty();
+            // Clamp selected index.
+            if app.autocomplete_selected >= items.len() {
+                app.autocomplete_selected = 0;
+            }
+            app.autocomplete_items = items;
+            return;
+        }
+    }
+    app.autocomplete_visible = false;
+    app.autocomplete_items.clear();
+    app.autocomplete_selected = 0;
+}
+
+/// Format a command result payload into a readable string for the chat.
+fn format_command_result(payload: &serde_json::Value) -> String {
+    let command = payload.get("command").and_then(|v| v.as_str()).unwrap_or("?");
+    match command {
+        "tools" => {
+            let count = payload.get("count").and_then(|v| v.as_u64()).unwrap_or(0);
+            let mut lines = vec![format!("Tools ({count}):") ];
+            if let Some(tools) = payload.get("tools").and_then(|v| v.as_array()) {
+                for tool in tools {
+                    let name = tool.get("name").and_then(|v| v.as_str()).unwrap_or("?");
+                    let desc = tool.get("description").and_then(|v| v.as_str()).unwrap_or("");
+                    lines.push(format!("  {name} — {desc}"));
+                }
+            }
+            lines.join("\n")
+        }
+        "sessions" | "plugins" => {
+            serde_json::to_string_pretty(payload).unwrap_or_else(|_| format!("{payload}"))
+        }
+        _ => serde_json::to_string_pretty(payload).unwrap_or_else(|_| format!("{payload}")),
+    }
+}
+
 fn word_left(s: &str, pos: usize) -> usize {
     let mut current = pos;
     for c in s[..current].chars().rev() {
@@ -731,6 +791,13 @@ pub async fn run(config: CliConfig) -> Result<(), String> {
             app.ws_status = WsStatus::Connected;
             app.chat.clear();
             app.chat.push(ChatMessage::System(format!("Connected to {}", config.gateway_url)));
+            // Fetch available commands from the gateway.
+            let fetch_client = client.clone();
+            let tx = tui_tx.clone();
+            tokio::spawn(async move {
+                let result = fetch_client.list_commands().await;
+                let _ = tx.send(TuiEvent::CommandsLoaded(result)).await;
+            });
             Some(client)
         }
         Err(e) => {
@@ -819,10 +886,26 @@ async fn run_loop(
                         }
                     }
                     KeyCode::Esc => {
-                        app.selection = None;
+                        if app.autocomplete_visible {
+                            app.autocomplete_visible = false;
+                            app.autocomplete_items.clear();
+                            app.autocomplete_selected = 0;
+                        } else {
+                            app.selection = None;
+                        }
                     }
                     KeyCode::Enter => {
-                        if !app.input.trim().is_empty() {
+                        // Accept autocomplete selection if popup is open.
+                        if app.autocomplete_visible
+                            && app.autocomplete_selected < app.autocomplete_items.len()
+                        {
+                            let name = app.autocomplete_items[app.autocomplete_selected].name.clone();
+                            app.input = format!("/{name} ");
+                            app.cursor_pos = app.input.len();
+                            app.autocomplete_visible = false;
+                            app.autocomplete_items.clear();
+                            app.autocomplete_selected = 0;
+                        } else if !app.input.trim().is_empty() {
                             let prompt = app.input.clone();
                             app.input_history.push(prompt.clone());
                             const MAX_INPUT_HISTORY: usize = 500;
@@ -831,27 +914,75 @@ async fn run_loop(
                             }
                             app.history_idx = None;
                             app.history_saved.clear();
-                            app.chat.push(ChatMessage::User(prompt.clone()));
                             app.chat_pinned = true;
                             app.input.clear();
                             app.cursor_pos = 0;
                             app.paste_markers.clear();
-                            app.tools_pinned = true;
-                            app.tools_scroll = 0;
-                            app.run_phase = None;
+                            app.autocomplete_visible = false;
+                            app.autocomplete_items.clear();
+                            app.autocomplete_selected = 0;
 
-                            if app.ws_status != WsStatus::Connected {
-                                app.chat.push(ChatMessage::System("not connected to gateway".to_string()));
-                            } else if let Some(ref client) = ws_client {
-                                let client = client.clone();
-                                let session_id = session_id.to_string();
-                                let tx = tui_tx.clone();
-                                tokio::spawn(async move {
-                                    let result = client.submit_prompt(&prompt, &session_id).await;
-                                    let _ = tx.send(TuiEvent::SubmitResult(result)).await;
-                                });
+                            // Dispatch slash commands; send everything else as a prompt.
+                            if let Some((cmd_name, args)) = crate::commands::parse_slash_input(&prompt) {
+                                match app.command_registry.resolve(&cmd_name) {
+                                    Some(SlashCommand::Local(LocalCommand::Quit)) => {
+                                        app.should_quit = true;
+                                    }
+                                    Some(SlashCommand::Local(LocalCommand::Clear)) => {
+                                        app.chat.clear();
+                                        app.tools.clear();
+                                    }
+                                    Some(SlashCommand::Local(LocalCommand::Help)) => {
+                                        let text = app.command_registry.help_text();
+                                        app.chat.push(ChatMessage::System(text));
+                                    }
+                                    Some(SlashCommand::Remote { name }) => {
+                                        app.chat.push(ChatMessage::User(prompt.clone()));
+                                        app.tools_pinned = true;
+                                        app.tools_scroll = 0;
+                                        app.run_phase = None;
+                                        if app.ws_status != WsStatus::Connected {
+                                            app.chat.push(ChatMessage::System("not connected to gateway".to_string()));
+                                        } else if let Some(ref client) = ws_client {
+                                            let client = client.clone();
+                                            let session_id = session_id.to_string();
+                                            let tx = tui_tx.clone();
+                                            let args_value = if args.is_empty() {
+                                                serde_json::Value::Null
+                                            } else {
+                                                serde_json::Value::String(args)
+                                            };
+                                            tokio::spawn(async move {
+                                                let result = client.exec_command(&name, args_value, &session_id).await;
+                                                let _ = tx.send(TuiEvent::CommandResult(result)).await;
+                                            });
+                                        }
+                                    }
+                                    None => {
+                                        app.chat.push(ChatMessage::System(format!(
+                                            "Unknown command: /{cmd_name} — type /help for available commands"
+                                        )));
+                                    }
+                                }
                             } else {
-                                app.chat.push(ChatMessage::System("not connected to gateway".to_string()));
+                                // Regular prompt — send to agent.
+                                app.chat.push(ChatMessage::User(prompt.clone()));
+                                app.tools_pinned = true;
+                                app.tools_scroll = 0;
+                                app.run_phase = None;
+                                if app.ws_status != WsStatus::Connected {
+                                    app.chat.push(ChatMessage::System("not connected to gateway".to_string()));
+                                } else if let Some(ref client) = ws_client {
+                                    let client = client.clone();
+                                    let session_id = session_id.to_string();
+                                    let tx = tui_tx.clone();
+                                    tokio::spawn(async move {
+                                        let result = client.submit_prompt(&prompt, &session_id).await;
+                                        let _ = tx.send(TuiEvent::SubmitResult(result)).await;
+                                    });
+                                } else {
+                                    app.chat.push(ChatMessage::System("not connected to gateway".to_string()));
+                                }
                             }
                         }
                     }
@@ -866,12 +997,28 @@ async fn run_loop(
                         app.cursor_pos += c.len_utf8();
                         #[cfg(debug_assertions)]
                         assert_markers_valid(&app.input, &app.paste_markers);
+                        update_autocomplete(app);
+                    }
+                    KeyCode::Tab => {
+                        if app.autocomplete_visible && !app.autocomplete_items.is_empty() {
+                            app.autocomplete_selected =
+                                (app.autocomplete_selected + 1) % app.autocomplete_items.len();
+                        }
+                    }
+                    KeyCode::BackTab => {
+                        if app.autocomplete_visible && !app.autocomplete_items.is_empty() {
+                            app.autocomplete_selected = app.autocomplete_selected
+                                .checked_sub(1)
+                                .unwrap_or(app.autocomplete_items.len() - 1);
+                        }
                     }
                     KeyCode::Backspace => {
                         app.do_backspace();
+                        update_autocomplete(app);
                     }
                     KeyCode::Delete => {
                         app.do_delete();
+                        update_autocomplete(app);
                     }
                     KeyCode::Left if key.modifiers.contains(KeyModifiers::CONTROL) => {
                         let new_pos = word_left(&app.input, app.cursor_pos);
@@ -1101,6 +1248,13 @@ async fn run_loop(
             TuiEvent::Reconnected(result) => {
                 match result {
                     Ok(client) => {
+                        // Re-fetch commands after reconnect.
+                        let fetch_client = client.clone();
+                        let tx = tui_tx.clone();
+                        tokio::spawn(async move {
+                            let result = fetch_client.list_commands().await;
+                            let _ = tx.send(TuiEvent::CommandsLoaded(result)).await;
+                        });
                         ws_client = Some(client);
                         app.reconnecting = false;
                         app.ws_status = WsStatus::Connected;
@@ -1110,6 +1264,23 @@ async fn run_loop(
                         // reconnect task is still running with backoff, nothing to do here
                     }
                 }
+            }
+            TuiEvent::CommandsLoaded(result) => {
+                if let Ok(payload) = result {
+                    app.command_registry.set_remote(&payload);
+                }
+            }
+            TuiEvent::CommandResult(result) => {
+                match result {
+                    Ok(payload) => {
+                        let msg = format_command_result(&payload);
+                        app.chat.push(ChatMessage::System(msg));
+                    }
+                    Err(e) => {
+                        app.chat.push(ChatMessage::System(format!("command error: {e}")));
+                    }
+                }
+                app.run_phase = None;
             }
             TuiEvent::Resize(_, _) => {}
         }
