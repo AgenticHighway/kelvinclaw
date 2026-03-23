@@ -18,33 +18,53 @@ SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 KELVIN_MODEL_PROVIDER="${KELVIN_MODEL_PROVIDER:-kelvin.echo}"
 KELVIN_PLUGIN_HOME="${KELVIN_PLUGIN_HOME:-${KELVIN_HOME:-/kelvin}/plugins}"
 KELVIN_TRUST_POLICY_PATH="${KELVIN_TRUST_POLICY_PATH:-${KELVIN_HOME:-/kelvin}/trusted_publishers.json}"
+BUILTIN_PLUGIN_DIR="${BUILTIN_PLUGIN_DIR:-/opt/kelvin/plugins-builtin}"
 
 export KELVIN_PLUGIN_HOME
 export KELVIN_TRUST_POLICY_PATH
 
+# Install a first-party plugin from a source directory baked into the container image.
+install_builtin_plugin() {
+  local src_dir="$1"
+  local plugin_id; plugin_id="$(jq -r '.id' "${src_dir}/plugin.json")"
+  local plugin_version; plugin_version="$(jq -r '.version' "${src_dir}/plugin.json")"
+  local install_dir="${KELVIN_PLUGIN_HOME}/${plugin_id}/${plugin_version}"
+  if [[ -d "${install_dir}" ]]; then
+    echo "[gateway-plugin-init] ${plugin_id}@${plugin_version} already installed"
+    return 0
+  fi
+  mkdir -p "${install_dir}"
+  cp "${src_dir}/plugin.json" "${install_dir}/plugin.json"
+  cp -r "${src_dir}/payload" "${install_dir}/payload"
+  ln -sfn "${plugin_version}" "${KELVIN_PLUGIN_HOME}/${plugin_id}/current"
+  echo "[gateway-plugin-init] installed ${plugin_id}@${plugin_version} from built-in"
+}
+
 # Standard setup: creates dirs, installs kelvin.cli, writes setup marker.
 "${SCRIPTS_DIR}/kelvin-setup.sh" --non-interactive
+
+# Write a permissive trust policy if none exists. First-party plugins are unsigned_local;
+# signature enforcement is disabled until a signed distribution flow is in place.
+if [[ ! -f "${KELVIN_TRUST_POLICY_PATH}" ]]; then
+  mkdir -p "$(dirname "${KELVIN_TRUST_POLICY_PATH}")"
+  echo '{"require_signature":false,"publishers":[]}' > "${KELVIN_TRUST_POLICY_PATH}"
+  echo "[gateway-plugin-init] wrote permissive trust policy: ${KELVIN_TRUST_POLICY_PATH}"
+fi
 
 # Install the model-provider plugin if it requires a WASM plugin (not the built-in Echo).
 case "${KELVIN_MODEL_PROVIDER}" in
   kelvin.echo)
-    echo "[gateway-plugin-init] using built-in echo provider — no additional plugin required"
+    install_builtin_plugin "${BUILTIN_PLUGIN_DIR}/kelvin-echo-plugin"
     ;;
   kelvin.anthropic)
     if [[ -z "${ANTHROPIC_API_KEY:-}" ]]; then
       echo "[gateway-plugin-init] KELVIN_MODEL_PROVIDER=kelvin.anthropic but ANTHROPIC_API_KEY is not set" >&2
       exit 1
     fi
-    ANTHROPIC_PLUGIN_DIR="${KELVIN_PLUGIN_HOME}/kelvin.anthropic"
-    if [[ -d "${ANTHROPIC_PLUGIN_DIR}" ]]; then
-      echo "[gateway-plugin-init] kelvin.anthropic already installed: ${ANTHROPIC_PLUGIN_DIR}"
-    else
-      echo "[gateway-plugin-init] installing kelvin.anthropic plugin"
-      "${SCRIPTS_DIR}/plugin-index-install.sh" \
-        --plugin "kelvin.anthropic" \
-        --plugin-home "${KELVIN_PLUGIN_HOME}" \
-        --trust-policy-path "${KELVIN_TRUST_POLICY_PATH}"
-    fi
+    install_builtin_plugin "${BUILTIN_PLUGIN_DIR}/kelvin-anthropic-plugin"
+    ;;
+  kelvin.openrouter)
+    install_builtin_plugin "${BUILTIN_PLUGIN_DIR}/kelvin-openrouter-plugin"
     ;;
   *)
     echo "[gateway-plugin-init] KELVIN_MODEL_PROVIDER=${KELVIN_MODEL_PROVIDER} — ensure plugin is pre-installed in the plugin volume"

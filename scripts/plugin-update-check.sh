@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PLUGIN_HOME="${KELVIN_PLUGIN_HOME:-${HOME}/.kelvinclaw/plugins}"
-INDEX_URL="${KELVIN_PLUGIN_INDEX_URL:-https://raw.githubusercontent.com/agentichighway/kelvinclaw-plugins/main/index.json}"
+INDEX_URL="${KELVIN_PLUGIN_INDEX_URL:-}"
 REGISTRY_URL="${KELVIN_PLUGIN_REGISTRY_URL:-}"
 PLUGIN_ID=""
 OUTPUT_FORMAT="table"

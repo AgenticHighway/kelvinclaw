@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DEFAULT_INDEX_URL="https://raw.githubusercontent.com/agentichighway/kelvinclaw-plugins/main/index.json"
+DEFAULT_INDEX_URL=""
 INDEX_URL="${KELVIN_PLUGIN_INDEX_URL:-${DEFAULT_INDEX_URL}}"
 REGISTRY_URL="${KELVIN_PLUGIN_REGISTRY_URL:-}"
 PLUGIN_ID=""
@@ -14,7 +14,7 @@ Usage: scripts/plugin-discovery.sh [options]
 Query plugin registry index metadata/discovery endpoints.
 
 Options:
-  --index-url <url>   Registry index URL (default: kelvinclaw-plugins index.json)
+  --index-url <url>   Registry index URL (set $KELVIN_PLUGIN_INDEX_URL or use --index-url for a community index)
   --registry-url <url>
                       Hosted registry base URL (uses /v1/plugins endpoints)
   --plugin <id>       Filter by plugin id

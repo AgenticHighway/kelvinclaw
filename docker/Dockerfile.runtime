@@ -14,6 +14,20 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
     cargo build --release -p kelvin-host && \
     cp /work/target/release/kelvin-host /usr/local/bin/kelvin-host
 
+FROM rust:${RUST_VERSION}-${DEBIAN_FLAVOR} AS plugin-builder
+RUN apt-get update && apt-get install -y --no-install-recommends jq && rm -rf /var/lib/apt/lists/*
+RUN rustup target add wasm32-unknown-unknown
+WORKDIR /build
+COPY plugins/ ./plugins/
+RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,target=/usr/local/cargo/git,sharing=locked \
+    for plugin_dir in plugins/*/; do \
+      if [ -f "${plugin_dir}build.sh" ]; then \
+        echo "==> building plugin: ${plugin_dir}" && \
+        cd "/build/${plugin_dir}" && bash build.sh && cd /build; \
+      fi; \
+    done
+
 FROM debian:${DEBIAN_FLAVOR}-slim AS runtime
 WORKDIR /opt/kelvin
 
@@ -26,6 +40,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /usr/local/bin/kelvin-host /usr/local/bin/kelvin-host
+COPY --from=plugin-builder /build/plugins/ /opt/kelvin/plugins-builtin/
+COPY release/vendor/ /opt/kelvin/plugins-vendor/
 COPY scripts/plugin-install.sh /opt/kelvin/scripts/plugin-install.sh
 COPY scripts/plugin-index-install.sh /opt/kelvin/scripts/plugin-index-install.sh
 COPY scripts/kelvin-setup.sh /opt/kelvin/scripts/kelvin-setup.sh
