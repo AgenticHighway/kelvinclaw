@@ -34,6 +34,7 @@ services:
       KELVIN_TRUST_POLICY_PATH: /kelvin/trusted_publishers.json
       KELVIN_MODEL_PROVIDER: ${KELVIN_MODEL_PROVIDER:-kelvin.echo}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       RUST_LOG: ${RUST_LOG:-info}
     entrypoint: ["/opt/kelvin/scripts/gateway-plugin-init.sh"]
@@ -55,6 +56,7 @@ services:
       KELVIN_GATEWAY_TOKEN: ${KELVIN_GATEWAY_TOKEN:?KELVIN_GATEWAY_TOKEN must be set (see .env.example)}
       KELVIN_GATEWAY_INGRESS_BIND: "0.0.0.0:34618"
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       RUST_LOG: ${RUST_LOG:-info}
     command:
