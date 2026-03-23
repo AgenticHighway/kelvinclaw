@@ -68,4 +68,13 @@ if [[ "${found_plugin}" == "0" ]]; then
   echo "[gateway-plugin-init] no builtin plugin found with id '${KELVIN_MODEL_PROVIDER}' — ensure it is pre-installed in the plugin volume" >&2
 fi
 
+# Install all builtin tool plugins unconditionally.
+for manifest in "${BUILTIN_PLUGIN_DIR}"/*/plugin.json; do
+  [[ -f "${manifest}" ]] || continue
+  is_tool="$(jq -r '[.capabilities[] | select(. == "tool_provider")] | length > 0' "${manifest}")"
+  if [[ "${is_tool}" == "true" ]]; then
+    install_builtin_plugin "$(dirname "${manifest}")"
+  fi
+done
+
 echo "[gateway-plugin-init] init complete (model-provider=${KELVIN_MODEL_PROVIDER})"
