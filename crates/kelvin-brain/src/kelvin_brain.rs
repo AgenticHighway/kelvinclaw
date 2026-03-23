@@ -308,6 +308,10 @@ impl KelvinBrain {
             })
             .await?;
 
+        // Load prior history BEFORE appending the current user message so that
+        // iteration 0 can pass it as context without duplicating the user prompt.
+        let prior_history = self.session_store.history(&req.session_id).await?;
+
         self.session_store
             .append_message(&req.session_id, SessionMessage::user(req.prompt.clone()))
             .await?;
@@ -348,13 +352,15 @@ impl KelvinBrain {
         let mut loop_detector = ToolLoopDetector::new();
 
         loop {
-            let history = self
-                .session_store
-                .history(&req.session_id)
-                .await?
-                .into_iter()
-                .map(|message| format!("{:?}: {}", message.role, message.content))
-                .collect::<Vec<_>>();
+            // For iteration 0 use the prior-history snapshot (before the current user
+            // message was appended) so that user_prompt is the sole source of the
+            // current turn.  For subsequent iterations reload the full session so the
+            // model sees all intermediate assistant / tool messages.
+            let history = if iteration == 0 {
+                prior_history.clone()
+            } else {
+                self.session_store.history(&req.session_id).await?
+            };
 
             let user_prompt = if iteration == 0 {
                 req.prompt.clone()
@@ -424,13 +430,7 @@ impl KelvinBrain {
                 )
                 .await?;
 
-                let final_history = self
-                    .session_store
-                    .history(&req.session_id)
-                    .await?
-                    .into_iter()
-                    .map(|message| format!("{:?}: {}", message.role, message.content))
-                    .collect::<Vec<_>>();
+                let final_history = self.session_store.history(&req.session_id).await?;
 
                 let final_input = ModelInput {
                     run_id: req.run_id.clone(),

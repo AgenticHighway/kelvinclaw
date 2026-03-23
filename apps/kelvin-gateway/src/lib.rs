@@ -1545,6 +1545,8 @@ mod tests {
                 "channel.telegram.ingest",
                 "channel.telegram.pair.approve",
                 "channel.telegram.status",
+                "command.exec",
+                "commands.list",
                 "connect",
                 "health",
                 "operator.plugins.inspect",

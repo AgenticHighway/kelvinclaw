@@ -5,7 +5,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use kelvin_core::{
     KelvinError, KelvinResult, ModelInput, ModelProviderAuthScheme, ModelProviderProfile,
-    ModelProviderProtocolFamily, OPENAI_RESPONSES_PROFILE_ID,
+    ModelProviderProtocolFamily, SessionRole, OPENAI_RESPONSES_PROFILE_ID,
 };
 use serde_json::{json, Value};
 use url::Url;
@@ -178,13 +178,25 @@ fn decode_model_input_request(request: &Value) -> Option<ModelInput> {
     serde_json::from_value(request.clone()).ok()
 }
 
+fn render_history_line(role: &SessionRole, content: &str) -> String {
+    let label = match role {
+        SessionRole::User => "user",
+        SessionRole::Assistant => "assistant",
+        SessionRole::Tool => "tool",
+        SessionRole::System => "system",
+    };
+    format!("{label}: {content}")
+}
+
 fn render_model_prompt(input: &ModelInput) -> String {
     let mut sections = Vec::new();
     if !input.history.is_empty() {
-        sections.push(format!(
-            "Conversation history:\n{}",
-            input.history.join("\n")
-        ));
+        let lines: Vec<String> = input
+            .history
+            .iter()
+            .map(|m| render_history_line(&m.role, &m.content))
+            .collect();
+        sections.push(format!("Conversation history:\n{}", lines.join("\n")));
     }
     if !input.memory_snippets.is_empty() {
         sections.push(format!(
@@ -224,16 +236,54 @@ fn model_input_to_openai_request(input: &ModelInput, model_name: &str) -> Value 
     payload
 }
 
+/// Map a `SessionRole` to the Anthropic role string.
+/// Tool results are represented as user-role messages in the Anthropic API.
+fn anthropic_role(role: &SessionRole) -> &'static str {
+    match role {
+        SessionRole::User | SessionRole::Tool => "user",
+        SessionRole::Assistant => "assistant",
+        SessionRole::System => "user", // system messages in history fall back to user
+    }
+}
+
+/// Build an Anthropic-compatible messages array.
+/// Anthropic requires strictly alternating user/assistant turns; consecutive
+/// messages with the same role are merged by concatenating their content.
+fn build_anthropic_messages(input: &ModelInput) -> Vec<Value> {
+    // Start with prior history turns then append the current user prompt.
+    let mut raw: Vec<(&str, String)> = input
+        .history
+        .iter()
+        .map(|m| (anthropic_role(&m.role), m.content.clone()))
+        .collect();
+
+    if !input.memory_snippets.is_empty() {
+        let memory = format!("Relevant memory:\n{}", input.memory_snippets.join("\n"));
+        raw.push(("user", memory));
+    }
+    raw.push(("user", input.user_prompt.clone()));
+
+    // Merge consecutive same-role entries.
+    let mut merged: Vec<Value> = Vec::new();
+    for (role, content) in raw {
+        if let Some(last) = merged.last_mut() {
+            if last["role"].as_str() == Some(role) {
+                let prev = last["content"].as_str().unwrap_or("").to_string();
+                last["content"] = Value::String(format!("{prev}\n{content}"));
+                continue;
+            }
+        }
+        merged.push(json!({ "role": role, "content": content }));
+    }
+    merged
+}
+
 fn model_input_to_anthropic_request(input: &ModelInput, model_name: &str) -> Value {
+    let messages = build_anthropic_messages(input);
     let mut payload = json!({
         "model": model_name,
         "max_tokens": 1024,
-        "messages": [
-            {
-                "role": "user",
-                "content": render_model_prompt(input)
-            }
-        ]
+        "messages": messages
     });
 
     if !input.system_prompt.trim().is_empty() {
@@ -258,6 +308,15 @@ fn model_input_to_anthropic_request(input: &ModelInput, model_name: &str) -> Val
     payload
 }
 
+/// Map a `SessionRole` to an OpenAI Chat Completions role string.
+fn chat_completions_role(role: &SessionRole) -> &'static str {
+    match role {
+        SessionRole::User | SessionRole::Tool => "user",
+        SessionRole::Assistant => "assistant",
+        SessionRole::System => "system",
+    }
+}
+
 fn model_input_to_openai_chat_completions_request(input: &ModelInput, model_name: &str) -> Value {
     let mut messages = Vec::new();
     if !input.system_prompt.trim().is_empty() {
@@ -266,9 +325,28 @@ fn model_input_to_openai_chat_completions_request(input: &ModelInput, model_name
             "content": input.system_prompt
         }));
     }
+
+    // Add prior history turns.
+    for msg in &input.history {
+        messages.push(json!({
+            "role": chat_completions_role(&msg.role),
+            "content": msg.content
+        }));
+    }
+
+    // Append memory context and current user prompt.
+    let user_content = if !input.memory_snippets.is_empty() {
+        format!(
+            "Relevant memory:\n{}\n\n{}",
+            input.memory_snippets.join("\n"),
+            input.user_prompt
+        )
+    } else {
+        input.user_prompt.clone()
+    };
     messages.push(json!({
         "role": "user",
-        "content": render_model_prompt(input)
+        "content": user_content
     }));
 
     let mut payload = json!({
@@ -928,7 +1006,10 @@ mod tests {
                 "system_prompt": "You are concise.",
                 "user_prompt": "Explain KelvinClaw.",
                 "memory_snippets": ["Project: KelvinClaw"],
-                "history": ["user: hello", "assistant: hi"]
+                "history": [
+                    {"role": "user", "content": "hello", "metadata": {}},
+                    {"role": "assistant", "content": "hi", "metadata": {}}
+                ]
             }),
         );
 
@@ -941,16 +1022,18 @@ mod tests {
             normalized["system"],
             Value::String("You are concise.".to_string())
         );
-        assert_eq!(
-            normalized["messages"][0]["role"],
-            Value::String("user".to_string())
-        );
-        let content = normalized["messages"][0]["content"]
-            .as_str()
-            .expect("anthropic content string");
-        assert!(content.contains("Conversation history"));
-        assert!(content.contains("Relevant memory"));
-        assert!(content.contains("Explain KelvinClaw."));
+        let messages = normalized["messages"].as_array().expect("messages array");
+        // history: user "hello", assistant "hi", then merged memory+user_prompt as user
+        assert_eq!(messages.len(), 3);
+        assert_eq!(messages[0]["role"], Value::String("user".to_string()));
+        assert_eq!(messages[0]["content"], Value::String("hello".to_string()));
+        assert_eq!(messages[1]["role"], Value::String("assistant".to_string()));
+        assert_eq!(messages[1]["content"], Value::String("hi".to_string()));
+        assert_eq!(messages[2]["role"], Value::String("user".to_string()));
+        let last_content = messages[2]["content"].as_str().expect("last user content");
+        assert!(last_content.contains("Relevant memory"));
+        assert!(last_content.contains("Project: KelvinClaw"));
+        assert!(last_content.contains("Explain KelvinClaw."));
     }
 
     #[test]
@@ -977,7 +1060,10 @@ mod tests {
                 "system_prompt": "You are concise.",
                 "user_prompt": "Explain KelvinClaw.",
                 "memory_snippets": ["Project: KelvinClaw"],
-                "history": ["user: hello", "assistant: hi"]
+                "history": [
+                    {"role": "user", "content": "hello", "metadata": {}},
+                    {"role": "assistant", "content": "hi", "metadata": {}}
+                ]
             }),
         );
 
@@ -985,24 +1071,23 @@ mod tests {
             normalized["model"],
             Value::String("openai/gpt-4.1-mini".to_string())
         );
+        let messages = normalized["messages"].as_array().expect("messages array");
+        // system + history user + history assistant + final user (memory + user_prompt)
+        assert_eq!(messages.len(), 4);
+        assert_eq!(messages[0]["role"], Value::String("system".to_string()));
         assert_eq!(
-            normalized["messages"][0]["role"],
-            Value::String("system".to_string())
-        );
-        assert_eq!(
-            normalized["messages"][0]["content"],
+            messages[0]["content"],
             Value::String("You are concise.".to_string())
         );
-        assert_eq!(
-            normalized["messages"][1]["role"],
-            Value::String("user".to_string())
-        );
-        let content = normalized["messages"][1]["content"]
-            .as_str()
-            .expect("openrouter content string");
-        assert!(content.contains("Conversation history"));
-        assert!(content.contains("Relevant memory"));
-        assert!(content.contains("Explain KelvinClaw."));
+        assert_eq!(messages[1]["role"], Value::String("user".to_string()));
+        assert_eq!(messages[1]["content"], Value::String("hello".to_string()));
+        assert_eq!(messages[2]["role"], Value::String("assistant".to_string()));
+        assert_eq!(messages[2]["content"], Value::String("hi".to_string()));
+        assert_eq!(messages[3]["role"], Value::String("user".to_string()));
+        let last_content = messages[3]["content"].as_str().expect("openrouter content string");
+        assert!(last_content.contains("Relevant memory"));
+        assert!(last_content.contains("Project: KelvinClaw"));
+        assert!(last_content.contains("Explain KelvinClaw."));
     }
 
     fn legacy_test_module() -> Vec<u8> {
