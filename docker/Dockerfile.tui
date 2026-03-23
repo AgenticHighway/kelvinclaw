@@ -8,7 +8,11 @@ WORKDIR /work
 COPY Cargo.toml Cargo.lock ./
 COPY crates ./crates
 COPY apps ./apps
-RUN cargo build --release -p kelvin-tui
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/usr/local/cargo/git \
+    --mount=type=cache,target=/work/target \
+    cargo build --release -p kelvin-tui && \
+    cp /work/target/release/kelvin-tui /usr/local/bin/kelvin-tui
 
 FROM debian:${DEBIAN_FLAVOR}-slim AS runtime
 WORKDIR /opt/kelvin
@@ -17,7 +21,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /work/target/release/kelvin-tui /usr/local/bin/kelvin-tui
+COPY --from=builder /usr/local/bin/kelvin-tui /usr/local/bin/kelvin-tui
 
 RUN chmod +x /usr/local/bin/kelvin-tui
 

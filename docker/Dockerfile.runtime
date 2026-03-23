@@ -8,7 +8,11 @@ WORKDIR /work
 COPY Cargo.toml Cargo.lock ./
 COPY crates ./crates
 COPY apps ./apps
-RUN cargo build --release -p kelvin-host
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/usr/local/cargo/git \
+    --mount=type=cache,target=/work/target \
+    cargo build --release -p kelvin-host && \
+    cp /work/target/release/kelvin-host /usr/local/bin/kelvin-host
 
 FROM debian:${DEBIAN_FLAVOR}-slim AS runtime
 WORKDIR /opt/kelvin
@@ -21,7 +25,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tar \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /work/target/release/kelvin-host /usr/local/bin/kelvin-host
+COPY --from=builder /usr/local/bin/kelvin-host /usr/local/bin/kelvin-host
 COPY scripts/plugin-install.sh /opt/kelvin/scripts/plugin-install.sh
 COPY scripts/plugin-index-install.sh /opt/kelvin/scripts/plugin-index-install.sh
 COPY scripts/kelvin-setup.sh /opt/kelvin/scripts/kelvin-setup.sh
