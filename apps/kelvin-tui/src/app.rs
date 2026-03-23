@@ -664,19 +664,50 @@ fn format_command_result(payload: &serde_json::Value) -> String {
     match command {
         "tools" => {
             let count = payload.get("count").and_then(|v| v.as_u64()).unwrap_or(0);
-            let mut lines = vec![format!("Tools ({count}):") ];
+            let mut lines = vec![format!("Tools ({count}):")];
             if let Some(tools) = payload.get("tools").and_then(|v| v.as_array()) {
                 for tool in tools {
                     let name = tool.get("name").and_then(|v| v.as_str()).unwrap_or("?");
                     let desc = tool.get("description").and_then(|v| v.as_str()).unwrap_or("");
-                    lines.push(format!("  {name} — {desc}"));
+                    lines.push(format!("  • {name} — {desc}"));
                 }
             }
             lines.join("\n")
         }
-        "sessions" | "plugins" => {
-            serde_json::to_string_pretty(payload).unwrap_or_else(|_| format!("{payload}"))
+        "sessions" => {
+            let result = payload.get("result").unwrap_or(payload);
+            let sessions = result.get("sessions").and_then(|v| v.as_array());
+            let count = sessions.map(|s| s.len()).unwrap_or(0);
+            let mut lines = vec![format!("Sessions ({count}):")];
+            if let Some(sessions) = sessions {
+                for s in sessions {
+                    let id = s.get("session_id").and_then(|v| v.as_str()).unwrap_or("?");
+                    let msgs = s.get("message_count").and_then(|v| v.as_u64()).unwrap_or(0);
+                    let workspace = s.get("workspace_dir").and_then(|v| v.as_str()).unwrap_or("");
+                    lines.push(format!("  • {id}  ({msgs} msgs)  {workspace}"));
+                }
+            }
+            lines.join("\n")
         }
+        "plugins" => {
+            let result = payload.get("result").unwrap_or(payload);
+            let loaded = result.get("loaded_installed_plugins").and_then(|v| v.as_u64()).unwrap_or(0);
+            let plugins = result.get("plugins").and_then(|v| v.as_array());
+            let total = plugins.map(|p| p.len()).unwrap_or(0);
+            let mut lines = vec![format!("Plugins ({loaded} loaded, {total} installed):")];
+            if let Some(plugins) = plugins {
+                for p in plugins {
+                    let name = p.get("name").and_then(|v| v.as_str()).unwrap_or("?");
+                    let version = p.get("version").and_then(|v| v.as_str()).unwrap_or("?");
+                    lines.push(format!("  • {name}  v{version}"));
+                }
+            }
+            if total == 0 {
+                lines.push("  (no plugins installed)".to_string());
+            }
+            lines.join("\n")
+        }
+        "clear" => "Session history cleared.".to_string(),
         _ => serde_json::to_string_pretty(payload).unwrap_or_else(|_| format!("{payload}")),
     }
 }

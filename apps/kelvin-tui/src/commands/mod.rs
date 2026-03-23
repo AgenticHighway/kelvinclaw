@@ -171,11 +171,11 @@ impl MergedCommandRegistry {
                 .as_deref()
                 .map(|u| format!(" {u}"))
                 .unwrap_or_default();
-            lines.push(format!("  /{}{} — {} [local]", item.name, usage, item.description));
+            lines.push(format!("  • /{}{} — {}", item.name, usage, item.description));
         }
         for r in &self.remote {
             let usage = r.usage.as_deref().map(|u| format!(" {u}")).unwrap_or_default();
-            lines.push(format!("  /{}{} — {}", r.name, usage, r.description));
+            lines.push(format!("  • /{}{} — {}", r.name, usage, r.description));
         }
         lines.join("\n")
     }
