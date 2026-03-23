@@ -85,7 +85,7 @@ impl Default for MergedCommandRegistry {
                 LocalCommand::Clear,
                 CompletionItem {
                     name: "clear".to_string(),
-                    description: "Clear the chat history".to_string(),
+                    description: "Clear session history and chat display".to_string(),
                     usage: None,
                     category: "system".to_string(),
                 },
@@ -109,12 +109,20 @@ impl Default for MergedCommandRegistry {
 
 impl MergedCommandRegistry {
     /// Replace remote commands with newly fetched list from the gateway.
+    /// Commands already registered as local are skipped to avoid duplicates.
     pub fn set_remote(&mut self, commands: &Value) {
         self.remote.clear();
+        let local_names: std::collections::HashSet<&str> = self
+            .local
+            .iter()
+            .map(|(_, item)| item.name.as_str())
+            .collect();
         if let Some(arr) = commands.get("commands").and_then(|v| v.as_array()) {
             for item in arr {
                 if let Some(meta) = RemoteCommandMeta::from_json(item) {
-                    self.remote.push(meta);
+                    if !local_names.contains(meta.name.as_str()) {
+                        self.remote.push(meta);
+                    }
                 }
             }
         }

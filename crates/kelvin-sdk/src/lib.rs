@@ -781,6 +781,14 @@ impl SessionStore for FileBackedSessionStore {
             .cloned()
             .unwrap_or_default())
     }
+
+    async fn clear_history(&self, session_id: &str) -> KelvinResult<()> {
+        self.messages
+            .write()
+            .await
+            .remove(session_id);
+        self.persistence.persist_session_messages(session_id, &[])
+    }
 }
 
 #[derive(Debug, Default)]
@@ -1021,6 +1029,7 @@ pub struct KelvinSdkRuntime {
     persistence: RuntimePersistence,
     scheduler_store: Arc<SchedulerStore>,
     tool_registry: Arc<dyn ToolRegistry>,
+    session_store: Arc<dyn SessionStore>,
 }
 
 impl KelvinSdkRuntime {
@@ -1131,7 +1140,7 @@ impl KelvinSdkRuntime {
             config.load_installed_plugins,
         )?;
         let brain = Arc::new(
-            KelvinBrain::new(session_store, memory, model, tools.clone(), event_sink)
+            KelvinBrain::new(session_store.clone(), memory, model, tools.clone(), event_sink)
                 .with_max_tool_iterations(config.max_tool_iterations),
         );
         let runtime = CoreRuntime::new(brain);
@@ -1147,6 +1156,7 @@ impl KelvinSdkRuntime {
             persistence,
             scheduler_store,
             tool_registry: tools,
+            session_store,
         })
     }
 
@@ -1156,6 +1166,10 @@ impl KelvinSdkRuntime {
 
     pub fn tool_definitions(&self) -> Vec<kelvin_core::ToolDefinition> {
         self.tool_registry.definitions()
+    }
+
+    pub async fn clear_session_history(&self, session_id: &str) -> KelvinResult<()> {
+        self.session_store.clear_history(session_id).await
     }
 
     pub fn state_dir(&self) -> Option<&Path> {

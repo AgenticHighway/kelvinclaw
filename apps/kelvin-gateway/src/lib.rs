@@ -1223,7 +1223,7 @@ async fn handle_request(
         "commands.list" => Ok(commands_list_payload(&state.runtime)),
         "command.exec" => {
             let params: CommandExecParams = parse_params(params, method)?;
-            command_exec_payload(&state.runtime, params).map_err(map_kelvin_error)
+            command_exec_payload(&state.runtime, params).await.map_err(map_kelvin_error)
         }
         _ => Err(GatewayErrorPayload {
             code: "method_not_found".to_string(),
@@ -1307,6 +1307,12 @@ struct CommandExecParams {
 fn builtin_commands() -> Vec<SlashCommandMeta> {
     vec![
         SlashCommandMeta {
+            name: "clear".to_string(),
+            description: "Clear session history".to_string(),
+            usage: None,
+            category: "session".to_string(),
+        },
+        SlashCommandMeta {
             name: "tools".to_string(),
             description: "List all available tools".to_string(),
             usage: None,
@@ -1339,12 +1345,17 @@ fn commands_list_payload(runtime: &kelvin_sdk::KelvinSdkRuntime) -> Value {
     })).collect::<Vec<_>>() })
 }
 
-fn command_exec_payload(
+async fn command_exec_payload(
     runtime: &kelvin_sdk::KelvinSdkRuntime,
     params: CommandExecParams,
 ) -> Result<Value, KelvinError> {
     let name = params.command.trim().trim_start_matches('/');
     match name {
+        "clear" => {
+            let session_id = params.session_id.as_deref().unwrap_or("main");
+            runtime.clear_session_history(session_id).await?;
+            Ok(json!({ "command": "clear", "session_id": session_id }))
+        }
         "tools" => {
             let defs = runtime.tool_definitions();
             Ok(json!({

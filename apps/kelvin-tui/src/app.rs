@@ -931,6 +931,27 @@ async fn run_loop(
                                     Some(SlashCommand::Local(LocalCommand::Clear)) => {
                                         app.chat.clear();
                                         app.tools.clear();
+                                        // Also clear server-side session history when connected.
+                                        if app.ws_status == WsStatus::Connected {
+                                            if let Some(ref client) = ws_client {
+                                                let client = client.clone();
+                                                let sid = session_id.to_string();
+                                                let tx = tui_tx.clone();
+                                                tokio::spawn(async move {
+                                                    let result = client.exec_command(
+                                                        "clear",
+                                                        serde_json::Value::Null,
+                                                        &sid,
+                                                    ).await;
+                                                    // Notify on error only.
+                                                    if let Err(e) = result {
+                                                        let _ = tx.send(TuiEvent::CommandResult(
+                                                            Err(format!("/clear failed: {e}"))
+                                                        )).await;
+                                                    }
+                                                });
+                                            }
+                                        }
                                     }
                                     Some(SlashCommand::Local(LocalCommand::Help)) => {
                                         let text = app.command_registry.help_text();
