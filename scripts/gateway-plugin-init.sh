@@ -2,15 +2,14 @@
 # gateway-plugin-init.sh — Runs first-time setup for the gateway's shared plugin volume.
 #
 # Called by the kelvin-init service in docker-compose before kelvin-gateway starts.
-# Installs kelvin.cli (required) and conditionally installs the model-provider plugin
-# specified by KELVIN_MODEL_PROVIDER (default: kelvin.echo, no plugin needed).
+# Scans BUILTIN_PLUGIN_DIR for a plugin whose manifest id matches KELVIN_MODEL_PROVIDER,
+# validates its api_key_env (if declared in provider_profile), and installs it.
 #
 # Environment variables:
 #   KELVIN_HOME              — shared home volume root  (default: /kelvin)
 #   KELVIN_PLUGIN_HOME       — plugin install path      (default: /kelvin/plugins)
 #   KELVIN_TRUST_POLICY_PATH — trust policy file        (default: /kelvin/trusted_publishers.json)
 #   KELVIN_MODEL_PROVIDER    — model-provider plugin id (default: kelvin.echo)
-#   ANTHROPIC_API_KEY        — required when KELVIN_MODEL_PROVIDER=kelvin.anthropic
 set -euo pipefail
 
 SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -51,24 +50,22 @@ if [[ ! -f "${KELVIN_TRUST_POLICY_PATH}" ]]; then
   echo "[gateway-plugin-init] wrote permissive trust policy: ${KELVIN_TRUST_POLICY_PATH}"
 fi
 
-# Install the model-provider plugin if it requires a WASM plugin (not the built-in Echo).
-case "${KELVIN_MODEL_PROVIDER}" in
-  kelvin.echo)
-    install_builtin_plugin "${BUILTIN_PLUGIN_DIR}/kelvin-echo-plugin"
-    ;;
-  kelvin.anthropic)
-    if [[ -z "${ANTHROPIC_API_KEY:-}" ]]; then
-      echo "[gateway-plugin-init] KELVIN_MODEL_PROVIDER=kelvin.anthropic but ANTHROPIC_API_KEY is not set" >&2
-      exit 1
-    fi
-    install_builtin_plugin "${BUILTIN_PLUGIN_DIR}/kelvin-anthropic-plugin"
-    ;;
-  kelvin.openrouter)
-    install_builtin_plugin "${BUILTIN_PLUGIN_DIR}/kelvin-openrouter-plugin"
-    ;;
-  *)
-    echo "[gateway-plugin-init] KELVIN_MODEL_PROVIDER=${KELVIN_MODEL_PROVIDER} — ensure plugin is pre-installed in the plugin volume"
-    ;;
-esac
+# Find and install the builtin plugin whose manifest id matches KELVIN_MODEL_PROVIDER.
+# Also validates api_key_env from provider_profile if present.
+found_plugin="0"
+for manifest in "${BUILTIN_PLUGIN_DIR}"/*/plugin.json; do
+  [[ -f "${manifest}" ]] || continue
+  plugin_id="$(jq -r '.id' "${manifest}")"
+  if [[ "${plugin_id}" != "${KELVIN_MODEL_PROVIDER}" ]]; then
+    continue
+  fi
+  install_builtin_plugin "$(dirname "${manifest}")"
+  found_plugin="1"
+  break
+done
+
+if [[ "${found_plugin}" == "0" ]]; then
+  echo "[gateway-plugin-init] no builtin plugin found with id '${KELVIN_MODEL_PROVIDER}' — ensure it is pre-installed in the plugin volume" >&2
+fi
 
 echo "[gateway-plugin-init] init complete (model-provider=${KELVIN_MODEL_PROVIDER})"
