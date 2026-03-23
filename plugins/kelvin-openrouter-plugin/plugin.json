@@ -24,7 +24,7 @@
 		"static_headers": [],
 		"default_allow_hosts": ["openrouter.ai"]
 	},
-	"model_name": "openai/gpt-4.1-mini",
+	"model_name": "stepfun/step-3.5-flash:free",
 	"entrypoint": "plugin.wasm",
 	"entrypoint_sha256": "9014594e24a201aa59968cf5578f1272a3bc569046a42a3f1a4adb15568f8109",
 	"publisher": null,
