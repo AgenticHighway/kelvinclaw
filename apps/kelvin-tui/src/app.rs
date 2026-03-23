@@ -895,17 +895,18 @@ async fn run_loop(
                         }
                     }
                     KeyCode::Enter => {
-                        // Accept autocomplete selection if popup is open.
+                        // Accept autocomplete selection if popup is open — execute immediately.
                         if app.autocomplete_visible
                             && app.autocomplete_selected < app.autocomplete_items.len()
                         {
                             let name = app.autocomplete_items[app.autocomplete_selected].name.clone();
-                            app.input = format!("/{name} ");
+                            app.input = format!("/{name}");
                             app.cursor_pos = app.input.len();
                             app.autocomplete_visible = false;
                             app.autocomplete_items.clear();
                             app.autocomplete_selected = 0;
-                        } else if !app.input.trim().is_empty() {
+                        }
+                        if !app.input.trim().is_empty() {
                             let prompt = app.input.clone();
                             app.input_history.push(prompt.clone());
                             const MAX_INPUT_HISTORY: usize = 500;
@@ -1098,7 +1099,11 @@ async fn run_loop(
                         }
                     }
                     KeyCode::Up => {
-                        if !app.input_history.is_empty() {
+                        if app.autocomplete_visible && !app.autocomplete_items.is_empty() {
+                            app.autocomplete_selected = app.autocomplete_selected
+                                .checked_sub(1)
+                                .unwrap_or(app.autocomplete_items.len() - 1);
+                        } else if !app.input_history.is_empty() {
                             let next_idx = match app.history_idx {
                                 None => {
                                     app.history_saved = app.input.clone();
@@ -1113,20 +1118,25 @@ async fn run_loop(
                         }
                     }
                     KeyCode::Down => {
-                        match app.history_idx {
-                            None => {}
-                            Some(i) if i + 1 >= app.input_history.len() => {
-                                app.history_idx = None;
-                                app.input = app.history_saved.clone();
-                                app.paste_markers.clear();
-                                app.cursor_pos = app.input.len();
-                            }
-                            Some(i) => {
-                                let next_idx = i + 1;
-                                app.history_idx = Some(next_idx);
-                                app.input = app.input_history[next_idx].clone();
-                                app.paste_markers.clear();
-                                app.cursor_pos = app.input.len();
+                        if app.autocomplete_visible && !app.autocomplete_items.is_empty() {
+                            app.autocomplete_selected =
+                                (app.autocomplete_selected + 1) % app.autocomplete_items.len();
+                        } else {
+                            match app.history_idx {
+                                None => {}
+                                Some(i) if i + 1 >= app.input_history.len() => {
+                                    app.history_idx = None;
+                                    app.input = app.history_saved.clone();
+                                    app.paste_markers.clear();
+                                    app.cursor_pos = app.input.len();
+                                }
+                                Some(i) => {
+                                    let next_idx = i + 1;
+                                    app.history_idx = Some(next_idx);
+                                    app.input = app.input_history[next_idx].clone();
+                                    app.paste_markers.clear();
+                                    app.cursor_pos = app.input.len();
+                                }
                             }
                         }
                     }
