@@ -96,17 +96,28 @@ kelvin plugin verify --package ./plugin-acme.echo/dist/acme.echo-0.1.0.tar.gz
 
 ## First-Party Model Plugins
 
-KelvinClaw includes first-party install flows for:
+First-party plugins are built from source in `plugins/` and baked into the Docker runtime
+image at build time. No external index is required.
 
-- `kelvin.openai`
-- `kelvin.anthropic`
+Bundled providers:
 
-Install helpers:
+| Plugin ID | Source directory | API key env var |
+|---|---|---|
+| `kelvin.echo` | `plugins/kelvin-echo-plugin` | — |
+| `kelvin.anthropic` | `plugins/kelvin-anthropic-plugin` | `ANTHROPIC_API_KEY` |
+| `kelvin.openrouter` | `plugins/kelvin-openrouter-plugin` | `OPENROUTER_API_KEY` |
+
+Set the active provider via `KELVIN_MODEL_PROVIDER` in `.env` or the environment before
+running `docker compose up`. The init container installs the selected plugin automatically.
+
+To rebuild plugins after source changes:
 
 ```bash
-scripts/install-kelvin-openai-plugin.sh
-scripts/install-kelvin-anthropic-plugin.sh
+docker compose build   # plugin-builder stage recompiles plugins/
 ```
+
+`kelvin.cli` (the required tool plugin) is vendored as a prebuilt tarball at
+`release/vendor/kelvin.cli-0.1.2.tar.gz` and installed by `kelvin-setup.sh` on first run.
 
 ## Related Pages
 

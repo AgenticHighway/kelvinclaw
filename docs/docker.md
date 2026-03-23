@@ -60,6 +60,30 @@ KELVIN_GATEWAY_INGRESS_PORT=34618   # Change gateway ingress port
 KELVIN_PLUGIN_REGISTRY_PORT=34718   # Change registry port
 ```
 
+### Model Provider
+
+Set `KELVIN_MODEL_PROVIDER` and the corresponding API key in `.env`:
+
+| Provider | `KELVIN_MODEL_PROVIDER` | API key env var |
+|---|---|---|
+| Echo (default, no key needed) | `kelvin.echo` | — |
+| Anthropic | `kelvin.anthropic` | `ANTHROPIC_API_KEY` |
+| OpenRouter | `kelvin.openrouter` | `OPENROUTER_API_KEY` |
+
+The selected provider's plugin is installed automatically from the image at startup.
+No external index or network access is required for first-party providers.
+
+### Community Plugins
+
+To install a community plugin at startup, set:
+
+```bash
+KELVIN_PLUGIN_INDEX_URL=https://your-host/index.json
+```
+
+The index must follow the v1 schema (`schema_version: "v1"`). See
+`docs/plugins/plugin-index-schema.md` for the format.
+
 ## Common Commands
 
 ### Start kelvin-host in the foreground
