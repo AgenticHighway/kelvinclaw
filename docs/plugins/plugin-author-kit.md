@@ -52,12 +52,17 @@ For model plugins, use the dedicated guide:
 
 - [docs/build-a-model-plugin.md](build-a-model-plugin.md)
 
-`kelvin plugin new --runtime wasm_model_v1` now creates a working source project
-with:
+For tool plugins, use the dedicated guide:
+
+- [docs/build-a-tool-plugin.md](build-a-tool-plugin.md)
+
+`kelvin plugin new` creates a working source project for both runtimes with:
 
 - `plugin.json`
 - `src/lib.rs`
+- `Cargo.toml`
 - `build.sh`
+- `Makefile`
 - a compiled `payload/plugin.wasm`
 
 ## Templates
@@ -72,10 +77,16 @@ instead of the legacy provider-specific host import. The profile object declares
 the provider id, protocol family, auth env vars, base URL, endpoint path, and
 default allowlist hosts.
 
-The maintained example source crate is:
+The maintained example source crates are:
+
+Model plugins:
 
 - `plugins/kelvin-anthropic-plugin`
 - `plugins/kelvin-openrouter-plugin`
+
+Tool plugins:
+
+- `plugins/kelvin-websearch-plugin`
 
 Use the example in Docker with:
 

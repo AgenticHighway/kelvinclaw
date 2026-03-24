@@ -49,7 +49,7 @@ Common manifest fields:
 
 Runtime-specific fields:
 
-- tool plugins: `tool_name`
+- tool plugins: `tool_name`, `tool_input_schema`, `capability_scopes.env_allow`, `operational_controls.fuel_budget`
 - model plugins: `provider_name`, `model_name`, `provider_profile`
 
 ## Installed Runtime Behavior
@@ -76,6 +76,19 @@ Kelvin ships first-party SDK tools through the same plugin path:
 - `session_tools`
 
 Sensitive operations require explicit per-call approvals.
+
+## First-Party Tool Plugins
+
+Community-extensible tool plugins built from source in `plugins/` and baked into the
+Docker runtime image at build time:
+
+| Plugin ID | Source directory | Capabilities | API key env var |
+|---|---|---|---|
+| `kelvin.websearch` | `plugins/kelvin-websearch-plugin` | `tool_provider`, `network_egress` | `BRAVE_API_KEY` |
+
+`scripts/gateway-plugin-init.sh` automatically installs all builtin tool plugins at
+gateway startup by scanning for manifests with the `tool_provider` capability. No manual
+install step is needed for plugins that ship in the image.
 
 ## Author Workflow
 
@@ -127,6 +140,7 @@ docker compose build   # plugin-builder stage recompiles plugins/
 ## Reference
 
 - [Kelvin Core SDK](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/KELVIN_CORE_SDK.md)
-- [Plugin author kit](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/plugin-author-kit.md)
-- [Model plugin ABI](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/model-plugin-abi.md)
-- [Channel plugin ABI](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/channel-plugin-abi.md)
+- [Plugin author kit](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/plugins/plugin-author-kit.md)
+- [Model plugin ABI](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/plugins/model-plugin-abi.md)
+- [Tool plugin ABI](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/plugins/tool-plugin-abi.md)
+- [Channel plugin ABI](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/gateway/channel-plugin-abi.md)

@@ -24,9 +24,11 @@ Welcome to KelvinClaw. This documentation is organized by audience and topic.
 
 - [Plugin Author Kit](plugins/plugin-author-kit.md) — Plugin development workflow
 - [Building Model Plugins](plugins/build-a-model-plugin.md) — Custom model provider walkthrough
+- [Building Tool Plugins](plugins/build-a-tool-plugin.md) — Custom tool plugin walkthrough
 - [Plugin Installation Flow](plugins/plugin-install-flow.md) — Package format and installation
 - [Plugin Trust & Quality](plugins/plugin-trust-operations.md) — Signing, verification, and tiers
 - [Model Plugin ABI](plugins/model-plugin-abi.md) — `wasm_model_v1` technical spec
+- [Tool Plugin ABI](plugins/tool-plugin-abi.md) — `wasm_tool_v1` technical spec
 - [Tool Pack Reference](plugins/toolpack-sdk-plugins.md) — Built-in SDK tools
 
 **Provider-Specific Guides:**
