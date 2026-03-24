@@ -49,7 +49,7 @@ Common manifest fields:
 
 Runtime-specific fields:
 
-- tool plugins: `tool_name`, `tool_input_schema`, `capability_scopes.env_allow`, `operational_controls.fuel_budget`
+- tool plugins: `tool_name`, `tool_input_schema`, `capability_scopes.env_allow`, `capability_scopes.network_allow_hosts`, `operational_controls.fuel_budget`
 - model plugins: `provider_name`, `model_name`, `provider_profile`
 
 ## Installed Runtime Behavior

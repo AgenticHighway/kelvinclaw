@@ -94,7 +94,7 @@ To enable `http_call` and `get_env`, add to `plugin.json`:
 
 `http_call` takes a pre-allocated response buffer (no alloc re-entry). The host writes
 `{"status":<int>,"body":"..."}` into it and returns bytes written. Requests to hosts not
-in `network_allow_hosts` return `{"status":403,"body":"host not allowed"}` without any
+in `network_allow_hosts` return `{"status":403,"body":"host not allowed by sandbox policy"}` without any
 network call. See [Tool Plugin ABI](../../docs/plugins/tool-plugin-abi.md) for request
 JSON format and truncation behavior.
 

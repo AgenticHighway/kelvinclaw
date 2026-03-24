@@ -110,11 +110,12 @@ Supported methods: `GET`, `POST`, `PUT`, `DELETE`, `PATCH`.
 { "status": 200, "body": "<response body as string>" }
 ```
 
-**Hostname enforcement:** Requests to hosts not in `network_allow_hosts` return
-`{"status":403,"body":"host not allowed"}` without any network call being made.
-The allowlist supports exact hostnames (`"api.example.com"`) and subdomain wildcards
-(`"*.example.com"`, which also matches the apex `example.com`). The value `"*"` allows
-any host (for development only).
+**Hostname enforcement:** Requests to hosts not in `network_allow_hosts` return a JSON
+object with `status` set to `403` and `body` containing a human-readable reason
+(intended for diagnostics only, not for programmatic matching), without any network
+call being made. The allowlist supports exact hostnames (`"api.example.com"`) and
+subdomain wildcards (`"*.example.com"`, which also matches the apex `example.com`).
+The value `"*"` allows any host (for development only).
 
 **Truncation:** If the serialized response JSON exceeds `resp_max` bytes, the host
 truncates the body before writing. If even a truncated response does not fit, the body
