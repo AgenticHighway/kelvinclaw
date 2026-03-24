@@ -49,7 +49,7 @@ Common manifest fields:
 
 Runtime-specific fields:
 
-- tool plugins: `tool_name`
+- tool plugins: `tool_name`, `tool_input_schema`, `capability_scopes.env_allow`, `capability_scopes.network_allow_hosts`, `operational_controls.fuel_budget`
 - model plugins: `provider_name`, `model_name`, `provider_profile`
 
 ## Installed Runtime Behavior
@@ -77,6 +77,19 @@ Kelvin ships first-party SDK tools through the same plugin path:
 
 Sensitive operations require explicit per-call approvals.
 
+## First-Party Tool Plugins
+
+Community-extensible tool plugins built from source in `plugins/` and baked into the
+Docker runtime image at build time:
+
+| Plugin ID | Source directory | Capabilities | API key env var |
+|---|---|---|---|
+| `kelvin.websearch` | `plugins/kelvin-websearch-plugin` | `tool_provider`, `network_egress` | `BRAVE_API_KEY` |
+
+`scripts/gateway-plugin-init.sh` automatically installs all builtin tool plugins at
+gateway startup by scanning for manifests with the `tool_provider` capability. No manual
+install step is needed for plugins that ship in the image.
+
 ## Author Workflow
 
 Add scripts to `PATH`:
@@ -96,17 +109,28 @@ kelvin plugin verify --package ./plugin-acme.echo/dist/acme.echo-0.1.0.tar.gz
 
 ## First-Party Model Plugins
 
-KelvinClaw includes first-party install flows for:
+First-party plugins are built from source in `plugins/` and baked into the Docker runtime
+image at build time. No external index is required.
 
-- `kelvin.openai`
-- `kelvin.anthropic`
+Bundled providers:
 
-Install helpers:
+| Plugin ID | Source directory | API key env var |
+|---|---|---|
+| `kelvin.echo` | `plugins/kelvin-echo-plugin` | — |
+| `kelvin.anthropic` | `plugins/kelvin-anthropic-plugin` | `ANTHROPIC_API_KEY` |
+| `kelvin.openrouter` | `plugins/kelvin-openrouter-plugin` | `OPENROUTER_API_KEY` |
+
+Set the active provider via `KELVIN_MODEL_PROVIDER` in `.env` or the environment before
+running `docker compose up`. The init container installs the selected plugin automatically.
+
+To rebuild plugins after source changes:
 
 ```bash
-scripts/install-kelvin-openai-plugin.sh
-scripts/install-kelvin-anthropic-plugin.sh
+docker compose build   # plugin-builder stage recompiles plugins/
 ```
+
+`kelvin.cli` (the required tool plugin) is vendored as a prebuilt tarball at
+`release/vendor/kelvin.cli-0.1.2.tar.gz` and installed by `kelvin-setup.sh` on first run.
 
 ## Related Pages
 
@@ -116,6 +140,7 @@ scripts/install-kelvin-anthropic-plugin.sh
 ## Reference
 
 - [Kelvin Core SDK](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/KELVIN_CORE_SDK.md)
-- [Plugin author kit](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/plugin-author-kit.md)
-- [Model plugin ABI](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/model-plugin-abi.md)
-- [Channel plugin ABI](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/channel-plugin-abi.md)
+- [Plugin author kit](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/plugins/plugin-author-kit.md)
+- [Model plugin ABI](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/plugins/model-plugin-abi.md)
+- [Tool plugin ABI](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/plugins/tool-plugin-abi.md)
+- [Channel plugin ABI](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/gateway/channel-plugin-abi.md)

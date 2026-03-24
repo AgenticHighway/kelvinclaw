@@ -160,7 +160,7 @@ protocol_family_default_model_name() {
   esac
 }
 
-scaffold_model_plugin_project() {
+scaffold_tool_plugin_project() {
   local output_dir="$1"
   local plugin_id="$2"
   local display_name="$3"
@@ -172,28 +172,92 @@ scaffold_model_plugin_project() {
   mkdir -p "${output_dir}/src" "${output_dir}/payload"
 
   cat > "${output_dir}/Cargo.toml" <<EOF
+# Kelvin tool plugin crate.
+# Compiled to wasm32-unknown-unknown and loaded by the Kelvin runtime as a
+# wasm_tool_v1 plugin. Distributed as a .wasm binary, not published to crates.io.
+
 [package]
 name = "${crate_package_name}"
+# edition = "2021" is the minimum for stable wasm32 support.
 version = "${plugin_version}"
 edition = "2021"
 publish = false
 
 [lib]
+# cdylib produces a .wasm with C ABI exports (alloc, dealloc, handle_tool_call).
+# Do NOT add rlib here; Kelvin loads only the .wasm cdylib.
 name = "${crate_lib_name}"
 crate-type = ["cdylib"]
 
+# Size optimisations — tool plugins are typically very small (<10 KiB).
+[profile.release]
+opt-level = "s"   # optimise for size
+lto = true         # link-time optimisation
+strip = true       # strip debug symbols
+
+# Empty [workspace] prevents Cargo from walking up to a parent workspace.
 [workspace]
 EOF
 
   cat > "${output_dir}/src/lib.rs" <<'EOF'
+//! Kelvin tool plugin guest — wasm_tool_v1 ABI (v2 shared-memory path).
+//!
+//! # Required exports (all must be present or the plugin will fail to load)
+//!
+//! | Export            | Signature            | Purpose                                     |
+//! |-------------------|----------------------|---------------------------------------------|
+//! | `memory`          | Memory               | Linear memory shared between host and guest |
+//! | `alloc`           | `(i32) -> i32`       | Bump-allocate N bytes; returns pointer or 0 |
+//! | `dealloc`         | `(i32, i32) -> ()`   | Free allocation (no-op in arena allocators) |
+//! | `handle_tool_call`| `(i32, i32) -> i64`  | Main entry point (v2 ABI — see below)       |
+//! | `run`             | `() -> i32`          | v1 compatibility stub; return 0             |
+//!
+//! # handle_tool_call return convention
+//!
+//! The return value is a packed i64:
+//!   upper 32 bits = pointer to output JSON in guest memory
+//!   lower 32 bits = byte length of the output JSON
+//! Return 0 to signal an error.
+//!
+//! # Host imports (claw module)
+//!
+//! All imports are under the `claw` module. `log` is always available;
+//! `network_send` and `fs_read` require the corresponding capability scopes
+//! declared in plugin.json and approved by the host security policy.
+
 #![no_std]
 
-#[link(wasm_import_module = "kelvin_model_host_v1")]
+#[link(wasm_import_module = "claw")]
 extern "C" {
-    fn provider_profile_call(req_ptr: i32, req_len: i32) -> i64;
+    /// Log a UTF-8 message to the Kelvin host log.
+    ///
+    /// level: 0=trace, 1=debug, 2=info, 3=warn, 4=error
+    /// msg_ptr / msg_len: byte slice in guest memory.
+    /// Returns 0 (reserved).
+    #[allow(dead_code)]
+    fn log(level: i32, msg_ptr: i32, msg_len: i32) -> i32;
+
+    /// Send a packet over the network.
+    /// Requires `network_egress` capability and host in `network_allow_hosts`.
+    #[allow(dead_code)]
+    fn network_send(packet: i32) -> i32;
+
+    /// Read from a filesystem path.
+    /// Requires `fs_read` capability and path in `fs_read_paths`.
+    #[allow(dead_code)]
+    fn fs_read(handle: i32) -> i32;
 }
 
-const HEAP_SIZE: usize = 1024 * 1024;
+// ---------------------------------------------------------------------------
+// Arena allocator
+//
+// No libc is available in a no_std WASM guest. We manage a 1 MiB static
+// heap with a bump pointer. The 8-byte alignment satisfies all scalar types.
+// `dealloc` is intentionally a no-op: the host creates a fresh WASM instance
+// per call, so all memory is reclaimed when the instance exits.
+// ---------------------------------------------------------------------------
+
+const HEAP_SIZE: usize = 1024 * 1024; // 1 MiB
 static mut HEAP: [u8; HEAP_SIZE] = [0; HEAP_SIZE];
 static mut NEXT_OFFSET: usize = 0;
 
@@ -202,10 +266,8 @@ pub extern "C" fn alloc(len: i32) -> i32 {
     if len <= 0 {
         return 0;
     }
-
     let len = len as usize;
     let align = 8usize;
-
     unsafe {
         let start = (NEXT_OFFSET + (align - 1)) & !(align - 1);
         let Some(end) = start.checked_add(len) else {
@@ -222,12 +284,96 @@ pub extern "C" fn alloc(len: i32) -> i32 {
 #[no_mangle]
 pub extern "C" fn dealloc(_ptr: i32, _len: i32) {}
 
+// ---------------------------------------------------------------------------
+// handle_tool_call — main entry point (v2 ABI)
+//
+// The host writes the tool arguments JSON directly into guest memory at (ptr, len).
+//
+// Input JSON — the tool arguments object (matches tool_input_schema in plugin.json):
+//   { "my_arg": "value", ... }
+//
+// NOTE: the input is the raw arguments object, NOT a wrapped ToolCallInput struct.
+// Do NOT look for "run_id", "session_id", "workspace_dir", or "arguments" fields —
+// those are not present. Parse your tool's own fields directly from the input bytes.
+//
+// Must return a ToolCallResult JSON:
+//   summary       string       — short description of what was done (shown in logs)
+//   output        string|null  — the tool's primary output (shown to the model)
+//   visible_text  string|null  — human-readable output (shown in UI if different from output)
+//   is_error      bool         — true if the tool call failed
+//
+// The return value is a packed i64 (ptr << 32 | len) pointing at the result JSON.
+// Return 0 to signal a hard error.
+// ---------------------------------------------------------------------------
+
 #[no_mangle]
-pub extern "C" fn infer(req_ptr: i32, req_len: i32) -> i64 {
-    // SAFETY: The trusted Kelvin host provides this import for approved
-    // provider_profile-backed model plugins.
-    unsafe { provider_profile_call(req_ptr, req_len) }
+pub extern "C" fn handle_tool_call(ptr: i32, len: i32) -> i64 {
+    if len <= 0 {
+        return 0;
+    }
+    let _input = unsafe { core::slice::from_raw_parts(ptr as *const u8, len as usize) };
+
+    // TODO: parse _input JSON, execute tool logic, build result JSON.
+    //
+    // Minimal valid ToolCallResult:
+    let result = b"{\"summary\":\"ok\",\"output\":null,\"visible_text\":null,\"is_error\":false}";
+
+    let out_ptr = alloc(result.len() as i32);
+    if out_ptr == 0 {
+        return 0;
+    }
+    unsafe {
+        core::ptr::copy_nonoverlapping(result.as_ptr(), out_ptr as *mut u8, result.len());
+    }
+    ((out_ptr as i64) << 32) | (result.len() as i64)
 }
+
+// v1 ABI backward-compatibility stub — the host calls this on older runtimes
+// that do not support handle_tool_call. Return 0 (success, no output).
+#[no_mangle]
+pub extern "C" fn run() -> i32 {
+    0
+}
+
+// ---------------------------------------------------------------------------
+// Example: using log() from within handle_tool_call
+//
+// fn log_str(level: i32, msg: &[u8]) {
+//     let ptr = alloc(msg.len() as i32);
+//     if ptr == 0 { return; }
+//     unsafe {
+//         core::ptr::copy_nonoverlapping(msg.as_ptr(), ptr as *mut u8, msg.len());
+//         log(level, ptr, msg.len() as i32);
+//     }
+// }
+//
+// Then inside handle_tool_call:
+//   log_str(2, b"tool called");
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Example: minimal JSON field extractor (no_std, no allocator)
+//
+// fn extract_str_field<'a>(json: &'a [u8], field: &[u8]) -> Option<&'a [u8]> {
+//     let mut needle = [0u8; 64];
+//     let mut ni = 0;
+//     needle[ni] = b'"'; ni += 1;
+//     for &b in field { needle[ni] = b; ni += 1; }
+//     needle[ni] = b'"'; ni += 1;
+//     needle[ni] = b':'; ni += 1;
+//     needle[ni] = b'"'; ni += 1;
+//     let needle = &needle[..ni];
+//     let pos = json.windows(needle.len()).position(|w| w == needle)?;
+//     let start = pos + needle.len();
+//     let mut i = start;
+//     while i < json.len() {
+//         if json[i] == b'\\' { i += 2; continue; }
+//         if json[i] == b'"' { return Some(&json[start..i]); }
+//         i += 1;
+//     }
+//     None
+// }
+// ---------------------------------------------------------------------------
 
 #[panic_handler]
 fn panic(_info: &core::panic::PanicInfo) -> ! {
@@ -237,6 +383,16 @@ EOF
 
   cat > "${output_dir}/build.sh" <<EOF
 #!/usr/bin/env bash
+# build.sh — Compile the Kelvin tool plugin WASM binary.
+#
+# Steps:
+#   1. Ensure the wasm32-unknown-unknown rustup target is installed
+#   2. cargo build --release for the wasm32 target (produces a cdylib .wasm)
+#   3. Copy the .wasm into payload/ (where plugin.json's "entrypoint" points)
+#   4. Compute SHA-256 of the .wasm and patch plugin.json's entrypoint_sha256
+#
+# The SHA-256 is verified at install-time and load-time by the Kelvin runtime
+# to ensure the binary on disk matches the manifest declaration.
 set -euo pipefail
 
 ROOT_DIR="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
@@ -274,12 +430,17 @@ require_cmd cargo
 require_cmd jq
 require_cmd rustup
 
+# Step 1: ensure the cross-compilation target is available.
 rustup target add wasm32-unknown-unknown >/dev/null
+
+# Step 2: compile the Rust guest to a WASM cdylib.
 cargo build --release --target wasm32-unknown-unknown
 
+# Step 3: copy the compiled binary into payload/ where the manifest expects it.
 mkdir -p "\$(dirname "\${ENTRYPOINT_ABS}")"
 cp "\${WASM_SOURCE}" "\${ENTRYPOINT_ABS}"
 
+# Step 4: compute and record the SHA-256 so the runtime can verify integrity.
 ENTRYPOINT_SHA="\$(sha256_file "\${ENTRYPOINT_ABS}")"
 jq --arg sha "\${ENTRYPOINT_SHA}" '.entrypoint_sha256 = \$sha' "\${PLUGIN_JSON}" > "\${PLUGIN_JSON}.tmp"
 mv "\${PLUGIN_JSON}.tmp" "\${PLUGIN_JSON}"
@@ -289,11 +450,58 @@ echo "[kelvin-plugin] entrypoint sha256: \${ENTRYPOINT_SHA}"
 EOF
   chmod +x "${output_dir}/build.sh"
 
+  cat > "${output_dir}/Makefile" <<EOF
+# Makefile for ${display_name}
+# Convenience wrapper around the common kelvin-plugin.sh development commands.
+# Run 'make help' to list available targets.
+
+PLUGIN_DIR := \$(dir \$(abspath \$(lastword \$(MAKEFILE_LIST))))
+MANIFEST   := \$(PLUGIN_DIR)plugin.json
+SCRIPTS    := \$(PLUGIN_DIR)../scripts
+
+ID      := \$(shell jq -er '.id'      \$(MANIFEST) 2>/dev/null || echo unknown)
+VERSION := \$(shell jq -er '.version' \$(MANIFEST) 2>/dev/null || echo 0.0.0)
+PACKAGE := \$(PLUGIN_DIR)dist/\$(ID)-\$(VERSION).tar.gz
+
+.PHONY: build test pack install smoke clean help
+
+build:          ## Compile WASM and update entrypoint_sha256 in plugin.json
+	@bash \$(PLUGIN_DIR)build.sh
+
+test: build     ## Validate plugin manifest structure
+	@\$(SCRIPTS)/kelvin-plugin.sh test --manifest \$(MANIFEST)
+
+pack: build     ## Create distributable .tar.gz package in dist/
+	@\$(SCRIPTS)/kelvin-plugin.sh pack --manifest \$(MANIFEST)
+
+install: pack   ## Install plugin into the local Kelvin plugin home
+	@\$(SCRIPTS)/kelvin-plugin.sh install --package \$(PACKAGE)
+
+smoke: build    ## Run a local smoke test
+	@\$(SCRIPTS)/kelvin-plugin.sh smoke --manifest \$(MANIFEST)
+
+clean:          ## Remove build artifacts (target/, dist/, payload/*.wasm)
+	@rm -rf \$(PLUGIN_DIR)target \$(PLUGIN_DIR)dist \$(PLUGIN_DIR)payload/*.wasm
+
+help:           ## Show this help message
+	@grep -E '^[a-zA-Z_-]+:.*?## ' \$(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-10s %s\\n", \$\$1, \$\$2}'
+EOF
+
   cat > "${output_dir}/payload/README.md" <<EOF
-Run ./build.sh to produce payload/${entrypoint_rel} from the Rust source in src/.
+This directory holds the compiled WASM entrypoint for the plugin.
+
+Run \`./build.sh\` (or \`make build\`) to compile \`src/lib.rs\` and place the
+resulting \`.wasm\` file here as \`${entrypoint_rel}\`.
+
+The filename must match the \`entrypoint\` field in \`plugin.json\`. The Kelvin
+runtime verifies the file's SHA-256 against \`entrypoint_sha256\` in the manifest;
+\`build.sh\` keeps that field up to date automatically.
+
+\`.wasm\` files are excluded from version control (see \`.gitignore\`).
 EOF
 
   cat > "${output_dir}/.gitignore" <<'EOF'
+# Build artifacts — do not commit compiled WASM binaries or distribution archives.
 /dist/
 /target/
 /payload/*.wasm
@@ -302,25 +510,613 @@ EOF
   cat > "${output_dir}/README.md" <<EOF
 # ${display_name}
 
-Generated by \`scripts/kelvin-plugin.sh new --runtime wasm_model_v1\`.
+A Kelvin tool plugin using the \`wasm_tool_v1\` runtime (v2 shared-memory ABI).
+Generated by \`scripts/kelvin-plugin.sh new --runtime wasm_tool_v1\`.
 
-This project uses only the public Kelvin model-plugin surface:
+## Architecture
 
-- \`provider_profile\` routing in \`plugin.json\`
-- a tiny Rust guest compiled to \`.wasm\`
-- \`kelvin plugin test|pack|verify\` for local validation
+Kelvin tool plugins are sandboxed WASM guests. The host calls \`handle_tool_call\`
+with a \`ToolCallInput\` JSON, the guest executes arbitrary logic and returns a
+\`ToolCallResult\` JSON. The guest runs in a fresh WASM instance per call with a
+fuel budget, memory limits, and a network/filesystem allowlist enforced by the host.
 
-Quick commands:
+## File Layout
+
+| File               | Purpose                                                          |
+|--------------------|------------------------------------------------------------------|
+| \`plugin.json\`      | Manifest: identity, tool_name, tool_input_schema, capabilities  |
+| \`src/lib.rs\`       | Rust WASM guest: exports alloc/dealloc/handle_tool_call/run     |
+| \`Cargo.toml\`       | Rust crate config (cdylib, no_std, wasm32 target, size opts)    |
+| \`build.sh\`         | Compile, copy .wasm to payload/, update SHA-256 in plugin.json  |
+| \`Makefile\`         | Convenience targets: build, test, pack, install, smoke, clean   |
+| \`payload/\`         | Directory containing the compiled .wasm entrypoint              |
+
+## Quick Start
 
 \`\`\`bash
-./build.sh
-kelvin plugin test --manifest ./plugin.json
-kelvin plugin pack --manifest ./plugin.json
-kelvin plugin verify --package ./dist/${plugin_id}-${plugin_version}.tar.gz
+make build        # compile WASM and patch plugin.json SHA-256
+make test         # validate manifest structure
+make smoke        # run a local smoke test
+make pack         # create dist/${plugin_id}-${plugin_version}.tar.gz
+make install      # install into the local Kelvin plugin home
 \`\`\`
 
-Local development plugins can stay \`unsigned_local\`. Kelvin will warn on install
-but still allow them to load from a local plugin home.
+## Implementing Your Tool
+
+Edit \`src/lib.rs\`. The \`handle_tool_call\` function is your entry point.
+It receives the tool arguments as JSON and must return a \`ToolCallResult\` JSON.
+
+### Input JSON (host → guest)
+
+The input passed to \`handle_tool_call\` is the **raw arguments object** — the exact
+JSON the model supplied, matching your \`tool_input_schema\`. There is no outer wrapper.
+
+\`\`\`
+{ "my_arg": "value", ... }
+\`\`\`
+
+**Do not** look for \`run_id\`, \`session_id\`, \`workspace_dir\`, or \`arguments\` in the
+input — those fields are not present. Parse your own argument fields directly.
+
+### ToolCallResult JSON (guest → host)
+
+\`\`\`
+{
+  "summary":      string       — short description of what was done (shown in logs)
+  "output":       string|null  — primary output returned to the model
+  "visible_text": string|null  — human-readable output for the UI (if different)
+  "is_error":     bool         — true if the tool call failed
+}
+\`\`\`
+
+### Defining Your Input Schema
+
+Edit \`tool_input_schema\` in \`plugin.json\` to declare your tool's arguments.
+This is a standard JSON Schema object. Example:
+
+\`\`\`json
+"tool_input_schema": {
+  "type": "object",
+  "properties": {
+    "query": { "type": "string", "description": "The search query" },
+    "limit": { "type": "integer", "description": "Max results", "default": 10 }
+  },
+  "required": ["query"]
+}
+\`\`\`
+
+## Available Host Imports (\`claw\` module)
+
+| Import         | Signature                  | Requires capability    |
+|----------------|----------------------------|------------------------|
+| \`log\`          | \`(i32, i32, i32) -> i32\`  | Always available       |
+| \`network_send\` | \`(i32) -> i32\`            | \`network_egress\` cap  |
+| \`fs_read\`      | \`(i32) -> i32\`            | \`fs_read\` cap         |
+
+To enable \`network_send\`, add to \`plugin.json\`:
+\`\`\`json
+"capabilities": ["tool_provider", "network_egress"],
+"capability_scopes": {
+  "network_allow_hosts": ["api.example.com"]
+}
+\`\`\`
+
+## Sandbox Limits
+
+| Limit               | Default  |
+|---------------------|----------|
+| Max module size     | 512 KiB  |
+| Max request JSON    | 256 KiB  |
+| Max response JSON   | 256 KiB  |
+| Fuel budget         | 1 000 000 |
+| Timeout             | 2 000 ms |
+
+## Packaging & Distribution
+
+\`\`\`bash
+make pack         # creates dist/${plugin_id}-${plugin_version}.tar.gz
+make install      # installs from the packaged tarball
+\`\`\`
+
+Local development plugins can stay \`unsigned_local\`. Kelvin prints a warning
+on install but still loads the plugin from a local plugin home.
+
+To sign for distribution:
+
+\`\`\`bash
+scripts/plugin-sign.sh \\\\
+  --manifest ./plugin.json \\\\
+  --private-key /path/to/ed25519-private.pem \\\\
+  --publisher-id your.publisher.id \\\\
+  --trust-policy-out ./trusted_publishers.json
+\`\`\`
+EOF
+}
+
+scaffold_model_plugin_project() {
+  local output_dir="$1"
+  local plugin_id="$2"
+  local display_name="$3"
+  local plugin_version="$4"
+  local entrypoint_rel="$5"
+  local crate_package_name="$6"
+  local crate_lib_name="$7"
+
+  mkdir -p "${output_dir}/src" "${output_dir}/payload"
+
+  cat > "${output_dir}/Cargo.toml" <<EOF
+# Kelvin model plugin crate.
+# Compiled to wasm32-unknown-unknown and loaded by the Kelvin runtime as a
+# wasm_model_v1 plugin. Distributed as a .wasm binary, not published to crates.io.
+
+[package]
+name = "${crate_package_name}"
+# edition = "2021" is the minimum for stable wasm32 support.
+version = "${plugin_version}"
+edition = "2021"
+publish = false
+
+[lib]
+# cdylib produces a .wasm with C ABI exports (alloc, dealloc, infer).
+# Do NOT add rlib here; Kelvin loads only the .wasm cdylib.
+name = "${crate_lib_name}"
+crate-type = ["cdylib"]
+
+# Uncomment to optimise for binary size (typical plugin .wasm < 2 KiB):
+# [profile.release]
+# opt-level = "z"     # optimise for size
+# lto = true          # link-time optimisation across the single crate
+# strip = "symbols"   # strip debug symbols
+
+# Empty [workspace] prevents Cargo from walking up to a parent workspace.
+[workspace]
+EOF
+
+  cat > "${output_dir}/src/lib.rs" <<'EOF'
+//! Kelvin model plugin guest — wasm_model_v1 ABI.
+//!
+//! # Required exports (all must be present or the plugin will fail to load)
+//!
+//! | Export    | Signature            | Purpose                                          |
+//! |-----------|----------------------|--------------------------------------------------|
+//! | `memory`  | Memory               | Linear memory shared between host and guest      |
+//! | `alloc`   | `(i32) -> i32`       | Bump-allocate N bytes; returns pointer or 0      |
+//! | `dealloc` | `(i32, i32) -> ()`   | Free allocation (no-op in this arena allocator)  |
+//! | `infer`   | `(i32, i32) -> i64`  | Main entry point (see below)                     |
+//!
+//! # infer return convention
+//!
+//! The return value is a packed i64:
+//!   upper 32 bits = pointer into guest memory
+//!   lower 32 bits = byte length of the response JSON
+//! Return 0 to signal an error.
+//!
+//! # Host imports (kelvin_model_host_v1)
+//!
+//! The host provides the following imports. All are optional to call, but
+//! `provider_profile_call` is what makes the actual HTTP request for most plugins.
+
+#![no_std]
+
+#[link(wasm_import_module = "kelvin_model_host_v1")]
+extern "C" {
+    /// Delegate the request to the provider declared in plugin.json's `provider_profile`.
+    ///
+    /// The host reads the `ModelInput` JSON from guest memory at (req_ptr, req_len),
+    /// translates it to the provider's native protocol (Anthropic Messages,
+    /// OpenAI Responses, or OpenAI Chat Completions), makes the HTTP call,
+    /// and writes a `ModelOutput` JSON response back into guest memory via `alloc`.
+    ///
+    /// Returns a packed i64 (ptr << 32 | len) pointing at the response, or 0 on error.
+    fn provider_profile_call(req_ptr: i32, req_len: i32) -> i64;
+
+    /// Same as provider_profile_call but always uses the built-in OpenAI Responses
+    /// profile, ignoring plugin.json. Useful only if you need to hard-code OpenAI
+    /// regardless of the manifest's provider_profile.
+    #[allow(dead_code)]
+    fn openai_responses_call(req_ptr: i32, req_len: i32) -> i64;
+
+    /// Log a UTF-8 message to the Kelvin host log.
+    ///
+    /// level: 0=trace, 1=debug, 2=info, 3=warn, 4=error
+    /// msg_ptr / msg_len: byte slice in guest memory.
+    /// Returns 0 (reserved).
+    #[allow(dead_code)]
+    fn log(level: i32, msg_ptr: i32, msg_len: i32) -> i32;
+
+    /// Returns the current wall-clock time as milliseconds since Unix epoch.
+    #[allow(dead_code)]
+    fn clock_now_ms() -> i64;
+}
+
+// ---------------------------------------------------------------------------
+// Arena allocator
+//
+// No libc is available in a no_std WASM guest. We manage a 1 MiB static
+// heap with a bump pointer. The 8-byte alignment satisfies all scalar types.
+// `dealloc` is intentionally a no-op: the host creates a fresh WASM instance
+// per call, so all memory is reclaimed when the instance exits.
+// ---------------------------------------------------------------------------
+
+const HEAP_SIZE: usize = 1024 * 1024; // 1 MiB — sufficient for typical JSON payloads
+static mut HEAP: [u8; HEAP_SIZE] = [0; HEAP_SIZE];
+static mut NEXT_OFFSET: usize = 0;
+
+#[no_mangle]
+pub extern "C" fn alloc(len: i32) -> i32 {
+    if len <= 0 {
+        return 0;
+    }
+
+    let len = len as usize;
+    let align = 8usize;
+
+    unsafe {
+        let start = (NEXT_OFFSET + (align - 1)) & !(align - 1);
+        let Some(end) = start.checked_add(len) else {
+            return 0;
+        };
+        if end > HEAP_SIZE {
+            return 0;
+        }
+        NEXT_OFFSET = end;
+        core::ptr::addr_of_mut!(HEAP).cast::<u8>().add(start) as usize as i32
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn dealloc(_ptr: i32, _len: i32) {}
+
+// ---------------------------------------------------------------------------
+// infer — main entry point
+//
+// The host serialises a ModelInput into JSON and writes it into guest memory
+// at (req_ptr, req_len). This passthrough implementation delegates directly
+// to provider_profile_call, which handles protocol translation and the HTTP
+// request. The return value is a packed (ptr << 32 | len) pointing at a
+// ModelOutput JSON in guest memory.
+//
+// ModelInput JSON fields:
+//   run_id          string   — unique identifier for this inference call
+//   session_id      string   — session the call belongs to
+//   system_prompt   string   — the system/context prompt
+//   user_prompt     string   — the user's message
+//   memory_snippets []string — relevant memory snippets injected by the host
+//   history         []       — prior session messages
+//   tools           []       — tool definitions available to the model
+//
+// ModelOutput JSON fields (must be returned by a custom infer):
+//   assistant_text  string   — the model's text response
+//   stop_reason     string?  — why generation stopped (e.g. "end_turn")
+//   tool_calls      []       — any tool calls the model wants to make
+//   usage           object?  — token usage stats (optional)
+// ---------------------------------------------------------------------------
+
+#[no_mangle]
+pub extern "C" fn infer(req_ptr: i32, req_len: i32) -> i64 {
+    // SAFETY: The trusted Kelvin host provides this import for approved
+    // provider_profile-backed model plugins.
+    unsafe { provider_profile_call(req_ptr, req_len) }
+}
+
+// ---------------------------------------------------------------------------
+// Example: using log() from within infer
+//
+// Uncomment to emit a debug log on every inference call.
+//
+// fn log_str(level: i32, msg: &[u8]) {
+//     let ptr = alloc(msg.len() as i32);
+//     if ptr == 0 { return; }
+//     unsafe {
+//         core::ptr::copy_nonoverlapping(msg.as_ptr(), ptr as *mut u8, msg.len());
+//         log(level, ptr, msg.len() as i32);
+//     }
+// }
+//
+// Then inside infer:
+//   log_str(2, b"infer called");
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Example: using clock_now_ms()
+//
+// let _now_ms: i64 = unsafe { clock_now_ms() };
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Example: custom infer (offline / echo style, no HTTP call)
+//
+// Override infer to build a ModelOutput JSON directly in guest memory,
+// without calling any host import. Useful for mocking, testing, or building
+// a fully self-contained plugin.
+//
+// #[no_mangle]
+// pub extern "C" fn infer(req_ptr: i32, req_len: i32) -> i64 {
+//     let input = unsafe {
+//         core::slice::from_raw_parts(req_ptr as *const u8, req_len as usize)
+//     };
+//     // Extract the user_prompt field from the input JSON.
+//     let prompt = extract_str_field(input, b"user_prompt").unwrap_or(b"(no prompt)");
+//
+//     // Build a minimal ModelOutput JSON.
+//     const PRE:  &[u8] = b"{\"assistant_text\":\"";
+//     const POST: &[u8] = b"\",\"stop_reason\":\"end_turn\",\"tool_calls\":[],\"usage\":null}";
+//     let total = PRE.len() + prompt.len() + POST.len();
+//     let ptr = alloc(total as i32) as usize;
+//     if ptr == 0 { return 0; }
+//     unsafe {
+//         let base = ptr as *mut u8;
+//         let mut off = 0;
+//         core::ptr::copy_nonoverlapping(PRE.as_ptr(),    base.add(off), PRE.len());    off += PRE.len();
+//         core::ptr::copy_nonoverlapping(prompt.as_ptr(), base.add(off), prompt.len()); off += prompt.len();
+//         core::ptr::copy_nonoverlapping(POST.as_ptr(),   base.add(off), POST.len());
+//     }
+//     ((ptr as i64) << 32) | (total as i64)
+// }
+//
+// // Minimal JSON field extractor (no_std, no allocator needed).
+// fn extract_str_field<'a>(json: &'a [u8], field: &[u8]) -> Option<&'a [u8]> {
+//     let mut needle = [0u8; 64];
+//     let mut ni = 0;
+//     needle[ni] = b'"'; ni += 1;
+//     for &b in field { needle[ni] = b; ni += 1; }
+//     needle[ni] = b'"'; ni += 1;
+//     needle[ni] = b':'; ni += 1;
+//     needle[ni] = b'"'; ni += 1;
+//     let needle = &needle[..ni];
+//     let pos = json.windows(needle.len()).position(|w| w == needle)?;
+//     let start = pos + needle.len();
+//     let mut i = start;
+//     while i < json.len() {
+//         if json[i] == b'\\' { i += 2; continue; }
+//         if json[i] == b'"' { return Some(&json[start..i]); }
+//         i += 1;
+//     }
+//     None
+// }
+// ---------------------------------------------------------------------------
+
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
+}
+EOF
+
+  cat > "${output_dir}/build.sh" <<EOF
+#!/usr/bin/env bash
+# build.sh — Compile the Kelvin model plugin WASM binary.
+#
+# Steps:
+#   1. Ensure the wasm32-unknown-unknown rustup target is installed
+#   2. cargo build --release for the wasm32 target (produces a cdylib .wasm)
+#   3. Copy the .wasm into payload/ (where plugin.json's "entrypoint" points)
+#   4. Compute SHA-256 of the .wasm and patch plugin.json's entrypoint_sha256
+#
+# The SHA-256 is verified at install-time and load-time by the Kelvin runtime
+# to ensure the binary on disk matches the manifest declaration.
+set -euo pipefail
+
+ROOT_DIR="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
+PLUGIN_JSON="\${ROOT_DIR}/plugin.json"
+PAYLOAD_DIR="\${ROOT_DIR}/payload"
+# Read the entrypoint filename from plugin.json so build.sh stays in sync
+# with any manual edits to the manifest.
+ENTRYPOINT_REL="\$(jq -er '.entrypoint' "\${PLUGIN_JSON}")"
+ENTRYPOINT_ABS="\${PAYLOAD_DIR}/\${ENTRYPOINT_REL}"
+TARGET_ROOT="\${CARGO_TARGET_DIR:-\${ROOT_DIR}/target}"
+TARGET_DIR="\${TARGET_ROOT}/wasm32-unknown-unknown/release"
+WASM_SOURCE="\${TARGET_DIR}/${crate_lib_name}.wasm"
+
+require_cmd() {
+  local name="\$1"
+  if ! command -v "\${name}" >/dev/null 2>&1; then
+    echo "Missing required command: \${name}" >&2
+    exit 1
+  fi
+}
+
+sha256_file() {
+  local file="\$1"
+  if command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "\${file}" | awk '{print \$1}'
+    return
+  fi
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "\${file}" | awk '{print \$1}'
+    return
+  fi
+  echo "Missing required command: shasum or sha256sum" >&2
+  exit 1
+}
+
+require_cmd cargo
+require_cmd jq
+require_cmd rustup
+
+# Step 1: ensure the cross-compilation target is available.
+rustup target add wasm32-unknown-unknown >/dev/null
+
+# Step 2: compile the Rust guest to a WASM cdylib.
+cargo build --release --target wasm32-unknown-unknown
+
+# Step 3: copy the compiled binary into payload/ where the manifest expects it.
+mkdir -p "\$(dirname "\${ENTRYPOINT_ABS}")"
+cp "\${WASM_SOURCE}" "\${ENTRYPOINT_ABS}"
+
+# Step 4: compute and record the SHA-256 so the runtime can verify integrity.
+ENTRYPOINT_SHA="\$(sha256_file "\${ENTRYPOINT_ABS}")"
+jq --arg sha "\${ENTRYPOINT_SHA}" '.entrypoint_sha256 = \$sha' "\${PLUGIN_JSON}" > "\${PLUGIN_JSON}.tmp"
+mv "\${PLUGIN_JSON}.tmp" "\${PLUGIN_JSON}"
+
+echo "[kelvin-plugin] built ${plugin_id} -> \${ENTRYPOINT_ABS}"
+echo "[kelvin-plugin] entrypoint sha256: \${ENTRYPOINT_SHA}"
+EOF
+  chmod +x "${output_dir}/build.sh"
+
+  cat > "${output_dir}/Makefile" <<EOF
+# Makefile for ${display_name}
+# Convenience wrapper around the common kelvin-plugin.sh development commands.
+# Run 'make help' to list available targets.
+
+PLUGIN_DIR := \$(dir \$(abspath \$(lastword \$(MAKEFILE_LIST))))
+MANIFEST   := \$(PLUGIN_DIR)plugin.json
+SCRIPTS    := \$(PLUGIN_DIR)../scripts
+
+ID      := \$(shell jq -er '.id'      \$(MANIFEST) 2>/dev/null || echo unknown)
+VERSION := \$(shell jq -er '.version' \$(MANIFEST) 2>/dev/null || echo 0.0.0)
+PACKAGE := \$(PLUGIN_DIR)dist/\$(ID)-\$(VERSION).tar.gz
+
+.PHONY: build test pack install smoke clean help
+
+build:          ## Compile WASM and update entrypoint_sha256 in plugin.json
+	@bash \$(PLUGIN_DIR)build.sh
+
+test: build     ## Validate plugin manifest structure
+	@\$(SCRIPTS)/kelvin-plugin.sh test --manifest \$(MANIFEST)
+
+pack: build     ## Create distributable .tar.gz package in dist/
+	@\$(SCRIPTS)/kelvin-plugin.sh pack --manifest \$(MANIFEST)
+
+install: pack   ## Install plugin into the local Kelvin plugin home
+	@\$(SCRIPTS)/kelvin-plugin.sh install --package \$(PACKAGE)
+
+smoke: build    ## Run a live inference smoke test (API key env var must be set)
+	@\$(SCRIPTS)/kelvin-plugin.sh smoke --manifest \$(MANIFEST)
+
+clean:          ## Remove build artifacts (target/, dist/, payload/*.wasm)
+	@rm -rf \$(PLUGIN_DIR)target \$(PLUGIN_DIR)dist \$(PLUGIN_DIR)payload/*.wasm
+
+help:           ## Show this help message
+	@grep -E '^[a-zA-Z_-]+:.*?## ' \$(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-10s %s\\n", \$\$1, \$\$2}'
+EOF
+
+  cat > "${output_dir}/payload/README.md" <<EOF
+This directory holds the compiled WASM entrypoint for the plugin.
+
+Run \`./build.sh\` (or \`make build\`) to compile \`src/lib.rs\` and place the
+resulting \`.wasm\` file here as \`${entrypoint_rel}\`.
+
+The filename must match the \`entrypoint\` field in \`plugin.json\`. The Kelvin
+runtime verifies the file's SHA-256 against \`entrypoint_sha256\` in the manifest;
+\`build.sh\` keeps that field up to date automatically.
+
+\`.wasm\` files are excluded from version control (see \`.gitignore\`).
+EOF
+
+  cat > "${output_dir}/.gitignore" <<'EOF'
+# Build artifacts — do not commit compiled WASM binaries or distribution archives.
+/dist/
+/target/
+/payload/*.wasm
+EOF
+
+  cat > "${output_dir}/README.md" <<EOF
+# ${display_name}
+
+A Kelvin model provider plugin using the \`wasm_model_v1\` runtime.
+Generated by \`scripts/kelvin-plugin.sh new --runtime wasm_model_v1\`.
+
+## Architecture
+
+Kelvin model plugins are thin WASM guests. The host (Kelvin runtime) calls the
+guest's \`infer(ptr, len) -> i64\` export with a serialised \`ModelInput\` JSON.
+Most plugins simply call the \`provider_profile_call\` host import, which tells
+the host to make the actual HTTP request using the \`provider_profile\` declared
+in \`plugin.json\`. All protocol translation, auth, and network I/O happen on the
+host side — the WASM guest stays small and dependency-free.
+
+## File Layout
+
+| File             | Purpose                                                        |
+|------------------|----------------------------------------------------------------|
+| \`plugin.json\`    | Manifest: identity, provider_profile, capabilities, controls  |
+| \`src/lib.rs\`     | Rust WASM guest: exports alloc/dealloc/infer, imports host fns|
+| \`Cargo.toml\`     | Rust crate config (cdylib, no_std, wasm32 target)             |
+| \`build.sh\`       | Compile, copy .wasm to payload/, update SHA-256 in plugin.json|
+| \`Makefile\`       | Convenience targets: build, test, pack, install, smoke, clean |
+| \`payload/\`       | Directory containing the compiled .wasm entrypoint            |
+
+## Quick Start
+
+\`\`\`bash
+make build        # compile WASM and patch plugin.json SHA-256
+make test         # validate manifest structure
+make smoke        # run live inference (API key env var must be set)
+make pack         # create dist/${plugin_id}-${plugin_version}.tar.gz
+make install      # install into the local Kelvin plugin home
+\`\`\`
+
+## Customising provider_profile
+
+The \`provider_profile\` object in \`plugin.json\` controls how the host routes
+HTTP requests. Key fields:
+
+| Field              | Description                                                  |
+|--------------------|--------------------------------------------------------------|
+| \`protocol_family\`  | \`openai_responses\`, \`anthropic_messages\`, or \`openai_chat_completions\` |
+| \`api_key_env\`      | Environment variable holding the API key                    |
+| \`base_url_env\`     | Environment variable to override the base URL (optional)    |
+| \`default_base_url\` | Fallback base URL when the env var is unset                 |
+| \`endpoint_path\`    | Appended to base URL (e.g. \`v1/messages\`)                   |
+| \`auth_header\`      | Header name for the API key (\`authorization\` or \`x-api-key\`)|
+| \`auth_scheme\`      | \`bearer\` (adds \`Bearer \` prefix) or \`raw\` (sends key as-is)  |
+| \`static_headers\`   | Additional headers sent on every request (e.g. API versions)|
+| \`default_allow_hosts\` | Must match \`capability_scopes.network_allow_hosts\`       |
+
+## Customising the Guest
+
+For most providers the passthrough \`infer()\` in \`src/lib.rs\` is sufficient.
+For custom behaviour (input rewriting, caching, offline responses), see the
+commented-out examples at the bottom of \`src/lib.rs\`.
+
+### Available Host Imports (\`kelvin_model_host_v1\`)
+
+| Import                  | Signature              | Purpose                                 |
+|-------------------------|------------------------|-----------------------------------------|
+| \`provider_profile_call\` | \`(i32, i32) -> i64\`  | Delegate to plugin.json provider_profile|
+| \`openai_responses_call\` | \`(i32, i32) -> i64\`  | Hard-coded OpenAI Responses call        |
+| \`log\`                   | \`(i32, i32, i32) -> i32\` | Log message (level 0–4, ptr, len)   |
+| \`clock_now_ms\`          | \`() -> i64\`          | Current time in ms since Unix epoch     |
+
+### ModelInput JSON (host → guest)
+
+\`\`\`
+{ "run_id", "session_id", "system_prompt", "user_prompt",
+  "memory_snippets", "history", "tools" }
+\`\`\`
+
+### ModelOutput JSON (guest → host)
+
+\`\`\`
+{ "assistant_text", "stop_reason", "tool_calls", "usage" }
+\`\`\`
+
+## Testing
+
+\`\`\`bash
+make test         # static manifest validation (no API key needed)
+make smoke        # live inference test (set API key env var first)
+\`\`\`
+
+## Packaging & Distribution
+
+\`\`\`bash
+make pack         # creates dist/${plugin_id}-${plugin_version}.tar.gz
+make install      # installs from the packaged tarball
+\`\`\`
+
+Local development plugins can stay \`unsigned_local\`. Kelvin prints a warning
+on install but still loads the plugin from a local plugin home.
+
+To sign a plugin for distribution:
+
+\`\`\`bash
+scripts/plugin-sign.sh \\\\
+  --manifest ./plugin.json \\\\
+  --private-key /path/to/ed25519-private.pem \\\\
+  --publisher-id your.publisher.id \\\\
+  --trust-policy-out ./trusted_publishers.json
+\`\`\`
 EOF
 }
 
@@ -850,7 +1646,14 @@ cmd_new() {
     network_allow_hosts='[]'
     timeout_ms="2000"
     capabilities='["tool_provider"]'
-    runtime_extra="$(jq -cn --arg tool_name "${tool_name}" '{tool_name:$tool_name}')"
+    runtime_extra="$(jq -cn --arg tool_name "${tool_name}" '{
+      tool_name:$tool_name,
+      tool_input_schema:{
+        type:"object",
+        properties:{},
+        required:[]
+      }
+    }')"
   fi
 
   jq -cn \
@@ -870,7 +1673,7 @@ cmd_new() {
       version:$version,
       api_version:"1.0.0",
       description:"Kelvin plugin scaffold",
-      homepage:"https://github.com/agentichighway/kelvinclaw-plugins",
+      homepage:"https://github.com/agentichighway/kelvinclaw",
       capabilities:$capabilities,
       experimental:false,
       min_core_version:"0.1.0",
@@ -893,42 +1696,18 @@ cmd_new() {
       }
     } + $runtime_extra' > "${out}/plugin.json"
 
-  cat > "${out}/payload/README.md" <<'EOF'
-Place your compiled WASM entrypoint file here.
-Example:
-  payload/plugin.wasm
-EOF
-
-  cat > "${out}/README.md" <<EOF
-# ${name}
-
-Generated by \`scripts/kelvin-plugin.sh new\`.
-
-Quick commands:
-
-\`\`\`bash
-scripts/kelvin-plugin.sh test --manifest "${out}/plugin.json"
-scripts/kelvin-plugin.sh pack --manifest "${out}/plugin.json"
-scripts/kelvin-plugin.sh install --package "${out}/dist/${id}-${version}.tar.gz"
-\`\`\`
-
-For a local runtime smoke:
-
-\`\`\`bash
-scripts/kelvin-plugin.sh smoke --manifest "${out}/plugin.json"
-\`\`\`
-
-For signing:
-
-\`\`\`bash
-scripts/plugin-sign.sh --manifest "${out}/plugin.json" --private-key /path/to/ed25519-private.pem --publisher-id your.publisher.id --trust-policy-out "${out}/trusted_publishers.json"
-\`\`\`
-EOF
-
   if [[ "${runtime}" == "wasm_model_v1" ]]; then
     crate_package_name="$(tr '._' '-' <<< "${id}")-plugin"
     crate_lib_name="$(tr '.-' '_' <<< "${id}")_plugin"
     scaffold_model_plugin_project "${out}" "${id}" "${name}" "${version}" "${entrypoint}" "${crate_package_name}" "${crate_lib_name}"
+    (
+      cd "${out}"
+      ./build.sh >/dev/null
+    )
+  else
+    crate_package_name="$(tr '._' '-' <<< "${id}")-plugin"
+    crate_lib_name="$(tr '.-' '_' <<< "${id}")_plugin"
+    scaffold_tool_plugin_project "${out}" "${id}" "${name}" "${version}" "${entrypoint}" "${crate_package_name}" "${crate_lib_name}"
     (
       cd "${out}"
       ./build.sh >/dev/null

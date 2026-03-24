@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/lib/rust-toolchain-path.sh"
 
-DEFAULT_INDEX_URL="https://raw.githubusercontent.com/agentichighway/kelvinclaw-plugins/main/index.json"
+DEFAULT_INDEX_URL=""
 INDEX_URL="${KELVIN_PLUGIN_INDEX_URL:-${DEFAULT_INDEX_URL}}"
 REGISTRY_URL="${KELVIN_PLUGIN_REGISTRY_URL:-}"
 PLUGIN_ID=""

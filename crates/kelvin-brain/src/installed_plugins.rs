@@ -118,6 +118,7 @@ pub fn load_installed_plugins_default(
 pub struct CapabilityScopes {
     pub fs_read_paths: Vec<String>,
     pub network_allow_hosts: Vec<String>,
+    pub env_allow: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -375,6 +376,8 @@ struct CapabilityScopesManifest {
     fs_read_paths: Vec<String>,
     #[serde(default)]
     network_allow_hosts: Vec<String>,
+    #[serde(default)]
+    env_allow: Vec<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -389,6 +392,9 @@ struct OperationalControlsManifest {
     circuit_breaker_failures: u32,
     #[serde(default = "default_circuit_breaker_cooldown_ms")]
     circuit_breaker_cooldown_ms: u64,
+    /// Override the WASM fuel budget for this plugin. Omit to use the runtime default.
+    #[serde(default)]
+    fuel_budget: Option<u64>,
 }
 
 impl Default for OperationalControlsManifest {
@@ -399,6 +405,7 @@ impl Default for OperationalControlsManifest {
             max_calls_per_minute: default_max_calls_per_minute(),
             circuit_breaker_failures: default_circuit_breaker_failures(),
             circuit_breaker_cooldown_ms: default_circuit_breaker_cooldown_ms(),
+            fuel_budget: None,
         }
     }
 }
@@ -640,23 +647,9 @@ impl InstalledWasmTool {
             }
         }
 
-        if self.sandbox_policy.allow_network_send {
-            let target_host = args
-                .get("target_host")
-                .and_then(|value| value.as_str())
-                .ok_or_else(|| {
-                    KelvinError::InvalidInput(format!(
-                        "tool '{}' requires string argument 'target_host' when network is enabled",
-                        self.tool_name
-                    ))
-                })?;
-            if !host_allowed(target_host, &self.scopes.network_allow_hosts) {
-                return Err(KelvinError::InvalidInput(format!(
-                    "tool '{}' denied target_host '{}' (outside network allowlist)",
-                    self.tool_name, target_host
-                )));
-            }
-        }
+        // Network host enforcement is handled at the WASM sandbox level (kelvin-wasm).
+        // wasm_tool_v1 plugins declare their fixed hosts in capability_scopes.network_allow_hosts
+        // and the sandbox prevents any connection outside that list — no caller argument needed.
 
         Ok(())
     }
@@ -714,7 +707,7 @@ impl InstalledWasmTool {
     async fn execute_once(&self, arguments: &Value) -> KelvinResult<kelvin_wasm::SkillExecution> {
         let host = self.host.clone();
         let entrypoint = self.entrypoint_abs.clone();
-        let policy = self.sandbox_policy;
+        let policy = self.sandbox_policy.clone();
         let input_json = serde_json::to_string(arguments).map_err(|err| {
             KelvinError::InvalidInput(format!(
                 "serialize tool arguments for plugin '{}': {err}",
@@ -1933,6 +1926,7 @@ fn normalize_scopes(manifest: &InstalledPluginPackageManifest) -> KelvinResult<C
     Ok(CapabilityScopes {
         fs_read_paths,
         network_allow_hosts,
+        env_allow: manifest.capability_scopes.env_allow.clone(),
     })
 }
 
@@ -1990,7 +1984,13 @@ fn sandbox_from_manifest(manifest: &InstalledPluginPackageManifest) -> KelvinRes
         .capabilities
         .contains(&PluginCapability::NetworkEgress)
     {
-        policy.allow_network_send = true;
+        policy.network_allow_hosts = manifest.capability_scopes.network_allow_hosts.clone();
+    }
+    if !manifest.capability_scopes.env_allow.is_empty() {
+        policy.env_allow = manifest.capability_scopes.env_allow.clone();
+    }
+    if let Some(budget) = manifest.operational_controls.fuel_budget {
+        policy.fuel_budget = budget;
     }
     if manifest.capabilities.contains(&PluginCapability::FsWrite)
         || manifest
@@ -2134,6 +2134,7 @@ fn maybe_load_trust_policy_path(path: &Path) -> KelvinResult<Option<&Path>> {
     Ok(None)
 }
 
+#[allow(dead_code)]
 fn host_allowed(target: &str, allowlist: &[String]) -> bool {
     let candidate = target.trim().to_ascii_lowercase();
     allowlist.iter().any(|pattern| {
@@ -2175,6 +2176,10 @@ fn claw_call_json(call: &ClawCall) -> serde_json::Value {
         ClawCall::NetworkSend { packet } => json!({
             "kind": "network_send",
             "packet": packet,
+        }),
+        ClawCall::HttpCall { url } => json!({
+            "kind": "http_call",
+            "url": url,
         }),
     }
 }

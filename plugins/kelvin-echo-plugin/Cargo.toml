@@ -1,0 +1,11 @@
+[package]
+name = "kelvin-echo-plugin"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "kelvin_echo_plugin"
+crate-type = ["cdylib"]
+
+[workspace]

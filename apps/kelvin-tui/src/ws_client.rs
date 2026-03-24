@@ -174,6 +174,27 @@ impl WsClient {
             .ok_or_else(|| "missing run_id in response".to_string())
     }
 
+    pub async fn list_commands(&self) -> Result<Value, String> {
+        self.call("commands.list", json!({})).await
+    }
+
+    pub async fn exec_command(
+        &self,
+        command: &str,
+        args: Value,
+        session_id: &str,
+    ) -> Result<Value, String> {
+        self.call(
+            "command.exec",
+            json!({
+                "command": command,
+                "args": args,
+                "session_id": session_id,
+            }),
+        )
+        .await
+    }
+
     #[allow(dead_code)]
     pub async fn health(&self) -> Result<Value, String> {
         self.call("health", json!({})).await

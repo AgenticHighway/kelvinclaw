@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::{KelvinError, KelvinResult, ToolDefinition};
+use crate::{KelvinError, KelvinResult, SessionMessage, ToolDefinition};
 
 pub const OPENAI_RESPONSES_PROFILE_ID: &str = "openai.responses";
 pub const ANTHROPIC_MESSAGES_PROFILE_ID: &str = "anthropic.messages";
@@ -28,7 +28,7 @@ pub struct ModelInput {
     pub system_prompt: String,
     pub user_prompt: String,
     pub memory_snippets: Vec<String>,
-    pub history: Vec<String>,
+    pub history: Vec<SessionMessage>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub tools: Vec<ToolDefinition>,
 }

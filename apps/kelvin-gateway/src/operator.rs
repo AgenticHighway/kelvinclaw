@@ -9,8 +9,7 @@ use kelvin_sdk::KelvinSdkRuntime;
 use serde::Deserialize;
 use serde_json::{json, Value};
 
-const DEFAULT_PLUGIN_INDEX_URL: &str =
-    "https://raw.githubusercontent.com/agentichighway/kelvinclaw-plugins/main/index.json";
+const DEFAULT_PLUGIN_INDEX_URL: &str = "";
 const RUN_LIST_LIMIT_DEFAULT: usize = 25;
 const RUN_LIST_LIMIT_MAX: usize = 200;
 const SESSION_LIST_LIMIT_DEFAULT: usize = 25;

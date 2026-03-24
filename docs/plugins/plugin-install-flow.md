@@ -100,7 +100,8 @@ scripts/plugin-update-check.sh --registry-url http://127.0.0.1:34718 --json
 
 Default index URL:
 
-- `https://raw.githubusercontent.com/agentichighway/kelvinclaw-plugins/main/index.json`
+- None. Set `KELVIN_PLUGIN_INDEX_URL` to point at a community or self-hosted index.
+  First-party plugins are baked into the Docker image and do not require an index.
 
 Default install location:
 
@@ -194,7 +195,6 @@ scripts/plugin-sign.sh \
 Reference template:
 
 - `trusted_publishers.example.json`
-- `https://raw.githubusercontent.com/agentichighway/kelvinclaw-plugins/main/trusted_publishers.kelvin.json`
 
 ## Verification
 

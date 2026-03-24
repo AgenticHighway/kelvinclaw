@@ -1,0 +1,54 @@
+{
+  "id": "kelvin.websearch",
+  "name": "Kelvin Web Search",
+  "version": "0.1.0",
+  "api_version": "1.0.0",
+  "description": "Web search powered by the Brave Search API",
+  "homepage": null,
+  "capabilities": [
+    "tool_provider",
+    "network_egress"
+  ],
+  "experimental": false,
+  "min_core_version": "0.1.0",
+  "max_core_version": null,
+  "runtime": "wasm_tool_v1",
+  "entrypoint": "plugin.wasm",
+  "entrypoint_sha256": "e14038fb8e1a02418a617b518fac7ac1b374fdd530df8d2747ee47adbdc74be5",
+  "publisher": null,
+  "quality_tier": "unsigned_local",
+  "capability_scopes": {
+    "fs_read_paths": [],
+    "network_allow_hosts": [
+      "api.search.brave.com"
+    ],
+    "env_allow": [
+      "BRAVE_API_KEY"
+    ]
+  },
+  "operational_controls": {
+    "timeout_ms": 15000,
+    "max_retries": 1,
+    "max_calls_per_minute": 30,
+    "circuit_breaker_failures": 5,
+    "circuit_breaker_cooldown_ms": 60000,
+    "fuel_budget": 20000000
+  },
+  "tool_name": "kelvin_websearch",
+  "tool_input_schema": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string",
+        "description": "The search query."
+      },
+      "count": {
+        "type": "integer",
+        "description": "Number of results to return (1-20, default 5)."
+      }
+    },
+    "required": [
+      "query"
+    ]
+  }
+}

@@ -77,12 +77,14 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
                 }
             }
             ChatMessage::System(text) => {
-                lines.push(Line::from(Span::styled(
-                    text.clone(),
-                    Style::default().fg(Color::DarkGray).add_modifier(Modifier::ITALIC),
-                )));
-                line_info.push(ChatLineInfo { prefix_width: 0, is_separator: false });
-                line_texts.push(text.clone());
+                let style = Style::default().fg(Color::DarkGray).add_modifier(Modifier::ITALIC);
+                let src_lines: Vec<&str> = text.lines().collect();
+                let src_lines = if src_lines.is_empty() { vec![""] } else { src_lines };
+                for src_line in src_lines {
+                    lines.push(Line::from(Span::styled(src_line.to_string(), style)));
+                    line_info.push(ChatLineInfo { prefix_width: 0, is_separator: false });
+                    line_texts.push(src_line.to_string());
+                }
             }
         }
     }

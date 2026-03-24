@@ -15,7 +15,12 @@ use tokio::time::interval;
 
 use unicode_width::UnicodeWidthChar;
 
-use crate::{ui, ws_client::WsClient, CliConfig};
+use crate::{
+    commands::{CompletionItem, LocalCommand, MergedCommandRegistry, SlashCommand},
+    ui,
+    ws_client::WsClient,
+    CliConfig,
+};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct AgentEvent {
@@ -83,6 +88,8 @@ pub enum TuiEvent {
     Mouse(crossterm::event::MouseEvent),
     SubmitResult(Result<String, String>),
     Reconnected(Result<WsClient, String>),
+    CommandsLoaded(Result<serde_json::Value, String>),
+    CommandResult(Result<serde_json::Value, String>),
     Tick,
 }
 
@@ -243,10 +250,15 @@ pub struct App {
     pub chat_line_map: Vec<(usize, usize)>, // visual_row -> (content_line_idx, char_start_col)
     pub chat_line_info: Vec<ChatLineInfo>,
     pub chat_line_texts: Vec<String>,       // per content line, prefix stripped (empty for separators)
+    pub command_registry: MergedCommandRegistry,
+    pub autocomplete_visible: bool,
+    pub autocomplete_items: Vec<CompletionItem>,
+    pub autocomplete_selected: usize,
+    pub session_id: String,
 }
 
 impl App {
-    pub fn new(gateway_url: String) -> Self {
+    pub fn new(gateway_url: String, session_id: String) -> Self {
         Self {
             chat: vec![ChatMessage::System("Connecting to gateway…".to_string())],
             tools: Vec::new(),
@@ -280,6 +292,11 @@ impl App {
             chat_line_map: Vec::new(),
             chat_line_info: Vec::new(),
             chat_line_texts: Vec::new(),
+            command_registry: MergedCommandRegistry::default(),
+            autocomplete_visible: false,
+            autocomplete_items: Vec::new(),
+            autocomplete_selected: 0,
+            session_id,
         }
     }
 
@@ -621,6 +638,90 @@ fn is_word_char(c: char) -> bool {
     c.is_alphanumeric() || c == '_'
 }
 
+/// Update the autocomplete popup based on the current input.
+fn update_autocomplete(app: &mut App) {
+    // Only trigger if input starts with '/' and cursor is still in the command name
+    // (i.e., no space has been typed yet after the command name).
+    if app.input.starts_with('/') {
+        let after_slash = &app.input[1..];
+        if !after_slash.contains(' ') {
+            let items = app.command_registry.completions(after_slash);
+            app.autocomplete_visible = !items.is_empty();
+            // Clamp selected index.
+            if app.autocomplete_selected >= items.len() {
+                app.autocomplete_selected = 0;
+            }
+            app.autocomplete_items = items;
+            return;
+        }
+    }
+    app.autocomplete_visible = false;
+    app.autocomplete_items.clear();
+    app.autocomplete_selected = 0;
+}
+
+/// Format a command result payload into a readable string for the chat.
+fn format_command_result(payload: &serde_json::Value) -> String {
+    let command = payload.get("command").and_then(|v| v.as_str()).unwrap_or("?");
+    match command {
+        "tools" => {
+            let count = payload.get("count").and_then(|v| v.as_u64()).unwrap_or(0);
+            let mut lines = vec![format!("Tools ({count}):")];
+            if let Some(tools) = payload.get("tools").and_then(|v| v.as_array()) {
+                for tool in tools {
+                    let name = tool.get("name").and_then(|v| v.as_str()).unwrap_or("?");
+                    let desc = tool.get("description").and_then(|v| v.as_str()).unwrap_or("");
+                    lines.push(format!("  • {name} — {desc}"));
+                }
+            }
+            lines.join("\n")
+        }
+        "sessions" => {
+            let result = payload.get("result").unwrap_or(payload);
+            let sessions = result.get("sessions").and_then(|v| v.as_array());
+            let count = sessions.map(|s| s.len()).unwrap_or(0);
+            let mut lines = vec![format!("Sessions ({count}):")];
+            if let Some(sessions) = sessions {
+                for s in sessions {
+                    let id = s.get("session_id").and_then(|v| v.as_str()).unwrap_or("?");
+                    let msgs = s.get("message_count").and_then(|v| v.as_u64()).unwrap_or(0);
+                    let workspace = s.get("workspace_dir").and_then(|v| v.as_str()).unwrap_or("");
+                    lines.push(format!("  • {id}  ({msgs} msgs)  {workspace}"));
+                }
+            }
+            lines.join("\n")
+        }
+        "plugins" => {
+            let result = payload.get("result").unwrap_or(payload);
+            let loaded = result.get("loaded_installed_plugins").and_then(|v| v.as_u64()).unwrap_or(0);
+            let plugins = result.get("plugins").and_then(|v| v.as_array());
+            let total = plugins.map(|p| p.len()).unwrap_or(0);
+            let mut lines = vec![format!("Plugins ({loaded} loaded, {total} installed):")];
+            if let Some(plugins) = plugins {
+                for p in plugins {
+                    let name = p.get("name").and_then(|v| v.as_str()).unwrap_or("?");
+                    let version = p.get("version").and_then(|v| v.as_str()).unwrap_or("?");
+                    lines.push(format!("  • {name}  v{version}"));
+                }
+            }
+            if total == 0 {
+                lines.push("  (no plugins installed)".to_string());
+            }
+            lines.join("\n")
+        }
+        "clear" => "Session history cleared.".to_string(),
+        "new" => {
+            let sid = payload.get("session_id").and_then(|v| v.as_str()).unwrap_or("?");
+            format!("New session created: {sid}")
+        }
+        "switch" => {
+            let sid = payload.get("session_id").and_then(|v| v.as_str()).unwrap_or("?");
+            format!("Switched to session: {sid}")
+        }
+        _ => serde_json::to_string_pretty(payload).unwrap_or_else(|_| format!("{payload}")),
+    }
+}
+
 fn word_left(s: &str, pos: usize) -> usize {
     let mut current = pos;
     for c in s[..current].chars().rev() {
@@ -722,7 +823,7 @@ pub async fn run(config: CliConfig) -> Result<(), String> {
     let backend = CrosstermBackend::new(std::io::stdout());
     let mut terminal = Terminal::new(backend).map_err(|e| format!("terminal: {e}"))?;
 
-    let mut app = App::new(config.gateway_url.clone());
+    let mut app = App::new(config.gateway_url.clone(), config.session_id.clone());
     app.auth_token = config.auth_token.clone();
 
     let ws_result = WsClient::connect(&config.gateway_url, config.auth_token.clone(), tui_tx.clone()).await;
@@ -731,6 +832,13 @@ pub async fn run(config: CliConfig) -> Result<(), String> {
             app.ws_status = WsStatus::Connected;
             app.chat.clear();
             app.chat.push(ChatMessage::System(format!("Connected to {}", config.gateway_url)));
+            // Fetch available commands from the gateway.
+            let fetch_client = client.clone();
+            let tx = tui_tx.clone();
+            tokio::spawn(async move {
+                let result = fetch_client.list_commands().await;
+                let _ = tx.send(TuiEvent::CommandsLoaded(result)).await;
+            });
             Some(client)
         }
         Err(e) => {
@@ -766,7 +874,7 @@ pub async fn run(config: CliConfig) -> Result<(), String> {
         }
     });
 
-    let result = run_loop(&mut terminal, &mut app, &mut tui_rx, tui_tx.clone(), ws_client, &config.session_id).await;
+    let result = run_loop(&mut terminal, &mut app, &mut tui_rx, tui_tx.clone(), ws_client).await;
 
     key_task.abort();
     tick_task.abort();
@@ -781,7 +889,6 @@ async fn run_loop(
     tui_rx: &mut mpsc::Receiver<TuiEvent>,
     tui_tx: mpsc::Sender<TuiEvent>,
     ws_client: Option<WsClient>,
-    session_id: &str,
 ) -> Result<(), String> {
     let mut ws_client = ws_client;
     loop {
@@ -819,9 +926,26 @@ async fn run_loop(
                         }
                     }
                     KeyCode::Esc => {
-                        app.selection = None;
+                        if app.autocomplete_visible {
+                            app.autocomplete_visible = false;
+                            app.autocomplete_items.clear();
+                            app.autocomplete_selected = 0;
+                        } else {
+                            app.selection = None;
+                        }
                     }
                     KeyCode::Enter => {
+                        // Accept autocomplete selection if popup is open — execute immediately.
+                        if app.autocomplete_visible
+                            && app.autocomplete_selected < app.autocomplete_items.len()
+                        {
+                            let name = app.autocomplete_items[app.autocomplete_selected].name.clone();
+                            app.input = format!("/{name}");
+                            app.cursor_pos = app.input.len();
+                            app.autocomplete_visible = false;
+                            app.autocomplete_items.clear();
+                            app.autocomplete_selected = 0;
+                        }
                         if !app.input.trim().is_empty() {
                             let prompt = app.input.clone();
                             app.input_history.push(prompt.clone());
@@ -831,27 +955,181 @@ async fn run_loop(
                             }
                             app.history_idx = None;
                             app.history_saved.clear();
-                            app.chat.push(ChatMessage::User(prompt.clone()));
                             app.chat_pinned = true;
                             app.input.clear();
                             app.cursor_pos = 0;
                             app.paste_markers.clear();
-                            app.tools_pinned = true;
-                            app.tools_scroll = 0;
-                            app.run_phase = None;
+                            app.autocomplete_visible = false;
+                            app.autocomplete_items.clear();
+                            app.autocomplete_selected = 0;
 
-                            if app.ws_status != WsStatus::Connected {
-                                app.chat.push(ChatMessage::System("not connected to gateway".to_string()));
-                            } else if let Some(ref client) = ws_client {
-                                let client = client.clone();
-                                let session_id = session_id.to_string();
-                                let tx = tui_tx.clone();
-                                tokio::spawn(async move {
-                                    let result = client.submit_prompt(&prompt, &session_id).await;
-                                    let _ = tx.send(TuiEvent::SubmitResult(result)).await;
-                                });
+                            // Dispatch slash commands; send everything else as a prompt.
+                            if let Some((cmd_name, args)) = crate::commands::parse_slash_input(&prompt) {
+                                match app.command_registry.resolve(&cmd_name) {
+                                    Some(SlashCommand::Local(LocalCommand::Quit)) => {
+                                        app.should_quit = true;
+                                    }
+                                    Some(SlashCommand::Local(LocalCommand::Clear)) => {
+                                        app.chat.clear();
+                                        app.tools.clear();
+                                        // Also clear server-side session history when connected.
+                                        if app.ws_status == WsStatus::Connected {
+                                            if let Some(ref client) = ws_client {
+                                                let client = client.clone();
+                                                let sid = app.session_id.clone();
+                                                let tx = tui_tx.clone();
+                                                tokio::spawn(async move {
+                                                    let result = client.exec_command(
+                                                        "clear",
+                                                        serde_json::Value::Null,
+                                                        &sid,
+                                                    ).await;
+                                                    // Notify on error only.
+                                                    if let Err(e) = result {
+                                                        let _ = tx.send(TuiEvent::CommandResult(
+                                                            Err(format!("/clear failed: {e}"))
+                                                        )).await;
+                                                    }
+                                                });
+                                            }
+                                        }
+                                    }
+                                    Some(SlashCommand::Local(LocalCommand::Help)) => {
+                                        let text = app.command_registry.help_text();
+                                        app.chat.push(ChatMessage::System(text));
+                                    }
+                                    Some(SlashCommand::Local(LocalCommand::New)) => {
+                                        let new_id = if args.trim().is_empty() {
+                                            uuid::Uuid::new_v4().to_string()
+                                        } else {
+                                            args.trim().to_string()
+                                        };
+                                        app.session_id = new_id.clone();
+                                        app.chat.clear();
+                                        app.tools.clear();
+                                        app.chat.push(ChatMessage::System(
+                                            format!("Switched to new session: {new_id}")
+                                        ));
+                                        if app.ws_status == WsStatus::Connected {
+                                            if let Some(ref client) = ws_client {
+                                                let client = client.clone();
+                                                let sid = new_id.clone();
+                                                let tx = tui_tx.clone();
+                                                tokio::spawn(async move {
+                                                    let result = client.exec_command(
+                                                        "new",
+                                                        serde_json::json!({ "session_id": sid }),
+                                                        &sid,
+                                                    ).await;
+                                                    if let Err(e) = result {
+                                                        let _ = tx.send(TuiEvent::CommandResult(
+                                                            Err(format!("/new failed on gateway: {e}"))
+                                                        )).await;
+                                                    }
+                                                });
+                                            }
+                                        }
+                                    }
+                                    Some(SlashCommand::Local(LocalCommand::Session)) => {
+                                        if args.trim().is_empty() {
+                                            // No args: list sessions.
+                                            app.chat.push(ChatMessage::User(prompt.clone()));
+                                            if app.ws_status == WsStatus::Connected {
+                                                if let Some(ref client) = ws_client {
+                                                    let client = client.clone();
+                                                    let sid = app.session_id.clone();
+                                                    let tx = tui_tx.clone();
+                                                    tokio::spawn(async move {
+                                                        let result = client.exec_command(
+                                                            "sessions",
+                                                            serde_json::Value::Null,
+                                                            &sid,
+                                                        ).await;
+                                                        let _ = tx.send(TuiEvent::CommandResult(result)).await;
+                                                    });
+                                                }
+                                            } else {
+                                                app.chat.push(ChatMessage::System(
+                                                    "not connected to gateway".to_string()
+                                                ));
+                                            }
+                                        } else {
+                                            // With args: switch to named session.
+                                            let target_id = args.trim().to_string();
+                                            app.session_id = target_id.clone();
+                                            app.chat.clear();
+                                            app.tools.clear();
+                                            app.chat.push(ChatMessage::System(
+                                                format!("Switched to session: {target_id}")
+                                            ));
+                                            if app.ws_status == WsStatus::Connected {
+                                                if let Some(ref client) = ws_client {
+                                                    let client = client.clone();
+                                                    let sid = target_id.clone();
+                                                    let tx = tui_tx.clone();
+                                                    tokio::spawn(async move {
+                                                        let result = client.exec_command(
+                                                            "switch",
+                                                            serde_json::json!({ "session_id": sid }),
+                                                            &sid,
+                                                        ).await;
+                                                        if let Err(e) = result {
+                                                            let _ = tx.send(TuiEvent::CommandResult(
+                                                                Err(format!("/session switch failed: {e}"))
+                                                            )).await;
+                                                        }
+                                                    });
+                                                }
+                                            }
+                                        }
+                                    }
+                                    Some(SlashCommand::Remote { name }) => {
+                                        app.chat.push(ChatMessage::User(prompt.clone()));
+                                        app.tools_pinned = true;
+                                        app.tools_scroll = 0;
+                                        app.run_phase = None;
+                                        if app.ws_status != WsStatus::Connected {
+                                            app.chat.push(ChatMessage::System("not connected to gateway".to_string()));
+                                        } else if let Some(ref client) = ws_client {
+                                            let client = client.clone();
+                                            let session_id = app.session_id.clone();
+                                            let tx = tui_tx.clone();
+                                            let args_value = if args.is_empty() {
+                                                serde_json::Value::Null
+                                            } else {
+                                                serde_json::Value::String(args)
+                                            };
+                                            tokio::spawn(async move {
+                                                let result = client.exec_command(&name, args_value, &session_id).await;
+                                                let _ = tx.send(TuiEvent::CommandResult(result)).await;
+                                            });
+                                        }
+                                    }
+                                    None => {
+                                        app.chat.push(ChatMessage::System(format!(
+                                            "Unknown command: /{cmd_name} — type /help for available commands"
+                                        )));
+                                    }
+                                }
                             } else {
-                                app.chat.push(ChatMessage::System("not connected to gateway".to_string()));
+                                // Regular prompt — send to agent.
+                                app.chat.push(ChatMessage::User(prompt.clone()));
+                                app.tools_pinned = true;
+                                app.tools_scroll = 0;
+                                app.run_phase = None;
+                                if app.ws_status != WsStatus::Connected {
+                                    app.chat.push(ChatMessage::System("not connected to gateway".to_string()));
+                                } else if let Some(ref client) = ws_client {
+                                    let client = client.clone();
+                                    let session_id = app.session_id.clone();
+                                    let tx = tui_tx.clone();
+                                    tokio::spawn(async move {
+                                        let result = client.submit_prompt(&prompt, &session_id).await;
+                                        let _ = tx.send(TuiEvent::SubmitResult(result)).await;
+                                    });
+                                } else {
+                                    app.chat.push(ChatMessage::System("not connected to gateway".to_string()));
+                                }
                             }
                         }
                     }
@@ -866,12 +1144,28 @@ async fn run_loop(
                         app.cursor_pos += c.len_utf8();
                         #[cfg(debug_assertions)]
                         assert_markers_valid(&app.input, &app.paste_markers);
+                        update_autocomplete(app);
+                    }
+                    KeyCode::Tab => {
+                        if app.autocomplete_visible && !app.autocomplete_items.is_empty() {
+                            app.autocomplete_selected =
+                                (app.autocomplete_selected + 1) % app.autocomplete_items.len();
+                        }
+                    }
+                    KeyCode::BackTab => {
+                        if app.autocomplete_visible && !app.autocomplete_items.is_empty() {
+                            app.autocomplete_selected = app.autocomplete_selected
+                                .checked_sub(1)
+                                .unwrap_or(app.autocomplete_items.len() - 1);
+                        }
                     }
                     KeyCode::Backspace => {
                         app.do_backspace();
+                        update_autocomplete(app);
                     }
                     KeyCode::Delete => {
                         app.do_delete();
+                        update_autocomplete(app);
                     }
                     KeyCode::Left if key.modifiers.contains(KeyModifiers::CONTROL) => {
                         let new_pos = word_left(&app.input, app.cursor_pos);
@@ -930,7 +1224,11 @@ async fn run_loop(
                         }
                     }
                     KeyCode::Up => {
-                        if !app.input_history.is_empty() {
+                        if app.autocomplete_visible && !app.autocomplete_items.is_empty() {
+                            app.autocomplete_selected = app.autocomplete_selected
+                                .checked_sub(1)
+                                .unwrap_or(app.autocomplete_items.len() - 1);
+                        } else if !app.input_history.is_empty() {
                             let next_idx = match app.history_idx {
                                 None => {
                                     app.history_saved = app.input.clone();
@@ -945,20 +1243,25 @@ async fn run_loop(
                         }
                     }
                     KeyCode::Down => {
-                        match app.history_idx {
-                            None => {}
-                            Some(i) if i + 1 >= app.input_history.len() => {
-                                app.history_idx = None;
-                                app.input = app.history_saved.clone();
-                                app.paste_markers.clear();
-                                app.cursor_pos = app.input.len();
-                            }
-                            Some(i) => {
-                                let next_idx = i + 1;
-                                app.history_idx = Some(next_idx);
-                                app.input = app.input_history[next_idx].clone();
-                                app.paste_markers.clear();
-                                app.cursor_pos = app.input.len();
+                        if app.autocomplete_visible && !app.autocomplete_items.is_empty() {
+                            app.autocomplete_selected =
+                                (app.autocomplete_selected + 1) % app.autocomplete_items.len();
+                        } else {
+                            match app.history_idx {
+                                None => {}
+                                Some(i) if i + 1 >= app.input_history.len() => {
+                                    app.history_idx = None;
+                                    app.input = app.history_saved.clone();
+                                    app.paste_markers.clear();
+                                    app.cursor_pos = app.input.len();
+                                }
+                                Some(i) => {
+                                    let next_idx = i + 1;
+                                    app.history_idx = Some(next_idx);
+                                    app.input = app.input_history[next_idx].clone();
+                                    app.paste_markers.clear();
+                                    app.cursor_pos = app.input.len();
+                                }
                             }
                         }
                     }
@@ -1101,6 +1404,13 @@ async fn run_loop(
             TuiEvent::Reconnected(result) => {
                 match result {
                     Ok(client) => {
+                        // Re-fetch commands after reconnect.
+                        let fetch_client = client.clone();
+                        let tx = tui_tx.clone();
+                        tokio::spawn(async move {
+                            let result = fetch_client.list_commands().await;
+                            let _ = tx.send(TuiEvent::CommandsLoaded(result)).await;
+                        });
                         ws_client = Some(client);
                         app.reconnecting = false;
                         app.ws_status = WsStatus::Connected;
@@ -1110,6 +1420,23 @@ async fn run_loop(
                         // reconnect task is still running with backoff, nothing to do here
                     }
                 }
+            }
+            TuiEvent::CommandsLoaded(result) => {
+                if let Ok(payload) = result {
+                    app.command_registry.set_remote(&payload);
+                }
+            }
+            TuiEvent::CommandResult(result) => {
+                match result {
+                    Ok(payload) => {
+                        let msg = format_command_result(&payload);
+                        app.chat.push(ChatMessage::System(msg));
+                    }
+                    Err(e) => {
+                        app.chat.push(ChatMessage::System(format!("command error: {e}")));
+                    }
+                }
+                app.run_phase = None;
             }
             TuiEvent::Resize(_, _) => {}
         }

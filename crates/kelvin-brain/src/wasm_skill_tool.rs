@@ -93,6 +93,33 @@ impl WasmSkillTool {
         }
     }
 
+    fn optional_string_array(
+        &self,
+        args: &serde_json::Map<String, Value>,
+        key: &str,
+    ) -> KelvinResult<Option<Vec<String>>> {
+        match args.get(key) {
+            None => Ok(None),
+            Some(Value::Array(arr)) => {
+                let mut result = Vec::with_capacity(arr.len());
+                for item in arr {
+                    match item.as_str() {
+                        Some(s) => result.push(s.to_string()),
+                        None => {
+                            return Err(KelvinError::InvalidInput(format!(
+                                "'{key}' must be an array of strings"
+                            )))
+                        }
+                    }
+                }
+                Ok(Some(result))
+            }
+            _ => Err(KelvinError::InvalidInput(format!(
+                "'{key}' must be an array of strings"
+            ))),
+        }
+    }
+
     fn optional_u64(
         &self,
         args: &serde_json::Map<String, Value>,
@@ -182,8 +209,8 @@ impl WasmSkillTool {
         if let Some(value) = self.optional_bool(args, "allow_fs_read")? {
             policy.allow_fs_read = value;
         }
-        if let Some(value) = self.optional_bool(args, "allow_network_send")? {
-            policy.allow_network_send = value;
+        if let Some(hosts) = self.optional_string_array(args, "network_allow_hosts")? {
+            policy.network_allow_hosts = hosts;
         }
         if let Some(value) = self.optional_usize(args, "max_module_bytes")? {
             policy.max_module_bytes = value;
@@ -269,7 +296,7 @@ impl Tool for WasmSkillTool {
         let args = self.require_args_object(&input.arguments)?;
         let wasm_rel_path =
             self.sanitize_rel_path(&self.require_string(args, "wasm_path")?, "wasm_path")?;
-        let policy = self.resolve_policy(args, self.default_policy)?;
+        let policy = self.resolve_policy(args, self.default_policy.clone())?;
 
         let workspace_dir = PathBuf::from(&input.workspace_dir);
         let wasm_path = workspace_dir.join(&wasm_rel_path);
@@ -339,6 +366,7 @@ fn claw_call_label(call: &ClawCall) -> String {
         ClawCall::MoveServo { channel, position } => format!("move_servo({channel},{position})"),
         ClawCall::FsRead { handle } => format!("fs_read({handle})"),
         ClawCall::NetworkSend { packet } => format!("network_send({packet})"),
+        ClawCall::HttpCall { url } => format!("http_call({url})"),
     }
 }
 
@@ -360,6 +388,10 @@ fn claw_call_json(call: &ClawCall) -> Value {
         ClawCall::NetworkSend { packet } => json!({
             "kind": "network_send",
             "packet": packet,
+        }),
+        ClawCall::HttpCall { url } => json!({
+            "kind": "http_call",
+            "url": url,
         }),
     }
 }
