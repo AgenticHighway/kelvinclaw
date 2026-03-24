@@ -30,18 +30,25 @@ We recommend generating a gateway token using `openssl rand -hex 32`
 KELVIN_GATEWAY_TOKEN=<a-secret-token-you-choose>
 ```
 
-For OpenAI:
-
-```bash
-KELVIN_MODEL_PROVIDER=kelvin.openai
-OPENAI_API_KEY=<your-key>
-```
-
 For Anthropic:
 
 ```bash
 KELVIN_MODEL_PROVIDER=kelvin.anthropic
 ANTHROPIC_API_KEY=<your-key>
+```
+
+For OpenRouter:
+
+```bash
+KELVIN_MODEL_PROVIDER=kelvin.openrouter
+OPENROUTER_API_KEY=<your-key>
+```
+
+For OpenAI:
+
+```bash
+KELVIN_MODEL_PROVIDER=kelvin.openai
+OPENAI_API_KEY=<your-key>
 ```
 
 Start the host and gateway:
@@ -154,13 +161,9 @@ scripts/verify-onboarding.sh --track beginner
 
 Expected result:
 
-- Interactive setup wizard runs on container start.
-- Required `kelvin.cli` plugin is installed from plugin index.
+- `kelvin.cli` and the selected model provider plugin are installed from artifacts baked
+  into the image — no external index or network access required.
 - Running `kelvin-host --prompt "hello" --timeout-ms 3000` works without local Rust setup.
-
-Default plugin index URL:
-
-- `https://raw.githubusercontent.com/agentichighway/kelvinclaw-plugins/main/index.json`
 
 ## Track 2: Rust Developer (Runtime Contributor)
 
@@ -270,6 +273,11 @@ scripts/verify-onboarding.sh --track daily
 
 ## Security and Stability Notes
 
-- Plugin execution is policy-gated and signature-verified by default.
+- First-party plugins (`kelvin.cli`, `kelvin.anthropic`, `kelvin.openrouter`, `kelvin.echo`)
+  are built from source in `plugins/` and baked into the Docker runtime image at build time.
+  No external index or signing infrastructure is required for the Docker flow.
+- Community and third-party plugins can be installed by setting `KELVIN_PLUGIN_INDEX_URL`
+  to point at a community-hosted `index.json`. Signature enforcement is off by default;
+  trust policy files can be added to re-enable it per deployment.
 - First-party CLI plugin installation uses the same installed-plugin flow as other plugins.
 - Onboarding verification intentionally checks runtime behavior and SDK tests, not only tool presence.

@@ -27,11 +27,15 @@ Install from a package:
 scripts/plugin-install.sh --package ./dist/acme.echo-1.0.0.tar.gz
 ```
 
-Install from the default plugin index:
+Install from a community index (requires `KELVIN_PLUGIN_INDEX_URL` to be set):
 
 ```bash
-scripts/plugin-index-install.sh --plugin kelvin.cli
+KELVIN_PLUGIN_INDEX_URL=https://your-host/index.json \
+  scripts/plugin-index-install.sh --plugin some.community.plugin
 ```
+
+First-party plugins (`kelvin.cli`, `kelvin.anthropic`, `kelvin.openrouter`, `kelvin.echo`)
+are baked into the Docker image and do not use the index install path.
 
 Discover available plugins:
 

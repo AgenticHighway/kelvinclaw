@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DEFAULT_INDEX_URL="https://raw.githubusercontent.com/agentichighway/kelvinclaw-plugins/main/index.json"
+DEFAULT_INDEX_URL=""
 PLUGIN_HOME_DEFAULT="${HOME}/.kelvinclaw/plugins"
 TRUST_POLICY_DEFAULT="${HOME}/.kelvinclaw/trusted_publishers.json"
 
@@ -26,7 +26,7 @@ Required options:
 
 Optional:
   --index-url <url>     Plugin index JSON URL
-                        (default: $KELVIN_PLUGIN_INDEX_URL or kelvinclaw-plugins main index)
+                        (default: $KELVIN_PLUGIN_INDEX_URL or set $KELVIN_PLUGIN_INDEX_URL for a community index)
   --registry-url <url>  Hosted registry base URL (uses /v1/index.json)
   --version <version>   Version to install (defaults to highest semver for id)
   --plugin-home <dir>   Install root (default: $KELVIN_PLUGIN_HOME or ~/.kelvinclaw/plugins)

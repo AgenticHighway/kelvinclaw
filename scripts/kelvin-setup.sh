@@ -2,14 +2,14 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DEFAULT_INDEX_URL="https://raw.githubusercontent.com/agentichighway/kelvinclaw-plugins/main/index.json"
 KELVIN_HOME="${KELVIN_HOME:-/kelvin}"
 PLUGIN_HOME="${KELVIN_PLUGIN_HOME:-${KELVIN_HOME}/plugins}"
 TRUST_POLICY_PATH="${KELVIN_TRUST_POLICY_PATH:-${KELVIN_HOME}/trusted_publishers.json}"
 SETUP_MARKER="${KELVIN_HOME}/.setup_complete"
 
 FORCE="0"
-INDEX_URL="${KELVIN_PLUGIN_INDEX_URL:-${DEFAULT_INDEX_URL}}"
+INDEX_URL="${KELVIN_PLUGIN_INDEX_URL:-}"
+KELVIN_CLI_PACKAGE="${KELVIN_CLI_PACKAGE:-/opt/kelvin/plugins-vendor/kelvin.cli-0.1.2.tar.gz}"
 
 usage() {
   cat <<'USAGE'
@@ -87,12 +87,9 @@ if [[ -d "${CLI_PLUGIN_DIR}" ]]; then
   echo "[kelvin-setup] kelvin.cli already installed: ${CLI_PLUGIN_DIR}"
 else
   echo "[kelvin-setup] installing required plugin: kelvin.cli"
-  echo "[kelvin-setup] using plugin index: ${INDEX_URL}"
-  "${ROOT_DIR}/scripts/plugin-index-install.sh" \
-    --index-url "${INDEX_URL}" \
-    --plugin "kelvin.cli" \
-    --plugin-home "${KELVIN_PLUGIN_HOME}" \
-    --trust-policy-path "${KELVIN_TRUST_POLICY_PATH}"
+  "${ROOT_DIR}/scripts/plugin-install.sh" \
+    --package "${KELVIN_CLI_PACKAGE}" \
+    --plugin-home "${KELVIN_PLUGIN_HOME}"
 fi
 
 if [[ "${KELVIN_SETUP_INSTALL_BROWSER_AUTOMATION:-0}" == "1" ]]; then

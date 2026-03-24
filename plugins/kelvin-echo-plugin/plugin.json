@@ -1,0 +1,49 @@
+{
+  "id": "kelvin.echo",
+  "name": "Kelvin Echo Model Plugin",
+  "version": "0.1.0",
+  "api_version": "1.0.0",
+  "description": "First-party echo plugin — reflects the user prompt back as the assistant response. No external network calls.",
+  "homepage": "https://github.com/agentichighway/kelvinclaw/tree/main/plugins/kelvin-echo-plugin",
+  "capabilities": [
+    "model_provider"
+  ],
+  "experimental": false,
+  "min_core_version": "0.1.0",
+  "max_core_version": null,
+  "runtime": "wasm_model_v1",
+  "provider_name": "echo",
+  "provider_profile": {
+    "id": "kelvin.echo",
+    "provider_name": "echo",
+    "protocol_family": "anthropic_messages",
+    "api_key_env": "KELVIN_ECHO_UNUSED",
+    "base_url_env": "KELVIN_ECHO_UNUSED",
+    "default_base_url": "http://localhost",
+    "endpoint_path": "echo",
+    "auth_header": "x-echo-unused",
+    "auth_scheme": "raw",
+    "static_headers": [],
+    "default_allow_hosts": [
+      "localhost"
+    ]
+  },
+  "model_name": "echo",
+  "entrypoint": "plugin.wasm",
+  "entrypoint_sha256": "8cd01e8ccd172d7c0a338b20e96ea25bf40f16533853f3bf3ae5738baceb6da1",
+  "publisher": null,
+  "quality_tier": "unsigned_local",
+  "capability_scopes": {
+    "fs_read_paths": [],
+    "network_allow_hosts": [
+      "localhost"
+    ]
+  },
+  "operational_controls": {
+    "timeout_ms": 30000,
+    "max_retries": 0,
+    "max_calls_per_minute": 120,
+    "circuit_breaker_failures": 3,
+    "circuit_breaker_cooldown_ms": 30000
+  }
+}

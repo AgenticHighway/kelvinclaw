@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/lib/docker-cache.sh"
 IMAGE="${KELVIN_RUNTIME_IMAGE:-kelvin-runtime:dev}"
-DEFAULT_INDEX_URL="https://raw.githubusercontent.com/agentichighway/kelvinclaw-plugins/main/index.json"
+DEFAULT_INDEX_URL=""
 INDEX_URL="${KELVIN_PLUGIN_INDEX_URL:-${DEFAULT_INDEX_URL}}"
 BUILDER_NAME="${KELVIN_DOCKER_BUILDER:-kelvinclaw-builder}"
 CACHE_DIR="${KELVIN_RUNTIME_DOCKER_CACHE_DIR:-$(kelvin_docker_buildx_cache_dir "${ROOT_DIR}" "runtime")}"
@@ -18,7 +18,7 @@ Build and run the minimal Kelvin runtime container with interactive setup.
 Options:
   --image <name>       Image tag to use/build (default: kelvin-runtime:dev)
   --index-url <url>    Plugin index URL exposed as KELVIN_PLUGIN_INDEX_URL in container
-                       (default: kelvinclaw-plugins main index)
+                       (required for community plugin installation; first-party plugins are baked in)
   --no-build           Skip docker build step
   -h, --help           Show help
 USAGE
@@ -90,7 +90,7 @@ docker_args=(
   -w /workspace
 )
 
-docker_args+=(-e "KELVIN_PLUGIN_INDEX_URL=${INDEX_URL}")
+[[ -n "${INDEX_URL}" ]] && docker_args+=(-e "KELVIN_PLUGIN_INDEX_URL=${INDEX_URL}")
 
 docker_args+=("${IMAGE}")
 

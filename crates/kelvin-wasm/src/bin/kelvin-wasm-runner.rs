@@ -19,7 +19,7 @@ fn run() -> Result<i32, String> {
     let mut preset = SandboxPreset::LockedDown;
     let mut allow_move_servo: Option<bool> = None;
     let mut allow_fs_read: Option<bool> = None;
-    let mut allow_network_send: Option<bool> = None;
+    let mut network_allow_hosts: Option<Vec<String>> = None;
     let mut max_module_bytes: Option<usize> = None;
     let mut fuel_budget: Option<u64> = None;
     let mut input_json: Option<String> = None;
@@ -55,9 +55,14 @@ fn run() -> Result<i32, String> {
                 allow_fs_read = Some(true);
                 idx += 1;
             }
-            "--allow-network-send" => {
-                allow_network_send = Some(true);
-                idx += 1;
+            "--network-allow-hosts" => {
+                let value = args
+                    .get(idx + 1)
+                    .ok_or_else(|| "missing value for --network-allow-hosts".to_string())?;
+                network_allow_hosts = Some(
+                    value.split(',').map(|h| h.trim().to_string()).collect(),
+                );
+                idx += 2;
             }
             "--max-module-bytes" => {
                 let value = args
@@ -101,8 +106,8 @@ fn run() -> Result<i32, String> {
     if let Some(value) = allow_fs_read {
         policy.allow_fs_read = value;
     }
-    if let Some(value) = allow_network_send {
-        policy.allow_network_send = value;
+    if let Some(hosts) = network_allow_hosts {
+        policy.network_allow_hosts = hosts;
     }
     if let Some(value) = max_module_bytes {
         policy.max_module_bytes = value;
@@ -142,7 +147,7 @@ fn print_usage() {
     println!("  --policy-preset <locked_down|dev_local|hardware_control>  (default: locked_down)");
     println!("  --allow-move-servo");
     println!("  --allow-fs-read");
-    println!("  --allow-network-send");
+    println!("  --network-allow-hosts <hosts>  Comma-separated hostnames; use * for any host");
     println!("  --max-module-bytes <usize>");
     println!("  --fuel-budget <u64>");
     println!("  --input-json <string>   Pass JSON arguments to v2 handle_tool_call export");

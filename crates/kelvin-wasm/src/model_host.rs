@@ -133,9 +133,10 @@ impl OpenAiResponsesTransport for EnvProviderProfileTransport {
 
         if !status.is_success() {
             return Err(KelvinError::Backend(format!(
-                "{} request failed with status {}",
+                "{} request failed with status {}: {}",
                 profile.id,
-                status.as_u16()
+                status.as_u16(),
+                body
             )));
         }
 
@@ -359,12 +360,19 @@ fn model_input_to_openai_chat_completions_request(input: &ModelInput, model_name
             .tools
             .iter()
             .map(|t| {
+                let mut schema = t.input_schema.clone();
+                // OpenAI requires `properties` on object schemas even when empty.
+                if schema.get("type").and_then(Value::as_str) == Some("object")
+                    && !schema.as_object().map_or(false, |o| o.contains_key("properties"))
+                {
+                    schema["properties"] = json!({});
+                }
                 json!({
                     "type": "function",
                     "function": {
                         "name": t.name,
                         "description": t.description,
-                        "parameters": t.input_schema
+                        "parameters": schema
                     }
                 })
             })

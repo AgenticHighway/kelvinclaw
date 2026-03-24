@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DEFAULT_INDEX_URL="https://raw.githubusercontent.com/agentichighway/kelvinclaw-plugins/main/index.json"
+DEFAULT_INDEX_URL=""
 
 INDEX_URL="${KELVIN_PLUGIN_INDEX_URL:-${DEFAULT_INDEX_URL}}"
 PLUGIN_HOME="${KELVIN_PLUGIN_HOME:-${ROOT_DIR}/.kelvin/plugins}"
@@ -18,7 +18,7 @@ Install Kelvin's first-party OpenRouter WASM model plugin from the plugin index.
 
 Options:
   --index-url <url>           Plugin index URL
-                              (default: $KELVIN_PLUGIN_INDEX_URL or kelvinclaw-plugins main index)
+                              (default: $KELVIN_PLUGIN_INDEX_URL or set $KELVIN_PLUGIN_INDEX_URL for a community index)
   --version <version>         Specific plugin version (default: latest from index)
   --plugin-home <dir>         Plugin install root (default: $KELVIN_PLUGIN_HOME or ./.kelvin/plugins)
   --trust-policy-path <path>  Trust policy file path (default: $KELVIN_TRUST_POLICY_PATH or ./.kelvin/trusted_publishers.json)
