@@ -287,13 +287,14 @@ pub extern "C" fn dealloc(_ptr: i32, _len: i32) {}
 // ---------------------------------------------------------------------------
 // handle_tool_call — main entry point (v2 ABI)
 //
-// The host writes a ToolCallInput JSON into guest memory at (ptr, len).
+// The host writes the tool arguments JSON directly into guest memory at (ptr, len).
 //
-// ToolCallInput JSON fields:
-//   run_id        string  — unique identifier for this tool call
-//   session_id    string  — session the call belongs to
-//   workspace_dir string  — absolute path to the agent's workspace directory
-//   arguments     object  — the tool arguments (matches tool_input_schema in plugin.json)
+// Input JSON — the tool arguments object (matches tool_input_schema in plugin.json):
+//   { "my_arg": "value", ... }
+//
+// NOTE: the input is the raw arguments object, NOT a wrapped ToolCallInput struct.
+// Do NOT look for "run_id", "session_id", "workspace_dir", or "arguments" fields —
+// those are not present. Parse your tool's own fields directly from the input bytes.
 //
 // Must return a ToolCallResult JSON:
 //   summary       string       — short description of what was done (shown in logs)
@@ -543,18 +544,19 @@ make install      # install into the local Kelvin plugin home
 ## Implementing Your Tool
 
 Edit \`src/lib.rs\`. The \`handle_tool_call\` function is your entry point.
-It receives a \`ToolCallInput\` JSON and must return a \`ToolCallResult\` JSON.
+It receives the tool arguments as JSON and must return a \`ToolCallResult\` JSON.
 
-### ToolCallInput JSON (host → guest)
+### Input JSON (host → guest)
+
+The input passed to \`handle_tool_call\` is the **raw arguments object** — the exact
+JSON the model supplied, matching your \`tool_input_schema\`. There is no outer wrapper.
 
 \`\`\`
-{
-  "run_id":        string  — unique ID for this call
-  "session_id":    string  — session this call belongs to
-  "workspace_dir": string  — agent's workspace directory path
-  "arguments":     object  — tool arguments (defined by tool_input_schema in plugin.json)
-}
+{ "my_arg": "value", ... }
 \`\`\`
+
+**Do not** look for \`run_id\`, \`session_id\`, \`workspace_dir\`, or \`arguments\` in the
+input — those fields are not present. Parse your own argument fields directly.
 
 ### ToolCallResult JSON (guest → host)
 

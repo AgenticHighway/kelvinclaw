@@ -36,6 +36,7 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      BRAVE_API_KEY: ${BRAVE_API_KEY:-}
       RUST_LOG: ${RUST_LOG:-info}
     entrypoint: ["/opt/kelvin/scripts/gateway-plugin-init.sh"]
     volumes:
@@ -58,6 +59,7 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      BRAVE_API_KEY: ${BRAVE_API_KEY:-}
       RUST_LOG: ${RUST_LOG:-info}
     command:
       - --bind
