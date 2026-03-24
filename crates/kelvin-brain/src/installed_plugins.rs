@@ -2134,6 +2134,7 @@ fn maybe_load_trust_policy_path(path: &Path) -> KelvinResult<Option<&Path>> {
     Ok(None)
 }
 
+#[allow(dead_code)]
 fn host_allowed(target: &str, allowlist: &[String]) -> bool {
     let candidate = target.trim().to_ascii_lowercase();
     allowlist.iter().any(|pattern| {
