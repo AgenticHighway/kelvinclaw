@@ -137,13 +137,26 @@ install_required_plugins() {
       --trust-policy-path "${TRUST_POLICY_PATH}"
   fi
 
-  if [[ -d "${PLUGIN_HOME}/kelvin.openai/current" ]]; then
-    echo "[kelvin-local-profile] plugin already installed: kelvin.openai"
+  if [[ -n "${OPENAI_API_KEY:-}" ]]; then
+    if [[ -d "${PLUGIN_HOME}/kelvin.openai/current" ]]; then
+      echo "[kelvin-local-profile] plugin already installed: kelvin.openai"
+    else
+      echo "[kelvin-local-profile] installing model plugin: kelvin.openai"
+      "${ROOT_DIR}/scripts/install-kelvin-openai-plugin.sh" \
+        --plugin-home "${PLUGIN_HOME}" \
+        --trust-policy-path "${TRUST_POLICY_PATH}"
+    fi
+  elif [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
+    if [[ -d "${PLUGIN_HOME}/kelvin.anthropic/current" ]]; then
+      echo "[kelvin-local-profile] plugin already installed: kelvin.anthropic"
+    else
+      echo "[kelvin-local-profile] installing model plugin: kelvin.anthropic"
+      "${ROOT_DIR}/scripts/install-kelvin-anthropic-plugin.sh" \
+        --plugin-home "${PLUGIN_HOME}" \
+        --trust-policy-path "${TRUST_POLICY_PATH}"
+    fi
   else
-    echo "[kelvin-local-profile] installing model plugin: kelvin.openai"
-    "${ROOT_DIR}/scripts/install-kelvin-openai-plugin.sh" \
-      --plugin-home "${PLUGIN_HOME}" \
-      --trust-policy-path "${TRUST_POLICY_PATH}"
+    echo "[kelvin-local-profile] no API key detected; gateway will use built-in echo provider"
   fi
 
   if [[ "${KELVIN_INSTALL_BROWSER_PLUGIN:-0}" == "1" ]]; then
