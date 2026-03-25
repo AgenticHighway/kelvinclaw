@@ -50,6 +50,7 @@ build_release_binaries() {
     -p kelvin-gateway \
     -p kelvin-registry \
     -p kelvin-memory-controller \
+    -p kelvin-tui \
     --features kelvin-gateway/memory_rpc,kelvin-host/memory_legacy_fallback
 }
 
@@ -140,6 +141,7 @@ smoke_test_archive() {
   "${work_dir}/${root_name}/bin/kelvin-gateway${bin_suffix}" --help >/dev/null
   "${work_dir}/${root_name}/bin/kelvin-registry${bin_suffix}" --help >/dev/null
   "${work_dir}/${root_name}/bin/kelvin-memory-controller${bin_suffix}" --help >/dev/null
+  "${work_dir}/${root_name}/bin/kelvin-tui${bin_suffix}" --help >/dev/null
   rm -rf "${work_dir}"
 }
 
@@ -193,6 +195,7 @@ EOF
   "${extract_root}/usr/lib/kelvinclaw/bin/kelvin-gateway" --help >/dev/null
   "${extract_root}/usr/lib/kelvinclaw/bin/kelvin-registry" --help >/dev/null
   "${extract_root}/usr/lib/kelvinclaw/bin/kelvin-memory-controller" --help >/dev/null
+  "${extract_root}/usr/lib/kelvinclaw/bin/kelvin-tui" --help >/dev/null
 
   rm -rf "${work_dir}"
   echo "deb=${deb_path}"
@@ -275,6 +278,7 @@ cp "${TARGET_DIR}/${TARGET}/release/kelvin-host" "${STAGE_ROOT}/bin/"
 cp "${TARGET_DIR}/${TARGET}/release/kelvin-gateway" "${STAGE_ROOT}/bin/"
 cp "${TARGET_DIR}/${TARGET}/release/kelvin-registry" "${STAGE_ROOT}/bin/"
 cp "${TARGET_DIR}/${TARGET}/release/kelvin-memory-controller" "${STAGE_ROOT}/bin/"
+cp "${TARGET_DIR}/${TARGET}/release/kelvin-tui" "${STAGE_ROOT}/bin/"
 cp "${ROOT_DIR}/LICENSE" "${STAGE_ROOT}/"
 cp "${ROOT_DIR}/README.md" "${STAGE_ROOT}/"
 cp "${ROOT_DIR}/scripts/kelvin-release-launcher.sh" "${STAGE_ROOT}/kelvin"

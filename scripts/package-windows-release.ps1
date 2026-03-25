@@ -48,6 +48,7 @@ function Build-ReleaseBinaries([string]$Triple, [string]$TargetDirPath) {
       -p kelvin-gateway `
       -p kelvin-registry `
       -p kelvin-memory-controller `
+      -p kelvin-tui `
       --features kelvin-gateway/memory_rpc,kelvin-host/memory_legacy_fallback
 }
 
@@ -61,6 +62,7 @@ function Smoke-TestZip([string]$ZipPath, [string]$RootName) {
     & (Join-Path $WorkDir "$RootName\\bin\\kelvin-gateway.exe") --help | Out-Null
     & (Join-Path $WorkDir "$RootName\\bin\\kelvin-registry.exe") --help | Out-Null
     & (Join-Path $WorkDir "$RootName\\bin\\kelvin-memory-controller.exe") --help | Out-Null
+    & (Join-Path $WorkDir "$RootName\\bin\\kelvin-tui.exe") --help | Out-Null
 
     Remove-Item -Recurse -Force $WorkDir
 }
@@ -92,6 +94,7 @@ try {
     Copy-Item (Join-Path $TargetDir "$Target\\release\\kelvin-gateway.exe") (Join-Path $StageRoot "bin\\")
     Copy-Item (Join-Path $TargetDir "$Target\\release\\kelvin-registry.exe") (Join-Path $StageRoot "bin\\")
     Copy-Item (Join-Path $TargetDir "$Target\\release\\kelvin-memory-controller.exe") (Join-Path $StageRoot "bin\\")
+    Copy-Item (Join-Path $TargetDir "$Target\\release\\kelvin-tui.exe") (Join-Path $StageRoot "bin\\")
     Copy-Item (Join-Path $RootDir "LICENSE") $StageRoot
     Copy-Item (Join-Path $RootDir "README.md") $StageRoot
     Copy-Item (Join-Path $RootDir "scripts\\kelvin-release-launcher.ps1") (Join-Path $StageRoot "kelvin.ps1")
