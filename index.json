@@ -1,4 +1,78 @@
 {
-  "schema_version": "v1",
-  "plugins": []
+	"schema_version": "v1",
+	"index_url": "https://raw.githubusercontent.com/AgenticHighway/kelvinclaw/main/index.json",
+	"updated_at": "2026-03-25T00:00:00Z",
+	"plugins": [
+		{
+			"id": "kelvin.cli",
+			"name": "Kelvin CLI Toolpack",
+			"version": "0.1.2",
+			"description": "Core CLI toolpack providing filesystem, web fetch, cron, and session tools — required by every KelvinClaw installation.",
+			"homepage": "https://github.com/AgenticHighway/kelvinclaw",
+			"package_url": "https://raw.githubusercontent.com/AgenticHighway/kelvinclaw/main/release/vendor/kelvin.cli-0.1.2.tar.gz",
+			"sha256": "c151dc7a0a7b3d398165babbf3572d34711592208fdcd6d0bd6bc81a4b649203",
+			"quality_tier": "unsigned_local",
+			"api_version": "1.0.0",
+			"min_core_version": "0.1.0",
+			"capabilities": ["tool_provider"],
+			"runtime": "wasm_tool_v1"
+		},
+		{
+			"id": "kelvin.anthropic",
+			"name": "Kelvin Anthropic Model Plugin",
+			"version": "0.1.0",
+			"description": "First-party Anthropic model plugin — routes to Claude via Kelvin's provider_profile host routing.",
+			"homepage": "https://github.com/AgenticHighway/kelvinclaw/tree/main/plugins/kelvin-anthropic-plugin",
+			"package_url": "https://raw.githubusercontent.com/AgenticHighway/kelvinclaw/main/release/vendor/kelvin.anthropic-0.1.0.tar.gz",
+			"sha256": "09c933f75755e5e2d43c62a1a584150b44fb86926b4c5803be892a86ac2a1b5c",
+			"quality_tier": "unsigned_local",
+			"api_version": "1.0.0",
+			"min_core_version": "0.1.0",
+			"capabilities": ["model_provider", "network_egress"],
+			"runtime": "wasm_model_v1"
+		},
+		{
+			"id": "kelvin.openai",
+			"name": "Kelvin OpenAI Model Plugin",
+			"version": "0.1.0",
+			"description": "First-party OpenAI model plugin — routes to GPT via Kelvin's provider_profile host routing (Responses API).",
+			"homepage": "https://github.com/AgenticHighway/kelvinclaw/tree/main/plugins/kelvin-openai-plugin",
+			"package_url": "https://raw.githubusercontent.com/AgenticHighway/kelvinclaw/main/release/vendor/kelvin.openai-0.1.0.tar.gz",
+			"sha256": "38a40d78ffaaaae983eab754bba2bd50f4f0437e886f85b294466e1178ed1cad",
+			"quality_tier": "unsigned_local",
+			"api_version": "1.0.0",
+			"min_core_version": "0.1.0",
+			"capabilities": ["model_provider", "network_egress"],
+			"runtime": "wasm_model_v1"
+		},
+		{
+			"id": "kelvin.openrouter",
+			"name": "Kelvin OpenRouter Model Plugin",
+			"version": "0.1.0",
+			"description": "First-party OpenRouter model plugin — routes to 200+ models via Kelvin's declarative provider_profile routing.",
+			"homepage": "https://github.com/AgenticHighway/kelvinclaw/tree/main/plugins/kelvin-openrouter-plugin",
+			"package_url": "https://raw.githubusercontent.com/AgenticHighway/kelvinclaw/main/release/vendor/kelvin.openrouter-0.1.0.tar.gz",
+			"sha256": "da72740d3319b9a7816b879c8643413f00b239642e50c4bc499669d1cf7e77f4",
+			"quality_tier": "unsigned_local",
+			"api_version": "1.0.0",
+			"min_core_version": "0.1.0",
+			"capabilities": ["model_provider", "network_egress"],
+			"runtime": "wasm_model_v1"
+		},
+		{
+			"id": "kelvin.websearch",
+			"name": "Kelvin Web Search",
+			"version": "0.1.0",
+			"description": "Web search tool powered by the Brave Search API — gives your agent access to live web results.",
+			"homepage": "https://github.com/AgenticHighway/kelvinclaw/tree/main/plugins/kelvin-websearch-plugin",
+			"package_url": null,
+			"sha256": null,
+			"quality_tier": "unsigned_local",
+			"api_version": "1.0.0",
+			"min_core_version": "0.1.0",
+			"capabilities": ["tool_provider", "network_egress"],
+			"runtime": "wasm_tool_v1",
+			"_note": "Build from source — no pre-built tarball yet. See plugins/kelvin-websearch-plugin/build.sh"
+		}
+	]
 }
