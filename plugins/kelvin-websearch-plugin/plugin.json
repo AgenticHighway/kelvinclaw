@@ -7,7 +7,8 @@
   "homepage": null,
   "capabilities": [
     "tool_provider",
-    "network_egress"
+    "network_egress",
+    "env_access"
   ],
   "experimental": false,
   "min_core_version": "0.1.0",
