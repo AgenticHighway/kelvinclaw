@@ -1,6 +1,12 @@
 # kelvinclaw
 
-KelvinClaw is a Secure, Stable, and Modular Runtime for Agentic Workflows.
+[![CI](https://github.com/AgenticHighway/kelvinclaw/actions/workflows/ci.yml/badge.svg)](https://github.com/AgenticHighway/kelvinclaw/actions/workflows/ci.yml)
+[![Release](https://github.com/AgenticHighway/kelvinclaw/actions/workflows/release-executables.yml/badge.svg)](https://github.com/AgenticHighway/kelvinclaw/actions/workflows/release-executables.yml)
+[![Plugin ABI](https://github.com/AgenticHighway/kelvinclaw/actions/workflows/plugin-abi-compat.yml/badge.svg)](https://github.com/AgenticHighway/kelvinclaw/actions/workflows/plugin-abi-compat.yml)
+[![Latest Release](https://img.shields.io/github/v/release/AgenticHighway/kelvinclaw)](https://github.com/AgenticHighway/kelvinclaw/releases/latest)
+[![License](https://img.shields.io/github/license/AgenticHighway/kelvinclaw)](LICENSE)
+
+KelvinClaw is a Secure, Stable, and Modular Harness for Agentic AI Workflows.
 It focuses on predictable runtime behavior, policy-driven extension loading, and a maintainable SDK surface for plugin developers.
 
 SDK name: **Kelvin Core**.
@@ -19,13 +25,18 @@ For end users, plugins are installed as packages and executed by Kelvin. They do
 ### Quick Try (Docker, no API keys needed)
 
 ```bash
-cp .env.example .env                                # uses kelvin.echo by default
+cp .env.example .env                                # uses kelvin.echo model provider by default
 docker compose up -d                                # starts gateway + init
 docker compose --profile tui run --rm kelvin-tui    # interactive TUI
 ```
 
 This runs the built-in echo provider — no OpenAI/Anthropic key required.
 To use a real LLM, edit `.env` and set `KELVIN_MODEL_PROVIDER` + your API key.
+
+```bash
+KELVIN_MODEL_PROVIDER=kelvin.anthropic              # e.g. anthropic
+ANTHROPIC_API_KEY=sk-ant-your-api-key-here
+```
 
 ### Quick Try (local Rust)
 
