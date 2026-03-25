@@ -53,6 +53,46 @@ if [[ "${MODE}" != "local" ]]; then
 fi
 
 echo "[quickstart] mode=local"
+
+# If no model API key is set and we're in an interactive TTY, offer a choice.
+if [[ -z "${OPENAI_API_KEY:-}" && -z "${ANTHROPIC_API_KEY:-}" && -z "${OPENROUTER_API_KEY:-}" ]]; then
+  if [[ -t 0 && -t 1 ]]; then
+    echo ""
+    echo "No LLM API key detected. Pick a model provider for this run:"
+    echo ""
+    echo "  1) OpenAI       (needs OPENAI_API_KEY)"
+    echo "  2) Anthropic    (needs ANTHROPIC_API_KEY)"
+    echo "  3) OpenRouter   (needs OPENROUTER_API_KEY)"
+    echo "  4) Echo mode    (no key needed — responses are echoed back)"
+    echo ""
+    printf "Choice [1-4, default 4]: "
+    read -r choice
+    case "${choice}" in
+      1)
+        printf "Paste your OpenAI API key: "
+        IFS= read -r -s api_key; printf '\n'
+        if [[ -n "${api_key}" ]]; then export OPENAI_API_KEY="${api_key}"; fi
+        ;;
+      2)
+        printf "Paste your Anthropic API key: "
+        IFS= read -r -s api_key; printf '\n'
+        if [[ -n "${api_key}" ]]; then export ANTHROPIC_API_KEY="${api_key}"; fi
+        ;;
+      3)
+        printf "Paste your OpenRouter API key: "
+        IFS= read -r -s api_key; printf '\n'
+        if [[ -n "${api_key}" ]]; then export OPENROUTER_API_KEY="${api_key}"; fi
+        ;;
+      4|"")
+        echo "[quickstart] continuing with echo mode"
+        ;;
+      *)
+        echo "[quickstart] invalid choice, continuing with echo mode"
+        ;;
+    esac
+  fi
+fi
+
 "${ROOT_DIR}/scripts/kelvin-local-profile.sh" start
 
 ensure_rust_toolchain_path || {
@@ -64,21 +104,26 @@ PLUGIN_HOME="${KELVIN_PLUGIN_HOME:-${ROOT_DIR}/.kelvin/plugins}"
 TRUST_POLICY_PATH="${KELVIN_TRUST_POLICY_PATH:-${ROOT_DIR}/.kelvin/trusted_publishers.json}"
 STATE_DIR="${KELVIN_STATE_DIR:-${ROOT_DIR}/.kelvin/state}"
 
+MODEL_PROVIDER=""
 if [[ -n "${OPENAI_API_KEY:-}" ]]; then
-  KELVIN_PLUGIN_HOME="${PLUGIN_HOME}" \
-  KELVIN_TRUST_POLICY_PATH="${TRUST_POLICY_PATH}" \
-    cargo run -p kelvin-host -- \
-      --prompt "${PROMPT}" \
-      --workspace "${ROOT_DIR}" \
-      --state-dir "${STATE_DIR}" \
-      --model-provider "kelvin.openai"
-else
-  KELVIN_PLUGIN_HOME="${PLUGIN_HOME}" \
-  KELVIN_TRUST_POLICY_PATH="${TRUST_POLICY_PATH}" \
-    cargo run -p kelvin-host -- \
-      --prompt "${PROMPT}" \
-      --workspace "${ROOT_DIR}" \
-      --state-dir "${STATE_DIR}"
+  MODEL_PROVIDER="kelvin.openai"
+elif [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
+  MODEL_PROVIDER="kelvin.anthropic"
+elif [[ -n "${OPENROUTER_API_KEY:-}" ]]; then
+  MODEL_PROVIDER="kelvin.openrouter"
 fi
+
+HOST_ARGS=(
+  --prompt "${PROMPT}"
+  --workspace "${ROOT_DIR}"
+  --state-dir "${STATE_DIR}"
+)
+if [[ -n "${MODEL_PROVIDER}" ]]; then
+  HOST_ARGS+=(--model-provider "${MODEL_PROVIDER}")
+fi
+
+KELVIN_PLUGIN_HOME="${PLUGIN_HOME}" \
+KELVIN_TRUST_POLICY_PATH="${TRUST_POLICY_PATH}" \
+  cargo run -p kelvin-host -- "${HOST_ARGS[@]}"
 
 echo "[quickstart] success"

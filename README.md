@@ -27,14 +27,15 @@ docker compose --profile tui run --rm kelvin-tui    # interactive TUI
 This runs the built-in echo provider — no OpenAI/Anthropic key required.
 To use a real LLM, edit `.env` and set `KELVIN_MODEL_PROVIDER` + your API key.
 
-### Quick Try (local Rust, no API keys needed)
+### Quick Try (local Rust)
 
 ```bash
 scripts/quickstart.sh --mode local
 ```
 
 Requires Rust toolchain, `jq`, `curl`, `tar`, and `openssl`.
-Without an API key the gateway defaults to the echo provider.
+The quickstart prompts you to pick a model provider (OpenAI, Anthropic, OpenRouter)
+or continue with echo mode if you don't have a key.
 
 ### More Options
 

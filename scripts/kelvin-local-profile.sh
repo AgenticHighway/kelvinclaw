@@ -183,6 +183,15 @@ install_required_plugins() {
         --plugin-home "${PLUGIN_HOME}" \
         --trust-policy-path "${TRUST_POLICY_PATH}"
     fi
+  elif [[ -n "${OPENROUTER_API_KEY:-}" ]]; then
+    if [[ -d "${PLUGIN_HOME}/kelvin.openrouter/current" ]]; then
+      echo "[kelvin-local-profile] plugin already installed: kelvin.openrouter"
+    else
+      echo "[kelvin-local-profile] installing model plugin: kelvin.openrouter"
+      "${ROOT_DIR}/scripts/install-kelvin-openrouter-plugin.sh" \
+        --plugin-home "${PLUGIN_HOME}" \
+        --trust-policy-path "${TRUST_POLICY_PATH}"
+    fi
   else
     echo "[kelvin-local-profile] no API key detected; gateway will use built-in echo provider"
   fi
@@ -267,6 +276,9 @@ start_gateway() {
   elif [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
     echo "[kelvin-local-profile] using model provider: kelvin.anthropic" >&2
     gateway_args+=(--model-provider "kelvin.anthropic")
+  elif [[ -n "${OPENROUTER_API_KEY:-}" ]]; then
+    echo "[kelvin-local-profile] using model provider: kelvin.openrouter" >&2
+    gateway_args+=(--model-provider "kelvin.openrouter")
   else
     echo "[kelvin-local-profile] no model provider set, gateway will default to echo" >&2
   fi
