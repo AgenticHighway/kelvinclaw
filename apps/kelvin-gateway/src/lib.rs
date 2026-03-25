@@ -7,7 +7,6 @@ mod scheduler;
 
 use std::collections::{HashMap, VecDeque};
 use std::fs;
-use std::io::BufReader;
 use std::net::{IpAddr, SocketAddr};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -35,7 +34,10 @@ use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{broadcast, mpsc, Mutex, Semaphore};
 use tokio::time::{self, Duration};
-use tokio_rustls::rustls::{self, pki_types::CertificateDer, pki_types::PrivateKeyDer};
+use tokio_rustls::rustls::{
+    self,
+    pki_types::{pem::PemObject, CertificateDer, PrivateKeyDer},
+};
 use tokio_rustls::TlsAcceptor;
 use tokio_tungstenite::connect_async;
 use tokio_tungstenite::tungstenite::{self, Message};
@@ -825,26 +827,15 @@ fn load_tls_acceptor(config: &GatewayTlsConfig) -> Result<TlsAcceptor, String> {
 }
 
 fn load_tls_certs(path: &Path) -> Result<Vec<CertificateDer<'static>>, String> {
-    let file = std::fs::File::open(path)
-        .map_err(|err| format!("open gateway tls cert '{}': {err}", path.to_string_lossy()))?;
-    let mut reader = BufReader::new(file);
-    rustls_pemfile::certs(&mut reader)
+    CertificateDer::pem_file_iter(path)
+        .map_err(|err| format!("open gateway tls cert '{}': {err}", path.to_string_lossy()))?
         .collect::<Result<Vec<_>, _>>()
         .map_err(|err| format!("read gateway tls cert '{}': {err}", path.to_string_lossy()))
 }
 
 fn load_tls_key(path: &Path) -> Result<PrivateKeyDer<'static>, String> {
-    let file = std::fs::File::open(path)
-        .map_err(|err| format!("open gateway tls key '{}': {err}", path.to_string_lossy()))?;
-    let mut reader = BufReader::new(file);
-    rustls_pemfile::private_key(&mut reader)
-        .map_err(|err| format!("read gateway tls key '{}': {err}", path.to_string_lossy()))?
-        .ok_or_else(|| {
-            format!(
-                "gateway tls key '{}' did not contain a private key",
-                path.to_string_lossy()
-            )
-        })
+    PrivateKeyDer::from_pem_file(path)
+        .map_err(|err| format!("read gateway tls key '{}': {err}", path.to_string_lossy()))
 }
 
 async fn handle_connection<S>(stream: S, peer_ip: IpAddr, state: GatewayState) -> Result<(), String>
