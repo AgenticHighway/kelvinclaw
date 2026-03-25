@@ -1125,6 +1125,8 @@ usage() {
 Usage: scripts/kelvin-plugin.sh <command> [options]
 
 Commands:
+  list      List installed plugins.
+  search    Search the remote plugin index for available plugins.
   new       Create a new plugin package scaffold.
   test      Validate plugin manifest/layout and compatibility matrix.
   pack      Build a .tar.gz plugin package from manifest + payload.
@@ -1136,6 +1138,14 @@ Commands:
 
 Run with --help after any command for command-specific options.
 USAGE
+}
+
+cmd_list() {
+  exec "${ROOT_DIR}/scripts/plugin-list.sh" "$@"
+}
+
+cmd_search() {
+  exec "${ROOT_DIR}/scripts/plugin-discovery.sh" "$@"
 }
 
 new_usage() {
@@ -2080,6 +2090,8 @@ main() {
   shift || true
 
   case "${command}" in
+    list) cmd_list "$@" ;;
+    search) cmd_search "$@" ;;
     new) cmd_new "$@" ;;
     test) cmd_test "$@" ;;
     pack) cmd_pack "$@" ;;

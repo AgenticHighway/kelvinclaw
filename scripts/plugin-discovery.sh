@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DEFAULT_INDEX_URL=""
+DEFAULT_INDEX_URL="https://raw.githubusercontent.com/AgenticHighway/kelvinclaw/main/index.json"
 INDEX_URL="${KELVIN_PLUGIN_INDEX_URL:-${DEFAULT_INDEX_URL}}"
 REGISTRY_URL="${KELVIN_PLUGIN_REGISTRY_URL:-}"
 PLUGIN_ID=""

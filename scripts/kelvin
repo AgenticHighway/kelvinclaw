@@ -6,7 +6,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 usage() {
   cat <<'USAGE'
 Usage:
-  kelvin plugin <new|test|pack|install|index-install|verify|smoke> [args...]
+  kelvin plugin <list|search|new|test|pack|install|index-install|verify|smoke> [args...]
+  kelvin medkit                          Run diagnostic health checks.
 
 Tip:
   export PATH="$PWD/scripts:$PATH"
@@ -22,6 +23,10 @@ case "$1" in
   plugin)
     shift
     exec "${ROOT_DIR}/scripts/kelvin-plugin.sh" "$@"
+    ;;
+  medkit)
+    shift
+    exec "${ROOT_DIR}/scripts/kelvin-medkit.sh" "$@"
     ;;
   -h|--help)
     usage
