@@ -72,6 +72,14 @@ if [[ -n "${VENDORED_TARBALL}" && -z "${INDEX_URL}" ]]; then
     INSTALL_ARGS+=(--force)
   fi
   "${ROOT_DIR}/scripts/plugin-install.sh" "${INSTALL_ARGS[@]}"
+
+  # Write a default trust policy if none exists (vendored path skips the index
+  # installer which normally handles trust policy merging).
+  if [[ ! -f "${TRUST_POLICY_PATH}" ]]; then
+    mkdir -p "$(dirname "${TRUST_POLICY_PATH}")"
+    echo '{"require_signature":false,"publishers":[]}' > "${TRUST_POLICY_PATH}"
+    echo "[install-kelvin-cli-plugin] wrote default trust policy: ${TRUST_POLICY_PATH}"
+  fi
   exit 0
 fi
 

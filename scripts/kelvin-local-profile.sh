@@ -111,6 +111,14 @@ ensure_prereqs() {
 
   mkdir -p "${PROFILE_DIR}" "${PLUGIN_HOME}" "$(dirname "${TRUST_POLICY_PATH}")" "${STATE_DIR}"
   write_memory_dev_keys
+
+  # Write a permissive trust policy if none exists (first-party plugins are
+  # unsigned_local; signature enforcement is disabled until a signed
+  # distribution flow is in place).
+  if [[ ! -f "${TRUST_POLICY_PATH}" ]]; then
+    echo '{"require_signature":false,"publishers":[]}' > "${TRUST_POLICY_PATH}"
+    echo "[kelvin-local-profile] wrote default trust policy: ${TRUST_POLICY_PATH}"
+  fi
 }
 
 build_local_profile_binaries() {
