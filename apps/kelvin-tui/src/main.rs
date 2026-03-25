@@ -14,7 +14,7 @@ pub struct CliConfig {
 
 fn parse_args() -> Result<CliConfig, String> {
     let mut gateway_url = "ws://127.0.0.1:34617".to_string();
-    let mut auth_token: Option<String> = None;
+    let mut auth_token: Option<String> = env::var("KELVIN_GATEWAY_TOKEN").ok();
     let mut session_id = "main".to_string();
 
     let mut args = env::args().skip(1).peekable();
