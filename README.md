@@ -6,7 +6,7 @@
 [![Latest Release](https://img.shields.io/github/v/release/AgenticHighway/kelvinclaw)](https://github.com/AgenticHighway/kelvinclaw/releases/latest)
 [![License](https://img.shields.io/github/license/AgenticHighway/kelvinclaw)](LICENSE)
 
-KelvinClaw is a Secure, Stable, and Modular Runtime for Agentic Workflows.
+KelvinClaw is a Secure, Stable, and Modular Harness for Agentic AI Workflows.
 It focuses on predictable runtime behavior, policy-driven extension loading, and a maintainable SDK surface for plugin developers.
 
 SDK name: **Kelvin Core**.
