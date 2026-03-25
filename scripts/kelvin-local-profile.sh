@@ -38,6 +38,7 @@ Commands:
   restart    Restart both processes.
   status     Show process status and endpoints.
   doctor     Run actionable gateway doctor output for this profile.
+  medkit     Run comprehensive diagnostic health checks.
 USAGE
 }
 
@@ -439,6 +440,9 @@ main() {
       ;;
     doctor)
       doctor_profile
+      ;;
+    medkit)
+      "${ROOT_DIR}/scripts/kelvin-medkit.sh" "$@"
       ;;
     *)
       usage
