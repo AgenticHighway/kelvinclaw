@@ -2,6 +2,7 @@ mod discord;
 mod slack;
 mod telegram;
 mod ui;
+mod whatsapp;
 
 use std::net::SocketAddr;
 
@@ -30,6 +31,7 @@ pub struct GatewayIngressConfig {
     telegram: TelegramWebhookConfig,
     slack: SlackWebhookConfig,
     discord: DiscordWebhookConfig,
+    pub(crate) whatsapp: WhatsappWebhookConfig,
 }
 
 #[derive(Debug, Clone)]
@@ -46,6 +48,12 @@ struct SlackWebhookConfig {
 #[derive(Debug, Clone)]
 struct DiscordWebhookConfig {
     public_key: Option<[u8; 32]>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct WhatsappWebhookConfig {
+    pub(crate) verify_token: Option<String>,
+    pub(crate) app_secret: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -74,6 +82,10 @@ impl Default for GatewayIngressConfig {
                 replay_window_secs: DEFAULT_SLACK_REPLAY_WINDOW_SECS,
             },
             discord: DiscordWebhookConfig { public_key: None },
+            whatsapp: WhatsappWebhookConfig {
+                verify_token: None,
+                app_secret: None,
+            },
         }
     }
 }
@@ -120,6 +132,10 @@ impl GatewayIngressConfig {
         let discord = DiscordWebhookConfig {
             public_key: read_optional_hex_32("KELVIN_DISCORD_INTERACTIONS_PUBLIC_KEY")?,
         };
+        let whatsapp = WhatsappWebhookConfig {
+            verify_token: read_optional_trimmed_env("KELVIN_WHATSAPP_WEBHOOK_VERIFY_TOKEN"),
+            app_secret: read_optional_trimmed_env("KELVIN_WHATSAPP_APP_SECRET"),
+        };
         Ok(Self {
             bind_addr,
             base_path,
@@ -128,6 +144,7 @@ impl GatewayIngressConfig {
             telegram,
             slack,
             discord,
+            whatsapp,
         })
     }
 
@@ -183,6 +200,12 @@ impl GatewayIngressConfig {
                 verification_method: Some("discord_ed25519".to_string()),
                 verification_configured: self.discord.public_key.is_some(),
             },
+            whatsapp: ChannelDirectIngressStatusConfig {
+                listener_enabled: runtime.is_some(),
+                webhook_path: base_path.map(|base| format!("{base}/whatsapp")),
+                verification_method: Some("whatsapp_hmac_sha256".to_string()),
+                verification_configured: self.whatsapp.app_secret.is_some(),
+            },
         }
     }
 
@@ -217,6 +240,10 @@ pub(crate) fn spawn_server(
         .route(&format!("{base_path}/telegram"), post(telegram::handle))
         .route(&format!("{base_path}/slack"), post(slack::handle))
         .route(&format!("{base_path}/discord"), post(discord::handle))
+        .route(
+            &format!("{base_path}/whatsapp"),
+            get(whatsapp::handle_verify).post(whatsapp::handle_post),
+        )
         .layer(DefaultBodyLimit::max(app_state.config.max_body_size_bytes))
         .with_state(app_state);
     tokio::spawn(async move {

@@ -17,6 +17,7 @@ pub struct ChannelEngine {
     telegram: Option<TextChannelAdapter>,
     slack: Option<TextChannelAdapter>,
     discord: Option<TextChannelAdapter>,
+    whatsapp: Option<TextChannelAdapter>,
 }
 
 impl ChannelEngine {
@@ -28,16 +29,19 @@ impl ChannelEngine {
             telegram: telegram_ingress,
             slack: slack_ingress,
             discord: discord_ingress,
+            whatsapp: whatsapp_ingress,
         } = ingress_exposure;
         let routing = ChannelRoutingTable::from_env()?;
         let telegram = TextChannelAdapter::telegram_from_env(state_dir, telegram_ingress)?;
         let slack = TextChannelAdapter::slack_from_env(state_dir, slack_ingress)?;
         let discord = TextChannelAdapter::discord_from_env(state_dir, discord_ingress)?;
+        let whatsapp = TextChannelAdapter::whatsapp_from_env(state_dir, whatsapp_ingress)?;
         Ok(Self {
             routing,
             telegram,
             slack,
             discord,
+            whatsapp,
         })
     }
 
@@ -155,6 +159,41 @@ impl ChannelEngine {
             .unwrap_or_else(|| json!({ "enabled": false }))
     }
 
+    pub async fn whatsapp_ingest(
+        &mut self,
+        runtime: &KelvinSdkRuntime,
+        request: WhatsappIngressRequest,
+    ) -> KelvinErrorOr<Value> {
+        let Some(adapter) = self.whatsapp.as_mut() else {
+            return Err(KelvinError::NotFound(
+                "whatsapp channel is not enabled".to_string(),
+            ));
+        };
+        adapter
+            .ingest(
+                runtime,
+                &self.routing,
+                ChannelEnvelope {
+                    delivery_id: request.delivery_id,
+                    sender_id: request.user_phone.clone(),
+                    account_id: request.user_phone,
+                    text: request.text,
+                    timeout_ms: request.timeout_ms,
+                    auth_token: request.auth_token,
+                    session_id: request.session_id,
+                    workspace_dir: request.workspace_dir,
+                },
+            )
+            .await
+    }
+
+    pub fn whatsapp_status(&self) -> Value {
+        self.whatsapp
+            .as_ref()
+            .map(TextChannelAdapter::status)
+            .unwrap_or_else(|| json!({ "enabled": false }))
+    }
+
     pub fn route_inspect(&self, request: ChannelRouteInspectRequest) -> KelvinErrorOr<Value> {
         let trust_tier = match request.sender_tier {
             Some(value) => SenderTrustTier::parse(&value).ok_or_else(|| {
@@ -208,6 +247,14 @@ impl ChannelEngine {
                     .deliver_outbound_message(&target.account_id, text)
                     .await
             }
+            "whatsapp" => {
+                let adapter = self.whatsapp.as_mut().ok_or_else(|| {
+                    KelvinError::NotFound("whatsapp channel is not enabled".to_string())
+                })?;
+                adapter
+                    .deliver_outbound_message(&target.account_id, text)
+                    .await
+            }
             other => Err(KelvinError::InvalidInput(format!(
                 "unsupported scheduled reply target channel '{}'",
                 other
@@ -224,6 +271,7 @@ impl ChannelEngine {
             ChannelKind::Telegram => self.telegram.is_some(),
             ChannelKind::Slack => self.slack.is_some(),
             ChannelKind::Discord => self.discord.is_some(),
+            ChannelKind::WhatsApp => self.whatsapp.is_some(),
         }
     }
 
@@ -253,6 +301,7 @@ impl ChannelEngine {
             ChannelKind::Telegram => self.telegram.as_mut(),
             ChannelKind::Slack => self.slack.as_mut(),
             ChannelKind::Discord => self.discord.as_mut(),
+            ChannelKind::WhatsApp => self.whatsapp.as_mut(),
         }
         .ok_or_else(|| KelvinError::NotFound(format!("{} channel is not enabled", kind.as_str())))
     }
@@ -265,6 +314,7 @@ pub struct ChannelIngressExposure {
     pub telegram: ChannelDirectIngressStatusConfig,
     pub slack: ChannelDirectIngressStatusConfig,
     pub discord: ChannelDirectIngressStatusConfig,
+    pub whatsapp: ChannelDirectIngressStatusConfig,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -281,6 +331,7 @@ pub(crate) enum ChannelKind {
     Telegram,
     Slack,
     Discord,
+    WhatsApp,
 }
 
 impl ChannelKind {
@@ -289,6 +340,7 @@ impl ChannelKind {
             Self::Telegram => "telegram",
             Self::Slack => "slack",
             Self::Discord => "discord",
+            Self::WhatsApp => "whatsapp",
         }
     }
 
@@ -297,6 +349,7 @@ impl ChannelKind {
             Self::Telegram => "KELVIN_TELEGRAM",
             Self::Slack => "KELVIN_SLACK",
             Self::Discord => "KELVIN_DISCORD",
+            Self::WhatsApp => "KELVIN_WHATSAPP",
         }
     }
 }
@@ -349,6 +402,7 @@ impl TextChannelConfig {
             ChannelKind::Telegram => "https://api.telegram.org",
             ChannelKind::Slack => "https://slack.com/api",
             ChannelKind::Discord => "https://discord.com/api/v10",
+            ChannelKind::WhatsApp => "https://graph.facebook.com/v21.0",
         };
 
         let api_base_url = std::env::var(format!("{prefix}_API_BASE_URL"))
@@ -506,6 +560,7 @@ fn validate_base_url(kind: ChannelKind, raw: &str, allow_custom_base: bool) -> K
         ChannelKind::Telegram => "api.telegram.org",
         ChannelKind::Slack => "slack.com",
         ChannelKind::Discord => "discord.com",
+        ChannelKind::WhatsApp => "graph.facebook.com",
     };
     if !allow_custom_base && host != default_host {
         return Err(KelvinError::InvalidInput(format!(
@@ -824,6 +879,16 @@ impl TextChannelAdapter {
     ) -> KelvinErrorOr<Option<Self>> {
         Self::new(
             TextChannelConfig::from_env(ChannelKind::Discord, direct_ingress)?,
+            state_dir,
+        )
+    }
+
+    fn whatsapp_from_env(
+        state_dir: Option<&Path>,
+        direct_ingress: ChannelDirectIngressStatusConfig,
+    ) -> KelvinErrorOr<Option<Self>> {
+        Self::new(
+            TextChannelConfig::from_env(ChannelKind::WhatsApp, direct_ingress)?,
             state_dir,
         )
     }
@@ -1560,6 +1625,25 @@ impl TextChannelAdapter {
                     }));
                 (endpoint, request)
             }
+            ChannelKind::WhatsApp => {
+                // bot_token is the WhatsApp Cloud API access token.
+                // account_id is the recipient phone number (user_phone).
+                // We need the phone_number_id from env to construct the endpoint.
+                let phone_number_id = std::env::var("KELVIN_WHATSAPP_PHONE_NUMBER_ID")
+                    .unwrap_or_default();
+                let endpoint = format!("{}/{}/messages", base, phone_number_id);
+                let request = self
+                    .client
+                    .post(endpoint.clone())
+                    .bearer_auth(bot_token)
+                    .json(&json!({
+                        "messaging_product": "whatsapp",
+                        "to": account_id,
+                        "type": "text",
+                        "text": { "body": text },
+                    }));
+                (endpoint, request)
+            }
         };
 
         let response = request.send().await.map_err(|err| {
@@ -1968,6 +2052,20 @@ pub struct DiscordIngressRequest {
     pub delivery_id: String,
     pub channel_id: String,
     pub user_id: String,
+    pub text: String,
+    pub timeout_ms: Option<u64>,
+    pub auth_token: Option<String>,
+    pub session_id: Option<String>,
+    pub workspace_dir: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct WhatsappIngressRequest {
+    pub delivery_id: String,
+    /// The WhatsApp Business phone number ID that received the message.
+    #[allow(dead_code)]
+    pub phone_number_id: String,
+    pub user_phone: String,
     pub text: String,
     pub timeout_ms: Option<u64>,
     pub auth_token: Option<String>,

@@ -58,7 +58,7 @@ scripts/plugin-update-check.sh --json
 Run it locally:
 
 ```bash
-cargo run -p kelvin-registry -- --index ./index.json --bind 127.0.0.1:34718
+cargo run -p kelvin-registry -- --index ./index.json --bind 127.0.0.1:34619
 ```
 
 Endpoints:
@@ -72,9 +72,9 @@ Endpoints:
 Use it with the plugin scripts:
 
 ```bash
-scripts/plugin-discovery.sh --registry-url http://127.0.0.1:34718
-scripts/plugin-index-install.sh --plugin kelvin.cli --registry-url http://127.0.0.1:34718
-scripts/plugin-update-check.sh --registry-url http://127.0.0.1:34718 --json
+scripts/plugin-discovery.sh --registry-url http://127.0.0.1:34619
+scripts/plugin-index-install.sh --plugin kelvin.cli --registry-url http://127.0.0.1:34619
+scripts/plugin-update-check.sh --registry-url http://127.0.0.1:34619 --json
 ```
 
 ## Install Root and Selection Model

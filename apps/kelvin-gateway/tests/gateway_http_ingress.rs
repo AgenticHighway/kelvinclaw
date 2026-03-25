@@ -656,3 +656,135 @@ fn hex_encode(bytes: &[u8]) -> String {
     }
     output
 }
+
+async fn post_signed_whatsapp(
+    client: &Client,
+    url: &str,
+    app_secret: &str,
+    body: &str,
+) -> reqwest::Response {
+    let key = hmac::Key::new(hmac::HMAC_SHA256, app_secret.as_bytes());
+    let signature = hmac::sign(&key, body.as_bytes());
+    client
+        .post(url)
+        .header(
+            "X-Hub-Signature-256",
+            format!("sha256={}", hex_encode(signature.as_ref())),
+        )
+        .header("Content-Type", "application/json")
+        .body(body.to_string())
+        .send()
+        .await
+        .expect("signed whatsapp request")
+}
+
+#[tokio::test]
+async fn whatsapp_http_webhook_verifies_signatures_and_dispatches() {
+    let _guard = ENV_LOCK.lock().await;
+    let _env_restore = [
+        EnvVarRestore::set("KELVIN_WHATSAPP_ENABLED", Some("true")),
+        EnvVarRestore::set("KELVIN_WHATSAPP_BOT_TOKEN", None),
+        EnvVarRestore::set("KELVIN_WHATSAPP_APP_SECRET", Some("whatsapp-app-secret")),
+        EnvVarRestore::set(
+            "KELVIN_WHATSAPP_WEBHOOK_VERIFY_TOKEN",
+            Some("whatsapp-verify-tok"),
+        ),
+    ];
+    let ingress = GatewayIngressConfig::from_env_overrides(
+        Some("127.0.0.1:0".parse().expect("ingress bind")),
+        None,
+        None,
+        false,
+    )
+    .expect("ingress config");
+    let (ws_url, server_handle) = start_gateway_with_ingress(Some("secret"), ingress).await;
+    let mut socket = connect_gateway(&ws_url).await;
+    let ingress_base = ingress_base_url(&mut socket).await;
+    let client = Client::new();
+
+    // Test GET webhook verification challenge.
+    let verify_response = client
+        .get(format!(
+            "{ingress_base}/whatsapp?hub.mode=subscribe&hub.verify_token=whatsapp-verify-tok&hub.challenge=challenge123"
+        ))
+        .send()
+        .await
+        .expect("whatsapp verify");
+    assert_eq!(verify_response.status(), reqwest::StatusCode::OK);
+    let challenge_body = verify_response.text().await.expect("challenge body");
+    assert_eq!(challenge_body, "challenge123");
+
+    // Test GET with wrong token is rejected.
+    let bad_verify = client
+        .get(format!(
+            "{ingress_base}/whatsapp?hub.mode=subscribe&hub.verify_token=wrong&hub.challenge=ch"
+        ))
+        .send()
+        .await
+        .expect("whatsapp bad verify");
+    assert_eq!(bad_verify.status(), reqwest::StatusCode::FORBIDDEN);
+
+    // Test POST with valid HMAC-SHA256 signature dispatches message.
+    let message_body = json!({
+        "entry": [{
+            "id": "123456789",
+            "changes": [{
+                "value": {
+                    "messaging_product": "whatsapp",
+                    "metadata": {"phone_number_id": "987654321"},
+                    "messages": [{
+                        "id": "wamid.test1",
+                        "from": "+15551234567",
+                        "type": "text",
+                        "text": {"body": "hello from whatsapp webhook"}
+                    }]
+                }
+            }]
+        }]
+    })
+    .to_string();
+    let msg_response = post_signed_whatsapp(
+        &client,
+        &format!("{ingress_base}/whatsapp"),
+        "whatsapp-app-secret",
+        &message_body,
+    )
+    .await;
+    assert_eq!(msg_response.status(), reqwest::StatusCode::OK);
+
+    // Test POST with invalid signature is rejected.
+    let bad_response = client
+        .post(format!("{ingress_base}/whatsapp"))
+        .header("X-Hub-Signature-256", "sha256=deadbeef")
+        .header("Content-Type", "application/json")
+        .body(message_body.clone())
+        .send()
+        .await
+        .expect("whatsapp bad signature");
+    assert_eq!(bad_response.status(), reqwest::StatusCode::UNAUTHORIZED);
+
+    let status = wait_for_channel_status(&mut socket, "channel.whatsapp.status", |payload| {
+        payload["metrics"]["webhook_accepted_total"]
+            .as_u64()
+            .unwrap_or_default()
+            >= 1
+            && payload["metrics"]["ingest_total"]
+                .as_u64()
+                .unwrap_or_default()
+                >= 1
+    })
+    .await;
+    assert_eq!(
+        status["ingress_verification"]["method"],
+        json!("whatsapp_hmac_sha256")
+    );
+    assert_eq!(status["ingress_verification"]["configured"], json!(true));
+    assert!(
+        status["metrics"]["verification_failed_total"]
+            .as_u64()
+            .unwrap_or_default()
+            >= 1
+    );
+
+    server_handle.abort();
+}

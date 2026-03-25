@@ -482,10 +482,10 @@ Hosted registry service:
 ```bash
 cargo run -p kelvin-registry -- \
   --index ./index.json \
-  --bind 127.0.0.1:34718
+  --bind 127.0.0.1:34619
 
-scripts/plugin-discovery.sh --registry-url http://127.0.0.1:34718
-scripts/plugin-update-check.sh --registry-url http://127.0.0.1:34718 --json
+scripts/plugin-discovery.sh --registry-url http://127.0.0.1:34619
+scripts/plugin-update-check.sh --registry-url http://127.0.0.1:34619 --json
 ```
 
 ## Installed Plugin Runtime (Secure Loader)

@@ -36,7 +36,7 @@ docker-compose --profile full up
 ### Optional Services (Profile: `registry` or `full`)
 
 - **kelvin-registry**: HTTP plugin registry for plugin discovery.
-  - Port: `34718` (configurable via `KELVIN_PLUGIN_REGISTRY_PORT`)
+  - Port: `34619` (configurable via `KELVIN_PLUGIN_REGISTRY_PORT`)
 
 ### TUI Client (Profile: `tui`)
 
@@ -57,7 +57,7 @@ Edit `.env` to customize:
 RUST_LOG=debug                      # Set logging level (debug, info, warn, error)
 KELVIN_GATEWAY_WS_PORT=34617        # Change gateway WebSocket port
 KELVIN_GATEWAY_INGRESS_PORT=34618   # Change gateway ingress port
-KELVIN_PLUGIN_REGISTRY_PORT=34718   # Change registry port
+KELVIN_PLUGIN_REGISTRY_PORT=34619   # Change registry port
 ```
 
 ### Model Provider
@@ -184,8 +184,8 @@ docker compose logs kelvin-host
 
 Change the port mapping in `.env`:
 ```bash
-KELVIN_GATEWAY_WS_PORT=34619       # Use 34619 instead of 34617
-KELVIN_GATEWAY_INGRESS_PORT=34620  # Use 34620 instead of 34618
+KELVIN_GATEWAY_WS_PORT=34620       # Use 34620 instead of 34617
+KELVIN_GATEWAY_INGRESS_PORT=34621  # Use 34621 instead of 34618
 ```
 
 ### Memory issues during build
@@ -208,7 +208,7 @@ docker compose up --build kelvin-host
 Services are connected via the `kelvin-network` bridge network, allowing them to communicate using service names:
 - `kelvin-gateway:34617` (WebSocket)
 - `kelvin-gateway:34618` (ingress)
-- `kelvin-registry:34718`
+- `kelvin-registry:34619`
 
 ## Building Without Compose
 
