@@ -13,7 +13,7 @@ fn parse_args() -> Result<RegistryConfig, String> {
         .as_deref()
         .map(str::trim)
         .filter(|value| !value.is_empty())
-        .unwrap_or("127.0.0.1:34718")
+        .unwrap_or("127.0.0.1:34619")
         .parse::<SocketAddr>()
         .map_err(|err| format!("invalid KELVIN_PLUGIN_REGISTRY_BIND value: {err}"))?;
     let mut index_path = std::env::var("KELVIN_PLUGIN_REGISTRY_INDEX")

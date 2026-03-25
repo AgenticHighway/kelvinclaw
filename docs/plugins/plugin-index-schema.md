@@ -62,10 +62,10 @@ Selection behavior:
 Example:
 
 ```bash
-cargo run -p kelvin-registry -- --index ./index.json --bind 127.0.0.1:34718
-scripts/plugin-discovery.sh --registry-url http://127.0.0.1:34718
-scripts/plugin-index-install.sh --plugin kelvin.cli --registry-url http://127.0.0.1:34718
-scripts/plugin-update-check.sh --registry-url http://127.0.0.1:34718 --json
+cargo run -p kelvin-registry -- --index ./index.json --bind 127.0.0.1:34619
+scripts/plugin-discovery.sh --registry-url http://127.0.0.1:34619
+scripts/plugin-index-install.sh --plugin kelvin.cli --registry-url http://127.0.0.1:34619
+scripts/plugin-update-check.sh --registry-url http://127.0.0.1:34619 --json
 ```
 
 ## Trust Policy

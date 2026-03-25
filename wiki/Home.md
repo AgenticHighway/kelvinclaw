@@ -48,7 +48,7 @@ KELVIN_GATEWAY_TOKEN=change-me cargo run -p kelvin-gateway -- --bind 127.0.0.1:3
 Hosted plugin registry:
 
 ```bash
-cargo run -p kelvin-registry -- --index ./index.json --bind 127.0.0.1:34718
+cargo run -p kelvin-registry -- --index ./index.json --bind 127.0.0.1:34619
 ```
 
 ## Wiki Map

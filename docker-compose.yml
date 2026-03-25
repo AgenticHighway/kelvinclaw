@@ -90,7 +90,7 @@ services:
       dockerfile: docker/Dockerfile.registry
     container_name: kelvin-registry
     environment:
-      KELVIN_PLUGIN_REGISTRY_BIND: "0.0.0.0:34718"
+      KELVIN_PLUGIN_REGISTRY_BIND: "0.0.0.0:34619"
       KELVIN_PLUGIN_REGISTRY_INDEX: /opt/kelvin/index.json
       KELVIN_PLUGIN_REGISTRY_TRUST_POLICY: /opt/kelvin/trusted_publishers.json
       RUST_LOG: ${RUST_LOG:-info}
@@ -98,7 +98,7 @@ services:
       - ./index.json:/opt/kelvin/index.json:ro
       - ./trusted_publishers.example.json:/opt/kelvin/trusted_publishers.json:ro
     ports:
-      - "${KELVIN_PLUGIN_REGISTRY_PORT:-34718}:34718"
+      - "${KELVIN_PLUGIN_REGISTRY_PORT:-34619}:34619"
     networks:
       - kelvin-network
     restart: unless-stopped
