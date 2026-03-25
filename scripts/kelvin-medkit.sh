@@ -326,10 +326,11 @@ fi
 # ── 6. Plugin index connectivity ─────────────────────────────────
 section "Plugin Index"
 
-DEFAULT_INDEX_URL="https://raw.githubusercontent.com/AgenticHighway/kelvinclaw/main/index.json"
-INDEX_URL="${KELVIN_PLUGIN_INDEX_URL:-${DEFAULT_INDEX_URL}}"
+INDEX_URL="${KELVIN_PLUGIN_INDEX_URL:-}"
 
-if curl -fsSL --max-time 10 "${INDEX_URL}" -o /dev/null 2>/dev/null; then
+if [[ -z "${INDEX_URL}" ]]; then
+  check_warn "Plugin index not configured" "Set KELVIN_PLUGIN_INDEX_URL"
+elif curl -fsSL --max-time 10 "${INDEX_URL}" -o /dev/null 2>/dev/null; then
   REMOTE_COUNT="$(curl -fsSL --max-time 10 "${INDEX_URL}" 2>/dev/null | jq '.plugins | length' 2>/dev/null || echo 0)"
   check_pass "Plugin index reachable (${INDEX_URL}, ${REMOTE_COUNT} plugins)"
 else
