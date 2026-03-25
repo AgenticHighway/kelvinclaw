@@ -142,6 +142,8 @@ smoke_test_archive() {
   "${work_dir}/${root_name}/bin/kelvin-registry${bin_suffix}" --help >/dev/null
   "${work_dir}/${root_name}/bin/kelvin-memory-controller${bin_suffix}" --help >/dev/null
   "${work_dir}/${root_name}/bin/kelvin-tui${bin_suffix}" --help >/dev/null
+  "${work_dir}/${root_name}/start-gateway" --help >/dev/null
+  "${work_dir}/${root_name}/setup-gateway" --help >/dev/null
   rm -rf "${work_dir}"
 }
 
@@ -282,8 +284,14 @@ cp "${TARGET_DIR}/${TARGET}/release/kelvin-tui" "${STAGE_ROOT}/bin/"
 cp "${ROOT_DIR}/LICENSE" "${STAGE_ROOT}/"
 cp "${ROOT_DIR}/README.md" "${STAGE_ROOT}/"
 cp "${ROOT_DIR}/scripts/kelvin-release-launcher.sh" "${STAGE_ROOT}/kelvin"
+cp "${ROOT_DIR}/scripts/start-gateway.sh" "${STAGE_ROOT}/start-gateway"
+cp "${ROOT_DIR}/scripts/setup-gateway.sh" "${STAGE_ROOT}/setup-gateway"
 cp "${ROOT_DIR}/release/official-first-party-plugins.env" "${STAGE_ROOT}/share/official-first-party-plugins.env"
-chmod +x "${STAGE_ROOT}/kelvin"
+mkdir -p "${STAGE_ROOT}/share/scripts"
+cp "${ROOT_DIR}/scripts/plugin-index-install.sh" "${STAGE_ROOT}/share/scripts/"
+cp "${ROOT_DIR}/scripts/plugin-install.sh" "${STAGE_ROOT}/share/scripts/"
+chmod +x "${STAGE_ROOT}/kelvin" "${STAGE_ROOT}/start-gateway" "${STAGE_ROOT}/setup-gateway"
+chmod +x "${STAGE_ROOT}/share/scripts/"*.sh
 
 if command -v xattr >/dev/null 2>&1; then
   xattr -rc "${STAGE_ROOT}" >/dev/null 2>&1 || true
@@ -293,8 +301,6 @@ cat > "${STAGE_ROOT}/BUILD_INFO.txt" <<EOF
 version=${VERSION}
 target=${TARGET}
 platform=${PLATFORM_LABEL}
-required_plugin=kelvin.cli@$(awk -F'"' '/^KELVIN_CLI_VERSION=/ {print $2}' "${ROOT_DIR}/release/official-first-party-plugins.env")
-optional_plugin=kelvin.openai@$(awk -F'"' '/^KELVIN_OPENAI_VERSION=/ {print $2}' "${ROOT_DIR}/release/official-first-party-plugins.env")
 EOF
 
 rm -f "${ARCHIVE_PATH}" "${CHECKSUM_PATH}"

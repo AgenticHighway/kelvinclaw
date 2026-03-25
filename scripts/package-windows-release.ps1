@@ -101,16 +101,10 @@ try {
     Copy-Item (Join-Path $RootDir "scripts\\kelvin-release-launcher.cmd") (Join-Path $StageRoot "kelvin.cmd")
     Copy-Item (Join-Path $RootDir "release\\official-first-party-plugins.env") (Join-Path $StageRoot "share\\official-first-party-plugins.env")
 
-    $ManifestPath = Join-Path $RootDir "release\\official-first-party-plugins.env"
-    $CliVersion = Select-String -Path $ManifestPath -Pattern '^KELVIN_CLI_VERSION="(.+)"$' | ForEach-Object { $_.Matches[0].Groups[1].Value }
-    $OpenAIVersion = Select-String -Path $ManifestPath -Pattern '^KELVIN_OPENAI_VERSION="(.+)"$' | ForEach-Object { $_.Matches[0].Groups[1].Value }
-
     @"
 version=$Version
 target=$Target
 platform=$PlatformLabel
-required_plugin=kelvin.cli@$CliVersion
-optional_plugin=kelvin.openai@$OpenAIVersion
 "@ | Set-Content -NoNewline (Join-Path $StageRoot "BUILD_INFO.txt")
 
     if (Test-Path $ArchivePath) {
