@@ -262,6 +262,8 @@ pub struct App {
     pub autocomplete_visible: bool,
     pub autocomplete_items: Vec<CompletionItem>,
     pub autocomplete_selected: usize,
+    /// Scroll offset so that the selected row is always visible (#49).
+    pub autocomplete_scroll_offset: usize,
     pub session_id: String,
 }
 
@@ -304,6 +306,7 @@ impl App {
             autocomplete_visible: false,
             autocomplete_items: Vec::new(),
             autocomplete_selected: 0,
+            autocomplete_scroll_offset: 0,
             session_id,
         }
     }
@@ -740,6 +743,16 @@ fn is_word_char(c: char) -> bool {
     c.is_alphanumeric() || c == '_'
 }
 
+/// Keep `autocomplete_scroll_offset` in sync so the selected item is visible.
+fn sync_autocomplete_scroll(app: &mut App) {
+    let max_vis = crate::ui::AUTOCOMPLETE_MAX_VISIBLE;
+    if app.autocomplete_selected < app.autocomplete_scroll_offset {
+        app.autocomplete_scroll_offset = app.autocomplete_selected;
+    } else if app.autocomplete_selected >= app.autocomplete_scroll_offset + max_vis {
+        app.autocomplete_scroll_offset = app.autocomplete_selected + 1 - max_vis;
+    }
+}
+
 /// Update the autocomplete popup based on the current input.
 fn update_autocomplete(app: &mut App) {
     // Only trigger if input starts with '/' and cursor is still in the command name
@@ -752,6 +765,7 @@ fn update_autocomplete(app: &mut App) {
             // Clamp selected index.
             if app.autocomplete_selected >= items.len() {
                 app.autocomplete_selected = 0;
+                app.autocomplete_scroll_offset = 0;
             }
             app.autocomplete_items = items;
             return;
@@ -760,6 +774,7 @@ fn update_autocomplete(app: &mut App) {
     app.autocomplete_visible = false;
     app.autocomplete_items.clear();
     app.autocomplete_selected = 0;
+    app.autocomplete_scroll_offset = 0;
 }
 
 /// Format a command result payload into a readable string for the chat.
@@ -1099,6 +1114,7 @@ async fn run_loop(
                             app.autocomplete_visible = false;
                             app.autocomplete_items.clear();
                             app.autocomplete_selected = 0;
+                            app.autocomplete_scroll_offset = 0;
                         } else {
                             app.selection = None;
                         }
@@ -1116,6 +1132,7 @@ async fn run_loop(
                             app.autocomplete_visible = false;
                             app.autocomplete_items.clear();
                             app.autocomplete_selected = 0;
+                            app.autocomplete_scroll_offset = 0;
                         }
                         if !app.input.trim().is_empty() {
                             let prompt = app.input.clone();
@@ -1134,6 +1151,7 @@ async fn run_loop(
                             app.autocomplete_visible = false;
                             app.autocomplete_items.clear();
                             app.autocomplete_selected = 0;
+                            app.autocomplete_scroll_offset = 0;
 
                             // Dispatch slash commands; send everything else as a prompt.
                             if let Some((cmd_name, args)) =
@@ -1346,6 +1364,7 @@ async fn run_loop(
                         if app.autocomplete_visible && !app.autocomplete_items.is_empty() {
                             app.autocomplete_selected =
                                 (app.autocomplete_selected + 1) % app.autocomplete_items.len();
+                            sync_autocomplete_scroll(app);
                         }
                     }
                     KeyCode::BackTab => {
@@ -1354,6 +1373,7 @@ async fn run_loop(
                                 .autocomplete_selected
                                 .checked_sub(1)
                                 .unwrap_or(app.autocomplete_items.len() - 1);
+                            sync_autocomplete_scroll(app);
                         }
                     }
                     KeyCode::Backspace => {
@@ -1450,6 +1470,7 @@ async fn run_loop(
                                 .autocomplete_selected
                                 .checked_sub(1)
                                 .unwrap_or(app.autocomplete_items.len() - 1);
+                            sync_autocomplete_scroll(app);
                         } else if !app.input_history.is_empty() {
                             let next_idx = match app.history_idx {
                                 None => {
@@ -1468,6 +1489,7 @@ async fn run_loop(
                         if app.autocomplete_visible && !app.autocomplete_items.is_empty() {
                             app.autocomplete_selected =
                                 (app.autocomplete_selected + 1) % app.autocomplete_items.len();
+                            sync_autocomplete_scroll(app);
                         } else {
                             match app.history_idx {
                                 None => {}

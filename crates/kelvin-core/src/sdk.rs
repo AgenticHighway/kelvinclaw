@@ -32,6 +32,7 @@ pub enum PluginCapability {
     NetworkEgress,
     CommandExecution,
     CommandProvider,
+    EnvAccess,
 }
 
 /// Metadata describing a single slash command provided by the gateway or a plugin.

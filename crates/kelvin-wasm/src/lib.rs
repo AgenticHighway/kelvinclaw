@@ -36,6 +36,9 @@ pub mod claw_abi {
 
 pub const DEFAULT_MAX_MODULE_BYTES: usize = 512 * 1024;
 pub const DEFAULT_FUEL_BUDGET: u64 = 1_000_000;
+/// Hard upper bound on fuel_budget to prevent manifests from requesting
+/// unbounded execution time (#69).
+pub const MAX_FUEL_BUDGET: u64 = 100_000_000;
 pub const DEFAULT_MAX_REQUEST_BYTES: usize = 256 * 1024;
 pub const DEFAULT_MAX_RESPONSE_BYTES: usize = 256 * 1024;
 
@@ -46,6 +49,7 @@ pub enum ClawCall {
     FsRead { handle: i32 },
     NetworkSend { packet: i32 },
     HttpCall { url: String },
+    EnvAccess { key: String },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -535,10 +539,21 @@ fn link_claw_imports(linker: &mut Linker<HostState>, policy: &SandboxPolicy) -> 
                     };
 
                     // --- enforce allowlist ---
-                    let hostname = url::Url::parse(&url_str)
+                    let hostname = match url::Url::parse(&url_str)
                         .ok()
                         .and_then(|u| u.host_str().map(|h| h.to_string()))
-                        .unwrap_or_default();
+                    {
+                        Some(h) if !h.is_empty() => h,
+                        _ => {
+                            // Reject unparseable or host-less URLs (#71)
+                            return write_resp_to_buf(
+                                &mut caller,
+                                &serde_json::json!({"status": 400, "body": "invalid or missing hostname in URL"}).to_string(),
+                                resp_ptr,
+                                resp_max_len,
+                            );
+                        }
+                    };
                     caller.data_mut().record(ClawCall::HttpCall { url: url_str.clone() });
 
                     // --- build response JSON ---
@@ -574,14 +589,24 @@ fn link_claw_imports(linker: &mut Linker<HostState>, policy: &SandboxPolicy) -> 
                             _ => client.get(&url_str),
                         };
                         // Optional headers object: {"Header-Name": "value", ...}
+                        // Block security-sensitive headers to prevent injection (#70).
+                        const BLOCKED_HEADERS: &[&str] = &[
+                            "host", "authorization", "proxy-authorization",
+                            "cookie", "set-cookie", "transfer-encoding",
+                            "te", "connection", "upgrade",
+                        ];
                         if let Some(hdrs) = req.get("headers").and_then(|v| v.as_object()) {
                             for (k, v) in hdrs {
                                 if let Some(val) = v.as_str() {
-                                    req_builder = req_builder.header(k.as_str(), val);
+                                    if !BLOCKED_HEADERS.contains(&k.to_ascii_lowercase().as_str()) {
+                                        req_builder = req_builder.header(k.as_str(), val);
+                                    }
                                 }
                             }
                         }
-                        match req_builder.send() {
+                        // Wrap blocking HTTP in block_in_place to avoid starving
+                        // the tokio runtime (#66).
+                        match tokio::task::block_in_place(|| req_builder.send()) {
                             Ok(resp) => {
                                 let status = resp.status().as_u16();
                                 let text = resp.text().unwrap_or_default();
@@ -652,6 +677,9 @@ fn link_claw_imports(linker: &mut Linker<HostState>, policy: &SandboxPolicy) -> 
                     if !env_allow.iter().any(|allowed| allowed == key) {
                         return 0;
                     }
+                    caller.data_mut().record(ClawCall::EnvAccess {
+                        key: key.to_string(),
+                    });
                     let value = match std::env::var(key) {
                         Ok(v) => v,
                         Err(_) => return 0,

@@ -367,6 +367,7 @@ fn claw_call_label(call: &ClawCall) -> String {
         ClawCall::FsRead { handle } => format!("fs_read({handle})"),
         ClawCall::NetworkSend { packet } => format!("network_send({packet})"),
         ClawCall::HttpCall { url } => format!("http_call({url})"),
+        ClawCall::EnvAccess { key } => format!("env_access({key})"),
     }
 }
 
@@ -392,6 +393,10 @@ fn claw_call_json(call: &ClawCall) -> Value {
         ClawCall::HttpCall { url } => json!({
             "kind": "http_call",
             "url": url,
+        }),
+        ClawCall::EnvAccess { key } => json!({
+            "kind": "env_access",
+            "key": key,
         }),
     }
 }

@@ -1629,8 +1629,8 @@ impl TextChannelAdapter {
                 // bot_token is the WhatsApp Cloud API access token.
                 // account_id is the recipient phone number (user_phone).
                 // We need the phone_number_id from env to construct the endpoint.
-                let phone_number_id = std::env::var("KELVIN_WHATSAPP_PHONE_NUMBER_ID")
-                    .unwrap_or_default();
+                let phone_number_id =
+                    std::env::var("KELVIN_WHATSAPP_PHONE_NUMBER_ID").unwrap_or_default();
                 let endpoint = format!("{}/{}/messages", base, phone_number_id);
                 let request = self
                     .client

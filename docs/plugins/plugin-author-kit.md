@@ -50,11 +50,11 @@ scripts/kelvin-plugin.sh verify --package ./plugin-acme.echo/dist/acme.echo-0.1.
 
 For model plugins, use the dedicated guide:
 
-- [docs/build-a-model-plugin.md](build-a-model-plugin.md)
+- [docs/plugins/build-a-model-plugin.md](build-a-model-plugin.md)
 
 For tool plugins, use the dedicated guide:
 
-- [docs/build-a-tool-plugin.md](build-a-tool-plugin.md)
+- [docs/plugins/build-a-tool-plugin.md](build-a-tool-plugin.md)
 
 `kelvin plugin new` creates a working source project for both runtimes with:
 

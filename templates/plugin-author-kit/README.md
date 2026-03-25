@@ -22,7 +22,7 @@ For working model-plugin source, also see:
 
 - `plugins/kelvin-anthropic-plugin`
 - `plugins/kelvin-openrouter-plugin`
-- `docs/build-a-model-plugin.md`
+- `docs/plugins/build-a-model-plugin.md`
 
 Template manifests:
 
