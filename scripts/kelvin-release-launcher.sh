@@ -238,9 +238,11 @@ bootstrap_official_plugins() {
   # shellcheck disable=SC1090
   source "${PLUGIN_MANIFEST_PATH}"
 
-  install_official_plugin "kelvin.cli" "${KELVIN_CLI_VERSION}" "${KELVIN_CLI_PACKAGE_URL}" "${KELVIN_CLI_SHA256}"
+  if [[ -n "${KELVIN_CLI_VERSION:-}" ]]; then
+    install_official_plugin "kelvin.cli" "${KELVIN_CLI_VERSION}" "${KELVIN_CLI_PACKAGE_URL}" "${KELVIN_CLI_SHA256}"
+  fi
 
-  if [[ -n "${OPENAI_API_KEY:-}" ]]; then
+  if [[ -n "${OPENAI_API_KEY:-}" && -n "${KELVIN_OPENAI_VERSION:-}" ]]; then
     install_official_plugin "kelvin.openai" "${KELVIN_OPENAI_VERSION}" "${KELVIN_OPENAI_PACKAGE_URL}" "${KELVIN_OPENAI_SHA256}"
   fi
 }
