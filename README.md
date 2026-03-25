@@ -19,9 +19,18 @@ For end users, plugins are installed as packages and executed by Kelvin. They do
 ### Quick Try (Docker, no API keys needed)
 
 ```bash
-cp .env.example .env                                # uses kelvin.echo by default
+cp .env.example .env                                # uses kelvin.echo model provider by default
 docker compose up -d                                # starts gateway + init
 docker compose --profile tui run --rm kelvin-tui    # interactive TUI
+```
+
+#### For Model Providers (e.g. kelvin.anthropic)
+
+Modify `.env`
+
+```bash
+KELVIN_MODEL_PROVIDER=kelvin.anthropic
+ANTHROPIC_API_KEY=sk-ant-your-api-key-here
 ```
 
 This runs the built-in echo provider — no OpenAI/Anthropic key required.
