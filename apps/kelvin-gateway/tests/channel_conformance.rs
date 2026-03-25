@@ -455,3 +455,81 @@ async fn conformance_flood_handling_is_enforced() {
 
     server_handle.abort();
 }
+
+#[tokio::test]
+async fn conformance_whatsapp_delivery_and_dedup() {
+    let _guard = ENV_LOCK.lock().await;
+    let _env_restore = [
+        EnvVarRestore::set("KELVIN_WHATSAPP_ENABLED", Some("true")),
+        EnvVarRestore::set("KELVIN_WHATSAPP_BOT_TOKEN", None),
+        EnvVarRestore::set("KELVIN_WHATSAPP_MAX_MESSAGES_PER_MINUTE", Some("100")),
+    ];
+
+    let (url, server_handle) = start_gateway(Some("secret")).await;
+    let (mut socket, _) = connect_async(url).await.expect("connect");
+
+    send_request(
+        &mut socket,
+        "connect-wa",
+        "connect",
+        json!({
+            "auth": {"token": "secret"},
+            "client_id": "channel-conformance"
+        }),
+    )
+    .await;
+    assert_eq!(
+        read_until_response(&mut socket, "connect-wa").await["ok"],
+        json!(true)
+    );
+
+    send_request(
+        &mut socket,
+        "wa-msg-1",
+        "channel.whatsapp.ingest",
+        json!({
+            "delivery_id": "whatsapp:wamid.abc123",
+            "phone_number_id": "123456789",
+            "user_phone": "+15551234567",
+            "text": "hello from whatsapp"
+        }),
+    )
+    .await;
+    let first = read_until_response(&mut socket, "wa-msg-1").await;
+    assert_eq!(first["ok"], json!(true));
+    assert_eq!(first["payload"]["status"], json!("completed"));
+    assert!(first["payload"]["response_text"]
+        .as_str()
+        .unwrap_or_default()
+        .contains("hello from whatsapp"));
+
+    send_request(
+        &mut socket,
+        "wa-msg-1-dup",
+        "channel.whatsapp.ingest",
+        json!({
+            "delivery_id": "whatsapp:wamid.abc123",
+            "phone_number_id": "123456789",
+            "user_phone": "+15551234567",
+            "text": "hello from whatsapp"
+        }),
+    )
+    .await;
+    let dup = read_until_response(&mut socket, "wa-msg-1-dup").await;
+    assert_eq!(dup["ok"], json!(true));
+    assert_eq!(dup["payload"]["status"], json!("deduped"));
+
+    send_request(
+        &mut socket,
+        "wa-status",
+        "channel.whatsapp.status",
+        json!({}),
+    )
+    .await;
+    let status = read_until_response(&mut socket, "wa-status").await;
+    assert_eq!(status["ok"], json!(true));
+    assert_eq!(status["payload"]["enabled"], json!(true));
+    assert_eq!(status["payload"]["kind"], json!("whatsapp"));
+
+    server_handle.abort();
+}

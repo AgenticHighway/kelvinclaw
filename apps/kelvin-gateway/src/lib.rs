@@ -14,7 +14,7 @@ use std::time::Instant;
 
 use channels::{
     ChannelEngine, ChannelRouteInspectRequest, DiscordIngressRequest, SlackIngressRequest,
-    TelegramIngressRequest, TelegramPairApproveRequest,
+    TelegramIngressRequest, TelegramPairApproveRequest, WhatsappIngressRequest,
 };
 use futures_util::{SinkExt, StreamExt};
 pub use ingress::GatewayIngressConfig;
@@ -56,6 +56,8 @@ pub const GATEWAY_METHODS_V1: &[&str] = &[
     "channel.telegram.ingest",
     "channel.telegram.pair.approve",
     "channel.telegram.status",
+    "channel.whatsapp.ingest",
+    "channel.whatsapp.status",
     "command.exec",
     "commands.list",
     "connect",
@@ -1179,6 +1181,18 @@ async fn handle_request(
             let channels = state.channels.lock().await;
             Ok(channels.discord_status())
         }
+        "channel.whatsapp.ingest" => {
+            let params: WhatsappIngressRequest = parse_params(params, method)?;
+            let mut channels = state.channels.lock().await;
+            channels
+                .whatsapp_ingest(&state.runtime, params)
+                .await
+                .map_err(map_kelvin_error)
+        }
+        "channel.whatsapp.status" => {
+            let channels = state.channels.lock().await;
+            Ok(channels.whatsapp_status())
+        }
         "channel.route.inspect" => {
             let params: ChannelRouteInspectRequest = parse_params(params, method)?;
             let channels = state.channels.lock().await;
@@ -1576,6 +1590,8 @@ mod tests {
                 "channel.telegram.ingest",
                 "channel.telegram.pair.approve",
                 "channel.telegram.status",
+                "channel.whatsapp.ingest",
+                "channel.whatsapp.status",
                 "command.exec",
                 "commands.list",
                 "connect",

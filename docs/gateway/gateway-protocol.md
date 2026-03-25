@@ -18,7 +18,7 @@ Protocol version constant: `1.0.0`.
 - auth failure backoff is applied per client IP
 - channel adapters are disabled unless explicitly enabled by environment config
 - Telegram channel defaults to pairing-required and host allowlist checks
-- Slack/Discord channels are available behind explicit env enable flags
+- Slack/Discord/WhatsApp channels are available behind explicit env enable flags
 - optional per-channel WASM policy plugin (`kelvin_channel_host_v1`) can deny/shape ingress before routing
 
 ## Transport
@@ -35,9 +35,11 @@ Optional direct channel ingress runs on a separate HTTP listener:
 - default base path: `/ingress`
 - operator console path: `/operator/`
 - routes:
-  - `POST /ingress/telegram`
-  - `POST /ingress/slack`
-  - `POST /ingress/discord`
+    - `POST /ingress/telegram`
+    - `POST /ingress/slack`
+    - `POST /ingress/discord`
+    - `GET  /ingress/whatsapp` (webhook verification challenge)
+    - `POST /ingress/whatsapp`
 
 Direct ingress listener state is exposed in `health.payload.ingress`.
 
@@ -93,48 +95,52 @@ Successful `connect` responses include:
 
 - `health`
 - `agent` (alias: `run.submit`)
-  - params: `request_id`, `prompt`, optional `session_id`, `workspace_dir`, `timeout_ms`, `system_prompt`, `memory_query`, `run_id`
+    - params: `request_id`, `prompt`, optional `session_id`, `workspace_dir`, `timeout_ms`, `system_prompt`, `memory_query`, `run_id`
 - `agent.wait` (alias: `run.wait`)
-  - params: `run_id`, optional `timeout_ms`
+    - params: `run_id`, optional `timeout_ms`
 - `agent.state` (alias: `run.state`)
-  - params: `run_id`
+    - params: `run_id`
 - `agent.outcome` (alias: `run.outcome`)
-  - params: `run_id`, optional `timeout_ms`
+    - params: `run_id`, optional `timeout_ms`
 - `channel.telegram.ingest`
-  - params: `delivery_id`, `chat_id`, `text`, optional `timeout_ms`, `auth_token`, `session_id`, `workspace_dir`
+    - params: `delivery_id`, `chat_id`, `text`, optional `timeout_ms`, `auth_token`, `session_id`, `workspace_dir`
 - `channel.telegram.pair.approve`
-  - params: `code`
+    - params: `code`
 - `channel.telegram.status`
-  - params: none
+    - params: none
 - `channel.slack.ingest`
-  - params: `delivery_id`, `channel_id`, `user_id`, `text`, optional `timeout_ms`, `auth_token`, `session_id`, `workspace_dir`
+    - params: `delivery_id`, `channel_id`, `user_id`, `text`, optional `timeout_ms`, `auth_token`, `session_id`, `workspace_dir`
 - `channel.slack.status`
-  - params: none
+    - params: none
 - `channel.discord.ingest`
-  - params: `delivery_id`, `channel_id`, `user_id`, `text`, optional `timeout_ms`, `auth_token`, `session_id`, `workspace_dir`
+    - params: `delivery_id`, `channel_id`, `user_id`, `text`, optional `timeout_ms`, `auth_token`, `session_id`, `workspace_dir`
 - `channel.discord.status`
-  - params: none
+    - params: none
+- `channel.whatsapp.ingest`
+    - params: `delivery_id`, `phone_number_id`, `user_phone`, `text`, optional `timeout_ms`, `auth_token`, `session_id`, `workspace_dir`
+- `channel.whatsapp.status`
+    - params: none
 - `channel.route.inspect`
-  - params: `channel`, `account_id`, optional `sender_tier`, `session_id`, `workspace_dir`
+    - params: `channel`, `account_id`, optional `sender_tier`, `session_id`, `workspace_dir`
 - `operator.runs.list`
-  - params: optional `limit`
+    - params: optional `limit`
 - `operator.sessions.list`
-  - params: optional `limit`
+    - params: optional `limit`
 - `operator.session.get`
-  - params: `session_id`, optional `limit`
+    - params: `session_id`, optional `limit`
 - `operator.plugins.inspect`
-  - params: none
+    - params: none
 - `commands.list`
-  - params: none
-  - returns: `commands` array of `{name, description, usage, category}`
+    - params: none
+    - returns: `commands` array of `{name, description, usage, category}`
 - `command.exec`
-  - params: `command` (name without leading `/`), optional `args`, optional `session_id`
-  - executes a named gateway built-in command and returns a command-specific payload
-  - built-in commands: `new`, `switch`, `clear`, `tools`, `sessions`, `plugins`
+    - params: `command` (name without leading `/`), optional `args`, optional `session_id`
+    - executes a named gateway built-in command and returns a command-specific payload
+    - built-in commands: `new`, `switch`, `clear`, `tools`, `sessions`, `plugins`
 - `schedule.list`
-  - params: none
+    - params: none
 - `schedule.history`
-  - params: optional `schedule_id`
+    - params: optional `schedule_id`
 
 ## Telegram Channel Policy
 
@@ -148,12 +154,13 @@ Telegram channel is configured only via environment variables and remains disabl
 - direct webhook verification uses `KELVIN_TELEGRAM_WEBHOOK_SECRET_TOKEN`
 - inbound dedupe, per-chat rate limits, and bounded retries are always applied
 
-## Slack + Discord Policy
+## Slack + Discord + WhatsApp Policy
 
-Slack and Discord channels are disabled unless explicitly enabled:
+Slack, Discord, and WhatsApp channels are disabled unless explicitly enabled:
 
 - `KELVIN_SLACK_ENABLED=true`
 - `KELVIN_DISCORD_ENABLED=true`
+- `KELVIN_WHATSAPP_ENABLED=true`
 
 Common policy controls per channel include:
 
@@ -164,14 +171,18 @@ Common policy controls per channel include:
 - bounded inbox + delivery-id dedupe (`*_MAX_QUEUE_DEPTH`, `*_MAX_SEEN_DELIVERY_IDS`)
 - bounded outbound retries (`*_OUTBOUND_MAX_RETRIES`, `*_OUTBOUND_RETRY_BACKOFF_MS`)
 - direct webhook verification:
-  - Slack: `KELVIN_SLACK_SIGNING_SECRET`
-  - Slack replay window: `KELVIN_SLACK_WEBHOOK_REPLAY_WINDOW_SECS`
-  - Discord interactions: `KELVIN_DISCORD_INTERACTIONS_PUBLIC_KEY`
+    - Slack: `KELVIN_SLACK_SIGNING_SECRET`
+    - Slack replay window: `KELVIN_SLACK_WEBHOOK_REPLAY_WINDOW_SECS`
+    - Discord interactions: `KELVIN_DISCORD_INTERACTIONS_PUBLIC_KEY`
+    - WhatsApp HMAC-SHA256: `KELVIN_WHATSAPP_APP_SECRET`
+    - WhatsApp verification token: `KELVIN_WHATSAPP_WEBHOOK_VERIFY_TOKEN`
+    - WhatsApp phone number ID: `KELVIN_WHATSAPP_PHONE_NUMBER_ID`
 
 Default base URL host allowlist is enforced unless explicitly relaxed:
 
 - Slack: `slack.com`
 - Discord: `discord.com`
+- WhatsApp: `graph.facebook.com`
 
 Custom base URLs require `*_ALLOW_CUSTOM_BASE_URL=true`.
 
@@ -186,7 +197,7 @@ Each rule supports deterministic matching by:
 
 Match fields:
 
-- `channel` (`telegram`, `slack`, `discord`, or `*`)
+- `channel` (`telegram`, `slack`, `discord`, `whatsapp`, or `*`)
 - optional `account_id`
 - optional `sender_tier`
 - optional `session_id`
