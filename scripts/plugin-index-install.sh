@@ -144,6 +144,12 @@ if [[ -z "${PLUGIN_ID}" ]]; then
   exit 1
 fi
 
+if [[ -z "${INDEX_URL}" && -z "${REGISTRY_URL}" ]]; then
+  echo "No plugin index URL configured." >&2
+  echo "Set KELVIN_PLUGIN_INDEX_URL, pass --index-url <url>, or --registry-url <url>." >&2
+  exit 1
+fi
+
 WORK_DIR="$(mktemp -d)"
 cleanup() {
   rm -rf "${WORK_DIR}"

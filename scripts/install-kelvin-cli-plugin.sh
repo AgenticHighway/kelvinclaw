@@ -61,6 +61,26 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# Prefer vendored tarball when no index URL is configured (offline / fresh clone).
+VENDOR_DIR="${ROOT_DIR}/release/vendor"
+VENDORED_TARBALL="$(ls -1 "${VENDOR_DIR}"/kelvin.cli-*.tar.gz 2>/dev/null | sort -V | tail -1 || true)"
+
+if [[ -n "${VENDORED_TARBALL}" && -z "${INDEX_URL}" ]]; then
+  echo "[install-kelvin-cli-plugin] installing from vendored tarball: ${VENDORED_TARBALL}"
+  INSTALL_ARGS=(--package "${VENDORED_TARBALL}" --plugin-home "${PLUGIN_HOME}")
+  if [[ "${FORCE}" == "1" ]]; then
+    INSTALL_ARGS+=(--force)
+  fi
+  "${ROOT_DIR}/scripts/plugin-install.sh" "${INSTALL_ARGS[@]}"
+  exit 0
+fi
+
+if [[ -z "${INDEX_URL}" ]]; then
+  echo "No plugin index URL configured and no vendored tarball found." >&2
+  echo "Set KELVIN_PLUGIN_INDEX_URL or pass --index-url <url>." >&2
+  exit 1
+fi
+
 INSTALL_ARGS=(
   --index-url "${INDEX_URL}"
   --plugin "kelvin.cli"
