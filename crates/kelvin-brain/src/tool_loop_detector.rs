@@ -112,11 +112,12 @@ mod tests {
         (name.to_string(), args, is_error)
     }
 
-    fn record(detector: &mut ToolLoopDetector, calls: &[(String, Value, bool)]) -> LoopDetectionResult {
-        let refs: Vec<(String, &Value, bool)> = calls
-            .iter()
-            .map(|(n, v, e)| (n.clone(), v, *e))
-            .collect();
+    fn record(
+        detector: &mut ToolLoopDetector,
+        calls: &[(String, Value, bool)],
+    ) -> LoopDetectionResult {
+        let refs: Vec<(String, &Value, bool)> =
+            calls.iter().map(|(n, v, e)| (n.clone(), v, *e)).collect();
         detector.record_call(&refs)
     }
 

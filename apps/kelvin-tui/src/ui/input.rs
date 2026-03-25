@@ -1,9 +1,9 @@
 use ratatui::{
-    Frame,
     layout::Rect,
     style::{Color, Modifier, Style},
     text::{Line, Span, Text},
     widgets::{Block, Borders, Paragraph},
+    Frame,
 };
 
 use crate::app::{App, PasteMarker};
@@ -33,15 +33,21 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
         let mut offset = first_cap;
         while offset < display.len() {
             let end = (offset + inner_width).min(display.len());
-            lines.push(Line::from(
-                render_display_spans(&display, &app.paste_markers, offset, end),
-            ));
+            lines.push(Line::from(render_display_spans(
+                &display,
+                &app.paste_markers,
+                offset,
+                end,
+            )));
             offset += inner_width;
         }
     }
 
-    let paragraph = Paragraph::new(Text::from(lines))
-        .block(Block::default().borders(Borders::ALL).title(" Input (Enter=submit, ^C^C=quit) "));
+    let paragraph = Paragraph::new(Text::from(lines)).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title(" Input (Enter=submit, ^C^C=quit) "),
+    );
 
     f.render_widget(paragraph, area);
 

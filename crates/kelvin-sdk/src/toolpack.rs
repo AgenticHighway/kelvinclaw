@@ -505,7 +505,7 @@ impl Tool for SafeWebFetchTool {
                     "type": "integer",
                     "description": "Request timeout in milliseconds (100–30000). Defaults to 10000."
                 },
-                
+
                 "approval": {
                     "type": "object",
                     "description": "Approval object required for this sensitive operation.",

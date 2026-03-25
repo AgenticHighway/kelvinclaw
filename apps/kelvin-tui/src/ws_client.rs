@@ -46,7 +46,11 @@ pub struct WsClient {
 }
 
 impl WsClient {
-    pub async fn connect(url: &str, auth_token: Option<String>, tui_tx: mpsc::Sender<TuiEvent>) -> Result<Self, String> {
+    pub async fn connect(
+        url: &str,
+        auth_token: Option<String>,
+        tui_tx: mpsc::Sender<TuiEvent>,
+    ) -> Result<Self, String> {
         let (ws_stream, _) = timeout(Duration::from_secs(10), connect_async(url))
             .await
             .map_err(|_| "WebSocket connect timed out".to_string())?
@@ -63,7 +67,9 @@ impl WsClient {
         tokio::spawn(async move {
             while let Some(msg) = frame_rx.recv().await {
                 if ws_write.send(Message::Text(msg.into())).await.is_err() {
-                    let _ = tui_tx_writer.send(TuiEvent::WsStatus(WsStatus::Disconnected)).await;
+                    let _ = tui_tx_writer
+                        .send(TuiEvent::WsStatus(WsStatus::Disconnected))
+                        .await;
                     break;
                 }
             }
@@ -72,44 +78,57 @@ impl WsClient {
         tokio::spawn(async move {
             while let Some(msg) = ws_read.next().await {
                 match msg {
-                    Ok(Message::Text(text)) => {
-                        match serde_json::from_str::<ServerFrame>(&text) {
-                            Ok(ServerFrame::Res { id, ok, payload, error }) => {
-                                let result = if ok {
-                                    Ok(payload.unwrap_or(Value::Null))
-                                } else {
-                                    Err(error
-                                        .and_then(|e| e.get("message").and_then(|m| m.as_str()).map(|s| s.to_string()))
-                                        .unwrap_or_else(|| "unknown error".to_string()))
-                                };
-                                let mut map = pending_clone.lock().await;
-                                if let Some(tx) = map.remove(&id) {
-                                    let _ = tx.send(result);
-                                }
+                    Ok(Message::Text(text)) => match serde_json::from_str::<ServerFrame>(&text) {
+                        Ok(ServerFrame::Res {
+                            id,
+                            ok,
+                            payload,
+                            error,
+                        }) => {
+                            let result = if ok {
+                                Ok(payload.unwrap_or(Value::Null))
+                            } else {
+                                Err(error
+                                    .and_then(|e| {
+                                        e.get("message")
+                                            .and_then(|m| m.as_str())
+                                            .map(|s| s.to_string())
+                                    })
+                                    .unwrap_or_else(|| "unknown error".to_string()))
+                            };
+                            let mut map = pending_clone.lock().await;
+                            if let Some(tx) = map.remove(&id) {
+                                let _ = tx.send(result);
                             }
-                            Ok(ServerFrame::Event { event, payload }) => {
-                                if event == "agent" {
-                                    match serde_json::from_value::<AgentEvent>(payload) {
-                                        Ok(ev) => {
-                                            let _ = tui_tx_clone.send(TuiEvent::Agent(ev)).await;
-                                        }
-                                        Err(e) => {
-                                            let _ = tui_tx_clone.send(TuiEvent::WsStatus(
-                                                WsStatus::Error(format!("failed to parse agent event: {e}"))
-                                            )).await;
-                                        }
+                        }
+                        Ok(ServerFrame::Event { event, payload }) => {
+                            if event == "agent" {
+                                match serde_json::from_value::<AgentEvent>(payload) {
+                                    Ok(ev) => {
+                                        let _ = tui_tx_clone.send(TuiEvent::Agent(ev)).await;
+                                    }
+                                    Err(e) => {
+                                        let _ = tui_tx_clone
+                                            .send(TuiEvent::WsStatus(WsStatus::Error(format!(
+                                                "failed to parse agent event: {e}"
+                                            ))))
+                                            .await;
                                     }
                                 }
                             }
-                            Err(e) => {
-                                let _ = tui_tx_clone.send(TuiEvent::WsStatus(
-                                    WsStatus::Error(format!("failed to parse server frame: {e}"))
-                                )).await;
-                            }
                         }
-                    }
+                        Err(e) => {
+                            let _ = tui_tx_clone
+                                .send(TuiEvent::WsStatus(WsStatus::Error(format!(
+                                    "failed to parse server frame: {e}"
+                                ))))
+                                .await;
+                        }
+                    },
                     Ok(Message::Close(_)) | Err(_) => {
-                        let _ = tui_tx_clone.send(TuiEvent::WsStatus(WsStatus::Disconnected)).await;
+                        let _ = tui_tx_clone
+                            .send(TuiEvent::WsStatus(WsStatus::Disconnected))
+                            .await;
                         break;
                     }
                     _ => {}
@@ -148,7 +167,10 @@ impl WsClient {
             map.insert(id, tx);
         }
 
-        self.sender.send(text).await.map_err(|_| "sender closed".to_string())?;
+        self.sender
+            .send(text)
+            .await
+            .map_err(|_| "sender closed".to_string())?;
 
         match timeout(Duration::from_secs(30), rx).await {
             Ok(result) => result.map_err(|_| "response channel closed".to_string())?,

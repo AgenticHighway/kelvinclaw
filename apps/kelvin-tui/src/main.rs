@@ -38,7 +38,11 @@ fn parse_args() -> Result<CliConfig, String> {
         }
     }
 
-    Ok(CliConfig { gateway_url, auth_token, session_id })
+    Ok(CliConfig {
+        gateway_url,
+        auth_token,
+        session_id,
+    })
 }
 
 #[tokio::main]

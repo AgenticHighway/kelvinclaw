@@ -291,9 +291,7 @@ impl WasmSkillHost {
             let memory = instance
                 .get_memory(&mut store, claw_abi::EXPORT_MEMORY)
                 .ok_or_else(|| {
-                    KelvinError::InvalidInput(
-                        "v2 tool module must export memory".to_string(),
-                    )
+                    KelvinError::InvalidInput("v2 tool module must export memory".to_string())
                 })?;
             let alloc_fn = instance
                 .get_typed_func::<i32, i32>(&mut store, claw_abi::EXPORT_ALLOC)
@@ -302,23 +300,24 @@ impl WasmSkillHost {
                 .get_typed_func::<(i32, i32), ()>(&mut store, claw_abi::EXPORT_DEALLOC)
                 .map_err(|err| backend("resolve dealloc export", err))?;
             let handle_fn = instance
-                .get_typed_func::<(i32, i32), i64>(
-                    &mut store,
-                    claw_abi::HANDLE_TOOL_CALL,
-                )
+                .get_typed_func::<(i32, i32), i64>(&mut store, claw_abi::HANDLE_TOOL_CALL)
                 .map_err(|err| backend("resolve handle_tool_call export", err))?;
 
             let input_bytes = input_json.as_bytes();
             let input_len = i32::try_from(input_bytes.len()).map_err(|_| {
-                KelvinError::InvalidInput(
-                    "tool input exceeded i32 address space".to_string(),
-                )
+                KelvinError::InvalidInput("tool input exceeded i32 address space".to_string())
             })?;
 
             let input_ptr = alloc_fn
                 .call(&mut store, input_len)
                 .map_err(|err| backend("call alloc for tool input", err))?;
-            skill_write_guest_bytes(&memory, &mut store, input_ptr, input_bytes, "write tool input")?;
+            skill_write_guest_bytes(
+                &memory,
+                &mut store,
+                input_ptr,
+                input_bytes,
+                "write tool input",
+            )?;
 
             let call_result = handle_fn.call(&mut store, (input_ptr, input_len));
             let _ = dealloc_fn.call(&mut store, (input_ptr, input_len));
@@ -331,8 +330,7 @@ impl WasmSkillHost {
                 }
             })?;
 
-            let (output_ptr, output_len) =
-                skill_unpack_ptr_len(packed, "handle_tool_call return")?;
+            let (output_ptr, output_len) = skill_unpack_ptr_len(packed, "handle_tool_call return")?;
             let output_bytes = skill_read_guest_bytes(
                 &memory,
                 &mut store,
@@ -402,7 +400,11 @@ fn validate_imports(module: &Module, policy: &SandboxPolicy) -> KelvinResult<()>
             claw_abi::NETWORK_SEND if !policy.network_allow_hosts.is_empty() => {}
             claw_abi::HTTP_CALL if !policy.network_allow_hosts.is_empty() => {}
             claw_abi::GET_ENV if !policy.env_allow.is_empty() => {}
-            claw_abi::MOVE_SERVO | claw_abi::FS_READ | claw_abi::NETWORK_SEND | claw_abi::HTTP_CALL | claw_abi::GET_ENV => {
+            claw_abi::MOVE_SERVO
+            | claw_abi::FS_READ
+            | claw_abi::NETWORK_SEND
+            | claw_abi::HTTP_CALL
+            | claw_abi::GET_ENV => {
                 return Err(KelvinError::InvalidInput(format!(
                     "capability import '{name}' denied by sandbox policy"
                 )));
@@ -637,7 +639,10 @@ fn link_claw_imports(linker: &mut Linker<HostState>, policy: &SandboxPolicy) -> 
                         None => return 0,
                     };
                     let mut key_bytes = vec![0u8; key_len as usize];
-                    if memory.read(&caller, key_ptr as usize, &mut key_bytes).is_err() {
+                    if memory
+                        .read(&caller, key_ptr as usize, &mut key_bytes)
+                        .is_err()
+                    {
                         return 0;
                     }
                     let key = match std::str::from_utf8(&key_bytes) {
@@ -694,7 +699,9 @@ fn skill_read_guest_bytes(
     let mut bytes = vec![0_u8; len];
     memory
         .read(store, ptr as usize, &mut bytes)
-        .map_err(|err| KelvinError::InvalidInput(format!("{context}: memory read failed: {err}")))?;
+        .map_err(|err| {
+            KelvinError::InvalidInput(format!("{context}: memory read failed: {err}"))
+        })?;
     Ok(bytes)
 }
 
@@ -813,7 +820,10 @@ mod tests {
             SandboxPolicy::locked_down()
         );
         assert!(SandboxPreset::DevLocal.policy().allow_fs_read);
-        assert!(SandboxPreset::DevLocal.policy().network_allow_hosts.is_empty());
+        assert!(SandboxPreset::DevLocal
+            .policy()
+            .network_allow_hosts
+            .is_empty());
         assert!(SandboxPreset::HardwareControl.policy().allow_move_servo);
         assert!(!SandboxPreset::HardwareControl.policy().allow_fs_read);
     }
@@ -1050,7 +1060,10 @@ mod tests {
             .expect("v1 fallback");
         assert_eq!(result.output_json, None);
         assert_eq!(result.exit_code, 0);
-        assert_eq!(result.calls, vec![ClawCall::SendMessage { message_code: 42 }]);
+        assert_eq!(
+            result.calls,
+            vec![ClawCall::SendMessage { message_code: 42 }]
+        );
     }
 
     #[test]
@@ -1346,7 +1359,10 @@ mod tests {
         let v: serde_json::Value = serde_json::from_str(&output).expect("valid json");
         // GitHub may redirect (301) or return 200; just verify a valid HTTP status came back
         let status = v["status"].as_u64().unwrap_or(0);
-        assert!(status > 0 && status < 600, "expected valid HTTP status, got {status}");
+        assert!(
+            status > 0 && status < 600,
+            "expected valid HTTP status, got {status}"
+        );
         assert!(!v["body"].as_str().unwrap_or("").is_empty());
     }
 }

@@ -363,7 +363,9 @@ fn model_input_to_openai_chat_completions_request(input: &ModelInput, model_name
                 let mut schema = t.input_schema.clone();
                 // OpenAI requires `properties` on object schemas even when empty.
                 if schema.get("type").and_then(Value::as_str) == Some("object")
-                    && !schema.as_object().map_or(false, |o| o.contains_key("properties"))
+                    && !schema
+                        .as_object()
+                        .map_or(false, |o| o.contains_key("properties"))
                 {
                     schema["properties"] = json!({});
                 }
@@ -1092,7 +1094,9 @@ mod tests {
         assert_eq!(messages[2]["role"], Value::String("assistant".to_string()));
         assert_eq!(messages[2]["content"], Value::String("hi".to_string()));
         assert_eq!(messages[3]["role"], Value::String("user".to_string()));
-        let last_content = messages[3]["content"].as_str().expect("openrouter content string");
+        let last_content = messages[3]["content"]
+            .as_str()
+            .expect("openrouter content string");
         assert!(last_content.contains("Relevant memory"));
         assert!(last_content.contains("Project: KelvinClaw"));
         assert!(last_content.contains("Explain KelvinClaw."));

@@ -783,10 +783,7 @@ impl SessionStore for FileBackedSessionStore {
     }
 
     async fn clear_history(&self, session_id: &str) -> KelvinResult<()> {
-        self.messages
-            .write()
-            .await
-            .remove(session_id);
+        self.messages.write().await.remove(session_id);
         self.persistence.persist_session_messages(session_id, &[])
     }
 }
@@ -1140,8 +1137,14 @@ impl KelvinSdkRuntime {
             config.load_installed_plugins,
         )?;
         let brain = Arc::new(
-            KelvinBrain::new(session_store.clone(), memory, model, tools.clone(), event_sink)
-                .with_max_tool_iterations(config.max_tool_iterations),
+            KelvinBrain::new(
+                session_store.clone(),
+                memory,
+                model,
+                tools.clone(),
+                event_sink,
+            )
+            .with_max_tool_iterations(config.max_tool_iterations),
         );
         let runtime = CoreRuntime::new(brain);
         Ok(Self {

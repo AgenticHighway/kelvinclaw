@@ -1,6 +1,6 @@
 use ratatui::{
-    Frame,
     layout::{Constraint, Direction, Layout},
+    Frame,
 };
 
 use crate::app::App;
@@ -24,7 +24,7 @@ fn input_line_count(input: &str, inner_width: u16) -> u16 {
     } else {
         let rest = input.len() - first_cap;
         let subsequent = rest.div_ceil(inner_width as usize);
-        (1 + subsequent).min(5) as u16  // cap at 5 content lines
+        (1 + subsequent).min(5) as u16 // cap at 5 content lines
     }
 }
 
