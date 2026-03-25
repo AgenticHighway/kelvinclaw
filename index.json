@@ -70,7 +70,7 @@
 			"quality_tier": "unsigned_local",
 			"api_version": "1.0.0",
 			"min_core_version": "0.1.0",
-			"capabilities": ["tool_provider", "network_egress"],
+			"capabilities": ["tool_provider", "network_egress", "env_access"],
 			"runtime": "wasm_tool_v1",
 			"_note": "Build from source — no pre-built tarball yet. See plugins/kelvin-websearch-plugin/build.sh"
 		}
