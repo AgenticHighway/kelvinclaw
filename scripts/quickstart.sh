@@ -104,13 +104,18 @@ PLUGIN_HOME="${KELVIN_PLUGIN_HOME:-${ROOT_DIR}/.kelvin/plugins}"
 TRUST_POLICY_PATH="${KELVIN_TRUST_POLICY_PATH:-${ROOT_DIR}/.kelvin/trusted_publishers.json}"
 STATE_DIR="${KELVIN_STATE_DIR:-${ROOT_DIR}/.kelvin/state}"
 
-MODEL_PROVIDER=""
-if [[ -n "${OPENAI_API_KEY:-}" ]]; then
-  MODEL_PROVIDER="kelvin.openai"
-elif [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
-  MODEL_PROVIDER="kelvin.anthropic"
-elif [[ -n "${OPENROUTER_API_KEY:-}" ]]; then
-  MODEL_PROVIDER="kelvin.openrouter"
+# Prefer explicit KELVIN_MODEL_PROVIDER; fall back to key detection.
+MODEL_PROVIDER="${KELVIN_MODEL_PROVIDER:-}"
+if [[ -z "${MODEL_PROVIDER}" || "${MODEL_PROVIDER}" == "kelvin.echo" ]]; then
+  if [[ -n "${OPENAI_API_KEY:-}" ]]; then
+    MODEL_PROVIDER="kelvin.openai"
+  elif [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
+    MODEL_PROVIDER="kelvin.anthropic"
+  elif [[ -n "${OPENROUTER_API_KEY:-}" ]]; then
+    MODEL_PROVIDER="kelvin.openrouter"
+  else
+    MODEL_PROVIDER=""
+  fi
 fi
 
 HOST_ARGS=(

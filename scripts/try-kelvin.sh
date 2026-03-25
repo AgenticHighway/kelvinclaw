@@ -58,13 +58,32 @@ run_local() {
   echo "[try-kelvin] mode=local"
   ensure_cli_plugin
   cd "${ROOT_DIR}"
+
+  local -a host_args=(
+    --prompt "${PROMPT}"
+    --timeout-ms "${TIMEOUT_MS}"
+  )
+
+  # Prefer explicit KELVIN_MODEL_PROVIDER; fall back to key detection.
+  local model_provider="${KELVIN_MODEL_PROVIDER:-}"
+  if [[ -z "${model_provider}" || "${model_provider}" == "kelvin.echo" ]]; then
+    if [[ -n "${OPENAI_API_KEY:-}" ]]; then
+      model_provider="kelvin.openai"
+    elif [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
+      model_provider="kelvin.anthropic"
+    elif [[ -n "${OPENROUTER_API_KEY:-}" ]]; then
+      model_provider="kelvin.openrouter"
+    fi
+  fi
+  if [[ -n "${model_provider}" && "${model_provider}" != "kelvin.echo" ]]; then
+    host_args+=(--model-provider "${model_provider}")
+  fi
+
   KELVIN_PLUGIN_HOME="${PLUGIN_HOME}" \
   KELVIN_TRUST_POLICY_PATH="${TRUST_POLICY_PATH}" \
   KELVIN_PLUGIN_INDEX_URL="${PLUGIN_INDEX_URL}" \
   CARGO_TARGET_DIR="${TARGET_DIR}" \
-    cargo run -p kelvin-host -- \
-      --prompt "${PROMPT}" \
-      --timeout-ms "${TIMEOUT_MS}"
+    cargo run -p kelvin-host -- "${host_args[@]}"
 }
 
 run_docker() {

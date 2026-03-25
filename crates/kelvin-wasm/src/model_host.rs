@@ -224,11 +224,20 @@ fn model_input_to_openai_request(input: &ModelInput, model_name: &str) -> Value 
             .tools
             .iter()
             .map(|t| {
+                let mut schema = t.input_schema.clone();
+                // OpenAI requires `properties` on object schemas even when empty.
+                if schema.get("type").and_then(Value::as_str) == Some("object")
+                    && !schema
+                        .as_object()
+                        .is_some_and(|o| o.contains_key("properties"))
+                {
+                    schema["properties"] = json!({});
+                }
                 json!({
                     "type": "function",
                     "name": t.name,
                     "description": t.description,
-                    "parameters": t.input_schema
+                    "parameters": schema
                 })
             })
             .collect();
