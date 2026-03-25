@@ -18,7 +18,7 @@ For end users, plugins are installed as packages and executed by Kelvin. They do
 
 Choose the onboarding path for your experience level:
 
-- [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)
+- [docs/GETTING_STARTED.md](docs/getting-started/GETTING_STARTED.md)
 - latest public release: [GitHub Releases](https://github.com/AgenticHighway/kelvinclaw/releases/latest)
 
 Canonical quick start commands:
@@ -129,37 +129,37 @@ Validated public onboarding today:
 See:
 
 - [OVERVIEW.md](OVERVIEW.md)
-- [docs/architecture.md](docs/architecture.md)
-- [docs/gateway-protocol.md](docs/gateway-protocol.md)
-- [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)
-- [docs/kelvin-gap-analysis.md](docs/kelvin-gap-analysis.md)
-- [docs/KELVIN_CORE_SDK.md](docs/KELVIN_CORE_SDK.md)
-- [docs/SDK_TEST_MATRIX.md](docs/SDK_TEST_MATRIX.md)
-- [docs/SDK_OWASP_TOP10_AI_2025.md](docs/SDK_OWASP_TOP10_AI_2025.md)
-- [docs/SDK_NIST_AI_RMF_1_0.md](docs/SDK_NIST_AI_RMF_1_0.md)
-- [docs/PLUGIN_INSTALL_FLOW.md](docs/PLUGIN_INSTALL_FLOW.md)
-- [docs/ROOT_VS_SDK.md](docs/ROOT_VS_SDK.md)
-- [docs/CORE_ADMISSION_POLICY.md](docs/CORE_ADMISSION_POLICY.md)
-- [docs/SDK_PRINCIPLES.md](docs/SDK_PRINCIPLES.md)
-- [docs/trusted-executive-wasm.md](docs/trusted-executive-wasm.md)
-- [docs/RUST_DEVELOPER_QUICKSTART.md](docs/RUST_DEVELOPER_QUICKSTART.md)
-- [docs/memory-control-data-plane.md](docs/memory-control-data-plane.md)
-- [docs/memory-rpc-contract.md](docs/memory-rpc-contract.md)
-- [docs/memory-module-sdk.md](docs/memory-module-sdk.md)
-- [docs/memory-controller-deployment-profiles.md](docs/memory-controller-deployment-profiles.md)
-- [docs/model-plugin-abi.md](docs/model-plugin-abi.md)
-- [docs/channel-plugin-abi.md](docs/channel-plugin-abi.md)
-- [docs/openai-plugin-install-and-run.md](docs/openai-plugin-install-and-run.md)
-- [docs/anthropic-plugin-install-and-run.md](docs/anthropic-plugin-install-and-run.md)
-- [docs/openrouter-plugin-install-and-run.md](docs/openrouter-plugin-install-and-run.md)
-- [docs/runtime-container-first-run.md](docs/runtime-container-first-run.md)
-- [docs/plugin-index-schema.md](docs/plugin-index-schema.md)
-- [docs/toolpack-sdk-plugins.md](docs/toolpack-sdk-plugins.md)
-- [docs/plugin-author-kit.md](docs/plugin-author-kit.md)
-- [docs/plugin-quality-tiers.md](docs/plugin-quality-tiers.md)
-- [docs/plugin-trust-operations.md](docs/plugin-trust-operations.md)
-- [docs/agents-tradeoffs.md](docs/agents-tradeoffs.md)
-- [docs/compatibility-contracts.md](docs/compatibility-contracts.md)
+- [docs/architecture.md](docs/architecture/architecture.md)
+- [docs/gateway-protocol.md](docs/gateway/gateway-protocol.md)
+- [docs/GETTING_STARTED.md](docs/getting-started/GETTING_STARTED.md)
+- [docs/kelvin-gap-analysis.md](docs/architecture/kelvin-gap-analysis.md)
+- [docs/KELVIN_CORE_SDK.md](docs/architecture/kelvin-core-sdk.md)
+- [docs/SDK_TEST_MATRIX.md](docs/security/sdk-test-matrix.md)
+- [docs/SDK_OWASP_TOP10_AI_2025.md](docs/security/sdk-owasp-top10-ai-2025.md)
+- [docs/SDK_NIST_AI_RMF_1_0.md](docs/security/sdk-nist-ai-rmf-1-0.md)
+- [docs/PLUGIN_INSTALL_FLOW.md](docs/plugins/plugin-install-flow.md)
+- [docs/ROOT_VS_SDK.md](docs/architecture/root-vs-sdk.md)
+- [docs/CORE_ADMISSION_POLICY.md](docs/architecture/core-admission-policy.md)
+- [docs/SDK_PRINCIPLES.md](docs/architecture/sdk-principles.md)
+- [docs/trusted-executive-wasm.md](docs/architecture/trusted-executive-wasm.md)
+- [docs/RUST_DEVELOPER_QUICKSTART.md](docs/getting-started/rust-developer-quickstart.md)
+- [docs/memory-control-data-plane.md](docs/memory/memory-control-data-plane.md)
+- [docs/memory-rpc-contract.md](docs/memory/memory-rpc-contract.md)
+- [docs/memory-module-sdk.md](docs/memory/memory-module-sdk.md)
+- [docs/memory-controller-deployment-profiles.md](docs/memory/memory-controller-deployment-profiles.md)
+- [docs/model-plugin-abi.md](docs/plugins/model-plugin-abi.md)
+- [docs/channel-plugin-abi.md](docs/gateway/channel-plugin-abi.md)
+- [docs/openai-plugin-install-and-run.md](docs/plugins/openai-plugin-install-and-run.md)
+- [docs/anthropic-plugin-install-and-run.md](docs/plugins/anthropic-plugin-install-and-run.md)
+- [docs/openrouter-plugin-install-and-run.md](docs/plugins/openrouter-plugin-install-and-run.md)
+- [docs/runtime-container-first-run.md](docs/getting-started/runtime-container-first-run.md)
+- [docs/plugin-index-schema.md](docs/plugins/plugin-index-schema.md)
+- [docs/toolpack-sdk-plugins.md](docs/plugins/toolpack-sdk-plugins.md)
+- [docs/plugin-author-kit.md](docs/plugins/plugin-author-kit.md)
+- [docs/plugin-quality-tiers.md](docs/plugins/plugin-quality-tiers.md)
+- [docs/plugin-trust-operations.md](docs/plugins/plugin-trust-operations.md)
+- [docs/agents-tradeoffs.md](docs/architecture/agents-tradeoffs.md)
+- [docs/compatibility-contracts.md](docs/architecture/compatibility-contracts.md)
 
 Workspace crates:
 
@@ -230,7 +230,7 @@ cargo run -p kelvin-wasm --bin kelvin-wasm-runner -- --wasm path/to/skill.wasm -
 
 Model-provider ABI reference:
 
-- [docs/model-plugin-abi.md](docs/model-plugin-abi.md)
+- [docs/model-plugin-abi.md](docs/plugins/model-plugin-abi.md)
 
 ## Memory Backend Swapping
 
@@ -264,7 +264,7 @@ CARGO_TARGET_DIR=target/try-kelvin-cli cargo run -p kelvin-host -- --prompt "hel
 Anthropic provider status:
 
 - the runtime contract and install path are now published in the official plugin index
-- use [docs/anthropic-plugin-install-and-run.md](docs/anthropic-plugin-install-and-run.md) for the supported Anthropic flow
+- use [docs/anthropic-plugin-install-and-run.md](docs/plugins/anthropic-plugin-install-and-run.md) for the supported Anthropic flow
 
 The CLI executable is only a thin launcher. Runtime behavior is composed in `kelvin-sdk`, and
 the CLI path executes through an installed plugin (`kelvin_cli`) loaded through the
@@ -371,8 +371,8 @@ kelvin-host --prompt "What is KelvinClaw?" --timeout-ms 3000
 
 Reference docs:
 
-- [docs/runtime-container-first-run.md](docs/runtime-container-first-run.md)
-- [docs/plugin-index-schema.md](docs/plugin-index-schema.md)
+- [docs/runtime-container-first-run.md](docs/getting-started/runtime-container-first-run.md)
+- [docs/plugin-index-schema.md](docs/plugins/plugin-index-schema.md)
 
 Tool-trigger pattern for the default model provider:
 
@@ -573,8 +573,8 @@ kelvin plugin new \
 
 Authoring docs:
 
-- [docs/plugin-author-kit.md](docs/plugin-author-kit.md)
-- [docs/build-a-model-plugin.md](docs/build-a-model-plugin.md)
+- [docs/plugin-author-kit.md](docs/plugins/plugin-author-kit.md)
+- [docs/build-a-model-plugin.md](docs/plugins/build-a-model-plugin.md)
 
 Trust policy template:
 
