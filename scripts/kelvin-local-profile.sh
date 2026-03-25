@@ -88,14 +88,34 @@ validate_gateway_exposure() {
   exit 1
 }
 
+resolve_openssl() {
+  # macOS ships LibreSSL which may lack ed25519 support.
+  # Prefer Homebrew OpenSSL 3 when available.
+  local brew_openssl
+  for brew_openssl in /opt/homebrew/opt/openssl@3/bin/openssl /usr/local/opt/openssl@3/bin/openssl; do
+    if [[ -x "${brew_openssl}" ]]; then
+      printf '%s' "${brew_openssl}"
+      return 0
+    fi
+  done
+  printf '%s' "openssl"
+}
+
 write_memory_dev_keys() {
   mkdir -p "${PROFILE_DIR}"
   if [[ -f "${MEMORY_PRIVATE_KEY_PATH}" && -f "${MEMORY_PUBLIC_KEY_PATH}" ]]; then
     return 0
   fi
+  local ssl_bin
+  ssl_bin="$(resolve_openssl)"
+  if ! "${ssl_bin}" genpkey -algorithm ed25519 -out /dev/null 2>/dev/null; then
+    echo "[kelvin-local-profile] openssl at '${ssl_bin}' does not support ed25519." >&2
+    echo "  On macOS, install OpenSSL 3 via Homebrew:  brew install openssl@3" >&2
+    exit 1
+  fi
   umask 077
-  openssl genpkey -algorithm ed25519 -out "${MEMORY_PRIVATE_KEY_PATH}" >/dev/null 2>&1
-  openssl pkey -in "${MEMORY_PRIVATE_KEY_PATH}" -pubout -out "${MEMORY_PUBLIC_KEY_PATH}" >/dev/null 2>&1
+  "${ssl_bin}" genpkey -algorithm ed25519 -out "${MEMORY_PRIVATE_KEY_PATH}" >/dev/null 2>&1
+  "${ssl_bin}" pkey -in "${MEMORY_PRIVATE_KEY_PATH}" -pubout -out "${MEMORY_PUBLIC_KEY_PATH}" >/dev/null 2>&1
 }
 
 ensure_prereqs() {
