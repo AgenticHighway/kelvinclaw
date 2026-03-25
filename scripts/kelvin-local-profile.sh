@@ -5,9 +5,13 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/lib/rust-toolchain-path.sh"
 
 PROFILE_DIR="${KELVIN_LOCAL_PROFILE_DIR:-${ROOT_DIR}/.kelvin/local-profile}"
+PROFILE_DIR="${PROFILE_DIR/#\~/${HOME}}"
 PLUGIN_HOME="${KELVIN_PLUGIN_HOME:-${ROOT_DIR}/.kelvin/plugins}"
+PLUGIN_HOME="${PLUGIN_HOME/#\~/${HOME}}"
 TRUST_POLICY_PATH="${KELVIN_TRUST_POLICY_PATH:-${ROOT_DIR}/.kelvin/trusted_publishers.json}"
+TRUST_POLICY_PATH="${TRUST_POLICY_PATH/#\~/${HOME}}"
 STATE_DIR="${KELVIN_STATE_DIR:-${ROOT_DIR}/.kelvin/state}"
+STATE_DIR="${STATE_DIR/#\~/${HOME}}"
 GATEWAY_BIND="${KELVIN_LOCAL_GATEWAY_BIND:-127.0.0.1:34617}"
 MEMORY_ADDR="${KELVIN_LOCAL_MEMORY_ADDR:-127.0.0.1:50051}"
 

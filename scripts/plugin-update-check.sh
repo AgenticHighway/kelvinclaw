@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PLUGIN_HOME="${KELVIN_PLUGIN_HOME:-${HOME}/.kelvinclaw/plugins}"
+PLUGIN_HOME="${PLUGIN_HOME/#\~/${HOME}}"
 INDEX_URL="${KELVIN_PLUGIN_INDEX_URL:-}"
 REGISTRY_URL="${KELVIN_PLUGIN_REGISTRY_URL:-}"
 PLUGIN_ID=""

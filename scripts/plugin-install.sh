@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PLUGIN_HOME_DEFAULT="${HOME}/.kelvinclaw/plugins"
 PLUGIN_HOME="${KELVIN_PLUGIN_HOME:-${PLUGIN_HOME_DEFAULT}}"
+PLUGIN_HOME="${PLUGIN_HOME/#\~/${HOME}}"
 
 PACKAGE_PATH=""
 FORCE="0"

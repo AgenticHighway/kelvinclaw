@@ -3,6 +3,7 @@ set -euo pipefail
 
 TRUST_POLICY_DEFAULT="${HOME}/.kelvinclaw/trusted_publishers.json"
 TRUST_POLICY_PATH="${KELVIN_TRUST_POLICY_PATH:-${TRUST_POLICY_DEFAULT}}"
+TRUST_POLICY_PATH="${TRUST_POLICY_PATH/#\~/${HOME}}"
 
 usage() {
   cat <<'USAGE'
