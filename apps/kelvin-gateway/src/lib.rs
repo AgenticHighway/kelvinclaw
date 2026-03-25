@@ -1223,7 +1223,9 @@ async fn handle_request(
         "commands.list" => Ok(commands_list_payload(&state.runtime)),
         "command.exec" => {
             let params: CommandExecParams = parse_params(params, method)?;
-            command_exec_payload(&state.runtime, params).await.map_err(map_kelvin_error)
+            command_exec_payload(&state.runtime, params)
+                .await
+                .map_err(map_kelvin_error)
         }
         _ => Err(GatewayErrorPayload {
             code: "method_not_found".to_string(),
@@ -1360,12 +1362,17 @@ async fn command_exec_payload(
     match name {
         "new" => {
             let session_id = params.session_id.as_deref().unwrap_or("main");
-            let workspace_dir = runtime.default_workspace_dir().to_string_lossy().to_string();
-            runtime.upsert_session(SessionDescriptor {
-                session_id: session_id.to_string(),
-                session_key: session_id.to_string(),
-                workspace_dir,
-            }).await?;
+            let workspace_dir = runtime
+                .default_workspace_dir()
+                .to_string_lossy()
+                .to_string();
+            runtime
+                .upsert_session(SessionDescriptor {
+                    session_id: session_id.to_string(),
+                    session_key: session_id.to_string(),
+                    workspace_dir,
+                })
+                .await?;
             Ok(json!({ "command": "new", "session_id": session_id }))
         }
         "switch" => {
@@ -1388,10 +1395,11 @@ async fn command_exec_payload(
                 })).collect::<Vec<_>>(),
             }))
         }
-        "sessions" => {
-            operator::sessions_list_payload(runtime, operator::OperatorSessionsListParams::default())
-                .map(|payload| json!({ "command": "sessions", "result": payload }))
-        }
+        "sessions" => operator::sessions_list_payload(
+            runtime,
+            operator::OperatorSessionsListParams::default(),
+        )
+        .map(|payload| json!({ "command": "sessions", "result": payload })),
         "plugins" => {
             let payload = operator::plugins_inspect_payload(
                 runtime,

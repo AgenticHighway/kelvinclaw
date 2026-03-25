@@ -59,9 +59,8 @@ fn run() -> Result<i32, String> {
                 let value = args
                     .get(idx + 1)
                     .ok_or_else(|| "missing value for --network-allow-hosts".to_string())?;
-                network_allow_hosts = Some(
-                    value.split(',').map(|h| h.trim().to_string()).collect(),
-                );
+                network_allow_hosts =
+                    Some(value.split(',').map(|h| h.trim().to_string()).collect());
                 idx += 2;
             }
             "--max-module-bytes" => {

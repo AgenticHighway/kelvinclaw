@@ -1,9 +1,9 @@
 use ratatui::{
-    Frame,
     layout::Rect,
     style::{Color, Modifier, Style},
     text::{Line, Span, Text},
     widgets::{Block, Borders, Paragraph, Wrap},
+    Frame,
 };
 use unicode_width::UnicodeWidthChar;
 
@@ -23,20 +23,38 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
 
     for (i, msg) in app.chat.iter().enumerate() {
         if i > 0 {
-            lines.push(Line::from(Span::styled(sep_str.clone(), Style::default().fg(Color::DarkGray))));
-            line_info.push(ChatLineInfo { prefix_width: inner_width, is_separator: true });
+            lines.push(Line::from(Span::styled(
+                sep_str.clone(),
+                Style::default().fg(Color::DarkGray),
+            )));
+            line_info.push(ChatLineInfo {
+                prefix_width: inner_width,
+                is_separator: true,
+            });
             line_texts.push(String::new());
             // blank spacer line between messages
             lines.push(Line::from(vec![]));
-            line_info.push(ChatLineInfo { prefix_width: 0, is_separator: false });
+            line_info.push(ChatLineInfo {
+                prefix_width: 0,
+                is_separator: false,
+            });
             line_texts.push(String::new());
         }
         match msg {
             ChatMessage::User(text) => {
                 let all_lines: Vec<&str> = text.lines().collect();
-                let src_lines: Vec<&str> = if all_lines.is_empty() { vec![""] } else {
-                    let f: Vec<&str> = all_lines.into_iter().filter(|l| !l.trim().is_empty()).collect();
-                    if f.is_empty() { vec![""] } else { f }
+                let src_lines: Vec<&str> = if all_lines.is_empty() {
+                    vec![""]
+                } else {
+                    let f: Vec<&str> = all_lines
+                        .into_iter()
+                        .filter(|l| !l.trim().is_empty())
+                        .collect();
+                    if f.is_empty() {
+                        vec![""]
+                    } else {
+                        f
+                    }
                 };
                 let mut first = true;
                 for src_line in src_lines {
@@ -50,15 +68,27 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
                     };
                     first = false;
                     lines.push(line);
-                    line_info.push(ChatLineInfo { prefix_width: 2, is_separator: false });
+                    line_info.push(ChatLineInfo {
+                        prefix_width: 2,
+                        is_separator: false,
+                    });
                     line_texts.push(src_line.to_string());
                 }
             }
             ChatMessage::Assistant { text, .. } => {
                 let all_lines: Vec<&str> = text.lines().collect();
-                let src_lines: Vec<&str> = if all_lines.is_empty() { vec![""] } else {
-                    let f: Vec<&str> = all_lines.into_iter().filter(|l| !l.trim().is_empty()).collect();
-                    if f.is_empty() { vec![""] } else { f }
+                let src_lines: Vec<&str> = if all_lines.is_empty() {
+                    vec![""]
+                } else {
+                    let f: Vec<&str> = all_lines
+                        .into_iter()
+                        .filter(|l| !l.trim().is_empty())
+                        .collect();
+                    if f.is_empty() {
+                        vec![""]
+                    } else {
+                        f
+                    }
                 };
                 let mut first = true;
                 for src_line in src_lines {
@@ -72,17 +102,29 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
                     };
                     first = false;
                     lines.push(line);
-                    line_info.push(ChatLineInfo { prefix_width: 2, is_separator: false });
+                    line_info.push(ChatLineInfo {
+                        prefix_width: 2,
+                        is_separator: false,
+                    });
                     line_texts.push(src_line.to_string());
                 }
             }
             ChatMessage::System(text) => {
-                let style = Style::default().fg(Color::DarkGray).add_modifier(Modifier::ITALIC);
+                let style = Style::default()
+                    .fg(Color::DarkGray)
+                    .add_modifier(Modifier::ITALIC);
                 let src_lines: Vec<&str> = text.lines().collect();
-                let src_lines = if src_lines.is_empty() { vec![""] } else { src_lines };
+                let src_lines = if src_lines.is_empty() {
+                    vec![""]
+                } else {
+                    src_lines
+                };
                 for src_line in src_lines {
                     lines.push(Line::from(Span::styled(src_line.to_string(), style)));
-                    line_info.push(ChatLineInfo { prefix_width: 0, is_separator: false });
+                    line_info.push(ChatLineInfo {
+                        prefix_width: 0,
+                        is_separator: false,
+                    });
                     line_texts.push(src_line.to_string());
                 }
             }
@@ -90,8 +132,14 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     }
 
     if !app.chat.is_empty() {
-        lines.push(Line::from(Span::styled(sep_str, Style::default().fg(Color::DarkGray))));
-        line_info.push(ChatLineInfo { prefix_width: inner_width, is_separator: true });
+        lines.push(Line::from(Span::styled(
+            sep_str,
+            Style::default().fg(Color::DarkGray),
+        )));
+        line_info.push(ChatLineInfo {
+            prefix_width: inner_width,
+            is_separator: true,
+        });
         line_texts.push(String::new());
     }
 
@@ -99,7 +147,11 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     let mut line_map: Vec<(usize, usize)> = Vec::with_capacity(lines.len());
     for (idx, line) in lines.iter().enumerate() {
         let w = line.width();
-        let vrows = if inner_width == 0 || w == 0 { 1 } else { w.div_ceil(inner_width) };
+        let vrows = if inner_width == 0 || w == 0 {
+            1
+        } else {
+            w.div_ceil(inner_width)
+        };
         for sub in 0..vrows {
             line_map.push((idx, sub * inner_width));
         }
@@ -129,14 +181,22 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
 
     // --- Render ---
     let paragraph = Paragraph::new(Text::from(lines))
-        .block(Block::default().borders(Borders::ALL).title(" Chat (drag to select · ^C copy · PgUp/PgDn scroll) "))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(" Chat (drag to select · ^C copy · PgUp/PgDn scroll) "),
+        )
         .wrap(Wrap { trim: false });
 
     let total_visual_lines = paragraph.line_count(inner_width as u16);
     let max_scroll = total_visual_lines.saturating_sub(inner_height);
     app.chat_max_scroll = max_scroll;
 
-    let scroll = if app.chat_pinned { max_scroll } else { app.chat_scroll.min(max_scroll) };
+    let scroll = if app.chat_pinned {
+        max_scroll
+    } else {
+        app.chat_scroll.min(max_scroll)
+    };
     f.render_widget(paragraph.scroll((scroll as u16, 0)), area);
 }
 
@@ -145,7 +205,8 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
 fn apply_highlight(line: Line<'static>, sel_start: usize, sel_end: usize) -> Line<'static> {
     let spans = if sel_start == 0 && sel_end == usize::MAX {
         // Whole line selected — apply bg to every span
-        line.spans.into_iter()
+        line.spans
+            .into_iter()
             .map(|s| Span::styled(s.content.into_owned(), s.style.bg(HL_BG)))
             .collect()
     } else {
@@ -155,7 +216,11 @@ fn apply_highlight(line: Line<'static>, sel_start: usize, sel_end: usize) -> Lin
 }
 
 /// Split spans, applying HL_BG to the [sel_start, sel_end) display-column range.
-fn split_with_highlight(spans: Vec<Span<'static>>, sel_start: usize, sel_end: usize) -> Vec<Span<'static>> {
+fn split_with_highlight(
+    spans: Vec<Span<'static>>,
+    sel_start: usize,
+    sel_end: usize,
+) -> Vec<Span<'static>> {
     let mut result: Vec<Span<'static>> = Vec::new();
     let mut offset = 0usize; // cumulative display width
 
@@ -171,9 +236,15 @@ fn split_with_highlight(spans: Vec<Span<'static>>, sel_start: usize, sel_end: us
             let local_end = sel_end.min(span_end) - offset;
             let (before, rest) = split_at_col(&content, local_start);
             let (mid, after) = split_at_col(rest, local_end - local_start);
-            if !before.is_empty() { result.push(Span::styled(before.to_string(), span.style)); }
-            if !mid.is_empty()    { result.push(Span::styled(mid.to_string(), span.style.bg(HL_BG))); }
-            if !after.is_empty()  { result.push(Span::styled(after.to_string(), span.style)); }
+            if !before.is_empty() {
+                result.push(Span::styled(before.to_string(), span.style));
+            }
+            if !mid.is_empty() {
+                result.push(Span::styled(mid.to_string(), span.style.bg(HL_BG)));
+            }
+            if !after.is_empty() {
+                result.push(Span::styled(after.to_string(), span.style));
+            }
         }
         offset = span_end;
     }
@@ -189,7 +260,9 @@ fn span_display_width(s: &str) -> usize {
 fn split_at_col(s: &str, col: usize) -> (&str, &str) {
     let mut width = 0usize;
     for (byte_idx, ch) in s.char_indices() {
-        if width >= col { return (&s[..byte_idx], &s[byte_idx..]); }
+        if width >= col {
+            return (&s[..byte_idx], &s[byte_idx..]);
+        }
         width += ch.width().unwrap_or(0);
     }
     (s, "")

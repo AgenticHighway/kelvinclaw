@@ -2,8 +2,10 @@ use std::time::{Duration, Instant};
 
 use crossterm::{
     cursor::SetCursorStyle,
-    event::{DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste, EnableMouseCapture,
-            Event, EventStream, KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEventKind},
+    event::{
+        DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste, EnableMouseCapture,
+        Event, EventStream, KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEventKind,
+    },
     execute,
     terminal::{enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -117,12 +119,18 @@ pub struct PasteMarker {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SelectionTarget { Chat, Tools }
+pub enum SelectionTarget {
+    Chat,
+    Tools,
+}
 
 /// A position in the flat Vec<Line> built by chat::render.
 /// `col` is a display-column offset within the full content line (including prefix spans).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ChatPos { pub line_idx: usize, pub col: usize }
+pub struct ChatPos {
+    pub line_idx: usize,
+    pub col: usize,
+}
 
 #[derive(Debug, Clone)]
 pub struct Selection {
@@ -249,7 +257,7 @@ pub struct App {
     pub selection: Option<Selection>,
     pub chat_line_map: Vec<(usize, usize)>, // visual_row -> (content_line_idx, char_start_col)
     pub chat_line_info: Vec<ChatLineInfo>,
-    pub chat_line_texts: Vec<String>,       // per content line, prefix stripped (empty for separators)
+    pub chat_line_texts: Vec<String>, // per content line, prefix stripped (empty for separators)
     pub command_registry: MergedCommandRegistry,
     pub autocomplete_visible: bool,
     pub autocomplete_items: Vec<CompletionItem>,
@@ -309,7 +317,8 @@ impl App {
     }
 
     pub fn do_paste(&mut self, text: String) {
-        self.paste_markers.retain(|m| m.end <= self.cursor_pos || m.start >= self.cursor_pos);
+        self.paste_markers
+            .retain(|m| m.end <= self.cursor_pos || m.start >= self.cursor_pos);
 
         let start = self.cursor_pos;
         let len = text.len();
@@ -324,7 +333,14 @@ impl App {
                 }
             }
             let idx = self.paste_markers.partition_point(|m| m.start < start);
-            self.paste_markers.insert(idx, PasteMarker { start, end: start + len, label });
+            self.paste_markers.insert(
+                idx,
+                PasteMarker {
+                    start,
+                    end: start + len,
+                    label,
+                },
+            );
         } else {
             self.input.insert_str(start, &text);
             for m in &mut self.paste_markers {
@@ -344,7 +360,11 @@ impl App {
         if self.cursor_pos >= self.input.len() {
             return;
         }
-        if let Some(idx) = self.paste_markers.iter().position(|m| m.start == self.cursor_pos) {
+        if let Some(idx) = self
+            .paste_markers
+            .iter()
+            .position(|m| m.start == self.cursor_pos)
+        {
             let m = self.paste_markers.remove(idx);
             let removed = m.end - m.start;
             self.input.drain(m.start..m.end);
@@ -376,7 +396,11 @@ impl App {
         if self.cursor_pos == 0 {
             return;
         }
-        if let Some(idx) = self.paste_markers.iter().position(|m| m.end == self.cursor_pos) {
+        if let Some(idx) = self
+            .paste_markers
+            .iter()
+            .position(|m| m.end == self.cursor_pos)
+        {
             let m = self.paste_markers.remove(idx);
             let removed = m.end - m.start;
             self.input.drain(m.start..m.end);
@@ -407,7 +431,9 @@ impl App {
     }
 
     pub fn move_left(&mut self) {
-        if self.cursor_pos == 0 { return; }
+        if self.cursor_pos == 0 {
+            return;
+        }
         if let Some(m) = self.paste_markers.iter().find(|m| m.end == self.cursor_pos) {
             self.cursor_pos = m.start;
         } else {
@@ -420,8 +446,14 @@ impl App {
     }
 
     pub fn move_right(&mut self) {
-        if self.cursor_pos >= self.input.len() { return; }
-        if let Some(m) = self.paste_markers.iter().find(|m| m.start == self.cursor_pos) {
+        if self.cursor_pos >= self.input.len() {
+            return;
+        }
+        if let Some(m) = self
+            .paste_markers
+            .iter()
+            .find(|m| m.start == self.cursor_pos)
+        {
             self.cursor_pos = m.end;
         } else {
             let mut new_pos = self.cursor_pos + 1;
@@ -434,10 +466,14 @@ impl App {
 
     fn compact_chat(&mut self) {
         const MAX_CHAT_MESSAGES: usize = 1000;
-        if self.chat.len() <= MAX_CHAT_MESSAGES { return; }
+        if self.chat.len() <= MAX_CHAT_MESSAGES {
+            return;
+        }
         let to_remove = self.chat.len() - MAX_CHAT_MESSAGES;
         let prior_count = match self.chat.first() {
-            Some(ChatMessage::System(s)) if s.starts_with('[') && s.contains("earlier messages omitted") => {
+            Some(ChatMessage::System(s))
+                if s.starts_with('[') && s.contains("earlier messages omitted") =>
+            {
                 s.trim_start_matches('[')
                     .split_whitespace()
                     .next()
@@ -451,14 +487,19 @@ impl App {
         if prior_count > 0 {
             self.chat[0] = ChatMessage::System(format!("[{total} earlier messages omitted]"));
         } else {
-            self.chat.insert(0, ChatMessage::System(format!("[{total} earlier messages omitted]")));
+            self.chat.insert(
+                0,
+                ChatMessage::System(format!("[{total} earlier messages omitted]")),
+            );
         }
         self.selection = None; // line indices shifted
     }
 
     pub fn handle_agent_event(&mut self, ev: AgentEvent) {
         match ev.data {
-            AgentEventData::Assistant { delta, final_chunk, .. } => {
+            AgentEventData::Assistant {
+                delta, final_chunk, ..
+            } => {
                 if let Some(ChatMessage::Assistant { text, complete }) = self.chat.last_mut() {
                     if !*complete {
                         text.push_str(&delta);
@@ -474,7 +515,13 @@ impl App {
                 });
                 self.chat_pinned = true;
             }
-            AgentEventData::Tool { tool_name, phase, summary, ts_ms, .. } => {
+            AgentEventData::Tool {
+                tool_name,
+                phase,
+                summary,
+                ts_ms,
+                ..
+            } => {
                 if let ToolPhase::Start = phase {
                     if let Some(ChatMessage::Assistant { complete, .. }) = self.chat.last_mut() {
                         *complete = true;
@@ -487,8 +534,10 @@ impl App {
                         ended_ms: None,
                     });
                 } else {
-                    if let Some(entry) = self.tools.iter_mut().rev()
-                        .find(|t| t.tool_name == tool_name && matches!(t.phase, ToolPhase::Start))
+                    if let Some(entry) =
+                        self.tools.iter_mut().rev().find(|t| {
+                            t.tool_name == tool_name && matches!(t.phase, ToolPhase::Start)
+                        })
                     {
                         entry.phase = phase;
                         entry.summary = summary.or(entry.summary.clone());
@@ -504,7 +553,12 @@ impl App {
                     }
                 }
             }
-            AgentEventData::Lifecycle { run_id, phase, message, .. } => {
+            AgentEventData::Lifecycle {
+                run_id,
+                phase,
+                message,
+                ..
+            } => {
                 match &phase {
                     LifecyclePhase::Start => {
                         self.current_run_id = Some(run_id);
@@ -536,22 +590,41 @@ fn in_rect(col: u16, row: u16, r: Rect) -> bool {
 fn screen_to_chat_pos(col: u16, row: u16, app: &App) -> Option<ChatPos> {
     let inner_x = app.chat_area.x + 1;
     let inner_y = app.chat_area.y + 1;
-    if col < inner_x || row < inner_y { return None; }
+    if col < inner_x || row < inner_y {
+        return None;
+    }
     let rel_col = (col - inner_x) as usize;
     let rel_row = (row - inner_y) as usize;
-    let scroll = if app.chat_pinned { app.chat_max_scroll } else { app.chat_scroll.min(app.chat_max_scroll) };
+    let scroll = if app.chat_pinned {
+        app.chat_max_scroll
+    } else {
+        app.chat_scroll.min(app.chat_max_scroll)
+    };
     let abs_row = rel_row + scroll;
     let &(line_idx, char_start_col) = app.chat_line_map.get(abs_row)?;
-    Some(ChatPos { line_idx, col: char_start_col + rel_col })
+    Some(ChatPos {
+        line_idx,
+        col: char_start_col + rel_col,
+    })
 }
 
 fn screen_to_tools_row(row: u16, app: &App) -> Option<usize> {
     let header_row = app.tools_area.y + 2; // top border + header row
-    if row < header_row { return None; }
+    if row < header_row {
+        return None;
+    }
     let rel_row = (row - header_row) as usize;
-    let offset = if app.tools_pinned { app.tools_max_scroll } else { app.tools_scroll.min(app.tools_max_scroll) };
+    let offset = if app.tools_pinned {
+        app.tools_max_scroll
+    } else {
+        app.tools_scroll.min(app.tools_max_scroll)
+    };
     let idx = rel_row + offset;
-    if idx < app.tools.len() { Some(idx) } else { None }
+    if idx < app.tools.len() {
+        Some(idx)
+    } else {
+        None
+    }
 }
 
 fn extract_selected_text(app: &App) -> String {
@@ -560,16 +633,26 @@ fn extract_selected_text(app: &App) -> String {
         Some(sel) if sel.target == SelectionTarget::Tools => {
             let idx = sel.anchor.line_idx;
             if let Some(e) = app.tools.get(idx) {
-                let phase = match e.phase { ToolPhase::Start => "running", ToolPhase::End => "done", ToolPhase::Error => "error" };
+                let phase = match e.phase {
+                    ToolPhase::Start => "running",
+                    ToolPhase::End => "done",
+                    ToolPhase::Error => "error",
+                };
                 let summary = e.summary.as_deref().unwrap_or("");
-                let dur = e.ended_ms.map_or("...".into(), |end| format!("{}ms", end.saturating_sub(e.started_ms)));
+                let dur = e.ended_ms.map_or("...".into(), |end| {
+                    format!("{}ms", end.saturating_sub(e.started_ms))
+                });
                 format!("{}\t{}\t{}\t{}", e.tool_name, phase, summary, dur)
-            } else { String::new() }
+            } else {
+                String::new()
+            }
         }
         Some(sel) => {
             let (start, end) = sel.normalized();
             let n = app.chat_line_texts.len();
-            if start.line_idx >= n { return String::new(); }
+            if start.line_idx >= n {
+                return String::new();
+            }
             // If the drag ended at column 0, the cursor is before that line — exclude it.
             let end_idx = if end.col == 0 && end.line_idx > start.line_idx {
                 end.line_idx - 1
@@ -579,7 +662,9 @@ fn extract_selected_text(app: &App) -> String {
             let mut result = String::new();
             for idx in start.line_idx..=end_idx {
                 let info = &app.chat_line_info[idx];
-                if info.is_separator { continue; }
+                if info.is_separator {
+                    continue;
+                }
                 let clean = &app.chat_line_texts[idx];
                 let sel_start = if idx == start.line_idx { start.col } else { 0 };
                 let sel_end = if idx == end_idx { end.col } else { usize::MAX };
@@ -589,12 +674,20 @@ fn extract_selected_text(app: &App) -> String {
                 } else {
                     let t = sel_end.saturating_sub(info.prefix_width);
                     // Selection lands within the prefix — include the full line.
-                    if t == 0 && sel_end > 0 { clean.len() } else { t }
+                    if t == 0 && sel_end > 0 {
+                        clean.len()
+                    } else {
+                        t
+                    }
                 };
                 let byte_start = display_col_to_byte(clean, text_start);
-                let byte_end = display_col_to_byte(clean, text_end).max(byte_start).min(clean.len());
+                let byte_end = display_col_to_byte(clean, text_end)
+                    .max(byte_start)
+                    .min(clean.len());
                 let slice = &clean[byte_start..byte_end];
-                if !result.is_empty() { result.push('\n'); }
+                if !result.is_empty() {
+                    result.push('\n');
+                }
                 result.push_str(slice);
             }
             result
@@ -605,7 +698,9 @@ fn extract_selected_text(app: &App) -> String {
 fn display_col_to_byte(s: &str, col: usize) -> usize {
     let mut width = 0usize;
     for (byte_idx, ch) in s.char_indices() {
-        if width >= col { return byte_idx; }
+        if width >= col {
+            return byte_idx;
+        }
         width += ch.width().unwrap_or(0);
     }
     s.len()
@@ -628,8 +723,16 @@ fn base64_encode(data: &[u8]) -> String {
         let n = (b0 << 16) | (b1 << 8) | b2;
         out.push(T[((n >> 18) & 0x3f) as usize] as char);
         out.push(T[((n >> 12) & 0x3f) as usize] as char);
-        out.push(if chunk.len() > 1 { T[((n >> 6) & 0x3f) as usize] as char } else { '=' });
-        out.push(if chunk.len() > 2 { T[(n & 0x3f) as usize] as char } else { '=' });
+        out.push(if chunk.len() > 1 {
+            T[((n >> 6) & 0x3f) as usize] as char
+        } else {
+            '='
+        });
+        out.push(if chunk.len() > 2 {
+            T[(n & 0x3f) as usize] as char
+        } else {
+            '='
+        });
     }
     out
 }
@@ -662,7 +765,10 @@ fn update_autocomplete(app: &mut App) {
 
 /// Format a command result payload into a readable string for the chat.
 fn format_command_result(payload: &serde_json::Value) -> String {
-    let command = payload.get("command").and_then(|v| v.as_str()).unwrap_or("?");
+    let command = payload
+        .get("command")
+        .and_then(|v| v.as_str())
+        .unwrap_or("?");
     match command {
         "tools" => {
             let count = payload.get("count").and_then(|v| v.as_u64()).unwrap_or(0);
@@ -670,7 +776,10 @@ fn format_command_result(payload: &serde_json::Value) -> String {
             if let Some(tools) = payload.get("tools").and_then(|v| v.as_array()) {
                 for tool in tools {
                     let name = tool.get("name").and_then(|v| v.as_str()).unwrap_or("?");
-                    let desc = tool.get("description").and_then(|v| v.as_str()).unwrap_or("");
+                    let desc = tool
+                        .get("description")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("");
                     lines.push(format!("  • {name} — {desc}"));
                 }
             }
@@ -685,7 +794,10 @@ fn format_command_result(payload: &serde_json::Value) -> String {
                 for s in sessions {
                     let id = s.get("session_id").and_then(|v| v.as_str()).unwrap_or("?");
                     let msgs = s.get("message_count").and_then(|v| v.as_u64()).unwrap_or(0);
-                    let workspace = s.get("workspace_dir").and_then(|v| v.as_str()).unwrap_or("");
+                    let workspace = s
+                        .get("workspace_dir")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("");
                     lines.push(format!("  • {id}  ({msgs} msgs)  {workspace}"));
                 }
             }
@@ -693,7 +805,10 @@ fn format_command_result(payload: &serde_json::Value) -> String {
         }
         "plugins" => {
             let result = payload.get("result").unwrap_or(payload);
-            let loaded = result.get("loaded_installed_plugins").and_then(|v| v.as_u64()).unwrap_or(0);
+            let loaded = result
+                .get("loaded_installed_plugins")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let plugins = result.get("plugins").and_then(|v| v.as_array());
             let total = plugins.map(|p| p.len()).unwrap_or(0);
             let mut lines = vec![format!("Plugins ({loaded} loaded, {total} installed):")];
@@ -711,11 +826,17 @@ fn format_command_result(payload: &serde_json::Value) -> String {
         }
         "clear" => "Session history cleared.".to_string(),
         "new" => {
-            let sid = payload.get("session_id").and_then(|v| v.as_str()).unwrap_or("?");
+            let sid = payload
+                .get("session_id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("?");
             format!("New session created: {sid}")
         }
         "switch" => {
-            let sid = payload.get("session_id").and_then(|v| v.as_str()).unwrap_or("?");
+            let sid = payload
+                .get("session_id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("?");
             format!("Switched to session: {sid}")
         }
         _ => serde_json::to_string_pretty(payload).unwrap_or_else(|_| format!("{payload}")),
@@ -725,11 +846,15 @@ fn format_command_result(payload: &serde_json::Value) -> String {
 fn word_left(s: &str, pos: usize) -> usize {
     let mut current = pos;
     for c in s[..current].chars().rev() {
-        if is_word_char(c) { break; }
+        if is_word_char(c) {
+            break;
+        }
         current -= c.len_utf8();
     }
     for c in s[..current].chars().rev() {
-        if !is_word_char(c) { break; }
+        if !is_word_char(c) {
+            break;
+        }
         current -= c.len_utf8();
     }
     current
@@ -738,11 +863,15 @@ fn word_left(s: &str, pos: usize) -> usize {
 fn word_right(s: &str, pos: usize) -> usize {
     let mut current = pos;
     for c in s[current..].chars() {
-        if is_word_char(c) { break; }
+        if is_word_char(c) {
+            break;
+        }
         current += c.len_utf8();
     }
     for c in s[current..].chars() {
-        if !is_word_char(c) { break; }
+        if !is_word_char(c) {
+            break;
+        }
         current += c.len_utf8();
     }
     current
@@ -752,7 +881,10 @@ fn word_right(s: &str, pos: usize) -> usize {
 fn assert_markers_valid(input: &str, markers: &[PasteMarker]) {
     for i in 0..markers.len() {
         assert!(markers[i].start < markers[i].end, "marker {i} start >= end");
-        assert!(markers[i].end <= input.len(), "marker {i} end out of bounds");
+        assert!(
+            markers[i].end <= input.len(),
+            "marker {i} end out of bounds"
+        );
         if i + 1 < markers.len() {
             assert!(
                 markers[i].end <= markers[i + 1].start,
@@ -764,7 +896,9 @@ fn assert_markers_valid(input: &str, markers: &[PasteMarker]) {
 }
 
 fn visual_line_start(display_pos: usize, inner_width: usize) -> usize {
-    if inner_width < 3 { return 0; }
+    if inner_width < 3 {
+        return 0;
+    }
     let prefix = 2;
     let first_cap = inner_width - prefix;
     if display_pos <= first_cap {
@@ -776,7 +910,9 @@ fn visual_line_start(display_pos: usize, inner_width: usize) -> usize {
 }
 
 fn visual_line_end(display_pos: usize, display_len: usize, inner_width: usize) -> usize {
-    if inner_width < 3 { return display_len; }
+    if inner_width < 3 {
+        return display_len;
+    }
     let prefix = 2;
     let first_cap = inner_width - prefix;
     let end = if display_pos < first_cap {
@@ -813,8 +949,13 @@ pub async fn run(config: CliConfig) -> Result<(), String> {
 
     enable_raw_mode().map_err(|e| format!("enable raw mode: {e}"))?;
     let mut stdout = std::io::stdout();
-    execute!(stdout, EnterAlternateScreen, EnableBracketedPaste, SetCursorStyle::SteadyBlock)
-        .map_err(|e| format!("enter alt screen: {e}"))?;
+    execute!(
+        stdout,
+        EnterAlternateScreen,
+        EnableBracketedPaste,
+        SetCursorStyle::SteadyBlock
+    )
+    .map_err(|e| format!("enter alt screen: {e}"))?;
     // best-effort: mouse scroll still works without this on some terminals
     let _ = execute!(stdout, EnableMouseCapture);
 
@@ -826,12 +967,20 @@ pub async fn run(config: CliConfig) -> Result<(), String> {
     let mut app = App::new(config.gateway_url.clone(), config.session_id.clone());
     app.auth_token = config.auth_token.clone();
 
-    let ws_result = WsClient::connect(&config.gateway_url, config.auth_token.clone(), tui_tx.clone()).await;
+    let ws_result = WsClient::connect(
+        &config.gateway_url,
+        config.auth_token.clone(),
+        tui_tx.clone(),
+    )
+    .await;
     let ws_client = match ws_result {
         Ok(client) => {
             app.ws_status = WsStatus::Connected;
             app.chat.clear();
-            app.chat.push(ChatMessage::System(format!("Connected to {}", config.gateway_url)));
+            app.chat.push(ChatMessage::System(format!(
+                "Connected to {}",
+                config.gateway_url
+            )));
             // Fetch available commands from the gateway.
             let fetch_client = client.clone();
             let tx = tui_tx.clone();
@@ -844,7 +993,8 @@ pub async fn run(config: CliConfig) -> Result<(), String> {
         Err(e) => {
             app.ws_status = WsStatus::Error(e.clone());
             app.last_error = Some(e.clone());
-            app.chat.push(ChatMessage::System(format!("Connection failed: {e}")));
+            app.chat
+                .push(ChatMessage::System(format!("Connection failed: {e}")));
             None
         }
     };
@@ -854,10 +1004,18 @@ pub async fn run(config: CliConfig) -> Result<(), String> {
         let mut reader = EventStream::new();
         while let Some(Ok(event)) = reader.next().await {
             match event {
-                Event::Key(key) => { let _ = tui_tx_key.send(TuiEvent::Key(key)).await; }
-                Event::Paste(text) => { let _ = tui_tx_key.send(TuiEvent::Paste(text)).await; }
-                Event::Resize(w, h) => { let _ = tui_tx_key.send(TuiEvent::Resize(w, h)).await; }
-                Event::Mouse(e) => { let _ = tui_tx_key.send(TuiEvent::Mouse(e)).await; }
+                Event::Key(key) => {
+                    let _ = tui_tx_key.send(TuiEvent::Key(key)).await;
+                }
+                Event::Paste(text) => {
+                    let _ = tui_tx_key.send(TuiEvent::Paste(text)).await;
+                }
+                Event::Resize(w, h) => {
+                    let _ = tui_tx_key.send(TuiEvent::Resize(w, h)).await;
+                }
+                Event::Mouse(e) => {
+                    let _ = tui_tx_key.send(TuiEvent::Mouse(e)).await;
+                }
                 _ => {}
             }
         }
@@ -874,7 +1032,14 @@ pub async fn run(config: CliConfig) -> Result<(), String> {
         }
     });
 
-    let result = run_loop(&mut terminal, &mut app, &mut tui_rx, tui_tx.clone(), ws_client).await;
+    let result = run_loop(
+        &mut terminal,
+        &mut app,
+        &mut tui_rx,
+        tui_tx.clone(),
+        ws_client,
+    )
+    .await;
 
     key_task.abort();
     tick_task.abort();
@@ -892,7 +1057,9 @@ async fn run_loop(
 ) -> Result<(), String> {
     let mut ws_client = ws_client;
     loop {
-        let frame = terminal.draw(|f| ui::render(f, app)).map_err(|e| format!("draw: {e}"))?;
+        let frame = terminal
+            .draw(|f| ui::render(f, app))
+            .map_err(|e| format!("draw: {e}"))?;
         app.input_inner_width = frame.area.width.saturating_sub(2) as usize;
 
         let event = tui_rx.recv().await.ok_or("event channel closed")?;
@@ -918,7 +1085,9 @@ async fn run_loop(
                             app.selection = None;
                         } else {
                             let now = Instant::now();
-                            if app.last_ctrl_c.map_or(false, |t| now.duration_since(t) < Duration::from_millis(500)) {
+                            if app.last_ctrl_c.map_or(false, |t| {
+                                now.duration_since(t) < Duration::from_millis(500)
+                            }) {
                                 app.should_quit = true;
                             } else {
                                 app.last_ctrl_c = Some(now);
@@ -939,7 +1108,9 @@ async fn run_loop(
                         if app.autocomplete_visible
                             && app.autocomplete_selected < app.autocomplete_items.len()
                         {
-                            let name = app.autocomplete_items[app.autocomplete_selected].name.clone();
+                            let name = app.autocomplete_items[app.autocomplete_selected]
+                                .name
+                                .clone();
                             app.input = format!("/{name}");
                             app.cursor_pos = app.input.len();
                             app.autocomplete_visible = false;
@@ -951,7 +1122,8 @@ async fn run_loop(
                             app.input_history.push(prompt.clone());
                             const MAX_INPUT_HISTORY: usize = 500;
                             if app.input_history.len() > MAX_INPUT_HISTORY {
-                                app.input_history.drain(0..app.input_history.len() - MAX_INPUT_HISTORY);
+                                app.input_history
+                                    .drain(0..app.input_history.len() - MAX_INPUT_HISTORY);
                             }
                             app.history_idx = None;
                             app.history_saved.clear();
@@ -964,7 +1136,9 @@ async fn run_loop(
                             app.autocomplete_selected = 0;
 
                             // Dispatch slash commands; send everything else as a prompt.
-                            if let Some((cmd_name, args)) = crate::commands::parse_slash_input(&prompt) {
+                            if let Some((cmd_name, args)) =
+                                crate::commands::parse_slash_input(&prompt)
+                            {
                                 match app.command_registry.resolve(&cmd_name) {
                                     Some(SlashCommand::Local(LocalCommand::Quit)) => {
                                         app.should_quit = true;
@@ -979,16 +1153,20 @@ async fn run_loop(
                                                 let sid = app.session_id.clone();
                                                 let tx = tui_tx.clone();
                                                 tokio::spawn(async move {
-                                                    let result = client.exec_command(
-                                                        "clear",
-                                                        serde_json::Value::Null,
-                                                        &sid,
-                                                    ).await;
+                                                    let result = client
+                                                        .exec_command(
+                                                            "clear",
+                                                            serde_json::Value::Null,
+                                                            &sid,
+                                                        )
+                                                        .await;
                                                     // Notify on error only.
                                                     if let Err(e) = result {
-                                                        let _ = tx.send(TuiEvent::CommandResult(
-                                                            Err(format!("/clear failed: {e}"))
-                                                        )).await;
+                                                        let _ = tx
+                                                            .send(TuiEvent::CommandResult(Err(
+                                                                format!("/clear failed: {e}"),
+                                                            )))
+                                                            .await;
                                                     }
                                                 });
                                             }
@@ -1007,9 +1185,9 @@ async fn run_loop(
                                         app.session_id = new_id.clone();
                                         app.chat.clear();
                                         app.tools.clear();
-                                        app.chat.push(ChatMessage::System(
-                                            format!("Switched to new session: {new_id}")
-                                        ));
+                                        app.chat.push(ChatMessage::System(format!(
+                                            "Switched to new session: {new_id}"
+                                        )));
                                         if app.ws_status == WsStatus::Connected {
                                             if let Some(ref client) = ws_client {
                                                 let client = client.clone();
@@ -1022,9 +1200,13 @@ async fn run_loop(
                                                         &sid,
                                                     ).await;
                                                     if let Err(e) = result {
-                                                        let _ = tx.send(TuiEvent::CommandResult(
-                                                            Err(format!("/new failed on gateway: {e}"))
-                                                        )).await;
+                                                        let _ = tx
+                                                            .send(TuiEvent::CommandResult(Err(
+                                                                format!(
+                                                                    "/new failed on gateway: {e}"
+                                                                ),
+                                                            )))
+                                                            .await;
                                                     }
                                                 });
                                             }
@@ -1040,17 +1222,21 @@ async fn run_loop(
                                                     let sid = app.session_id.clone();
                                                     let tx = tui_tx.clone();
                                                     tokio::spawn(async move {
-                                                        let result = client.exec_command(
-                                                            "sessions",
-                                                            serde_json::Value::Null,
-                                                            &sid,
-                                                        ).await;
-                                                        let _ = tx.send(TuiEvent::CommandResult(result)).await;
+                                                        let result = client
+                                                            .exec_command(
+                                                                "sessions",
+                                                                serde_json::Value::Null,
+                                                                &sid,
+                                                            )
+                                                            .await;
+                                                        let _ = tx
+                                                            .send(TuiEvent::CommandResult(result))
+                                                            .await;
                                                     });
                                                 }
                                             } else {
                                                 app.chat.push(ChatMessage::System(
-                                                    "not connected to gateway".to_string()
+                                                    "not connected to gateway".to_string(),
                                                 ));
                                             }
                                         } else {
@@ -1059,9 +1245,9 @@ async fn run_loop(
                                             app.session_id = target_id.clone();
                                             app.chat.clear();
                                             app.tools.clear();
-                                            app.chat.push(ChatMessage::System(
-                                                format!("Switched to session: {target_id}")
-                                            ));
+                                            app.chat.push(ChatMessage::System(format!(
+                                                "Switched to session: {target_id}"
+                                            )));
                                             if app.ws_status == WsStatus::Connected {
                                                 if let Some(ref client) = ws_client {
                                                     let client = client.clone();
@@ -1089,7 +1275,9 @@ async fn run_loop(
                                         app.tools_scroll = 0;
                                         app.run_phase = None;
                                         if app.ws_status != WsStatus::Connected {
-                                            app.chat.push(ChatMessage::System("not connected to gateway".to_string()));
+                                            app.chat.push(ChatMessage::System(
+                                                "not connected to gateway".to_string(),
+                                            ));
                                         } else if let Some(ref client) = ws_client {
                                             let client = client.clone();
                                             let session_id = app.session_id.clone();
@@ -1100,8 +1288,11 @@ async fn run_loop(
                                                 serde_json::Value::String(args)
                                             };
                                             tokio::spawn(async move {
-                                                let result = client.exec_command(&name, args_value, &session_id).await;
-                                                let _ = tx.send(TuiEvent::CommandResult(result)).await;
+                                                let result = client
+                                                    .exec_command(&name, args_value, &session_id)
+                                                    .await;
+                                                let _ =
+                                                    tx.send(TuiEvent::CommandResult(result)).await;
                                             });
                                         }
                                     }
@@ -1118,17 +1309,22 @@ async fn run_loop(
                                 app.tools_scroll = 0;
                                 app.run_phase = None;
                                 if app.ws_status != WsStatus::Connected {
-                                    app.chat.push(ChatMessage::System("not connected to gateway".to_string()));
+                                    app.chat.push(ChatMessage::System(
+                                        "not connected to gateway".to_string(),
+                                    ));
                                 } else if let Some(ref client) = ws_client {
                                     let client = client.clone();
                                     let session_id = app.session_id.clone();
                                     let tx = tui_tx.clone();
                                     tokio::spawn(async move {
-                                        let result = client.submit_prompt(&prompt, &session_id).await;
+                                        let result =
+                                            client.submit_prompt(&prompt, &session_id).await;
                                         let _ = tx.send(TuiEvent::SubmitResult(result)).await;
                                     });
                                 } else {
-                                    app.chat.push(ChatMessage::System("not connected to gateway".to_string()));
+                                    app.chat.push(ChatMessage::System(
+                                        "not connected to gateway".to_string(),
+                                    ));
                                 }
                             }
                         }
@@ -1154,7 +1350,8 @@ async fn run_loop(
                     }
                     KeyCode::BackTab => {
                         if app.autocomplete_visible && !app.autocomplete_items.is_empty() {
-                            app.autocomplete_selected = app.autocomplete_selected
+                            app.autocomplete_selected = app
+                                .autocomplete_selected
                                 .checked_sub(1)
                                 .unwrap_or(app.autocomplete_items.len() - 1);
                         }
@@ -1169,18 +1366,26 @@ async fn run_loop(
                     }
                     KeyCode::Left if key.modifiers.contains(KeyModifiers::CONTROL) => {
                         let new_pos = word_left(&app.input, app.cursor_pos);
-                        app.cursor_pos = app.paste_markers.iter()
+                        app.cursor_pos = app
+                            .paste_markers
+                            .iter()
                             .find(|m| new_pos > m.start && new_pos < m.end)
                             .map_or(new_pos, |m| m.start);
                     }
                     KeyCode::Right if key.modifiers.contains(KeyModifiers::CONTROL) => {
                         let new_pos = word_right(&app.input, app.cursor_pos);
-                        app.cursor_pos = app.paste_markers.iter()
+                        app.cursor_pos = app
+                            .paste_markers
+                            .iter()
                             .find(|m| new_pos > m.start && new_pos < m.end)
                             .map_or(new_pos, |m| m.end);
                     }
-                    KeyCode::Left => { app.move_left(); }
-                    KeyCode::Right => { app.move_right(); }
+                    KeyCode::Left => {
+                        app.move_left();
+                    }
+                    KeyCode::Right => {
+                        app.move_right();
+                    }
                     KeyCode::Home => {
                         let disp = app.display_cursor();
                         let disp_start = visual_line_start(disp, app.input_inner_width);
@@ -1194,12 +1399,20 @@ async fn run_loop(
                     }
                     // shift+up/down/pgup/pgdown scroll chat; must appear before plain Up/Down
                     KeyCode::Up if key.modifiers.contains(KeyModifiers::SHIFT) => {
-                        let current = if app.chat_pinned { app.chat_max_scroll } else { app.chat_scroll };
+                        let current = if app.chat_pinned {
+                            app.chat_max_scroll
+                        } else {
+                            app.chat_scroll
+                        };
                         app.chat_pinned = false;
                         app.chat_scroll = current.saturating_sub(3);
                     }
                     KeyCode::Down if key.modifiers.contains(KeyModifiers::SHIFT) => {
-                        let current = if app.chat_pinned { app.chat_max_scroll } else { app.chat_scroll };
+                        let current = if app.chat_pinned {
+                            app.chat_max_scroll
+                        } else {
+                            app.chat_scroll
+                        };
                         let next = current.saturating_add(3);
                         if next >= app.chat_max_scroll {
                             app.chat_pinned = true;
@@ -1209,12 +1422,20 @@ async fn run_loop(
                         }
                     }
                     KeyCode::PageUp => {
-                        let current = if app.chat_pinned { app.chat_max_scroll } else { app.chat_scroll };
+                        let current = if app.chat_pinned {
+                            app.chat_max_scroll
+                        } else {
+                            app.chat_scroll
+                        };
                         app.chat_pinned = false;
                         app.chat_scroll = current.saturating_sub(10);
                     }
                     KeyCode::PageDown => {
-                        let current = if app.chat_pinned { app.chat_max_scroll } else { app.chat_scroll };
+                        let current = if app.chat_pinned {
+                            app.chat_max_scroll
+                        } else {
+                            app.chat_scroll
+                        };
                         let next = current.saturating_add(10);
                         if next >= app.chat_max_scroll {
                             app.chat_pinned = true;
@@ -1225,7 +1446,8 @@ async fn run_loop(
                     }
                     KeyCode::Up => {
                         if app.autocomplete_visible && !app.autocomplete_items.is_empty() {
-                            app.autocomplete_selected = app.autocomplete_selected
+                            app.autocomplete_selected = app
+                                .autocomplete_selected
                                 .checked_sub(1)
                                 .unwrap_or(app.autocomplete_items.len() - 1);
                         } else if !app.input_history.is_empty() {
@@ -1269,96 +1491,121 @@ async fn run_loop(
                 }
             }
 
-            TuiEvent::Mouse(ev) => {
-                match ev.kind {
-                    MouseEventKind::Down(MouseButton::Left) => {
-                        if in_rect(ev.column, ev.row, app.chat_area) {
-                            match screen_to_chat_pos(ev.column, ev.row, app) {
-                                Some(pos) => {
-                                    app.selection = Some(Selection {
-                                        target: SelectionTarget::Chat,
-                                        anchor: pos,
-                                        extent: pos,
-                                    });
-                                }
-                                None => { app.selection = None; }
+            TuiEvent::Mouse(ev) => match ev.kind {
+                MouseEventKind::Down(MouseButton::Left) => {
+                    if in_rect(ev.column, ev.row, app.chat_area) {
+                        match screen_to_chat_pos(ev.column, ev.row, app) {
+                            Some(pos) => {
+                                app.selection = Some(Selection {
+                                    target: SelectionTarget::Chat,
+                                    anchor: pos,
+                                    extent: pos,
+                                });
                             }
-                        } else if app.tools_visible && in_rect(ev.column, ev.row, app.tools_area) {
-                            match screen_to_tools_row(ev.row, app) {
-                                Some(row_idx) => {
-                                    app.selection = Some(Selection {
-                                        target: SelectionTarget::Tools,
-                                        anchor: ChatPos { line_idx: row_idx, col: 0 },
-                                        extent: ChatPos { line_idx: row_idx, col: usize::MAX },
-                                    });
-                                }
-                                None => { app.selection = None; }
-                            }
-                        } else {
-                            app.selection = None;
-                        }
-                    }
-                    MouseEventKind::Drag(MouseButton::Left) => {
-                        if in_rect(ev.column, ev.row, app.chat_area) {
-                            let is_chat_sel = matches!(&app.selection, Some(s) if s.target == SelectionTarget::Chat);
-                            if is_chat_sel {
-                                let pos = screen_to_chat_pos(ev.column, ev.row, app);
-                                if let (Some(pos), Some(ref mut sel)) = (pos, app.selection.as_mut()) {
-                                    sel.extent = pos;
-                                }
-                            }
-                        }
-                    }
-                    MouseEventKind::Up(MouseButton::Left) => {
-                        if let Some(ref sel) = app.selection {
-                            if sel.anchor == sel.extent {
+                            None => {
                                 app.selection = None;
                             }
                         }
-                    }
-                    MouseEventKind::ScrollUp => {
-                        if in_rect(ev.column, ev.row, app.chat_area) {
-                            let current = if app.chat_pinned { app.chat_max_scroll } else { app.chat_scroll };
-                            app.chat_pinned = false;
-                            app.chat_scroll = current.saturating_sub(3);
-                        } else if app.tools_visible && in_rect(ev.column, ev.row, app.tools_area) {
-                            let current = if app.tools_pinned { app.tools_max_scroll } else { app.tools_scroll };
-                            app.tools_pinned = false;
-                            app.tools_scroll = current.saturating_sub(1);
-                        }
-                    }
-                    MouseEventKind::ScrollDown => {
-                        if in_rect(ev.column, ev.row, app.chat_area) {
-                            let current = if app.chat_pinned { app.chat_max_scroll } else { app.chat_scroll };
-                            let next = current.saturating_add(3);
-                            if next >= app.chat_max_scroll {
-                                app.chat_pinned = true;
-                            } else {
-                                app.chat_scroll = next;
+                    } else if app.tools_visible && in_rect(ev.column, ev.row, app.tools_area) {
+                        match screen_to_tools_row(ev.row, app) {
+                            Some(row_idx) => {
+                                app.selection = Some(Selection {
+                                    target: SelectionTarget::Tools,
+                                    anchor: ChatPos {
+                                        line_idx: row_idx,
+                                        col: 0,
+                                    },
+                                    extent: ChatPos {
+                                        line_idx: row_idx,
+                                        col: usize::MAX,
+                                    },
+                                });
                             }
-                        } else if app.tools_visible && in_rect(ev.column, ev.row, app.tools_area) {
-                            let current = if app.tools_pinned { app.tools_max_scroll } else { app.tools_scroll };
-                            let next = current.saturating_add(1);
-                            if next >= app.tools_max_scroll {
-                                app.tools_pinned = true;
-                            } else {
-                                app.tools_scroll = next;
+                            None => {
+                                app.selection = None;
                             }
                         }
+                    } else {
+                        app.selection = None;
                     }
-                    _ => {}
                 }
-            }
+                MouseEventKind::Drag(MouseButton::Left) => {
+                    if in_rect(ev.column, ev.row, app.chat_area) {
+                        let is_chat_sel =
+                            matches!(&app.selection, Some(s) if s.target == SelectionTarget::Chat);
+                        if is_chat_sel {
+                            let pos = screen_to_chat_pos(ev.column, ev.row, app);
+                            if let (Some(pos), Some(ref mut sel)) = (pos, app.selection.as_mut()) {
+                                sel.extent = pos;
+                            }
+                        }
+                    }
+                }
+                MouseEventKind::Up(MouseButton::Left) => {
+                    if let Some(ref sel) = app.selection {
+                        if sel.anchor == sel.extent {
+                            app.selection = None;
+                        }
+                    }
+                }
+                MouseEventKind::ScrollUp => {
+                    if in_rect(ev.column, ev.row, app.chat_area) {
+                        let current = if app.chat_pinned {
+                            app.chat_max_scroll
+                        } else {
+                            app.chat_scroll
+                        };
+                        app.chat_pinned = false;
+                        app.chat_scroll = current.saturating_sub(3);
+                    } else if app.tools_visible && in_rect(ev.column, ev.row, app.tools_area) {
+                        let current = if app.tools_pinned {
+                            app.tools_max_scroll
+                        } else {
+                            app.tools_scroll
+                        };
+                        app.tools_pinned = false;
+                        app.tools_scroll = current.saturating_sub(1);
+                    }
+                }
+                MouseEventKind::ScrollDown => {
+                    if in_rect(ev.column, ev.row, app.chat_area) {
+                        let current = if app.chat_pinned {
+                            app.chat_max_scroll
+                        } else {
+                            app.chat_scroll
+                        };
+                        let next = current.saturating_add(3);
+                        if next >= app.chat_max_scroll {
+                            app.chat_pinned = true;
+                        } else {
+                            app.chat_scroll = next;
+                        }
+                    } else if app.tools_visible && in_rect(ev.column, ev.row, app.tools_area) {
+                        let current = if app.tools_pinned {
+                            app.tools_max_scroll
+                        } else {
+                            app.tools_scroll
+                        };
+                        let next = current.saturating_add(1);
+                        if next >= app.tools_max_scroll {
+                            app.tools_pinned = true;
+                        } else {
+                            app.tools_scroll = next;
+                        }
+                    }
+                }
+                _ => {}
+            },
 
-            TuiEvent::SubmitResult(result) => {
-                match result {
-                    Ok(run_id) => { app.current_run_id = Some(run_id); }
-                    Err(e) => {
-                        app.last_error = Some(e.clone());
-                        app.chat.push(ChatMessage::System(format!("error: {e}")));
-                    }
+            TuiEvent::SubmitResult(result) => match result {
+                Ok(run_id) => {
+                    app.current_run_id = Some(run_id);
                 }
-            }
+                Err(e) => {
+                    app.last_error = Some(e.clone());
+                    app.chat.push(ChatMessage::System(format!("error: {e}")));
+                }
+            },
 
             TuiEvent::Agent(ev) => {
                 app.handle_agent_event(ev);
@@ -1370,7 +1617,8 @@ async fn run_loop(
                             app.last_error = Some(e.clone());
                             app.chat.push(ChatMessage::System(format!("WS error: {e}")));
                         } else {
-                            app.chat.push(ChatMessage::System("disconnected from gateway".into()));
+                            app.chat
+                                .push(ChatMessage::System("disconnected from gateway".into()));
                         }
                         ws_client = None;
                         if !app.reconnecting {
@@ -1382,9 +1630,16 @@ async fn run_loop(
                                 let mut backoff = Duration::from_millis(250);
                                 loop {
                                     tokio::time::sleep(backoff).await;
-                                    match WsClient::connect(&gateway_url, auth_token.clone(), tx.clone()).await {
+                                    match WsClient::connect(
+                                        &gateway_url,
+                                        auth_token.clone(),
+                                        tx.clone(),
+                                    )
+                                    .await
+                                    {
                                         Ok(client) => {
-                                            let _ = tx.send(TuiEvent::Reconnected(Ok(client))).await;
+                                            let _ =
+                                                tx.send(TuiEvent::Reconnected(Ok(client))).await;
                                             return;
                                         }
                                         Err(e) => {
@@ -1414,7 +1669,10 @@ async fn run_loop(
                         ws_client = Some(client);
                         app.reconnecting = false;
                         app.ws_status = WsStatus::Connected;
-                        app.chat.push(ChatMessage::System(format!("reconnected to {}", app.gateway_url)));
+                        app.chat.push(ChatMessage::System(format!(
+                            "reconnected to {}",
+                            app.gateway_url
+                        )));
                     }
                     Err(_) => {
                         // reconnect task is still running with backoff, nothing to do here
@@ -1433,7 +1691,8 @@ async fn run_loop(
                         app.chat.push(ChatMessage::System(msg));
                     }
                     Err(e) => {
-                        app.chat.push(ChatMessage::System(format!("command error: {e}")));
+                        app.chat
+                            .push(ChatMessage::System(format!("command error: {e}")));
                     }
                 }
                 app.run_phase = None;

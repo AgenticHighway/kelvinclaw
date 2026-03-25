@@ -178,7 +178,11 @@ impl MergedCommandRegistry {
         if let Some((cmd, _)) = self.local.iter().find(|(_, item)| item.name == lower) {
             return Some(SlashCommand::Local(cmd.clone()));
         }
-        if self.remote.iter().any(|r| r.name.to_ascii_lowercase() == lower) {
+        if self
+            .remote
+            .iter()
+            .any(|r| r.name.to_ascii_lowercase() == lower)
+        {
             return Some(SlashCommand::Remote { name: lower });
         }
         None
@@ -193,10 +197,17 @@ impl MergedCommandRegistry {
                 .as_deref()
                 .map(|u| format!(" {u}"))
                 .unwrap_or_default();
-            lines.push(format!("  • /{}{} — {}", item.name, usage, item.description));
+            lines.push(format!(
+                "  • /{}{} — {}",
+                item.name, usage, item.description
+            ));
         }
         for r in &self.remote {
-            let usage = r.usage.as_deref().map(|u| format!(" {u}")).unwrap_or_default();
+            let usage = r
+                .usage
+                .as_deref()
+                .map(|u| format!(" {u}"))
+                .unwrap_or_default();
             lines.push(format!("  • /{}{} — {}", r.name, usage, r.description));
         }
         lines.join("\n")
@@ -253,7 +264,10 @@ mod tests {
     fn resolve_local_session() {
         let reg = MergedCommandRegistry::default();
         let cmd = reg.resolve("session");
-        assert!(matches!(cmd, Some(SlashCommand::Local(LocalCommand::Session))));
+        assert!(matches!(
+            cmd,
+            Some(SlashCommand::Local(LocalCommand::Session))
+        ));
     }
 
     #[test]

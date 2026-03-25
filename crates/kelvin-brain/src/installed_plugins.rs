@@ -931,9 +931,9 @@ fn validate_model_output_schema(value: &Value) -> Result<(), String> {
         .ok_or("field 'tool_calls' must be an array")?;
 
     for (idx, tool_call) in tool_calls_array.iter().enumerate() {
-        let tc_obj = tool_call.as_object().ok_or_else(|| {
-            format!("tool_calls[{idx}] is not a JSON object")
-        })?;
+        let tc_obj = tool_call
+            .as_object()
+            .ok_or_else(|| format!("tool_calls[{idx}] is not a JSON object"))?;
 
         let id = tc_obj
             .get("id")
@@ -987,20 +987,19 @@ fn validate_openai_response_schema(value: &Value) -> Result<(), String> {
         .get("output_text")
         .map(|v| v.is_string())
         .unwrap_or(false);
-    let has_output = obj
-        .get("output")
-        .map(|v| v.is_array())
-        .unwrap_or(false);
+    let has_output = obj.get("output").map(|v| v.is_array()).unwrap_or(false);
 
     if !has_output_text && !has_output {
-        return Err("OpenAI Responses: must have 'output_text' (string) or 'output' (array)".to_string());
+        return Err(
+            "OpenAI Responses: must have 'output_text' (string) or 'output' (array)".to_string(),
+        );
     }
 
     if let Some(output_array) = obj.get("output").and_then(Value::as_array) {
         for (idx, item) in output_array.iter().enumerate() {
-            let item_obj = item.as_object().ok_or_else(|| {
-                format!("OpenAI Responses output[{idx}] is not a JSON object")
-            })?;
+            let item_obj = item
+                .as_object()
+                .ok_or_else(|| format!("OpenAI Responses output[{idx}] is not a JSON object"))?;
 
             let item_type = item_obj
                 .get("type")
@@ -1010,7 +1009,9 @@ fn validate_openai_response_schema(value: &Value) -> Result<(), String> {
             match item_type {
                 "message" => {
                     let content = item_obj.get("content").ok_or_else(|| {
-                        format!("OpenAI Responses output[{idx}] (type=message) missing field: content")
+                        format!(
+                            "OpenAI Responses output[{idx}] (type=message) missing field: content"
+                        )
                     })?;
                     if !content.is_array() {
                         return Err(format!(
@@ -1049,16 +1050,14 @@ fn validate_anthropic_response_schema(value: &Value) -> Result<(), String> {
         .ok_or("Anthropic Messages: field 'content' must be an array")?;
 
     for (idx, block) in content_array.iter().enumerate() {
-        let block_obj = block.as_object().ok_or_else(|| {
-            format!("Anthropic Messages content[{idx}] is not a JSON object")
-        })?;
+        let block_obj = block
+            .as_object()
+            .ok_or_else(|| format!("Anthropic Messages content[{idx}] is not a JSON object"))?;
 
         let block_type = block_obj
             .get("type")
             .and_then(Value::as_str)
-            .ok_or_else(|| {
-                format!("Anthropic Messages content[{idx}] missing field: type")
-            })?;
+            .ok_or_else(|| format!("Anthropic Messages content[{idx}] missing field: type"))?;
 
         match block_type {
             "text" => {
@@ -1095,9 +1094,9 @@ fn validate_openai_chat_completions_schema(value: &Value) -> Result<(), String> 
     let choices = obj
         .get("choices")
         .ok_or("OpenAI Chat Completions: missing required field: choices")?;
-    let choices_array = choices.as_array().ok_or(
-        "OpenAI Chat Completions: field 'choices' must be an array",
-    )?;
+    let choices_array = choices
+        .as_array()
+        .ok_or("OpenAI Chat Completions: field 'choices' must be an array")?;
 
     if choices_array.is_empty() {
         return Err("OpenAI Chat Completions: choices array must not be empty".to_string());
@@ -1110,14 +1109,12 @@ fn validate_openai_chat_completions_schema(value: &Value) -> Result<(), String> 
     let message = first_choice
         .get("message")
         .ok_or("OpenAI Chat Completions: choices[0] missing field: message")?;
-    let message_obj = message.as_object().ok_or(
-        "OpenAI Chat Completions: choices[0].message must be a JSON object",
-    )?;
+    let message_obj = message
+        .as_object()
+        .ok_or("OpenAI Chat Completions: choices[0].message must be a JSON object")?;
 
     if !message_obj.contains_key("role") {
-        return Err(
-            "OpenAI Chat Completions: choices[0].message missing field: role".to_string(),
-        );
+        return Err("OpenAI Chat Completions: choices[0].message missing field: role".to_string());
     }
 
     if let Some(tool_calls) = message_obj.get("tool_calls") {
@@ -1176,7 +1173,11 @@ fn adapt_openai_response(value: &Value) -> Option<ModelOutput> {
                         .and_then(Value::as_str)
                         .and_then(|s| serde_json::from_str(s).ok())
                         .unwrap_or_else(|| serde_json::json!({}));
-                    tool_calls.push(ToolCall { id, name, arguments });
+                    tool_calls.push(ToolCall {
+                        id,
+                        name,
+                        arguments,
+                    });
                     continue;
                 }
                 if item_type != Some("message") {
@@ -1246,7 +1247,11 @@ fn adapt_anthropic_response(value: &Value) -> Option<ModelOutput> {
                     .get("input")
                     .cloned()
                     .unwrap_or_else(|| serde_json::json!({}));
-                tool_calls.push(ToolCall { id, name, arguments });
+                tool_calls.push(ToolCall {
+                    id,
+                    name,
+                    arguments,
+                });
             }
             _ => {}
         }
@@ -1295,7 +1300,11 @@ fn adapt_openrouter_response(value: &Value) -> Option<ModelOutput> {
     let mut tool_calls = Vec::new();
     if let Some(tc_array) = message.get("tool_calls").and_then(Value::as_array) {
         for tc in tc_array {
-            let id = tc.get("id").and_then(Value::as_str).unwrap_or("").to_string();
+            let id = tc
+                .get("id")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .to_string();
             let function = tc.get("function");
             let name = function
                 .and_then(|f| f.get("name"))
@@ -1307,7 +1316,11 @@ fn adapt_openrouter_response(value: &Value) -> Option<ModelOutput> {
                 .and_then(Value::as_str)
                 .and_then(|s| serde_json::from_str(s).ok())
                 .unwrap_or_else(|| serde_json::json!({}));
-            tool_calls.push(ToolCall { id, name, arguments });
+            tool_calls.push(ToolCall {
+                id,
+                name,
+                arguments,
+            });
         }
     }
 
@@ -1724,10 +1737,7 @@ fn load_one_plugin(
 
         let tool_name = package_manifest.resolved_tool_name()?;
         let sandbox_policy = sandbox_from_manifest(&package_manifest)?;
-        let tool_description = package_manifest
-            .description
-            .clone()
-            .unwrap_or_default();
+        let tool_description = package_manifest.description.clone().unwrap_or_default();
         let tool_input_schema = package_manifest
             .tool_input_schema
             .clone()
@@ -3209,10 +3219,7 @@ mod schema_validation_tests {
             "status": "success"
         });
         let err = validate_openai_response_schema(&invalid).unwrap_err();
-        assert!(
-            err.contains("output_text") ||
-            err.contains("output")
-        );
+        assert!(err.contains("output_text") || err.contains("output"));
     }
 
     #[test]

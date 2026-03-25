@@ -1,8 +1,8 @@
 pub mod installed_plugins;
 pub mod kelvin_brain;
 pub mod providers;
-pub mod wasm_skill_tool;
 pub mod tool_loop_detector;
+pub mod wasm_skill_tool;
 
 pub use installed_plugins::{
     default_plugin_home, default_trust_policy_path, load_installed_plugins,

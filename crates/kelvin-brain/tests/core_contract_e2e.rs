@@ -514,8 +514,16 @@ async fn e2e_multi_iteration_tool_calls() {
     let tool_calls_log = Arc::new(Mutex::new(Vec::<String>::new()));
 
     let tools = Arc::new(MapToolRegistry::from_tools(vec![
-        Arc::new(RecordingTool::new("alpha", "alpha-out", tool_calls_log.clone())),
-        Arc::new(RecordingTool::new("beta", "beta-out", tool_calls_log.clone())),
+        Arc::new(RecordingTool::new(
+            "alpha",
+            "alpha-out",
+            tool_calls_log.clone(),
+        )),
+        Arc::new(RecordingTool::new(
+            "beta",
+            "beta-out",
+            tool_calls_log.clone(),
+        )),
     ]));
 
     let model = Arc::new(MultiPhaseStubModelProvider::new(vec![
@@ -561,11 +569,20 @@ async fn e2e_multi_iteration_tool_calls() {
     // user → assistant1 → tool(alpha) → assistant2 → tool(beta) → assistant3
     assert_eq!(history.len(), 6);
     assert!(matches!(history[0].role, kelvin_core::SessionRole::User));
-    assert!(matches!(history[1].role, kelvin_core::SessionRole::Assistant));
+    assert!(matches!(
+        history[1].role,
+        kelvin_core::SessionRole::Assistant
+    ));
     assert!(matches!(history[2].role, kelvin_core::SessionRole::Tool));
-    assert!(matches!(history[3].role, kelvin_core::SessionRole::Assistant));
+    assert!(matches!(
+        history[3].role,
+        kelvin_core::SessionRole::Assistant
+    ));
     assert!(matches!(history[4].role, kelvin_core::SessionRole::Tool));
-    assert!(matches!(history[5].role, kelvin_core::SessionRole::Assistant));
+    assert!(matches!(
+        history[5].role,
+        kelvin_core::SessionRole::Assistant
+    ));
 }
 
 #[tokio::test]

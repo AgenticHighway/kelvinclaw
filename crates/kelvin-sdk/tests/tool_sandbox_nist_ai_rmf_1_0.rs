@@ -96,7 +96,9 @@ async fn map_fs_write_allows_newlines_in_content() {
     )
     .await;
     assert!(
-        payloads.iter().any(|text| text.contains("fs_safe_write wrote")),
+        payloads
+            .iter()
+            .any(|text| text.contains("fs_safe_write wrote")),
         "expected write to succeed, got: {payloads:?}"
     );
     let text = std::fs::read_to_string(workspace.join("memory/lines.md")).expect("read output");
@@ -113,7 +115,9 @@ async fn map_fs_write_allows_tabs_and_mixed_control_chars_in_content() {
     )
     .await;
     assert!(
-        payloads.iter().any(|text| text.contains("fs_safe_write wrote")),
+        payloads
+            .iter()
+            .any(|text| text.contains("fs_safe_write wrote")),
         "expected write to succeed, got: {payloads:?}"
     );
     let text = std::fs::read_to_string(workspace.join("memory/tabbed.md")).expect("read output");

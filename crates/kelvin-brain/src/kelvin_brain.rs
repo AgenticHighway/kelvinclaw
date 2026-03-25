@@ -170,7 +170,7 @@ impl KelvinBrain {
                     AgentPayload {
                         text: summary,
                         is_error: true,
-                    }
+                    },
                 ));
                 continue;
             };
@@ -223,7 +223,7 @@ impl KelvinBrain {
                         AgentPayload {
                             text: summary,
                             is_error: true,
-                        }
+                        },
                     ));
                     continue;
                 }
@@ -281,7 +281,7 @@ impl KelvinBrain {
                     AgentPayload {
                         text: visible_text,
                         is_error: result.is_error,
-                    }
+                    },
                 ));
             }
         }
@@ -386,10 +386,7 @@ impl KelvinBrain {
             if !text.is_empty() && text != "NO_REPLY" {
                 self.emit_assistant(&req.run_id, &text, !has_tools).await?;
                 self.session_store
-                    .append_message(
-                        &req.session_id,
-                        SessionMessage::assistant(text.clone()),
-                    )
+                    .append_message(&req.session_id, SessionMessage::assistant(text.clone()))
                     .await?;
                 if !has_tools {
                     payloads.push(AgentPayload {
@@ -405,30 +402,37 @@ impl KelvinBrain {
 
             let tool_results = self.execute_tool_calls(&req, &output.tool_calls).await?;
 
-            let tool_calls: Vec<_> = tool_results.iter()
-                .map(|(tc,tp)| (tc.name.clone(), &tc.arguments, tp.is_error))
+            let tool_calls: Vec<_> = tool_results
+                .iter()
+                .map(|(tc, tp)| (tc.name.clone(), &tc.arguments, tp.is_error))
                 .collect();
 
             let loop_detection = loop_detector.record_call(&tool_calls);
 
-            payloads.extend(tool_results.into_iter().map(|(_,tc)| tc).collect::<Vec<_>>());
+            payloads.extend(
+                tool_results
+                    .into_iter()
+                    .map(|(_, tc)| tc)
+                    .collect::<Vec<_>>(),
+            );
             iteration += 1;
 
             let force_reason = if iteration >= max_iter {
                 Some(format!("max tool iterations ({max_iter}) reached"))
-            } else if let LoopDetectionResult::SuspectedLoop { tool_name, repeat_count, is_all_errors } = loop_detection {
+            } else if let LoopDetectionResult::SuspectedLoop {
+                tool_name,
+                repeat_count,
+                is_all_errors,
+            } = loop_detection
+            {
                 Some(format!("loop detector triggered with (name=\"{tool_name}\", repeat_count={repeat_count}, is_all_errors={is_all_errors})"))
             } else {
                 None
             };
 
             if let Some(reason) = force_reason {
-                self.emit_lifecycle(
-                    &req.run_id,
-                    LifecyclePhase::Warning,
-                    Some(reason),
-                )
-                .await?;
+                self.emit_lifecycle(&req.run_id, LifecyclePhase::Warning, Some(reason))
+                    .await?;
 
                 let final_history = self.session_store.history(&req.session_id).await?;
 

@@ -1,9 +1,9 @@
 use ratatui::{
-    Frame,
     layout::Rect,
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Clear, List, ListItem, ListState},
+    Frame,
 };
 
 use crate::app::App;
@@ -57,7 +57,10 @@ pub fn render(f: &mut Frame, app: &App, input_area: Rect) {
                 Style::default().fg(Color::White)
             };
             let label = Line::from(vec![
-                Span::styled(format!("/{}", item.name), style.add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    format!("/{}", item.name),
+                    style.add_modifier(Modifier::BOLD),
+                ),
                 Span::styled(
                     format!("  {}", item.description),
                     style.remove_modifier(Modifier::BOLD),
