@@ -66,7 +66,7 @@ impl WsClient {
 
         tokio::spawn(async move {
             while let Some(msg) = frame_rx.recv().await {
-                if ws_write.send(Message::Text(msg.into())).await.is_err() {
+                if ws_write.send(Message::Text(msg)).await.is_err() {
                     let _ = tui_tx_writer
                         .send(TuiEvent::WsStatus(WsStatus::Disconnected))
                         .await;
@@ -176,7 +176,7 @@ impl WsClient {
             Ok(result) => result.map_err(|_| "response channel closed".to_string())?,
             Err(_) => {
                 self.pending.lock().await.remove(&id_for_cleanup);
-                return Err(format!("request '{method}' timed out"));
+                Err(format!("request '{method}' timed out"))
             }
         }
     }

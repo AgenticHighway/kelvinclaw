@@ -533,24 +533,23 @@ impl App {
                         started_ms: ts_ms,
                         ended_ms: None,
                     });
+                } else if let Some(entry) = self
+                    .tools
+                    .iter_mut()
+                    .rev()
+                    .find(|t| t.tool_name == tool_name && matches!(t.phase, ToolPhase::Start))
+                {
+                    entry.phase = phase;
+                    entry.summary = summary.or(entry.summary.clone());
+                    entry.ended_ms = Some(ts_ms);
                 } else {
-                    if let Some(entry) =
-                        self.tools.iter_mut().rev().find(|t| {
-                            t.tool_name == tool_name && matches!(t.phase, ToolPhase::Start)
-                        })
-                    {
-                        entry.phase = phase;
-                        entry.summary = summary.or(entry.summary.clone());
-                        entry.ended_ms = Some(ts_ms);
-                    } else {
-                        self.tools.push(ToolEntry {
-                            tool_name,
-                            phase,
-                            summary,
-                            started_ms: ts_ms,
-                            ended_ms: Some(ts_ms),
-                        });
-                    }
+                    self.tools.push(ToolEntry {
+                        tool_name,
+                        phase,
+                        summary,
+                        started_ms: ts_ms,
+                        ended_ms: Some(ts_ms),
+                    });
                 }
             }
             AgentEventData::Lifecycle {
@@ -715,7 +714,7 @@ fn copy_osc52(text: &str) {
 
 fn base64_encode(data: &[u8]) -> String {
     const T: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    let mut out = String::with_capacity((data.len() + 2) / 3 * 4);
+    let mut out = String::with_capacity(data.len().div_ceil(3) * 4);
     for chunk in data.chunks(3) {
         let b0 = chunk[0] as u32;
         let b1 = chunk.get(1).copied().unwrap_or(0) as u32;
@@ -1085,9 +1084,10 @@ async fn run_loop(
                             app.selection = None;
                         } else {
                             let now = Instant::now();
-                            if app.last_ctrl_c.map_or(false, |t| {
-                                now.duration_since(t) < Duration::from_millis(500)
-                            }) {
+                            if app
+                                .last_ctrl_c
+                                .is_some_and(|t| now.duration_since(t) < Duration::from_millis(500))
+                            {
                                 app.should_quit = true;
                             } else {
                                 app.last_ctrl_c = Some(now);

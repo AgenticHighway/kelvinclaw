@@ -164,11 +164,12 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
             let n = lines.len();
             if start.line_idx < n {
                 let end_idx = end.line_idx.min(n - 1);
-                for idx in start.line_idx..=end_idx {
+                for (i, line) in lines[start.line_idx..=end_idx].iter_mut().enumerate() {
+                    let idx = i + start.line_idx;
                     let sel_start = if idx == start.line_idx { start.col } else { 0 };
                     let sel_end = if idx == end_idx { end.col } else { usize::MAX };
-                    let old = std::mem::replace(&mut lines[idx], Line::from(vec![]));
-                    lines[idx] = apply_highlight(old, sel_start, sel_end);
+                    let old = std::mem::replace(line, Line::from(vec![]));
+                    *line = apply_highlight(old, sel_start, sel_end);
                 }
             }
         }

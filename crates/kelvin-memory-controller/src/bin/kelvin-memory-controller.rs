@@ -13,17 +13,13 @@ fn usage() -> &'static str {
 }
 
 fn handle_cli() -> Result<(), String> {
-    let mut args = std::env::args().skip(1);
-    while let Some(arg) = args.next() {
-        match arg.as_str() {
-            "-h" | "--help" => {
-                println!("{}", usage());
-                std::process::exit(0);
-            }
-            _ => {
-                return Err(format!("unknown argument: {arg}\n{}", usage()));
-            }
-        }
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    if args.iter().any(|a| a == "-h" || a == "--help") {
+        println!("{}", usage());
+        std::process::exit(0);
+    }
+    if let Some(arg) = args.first() {
+        return Err(format!("unknown argument: {arg}\n{}", usage()));
     }
     Ok(())
 }

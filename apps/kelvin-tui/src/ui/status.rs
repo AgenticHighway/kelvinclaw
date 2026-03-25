@@ -29,9 +29,9 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
     let error_str = app.last_error.as_deref().unwrap_or("");
 
     // Show exit hint if first ^C was pressed recently (within the 500ms window)
-    let show_exit_hint = app.last_ctrl_c.map_or(false, |t| {
-        Instant::now().duration_since(t) < Duration::from_secs(5)
-    });
+    let show_exit_hint = app
+        .last_ctrl_c
+        .is_some_and(|t| Instant::now().duration_since(t) < Duration::from_secs(5));
 
     let mut spans = vec![
         Span::raw(format!(" {} ", app.gateway_url)),
