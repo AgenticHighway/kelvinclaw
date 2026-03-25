@@ -22,13 +22,14 @@ cp .env.example .env
 
 ### Minimum `.env`
 
-Open `.env` and configure your settings.
-
-We recommend generating a gateway token using `openssl rand -hex 32`
+The default `.env.example` uses `kelvin.echo` which works immediately with no API keys.
+Just copy and go:
 
 ```bash
-KELVIN_GATEWAY_TOKEN=<a-secret-token-you-choose>
+docker compose up -d
 ```
+
+To use a real LLM, open `.env` and uncomment one of the provider blocks:
 
 For Anthropic:
 
@@ -51,6 +52,12 @@ KELVIN_MODEL_PROVIDER=kelvin.openai
 OPENAI_API_KEY=<your-key>
 ```
 
+For public-facing deployments, generate a gateway token:
+
+```bash
+KELVIN_GATEWAY_TOKEN=$(openssl rand -hex 32)
+```
+
 Start the host and gateway:
 
 ```bash
@@ -60,7 +67,7 @@ docker compose up -d
 Launch the TUI:
 
 ```bash
-docker compose run kelvin-tui
+docker compose --profile tui run --rm kelvin-tui
 ```
 
 ## Canonical Quick Start (Daily Driver MVP)
