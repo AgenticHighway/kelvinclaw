@@ -16,17 +16,32 @@ For end users, plugins are installed as packages and executed by Kelvin. They do
 
 ## Getting Started
 
+### Quick Try (Docker, no API keys needed)
+
+```bash
+cp .env.example .env                     # uses kelvin.echo by default
+docker compose up -d                     # starts gateway + init
+docker compose run --rm kelvin-tui       # interactive TUI
+```
+
+This runs the built-in echo provider — no OpenAI/Anthropic key required.
+To use a real LLM, edit `.env` and set `KELVIN_MODEL_PROVIDER` + your API key.
+
+### Quick Try (local Rust, no API keys needed)
+
+```bash
+scripts/quickstart.sh --mode local
+```
+
+Requires Rust toolchain, `jq`, `curl`, `tar`, and `openssl`.
+Without an API key the gateway defaults to the echo provider.
+
+### More Options
+
 Choose the onboarding path for your experience level:
 
 - [docs/GETTING_STARTED.md](docs/getting-started/GETTING_STARTED.md)
 - latest public release: [GitHub Releases](https://github.com/AgenticHighway/kelvinclaw/releases/latest)
-
-Canonical quick start commands:
-
-```bash
-scripts/quickstart.sh --mode local
-scripts/quickstart.sh --mode docker
-```
 
 Verify a specific path:
 

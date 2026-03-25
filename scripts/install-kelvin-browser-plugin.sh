@@ -60,6 +60,12 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [[ -z "${INDEX_URL}" ]]; then
+  echo "No plugin index URL configured." >&2
+  echo "Set KELVIN_PLUGIN_INDEX_URL or pass --index-url <url>." >&2
+  exit 1
+fi
+
 INSTALL_ARGS=(
   --index-url "${INDEX_URL}"
   --plugin "kelvin.browser.automation"
