@@ -1564,7 +1564,9 @@ cmd_new() {
       [[ -n "${auth_header}" ]] || auth_header="$(jq -er '.auth_header' <<< "${builtin_profile_json}")"
       [[ "${auth_scheme}" != "bearer" ]] || auth_scheme="$(jq -er '.auth_scheme' <<< "${builtin_profile_json}")"
       if [[ "${#allow_hosts[@]}" -eq 0 ]]; then
-        mapfile -t allow_hosts < <(jq -r '.default_allow_hosts[]' <<< "${builtin_profile_json}")
+        while IFS= read -r _host; do
+          allow_hosts+=("$_host")
+        done < <(jq -r '.default_allow_hosts[]' <<< "${builtin_profile_json}")
       fi
     fi
     [[ -n "${protocol_family}" ]] || {
