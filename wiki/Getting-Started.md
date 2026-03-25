@@ -161,23 +161,24 @@ KELVIN_GATEWAY_TOKEN=change-me cargo run -p kelvin-gateway -- --bind 127.0.0.1:3
 
 ## Install First-Party Plugins
 
-CLI plugin:
+Using `kpm` from a release bundle (requires `KELVIN_PLUGIN_INDEX_URL`):
+
+```bash
+./kpm install kelvin.cli
+./kpm install kelvin.anthropic
+./kpm install kelvin.openai
+./kpm search   # list all available plugins
+```
+
+Using individual install scripts (dev environment only):
 
 ```bash
 scripts/install-kelvin-cli-plugin.sh
-```
-
-OpenAI model plugin:
-
-```bash
+scripts/install-kelvin-anthropic-plugin.sh
 scripts/install-kelvin-openai-plugin.sh
 ```
 
-Anthropic model plugin:
-
-```bash
-scripts/install-kelvin-anthropic-plugin.sh
-```
+See [Plugin System](Plugin-System) for the full `kpm` reference.
 
 ## Verification
 

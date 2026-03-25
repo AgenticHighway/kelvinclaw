@@ -132,6 +132,94 @@ docker compose build   # plugin-builder stage recompiles plugins/
 `kelvin.cli` (the required tool plugin) is vendored as a prebuilt tarball at
 `release/vendor/kelvin.cli-0.1.2.tar.gz` and installed by `kelvin-setup.sh` on first run.
 
+## Plugin Index and kpm
+
+Outside of Docker, plugins are installed from a plugin index served at `KELVIN_PLUGIN_INDEX_URL`.
+The index is a JSON document listing available plugins with their metadata and download URLs.
+
+**`kpm`** (Kelvin Plugin Manager) is the command-line tool for managing plugins in release
+bundles and local environments. It is bundled in the release archive as `./kpm`.
+
+### Subcommands
+
+```
+kpm install <plugin-id> [--version <ver>] [--force]
+kpm uninstall <plugin-id> [--yes]
+kpm update [<plugin-id>] [--dry-run]
+kpm search [<query>]
+kpm info <plugin-id>
+kpm list
+kpm status
+```
+
+### Examples
+
+Search for available plugins:
+
+```bash
+export KELVIN_PLUGIN_INDEX_URL=https://example.com/plugins/index.json
+./kpm search
+./kpm search anthropic
+```
+
+Install a plugin:
+
+```bash
+./kpm install kelvin.anthropic
+./kpm install kelvin.anthropic --version 0.3.0
+```
+
+Inspect a plugin:
+
+```bash
+./kpm info kelvin.anthropic
+```
+
+List installed plugins and current configuration:
+
+```bash
+./kpm list
+./kpm status
+```
+
+Update all installed plugins:
+
+```bash
+./kpm update
+./kpm update --dry-run   # show what would be updated without installing
+```
+
+Remove a plugin:
+
+```bash
+./kpm uninstall kelvin.anthropic
+./kpm uninstall kelvin.anthropic --yes   # skip confirmation prompt
+```
+
+### Environment Variables
+
+| Variable | Required for | Default |
+|---|---|---|
+| `KELVIN_PLUGIN_INDEX_URL` | install, search, info, update | — |
+| `KELVIN_HOME` | all | `~/.kelvinclaw` |
+| `KELVIN_PLUGIN_HOME` | all | `$KELVIN_HOME/plugins` |
+| `KELVIN_TRUST_POLICY_PATH` | install | `$KELVIN_HOME/trusted_publishers.json` |
+| `KELVIN_MODEL_PROVIDER` | status (informational) | `kelvin.echo` |
+
+### start-gateway
+
+The `start-gateway` launcher in the release bundle wraps `kelvin-gateway` with automatic
+plugin bootstrapping. When `KELVIN_MODEL_PROVIDER` is set to a non-echo provider, it checks
+whether the plugin is already installed and installs it from the index before exec-ing the
+gateway binary.
+
+```bash
+export KELVIN_MODEL_PROVIDER=kelvin.anthropic
+export KELVIN_PLUGIN_INDEX_URL=https://example.com/plugins/index.json
+export ANTHROPIC_API_KEY=<your-key>
+./start-gateway
+```
+
 ## Related Pages
 
 - [Plugin Registry and Trust](Plugin-Registry-and-Trust)
