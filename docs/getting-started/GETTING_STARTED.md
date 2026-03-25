@@ -241,7 +241,7 @@ kelvin plugin test --manifest ./plugin-acme.echo/plugin.json
 
 For the supported model-plugin contributor path, use:
 
-- `docs/build-a-model-plugin.md`
+- `docs/plugins/build-a-model-plugin.md`
 - `plugins/kelvin-anthropic-plugin`
 - `plugins/kelvin-openrouter-plugin`
 

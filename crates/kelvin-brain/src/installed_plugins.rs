@@ -1997,10 +1997,18 @@ fn sandbox_from_manifest(manifest: &InstalledPluginPackageManifest) -> KelvinRes
         policy.network_allow_hosts = manifest.capability_scopes.network_allow_hosts.clone();
     }
     if !manifest.capability_scopes.env_allow.is_empty() {
+        // Require EnvAccess capability for env_allow scopes (#67)
+        if !manifest.capabilities.contains(&PluginCapability::EnvAccess) {
+            return Err(KelvinError::InvalidInput(format!(
+                "plugin '{}' declares env_allow scopes but lacks 'env_access' capability",
+                manifest.id
+            )));
+        }
         policy.env_allow = manifest.capability_scopes.env_allow.clone();
     }
     if let Some(budget) = manifest.operational_controls.fuel_budget {
-        policy.fuel_budget = budget;
+        // Clamp fuel_budget to the hard upper bound (#69)
+        policy.fuel_budget = budget.min(kelvin_wasm::MAX_FUEL_BUDGET);
     }
     if manifest.capabilities.contains(&PluginCapability::FsWrite)
         || manifest
@@ -2190,6 +2198,10 @@ fn claw_call_json(call: &ClawCall) -> serde_json::Value {
         ClawCall::HttpCall { url } => json!({
             "kind": "http_call",
             "url": url,
+        }),
+        ClawCall::EnvAccess { key } => json!({
+            "kind": "env_access",
+            "key": key,
         }),
     }
 }

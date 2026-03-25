@@ -2305,6 +2305,7 @@ dependencies = [
  "kelvin-core",
  "reqwest",
  "serde_json",
+ "tokio",
  "url",
  "wasmtime",
  "wat",

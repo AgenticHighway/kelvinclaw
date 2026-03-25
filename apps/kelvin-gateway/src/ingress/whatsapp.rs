@@ -105,27 +105,13 @@ pub(super) async fn handle_verify(
 
     if mode != "subscribe" {
         let message = "whatsapp webhook verification: hub.mode is not 'subscribe'";
-        record_webhook_denied(
-            &state.gateway,
-            kind,
-            StatusCode::FORBIDDEN,
-            false,
-            message,
-        )
-        .await;
+        record_webhook_denied(&state.gateway, kind, StatusCode::FORBIDDEN, false, message).await;
         return json_error(StatusCode::FORBIDDEN, "verification_failed", message);
     }
 
     if token != configured_token {
         let message = "whatsapp webhook verification: verify token mismatch";
-        record_webhook_denied(
-            &state.gateway,
-            kind,
-            StatusCode::FORBIDDEN,
-            false,
-            message,
-        )
-        .await;
+        record_webhook_denied(&state.gateway, kind, StatusCode::FORBIDDEN, false, message).await;
         return json_error(StatusCode::FORBIDDEN, "verification_failed", message);
     }
 
@@ -278,9 +264,7 @@ fn verify_signature(app_secret: &str, headers: &HeaderMap, body: &[u8]) -> Resul
         .and_then(|v| v.to_str().ok())
         .map(str::trim)
         .filter(|v| !v.is_empty())
-        .ok_or_else(|| {
-            "missing x-hub-signature-256 header for whatsapp webhook".to_string()
-        })?;
+        .ok_or_else(|| "missing x-hub-signature-256 header for whatsapp webhook".to_string())?;
 
     let Some(encoded_signature) = signature_header.strip_prefix("sha256=") else {
         return Err("whatsapp signature must start with 'sha256='".to_string());

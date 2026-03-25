@@ -108,11 +108,13 @@ services:
 
   # TUI client — connects to kelvin-gateway over the internal Docker network
   # Usage: docker compose run --rm kelvin-tui
+  # After exiting: docker compose down --remove-orphans
   kelvin-tui:
     build:
       context: .
       dockerfile: docker/Dockerfile.tui
     container_name: kelvin-tui
+    init: true
     stdin_open: true
     tty: true
     environment:

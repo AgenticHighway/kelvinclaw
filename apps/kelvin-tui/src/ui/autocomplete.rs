@@ -9,7 +9,7 @@ use ratatui::{
 use crate::app::App;
 
 /// Maximum number of completions shown at once.
-const MAX_VISIBLE: usize = 8;
+pub const MAX_VISIBLE: usize = 8;
 
 /// Render the autocomplete popup floating just above `input_area`.
 /// Does nothing if `app.autocomplete_visible` is false or the area is too small.
@@ -42,13 +42,16 @@ pub fn render(f: &mut Frame, app: &App, input_area: Rect) {
     // Clear the area behind the popup.
     f.render_widget(Clear, popup_area);
 
+    let offset = app.autocomplete_scroll_offset;
     let items: Vec<ListItem> = app
         .autocomplete_items
         .iter()
+        .skip(offset)
         .take(MAX_VISIBLE)
         .enumerate()
         .map(|(idx, item)| {
-            let style = if idx == app.autocomplete_selected {
+            let abs_idx = offset + idx;
+            let style = if abs_idx == app.autocomplete_selected {
                 Style::default()
                     .fg(Color::Black)
                     .bg(Color::Yellow)
@@ -80,6 +83,6 @@ pub fn render(f: &mut Frame, app: &App, input_area: Rect) {
 
     let list = List::new(items).block(block);
     let mut list_state = ListState::default();
-    list_state.select(Some(app.autocomplete_selected));
+    list_state.select(Some(app.autocomplete_selected.saturating_sub(offset)));
     f.render_stateful_widget(list, popup_area, &mut list_state);
 }

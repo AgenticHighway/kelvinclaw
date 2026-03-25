@@ -6,6 +6,7 @@ use ratatui::{
 use crate::app::App;
 
 mod autocomplete;
+pub use autocomplete::MAX_VISIBLE as AUTOCOMPLETE_MAX_VISIBLE;
 mod chat;
 mod input;
 mod status;

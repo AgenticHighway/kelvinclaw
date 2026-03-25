@@ -589,8 +589,8 @@ kelvin plugin new \
 
 Authoring docs:
 
-- [docs/plugin-author-kit.md](docs/plugins/plugin-author-kit.md)
-- [docs/build-a-model-plugin.md](docs/plugins/build-a-model-plugin.md)
+- [docs/plugins/plugin-author-kit.md](docs/plugins/plugin-author-kit.md)
+- [docs/plugins/build-a-model-plugin.md](docs/plugins/build-a-model-plugin.md)
 
 Trust policy template:
 
