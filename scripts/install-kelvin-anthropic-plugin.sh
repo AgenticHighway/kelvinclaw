@@ -61,6 +61,26 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# Prefer vendored tarball when no index URL is configured (offline / fresh clone).
+VENDOR_DIR="${ROOT_DIR}/release/vendor"
+VENDORED_TARBALL="$(ls -1 "${VENDOR_DIR}"/kelvin.anthropic-*.tar.gz 2>/dev/null | sort -V | tail -1 || true)"
+
+if [[ -n "${VENDORED_TARBALL}" && -z "${INDEX_URL}" ]]; then
+  echo "[install-kelvin-anthropic-plugin] installing from vendored tarball: ${VENDORED_TARBALL}"
+  INSTALL_ARGS=(--package "${VENDORED_TARBALL}" --plugin-home "${PLUGIN_HOME}")
+  if [[ "${FORCE}" == "1" ]]; then
+    INSTALL_ARGS+=(--force)
+  fi
+  "${ROOT_DIR}/scripts/plugin-install.sh" "${INSTALL_ARGS[@]}"
+
+  if [[ ! -f "${TRUST_POLICY_PATH}" ]]; then
+    mkdir -p "$(dirname "${TRUST_POLICY_PATH}")"
+    echo '{"require_signature":false,"publishers":[]}' > "${TRUST_POLICY_PATH}"
+    echo "[install-kelvin-anthropic-plugin] wrote default trust policy: ${TRUST_POLICY_PATH}"
+  fi
+  exit 0
+fi
+
 if [[ -z "${INDEX_URL}" ]]; then
   echo "No plugin index URL configured." >&2
   echo "Set KELVIN_PLUGIN_INDEX_URL or pass --index-url <url>." >&2
