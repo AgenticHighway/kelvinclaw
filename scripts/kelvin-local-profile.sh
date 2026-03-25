@@ -165,36 +165,54 @@ install_required_plugins() {
       --trust-policy-path "${TRUST_POLICY_PATH}"
   fi
 
-  if [[ -n "${OPENAI_API_KEY:-}" ]]; then
-    if [[ -d "${PLUGIN_HOME}/kelvin.openai/current" ]]; then
-      echo "[kelvin-local-profile] plugin already installed: kelvin.openai"
-    else
-      echo "[kelvin-local-profile] installing model plugin: kelvin.openai"
-      "${ROOT_DIR}/scripts/install-kelvin-openai-plugin.sh" \
-        --plugin-home "${PLUGIN_HOME}" \
-        --trust-policy-path "${TRUST_POLICY_PATH}"
+  # Determine which model plugin to install.
+  # Prefer explicit KELVIN_MODEL_PROVIDER; fall back to key detection.
+  local model_plugin="${KELVIN_MODEL_PROVIDER:-}"
+  if [[ -z "${model_plugin}" || "${model_plugin}" == "kelvin.echo" ]]; then
+    if [[ -n "${OPENAI_API_KEY:-}" ]]; then
+      model_plugin="kelvin.openai"
+    elif [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
+      model_plugin="kelvin.anthropic"
+    elif [[ -n "${OPENROUTER_API_KEY:-}" ]]; then
+      model_plugin="kelvin.openrouter"
     fi
-  elif [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
-    if [[ -d "${PLUGIN_HOME}/kelvin.anthropic/current" ]]; then
-      echo "[kelvin-local-profile] plugin already installed: kelvin.anthropic"
-    else
-      echo "[kelvin-local-profile] installing model plugin: kelvin.anthropic"
-      "${ROOT_DIR}/scripts/install-kelvin-anthropic-plugin.sh" \
-        --plugin-home "${PLUGIN_HOME}" \
-        --trust-policy-path "${TRUST_POLICY_PATH}"
-    fi
-  elif [[ -n "${OPENROUTER_API_KEY:-}" ]]; then
-    if [[ -d "${PLUGIN_HOME}/kelvin.openrouter/current" ]]; then
-      echo "[kelvin-local-profile] plugin already installed: kelvin.openrouter"
-    else
-      echo "[kelvin-local-profile] installing model plugin: kelvin.openrouter"
-      "${ROOT_DIR}/scripts/install-kelvin-openrouter-plugin.sh" \
-        --plugin-home "${PLUGIN_HOME}" \
-        --trust-policy-path "${TRUST_POLICY_PATH}"
-    fi
-  else
-    echo "[kelvin-local-profile] no API key detected; gateway will use built-in echo provider"
   fi
+
+  case "${model_plugin}" in
+    kelvin.openai)
+      if [[ -d "${PLUGIN_HOME}/kelvin.openai/current" ]]; then
+        echo "[kelvin-local-profile] plugin already installed: kelvin.openai"
+      else
+        echo "[kelvin-local-profile] installing model plugin: kelvin.openai"
+        "${ROOT_DIR}/scripts/install-kelvin-openai-plugin.sh" \
+          --plugin-home "${PLUGIN_HOME}" \
+          --trust-policy-path "${TRUST_POLICY_PATH}"
+      fi
+      ;;
+    kelvin.anthropic)
+      if [[ -d "${PLUGIN_HOME}/kelvin.anthropic/current" ]]; then
+        echo "[kelvin-local-profile] plugin already installed: kelvin.anthropic"
+      else
+        echo "[kelvin-local-profile] installing model plugin: kelvin.anthropic"
+        "${ROOT_DIR}/scripts/install-kelvin-anthropic-plugin.sh" \
+          --plugin-home "${PLUGIN_HOME}" \
+          --trust-policy-path "${TRUST_POLICY_PATH}"
+      fi
+      ;;
+    kelvin.openrouter)
+      if [[ -d "${PLUGIN_HOME}/kelvin.openrouter/current" ]]; then
+        echo "[kelvin-local-profile] plugin already installed: kelvin.openrouter"
+      else
+        echo "[kelvin-local-profile] installing model plugin: kelvin.openrouter"
+        "${ROOT_DIR}/scripts/install-kelvin-openrouter-plugin.sh" \
+          --plugin-home "${PLUGIN_HOME}" \
+          --trust-policy-path "${TRUST_POLICY_PATH}"
+      fi
+      ;;
+    *)
+      echo "[kelvin-local-profile] no model plugin to install; gateway will use built-in echo provider"
+      ;;
+  esac
 
   if [[ "${KELVIN_INSTALL_BROWSER_PLUGIN:-0}" == "1" ]]; then
     if [[ -d "${PLUGIN_HOME}/kelvin.browser.automation/current" ]]; then
@@ -270,15 +288,20 @@ start_gateway() {
       gateway_args+=(--allow-insecure-public-bind true)
       ;;
   esac
-  if [[ -n "${OPENAI_API_KEY:-}" ]]; then
-    echo "[kelvin-local-profile] using model provider: kelvin.openai" >&2
-    gateway_args+=(--model-provider "kelvin.openai")
-  elif [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
-    echo "[kelvin-local-profile] using model provider: kelvin.anthropic" >&2
-    gateway_args+=(--model-provider "kelvin.anthropic")
-  elif [[ -n "${OPENROUTER_API_KEY:-}" ]]; then
-    echo "[kelvin-local-profile] using model provider: kelvin.openrouter" >&2
-    gateway_args+=(--model-provider "kelvin.openrouter")
+  # Determine model provider: prefer explicit KELVIN_MODEL_PROVIDER, fall back to key detection.
+  local model_provider="${KELVIN_MODEL_PROVIDER:-}"
+  if [[ -z "${model_provider}" || "${model_provider}" == "kelvin.echo" ]]; then
+    if [[ -n "${OPENAI_API_KEY:-}" ]]; then
+      model_provider="kelvin.openai"
+    elif [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
+      model_provider="kelvin.anthropic"
+    elif [[ -n "${OPENROUTER_API_KEY:-}" ]]; then
+      model_provider="kelvin.openrouter"
+    fi
+  fi
+  if [[ -n "${model_provider}" && "${model_provider}" != "kelvin.echo" ]]; then
+    echo "[kelvin-local-profile] using model provider: ${model_provider}" >&2
+    gateway_args+=(--model-provider "${model_provider}")
   else
     echo "[kelvin-local-profile] no model provider set, gateway will default to echo" >&2
   fi
