@@ -97,6 +97,7 @@ try {
     Copy-Item (Join-Path $TargetDir "$Target\\release\\kelvin-tui.exe") (Join-Path $StageRoot "bin\\")
     Copy-Item (Join-Path $RootDir "LICENSE") $StageRoot
     Copy-Item (Join-Path $RootDir "README.md") $StageRoot
+    Copy-Item (Join-Path $RootDir "release\env.example") (Join-Path $StageRoot ".env.example")
     Copy-Item (Join-Path $RootDir "scripts\\kelvin-release-launcher.ps1") (Join-Path $StageRoot "kelvin.ps1")
     Copy-Item (Join-Path $RootDir "scripts\\kelvin-release-launcher.cmd") (Join-Path $StageRoot "kelvin.cmd")
     Copy-Item (Join-Path $RootDir "release\\official-first-party-plugins.env") (Join-Path $StageRoot "share\\official-first-party-plugins.env")

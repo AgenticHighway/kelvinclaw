@@ -283,6 +283,7 @@ cp "${TARGET_DIR}/${TARGET}/release/kelvin-memory-controller" "${STAGE_ROOT}/bin
 cp "${TARGET_DIR}/${TARGET}/release/kelvin-tui" "${STAGE_ROOT}/bin/"
 cp "${ROOT_DIR}/LICENSE" "${STAGE_ROOT}/"
 cp "${ROOT_DIR}/README.md" "${STAGE_ROOT}/"
+cp "${ROOT_DIR}/release/env.example" "${STAGE_ROOT}/.env.example"
 cp "${ROOT_DIR}/scripts/kelvin-release-launcher.sh" "${STAGE_ROOT}/kelvin"
 cp "${ROOT_DIR}/scripts/start-gateway.sh" "${STAGE_ROOT}/start-gateway"
 cp "${ROOT_DIR}/scripts/kpm.sh" "${STAGE_ROOT}/kpm"
