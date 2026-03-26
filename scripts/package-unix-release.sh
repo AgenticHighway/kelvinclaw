@@ -142,7 +142,7 @@ smoke_test_archive() {
   "${work_dir}/${root_name}/bin/kelvin-registry${bin_suffix}" --help >/dev/null
   "${work_dir}/${root_name}/bin/kelvin-memory-controller${bin_suffix}" --help >/dev/null
   "${work_dir}/${root_name}/bin/kelvin-tui${bin_suffix}" --help >/dev/null
-  "${work_dir}/${root_name}/start-gateway" --help >/dev/null
+  "${work_dir}/${root_name}/kelvin-gateway" --help >/dev/null
   "${work_dir}/${root_name}/kpm" --help >/dev/null
   "${work_dir}/${root_name}/kelvin-tui" --help >/dev/null
   rm -rf "${work_dir}"
@@ -286,14 +286,14 @@ cp "${ROOT_DIR}/LICENSE" "${STAGE_ROOT}/"
 cp "${ROOT_DIR}/README.md" "${STAGE_ROOT}/"
 cp "${ROOT_DIR}/release/env.example" "${STAGE_ROOT}/.env.example"
 cp "${ROOT_DIR}/scripts/kelvin-release-launcher.sh" "${STAGE_ROOT}/kelvin"
-cp "${ROOT_DIR}/scripts/start-gateway.sh" "${STAGE_ROOT}/start-gateway"
+cp "${ROOT_DIR}/scripts/kelvin-gateway.sh" "${STAGE_ROOT}/kelvin-gateway"
 cp "${ROOT_DIR}/scripts/kpm.sh" "${STAGE_ROOT}/kpm"
 cp "${ROOT_DIR}/scripts/kelvin-tui.sh" "${STAGE_ROOT}/kelvin-tui"
 cp "${ROOT_DIR}/release/official-first-party-plugins.env" "${STAGE_ROOT}/share/official-first-party-plugins.env"
 mkdir -p "${STAGE_ROOT}/share/scripts"
 cp "${ROOT_DIR}/scripts/plugin-index-install.sh" "${STAGE_ROOT}/share/scripts/"
 cp "${ROOT_DIR}/scripts/plugin-install.sh" "${STAGE_ROOT}/share/scripts/"
-chmod +x "${STAGE_ROOT}/kelvin" "${STAGE_ROOT}/start-gateway" "${STAGE_ROOT}/kpm" "${STAGE_ROOT}/kelvin-tui"
+chmod +x "${STAGE_ROOT}/kelvin" "${STAGE_ROOT}/kelvin-gateway" "${STAGE_ROOT}/kpm" "${STAGE_ROOT}/kelvin-tui"
 chmod +x "${STAGE_ROOT}/share/scripts/"*.sh
 
 if command -v xattr >/dev/null 2>&1; then

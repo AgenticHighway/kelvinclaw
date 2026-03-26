@@ -58,7 +58,7 @@ function Smoke-TestZip([string]$ZipPath, [string]$RootName) {
     Expand-Archive -Path $ZipPath -DestinationPath $WorkDir
 
     & (Join-Path $WorkDir "$RootName\\kelvin.cmd") --help | Out-Null
-    & (Join-Path $WorkDir "$RootName\\start-gateway.cmd") --help | Out-Null
+    & (Join-Path $WorkDir "$RootName\\kelvin-gateway.cmd") --help | Out-Null
     & (Join-Path $WorkDir "$RootName\\kpm.cmd") --help | Out-Null
     & (Join-Path $WorkDir "$RootName\\kelvin-tui.cmd") --help | Out-Null
     & (Join-Path $WorkDir "$RootName\\bin\\kelvin-host.exe") --help | Out-Null
@@ -103,8 +103,8 @@ try {
     Copy-Item (Join-Path $RootDir "release\env.example") (Join-Path $StageRoot ".env.example")
     Copy-Item (Join-Path $RootDir "scripts\\kelvin-release-launcher.ps1") (Join-Path $StageRoot "kelvin.ps1")
     Copy-Item (Join-Path $RootDir "scripts\\kelvin-release-launcher.cmd") (Join-Path $StageRoot "kelvin.cmd")
-    Copy-Item (Join-Path $RootDir "scripts\\start-gateway.ps1") (Join-Path $StageRoot "start-gateway.ps1")
-    Copy-Item (Join-Path $RootDir "scripts\\start-gateway.cmd") (Join-Path $StageRoot "start-gateway.cmd")
+    Copy-Item (Join-Path $RootDir "scripts\\kelvin-gateway.ps1") (Join-Path $StageRoot "kelvin-gateway.ps1")
+    Copy-Item (Join-Path $RootDir "scripts\\kelvin-gateway.cmd") (Join-Path $StageRoot "kelvin-gateway.cmd")
     Copy-Item (Join-Path $RootDir "scripts\\kpm.ps1") (Join-Path $StageRoot "kpm.ps1")
     Copy-Item (Join-Path $RootDir "scripts\\kpm.cmd") (Join-Path $StageRoot "kpm.cmd")
     Copy-Item (Join-Path $RootDir "scripts\\kelvin-tui.ps1") (Join-Path $StageRoot "kelvin-tui.ps1")

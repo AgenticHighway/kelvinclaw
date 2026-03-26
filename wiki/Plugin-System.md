@@ -206,18 +206,23 @@ Remove a plugin:
 | `KELVIN_TRUST_POLICY_PATH` | install | `$KELVIN_HOME/trusted_publishers.json` |
 | `KELVIN_MODEL_PROVIDER` | status (informational) | `kelvin.echo` |
 
-### start-gateway
+### kelvin-gateway (service manager)
 
-The `start-gateway` launcher in the release bundle wraps `kelvin-gateway` with automatic
-plugin bootstrapping. When `KELVIN_MODEL_PROVIDER` is set to a non-echo provider, it checks
-whether the plugin is already installed and installs it from the index before exec-ing the
-gateway binary.
+The `kelvin-gateway` script in the release bundle is a lifecycle manager for the gateway
+daemon. It auto-installs the configured model provider plugin if needed, then manages
+start/stop/restart/status.
 
 ```bash
 export KELVIN_MODEL_PROVIDER=kelvin.anthropic
 export KELVIN_PLUGIN_INDEX_URL=https://example.com/plugins/index.json
 export ANTHROPIC_API_KEY=<your-key>
-./start-gateway
+
+./kelvin-gateway start                          # daemon mode
+./kelvin-gateway start -- --bind 0.0.0.0:34617 # with gateway args
+./kelvin-gateway start --foreground             # attached to terminal
+./kelvin-gateway status                         # show pid, provider, uptime
+./kelvin-gateway stop
+./kelvin-gateway restart
 ```
 
 ## Related Pages
