@@ -19,6 +19,33 @@ else
   ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 fi
 
+# ── dotenv loader ─────────────────────────────────────────────────────────────
+_ksg_trim()   { local v="$1"; v="${v#"${v%%[![:space:]]*}"}"; v="${v%"${v##*[![:space:]]}"}"; printf '%s' "${v}"; }
+_ksg_unquote() {
+  local v="$1"
+  if [[ "${v}" == \"*\" ]] && [[ "${v}" == *\" ]]; then printf '%s' "${v:1:${#v}-2}"; return; fi
+  if [[ "${v}" == \'*\' ]] && [[ "${v}" == *\' ]]; then printf '%s' "${v:1:${#v}-2}"; return; fi
+  printf '%s' "${v}"
+}
+load_dotenv() {
+  local f line stripped key value
+  for f in "${PWD}/.env.local" "${PWD}/.env" "${HOME}/.kelvinclaw/.env.local" "${HOME}/.kelvinclaw/.env"; do
+    [[ -f "${f}" ]] || continue
+    while IFS= read -r line || [[ -n "${line}" ]]; do
+      stripped="$(_ksg_trim "${line%%#*}")"
+      [[ -z "${stripped}" ]] && continue
+      [[ "${stripped}" =~ ^export[[:space:]]+ ]] && stripped="$(_ksg_trim "${stripped#export }")"
+      if [[ "${stripped}" =~ ^([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*=[[:space:]]*(.*)$ ]]; then
+        key="${BASH_REMATCH[1]}"
+        value="$(_ksg_unquote "$(_ksg_trim "${BASH_REMATCH[2]}")")"
+        [[ -z "${!key+x}" ]] && export "${key}=${value}"
+      fi
+    done < "${f}"
+  done
+}
+load_dotenv
+# ──────────────────────────────────────────────────────────────────────────────
+
 KELVIN_MODEL_PROVIDER="${KELVIN_MODEL_PROVIDER:-kelvin.echo}"
 KELVIN_HOME="${KELVIN_HOME:-${HOME}/.kelvinclaw}"
 KELVIN_HOME="${KELVIN_HOME/#\~/${HOME}}"

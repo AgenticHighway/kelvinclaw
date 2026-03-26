@@ -60,6 +60,7 @@ function Smoke-TestZip([string]$ZipPath, [string]$RootName) {
     & (Join-Path $WorkDir "$RootName\\kelvin.cmd") --help | Out-Null
     & (Join-Path $WorkDir "$RootName\\start-gateway.cmd") --help | Out-Null
     & (Join-Path $WorkDir "$RootName\\kpm.cmd") --help | Out-Null
+    & (Join-Path $WorkDir "$RootName\\kelvin-tui.cmd") --help | Out-Null
     & (Join-Path $WorkDir "$RootName\\bin\\kelvin-host.exe") --help | Out-Null
     & (Join-Path $WorkDir "$RootName\\bin\\kelvin-gateway.exe") --help | Out-Null
     & (Join-Path $WorkDir "$RootName\\bin\\kelvin-registry.exe") --help | Out-Null
@@ -106,6 +107,8 @@ try {
     Copy-Item (Join-Path $RootDir "scripts\\start-gateway.cmd") (Join-Path $StageRoot "start-gateway.cmd")
     Copy-Item (Join-Path $RootDir "scripts\\kpm.ps1") (Join-Path $StageRoot "kpm.ps1")
     Copy-Item (Join-Path $RootDir "scripts\\kpm.cmd") (Join-Path $StageRoot "kpm.cmd")
+    Copy-Item (Join-Path $RootDir "scripts\\kelvin-tui.ps1") (Join-Path $StageRoot "kelvin-tui.ps1")
+    Copy-Item (Join-Path $RootDir "scripts\\kelvin-tui.cmd") (Join-Path $StageRoot "kelvin-tui.cmd")
     Copy-Item (Join-Path $RootDir "release\\official-first-party-plugins.env") (Join-Path $StageRoot "share\\official-first-party-plugins.env")
 
     @"

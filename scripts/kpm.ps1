@@ -6,6 +6,31 @@ if (Test-Path (Join-Path $PSScriptRoot "bin\kelvin-gateway.exe")) {
     $RootDir = Split-Path -Parent $PSScriptRoot
 }
 
+# ── dotenv loader ─────────────────────────────────────────────────────────────
+$_KpmEnvPaths = @(
+    (Join-Path (Get-Location).Path ".env.local"),
+    (Join-Path (Get-Location).Path ".env"),
+    (Join-Path $HOME ".kelvinclaw\.env.local"),
+    (Join-Path $HOME ".kelvinclaw\.env")
+)
+function _KpmLoadDotenv {
+    foreach ($F in $_KpmEnvPaths) {
+        if (-not (Test-Path $F)) { continue }
+        foreach ($Line in Get-Content $F) {
+            $S = $Line.Split("#")[0].Trim()
+            if ([string]::IsNullOrWhiteSpace($S)) { continue }
+            if ($S -match '^export\s+') { $S = $S -replace '^export\s+', '' }
+            if ($S -match '^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$') {
+                $K = $Matches[1]; $V = $Matches[2].Trim()
+                if ($V.Length -ge 2 -and (($V[0] -eq '"' -and $V[-1] -eq '"') -or ($V[0] -eq "'" -and $V[-1] -eq "'"))) { $V = $V.Substring(1, $V.Length - 2) }
+                if (-not [System.Environment]::GetEnvironmentVariable($K)) { Set-Item -Path "Env:$K" -Value $V }
+            }
+        }
+    }
+}
+_KpmLoadDotenv
+# ──────────────────────────────────────────────────────────────────────────────
+
 $KelvinHome      = if ($env:KELVIN_HOME)              { $env:KELVIN_HOME }              else { Join-Path $HOME ".kelvinclaw" }
 $PluginHome      = if ($env:KELVIN_PLUGIN_HOME)       { $env:KELVIN_PLUGIN_HOME }       else { Join-Path $KelvinHome "plugins" }
 $TrustPolicyPath = if ($env:KELVIN_TRUST_POLICY_PATH) { $env:KELVIN_TRUST_POLICY_PATH } else { Join-Path $KelvinHome "trusted_publishers.json" }
