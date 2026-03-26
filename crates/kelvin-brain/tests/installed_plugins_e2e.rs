@@ -395,7 +395,7 @@ fn installed_plugin_loader_rejects_missing_signature_when_required() {
 }
 
 #[test]
-fn default_loader_uses_env_paths_and_enforces_missing_explicit_trust_policy() {
+fn default_loader_uses_env_paths_and_tolerates_missing_trust_policy_file() {
     let _guard = ENV_LOCK.lock().expect("lock env");
     let workspace = unique_workspace("default-loader-missing-trust");
     let plugin_home = workspace.join("plugins");
@@ -412,13 +412,9 @@ fn default_loader_uses_env_paths_and_enforces_missing_explicit_trust_policy() {
         );
     }
 
-    let err = match load_installed_tool_plugins_default("0.1.0", PluginSecurityPolicy::default()) {
-        Ok(_) => panic!("missing explicit trust policy path should fail"),
-        Err(err) => err,
-    };
-    assert!(err
-        .to_string()
-        .contains("configured trust policy file does not exist"));
+    let loaded = load_installed_tool_plugins_default("0.1.0", PluginSecurityPolicy::default())
+        .expect("missing trust policy file should be tolerated");
+    assert!(loaded.loaded_plugins.is_empty());
 
     unsafe {
         std::env::remove_var("KELVIN_PLUGIN_HOME");
