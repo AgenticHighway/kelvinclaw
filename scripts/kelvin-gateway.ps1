@@ -144,8 +144,8 @@ Subcommands:
 
 State files:
   %KELVIN_HOME%\gateway.pid        PID of the running daemon
-  %KELVIN_HOME%\logs\gateway.log   Daemon stdout (appended per run)
-  %KELVIN_HOME%\logs\gateway.err   Daemon stderr (appended per run)
+  %KELVIN_HOME%\logs\gateway.log   Daemon stdout (overwritten each run)
+  %KELVIN_HOME%\logs\gateway.err   Daemon stderr (overwritten each run)
 
 Environment:
   KELVIN_MODEL_PROVIDER      Model provider plugin id (default: kelvin.echo)
