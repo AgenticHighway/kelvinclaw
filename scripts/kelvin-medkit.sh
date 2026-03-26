@@ -6,9 +6,13 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 KELVIN_HOME="${KELVIN_HOME:-${HOME}/.kelvinclaw}"
+KELVIN_HOME="${KELVIN_HOME/#\~/${HOME}}"
 PLUGIN_HOME="${KELVIN_PLUGIN_HOME:-${KELVIN_HOME}/plugins}"
+PLUGIN_HOME="${PLUGIN_HOME/#\~/${HOME}}"
 TRUST_POLICY_PATH="${KELVIN_TRUST_POLICY_PATH:-${KELVIN_HOME}/trusted_publishers.json}"
+TRUST_POLICY_PATH="${TRUST_POLICY_PATH/#\~/${HOME}}"
 STATE_DIR="${KELVIN_STATE_DIR:-${KELVIN_HOME}/state}"
+STATE_DIR="${STATE_DIR/#\~/${HOME}}"
 OUTPUT_JSON="0"
 AUTO_FIX="0"
 
@@ -326,10 +330,11 @@ fi
 # ── 6. Plugin index connectivity ─────────────────────────────────
 section "Plugin Index"
 
-DEFAULT_INDEX_URL="https://raw.githubusercontent.com/AgenticHighway/kelvinclaw/main/index.json"
-INDEX_URL="${KELVIN_PLUGIN_INDEX_URL:-${DEFAULT_INDEX_URL}}"
+INDEX_URL="${KELVIN_PLUGIN_INDEX_URL:-}"
 
-if curl -fsSL --max-time 10 "${INDEX_URL}" -o /dev/null 2>/dev/null; then
+if [[ -z "${INDEX_URL}" ]]; then
+  check_warn "Plugin index not configured" "Set KELVIN_PLUGIN_INDEX_URL"
+elif curl -fsSL --max-time 10 "${INDEX_URL}" -o /dev/null 2>/dev/null; then
   REMOTE_COUNT="$(curl -fsSL --max-time 10 "${INDEX_URL}" 2>/dev/null | jq '.plugins | length' 2>/dev/null || echo 0)"
   check_pass "Plugin index reachable (${INDEX_URL}, ${REMOTE_COUNT} plugins)"
 else

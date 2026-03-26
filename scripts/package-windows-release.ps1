@@ -48,6 +48,7 @@ function Build-ReleaseBinaries([string]$Triple, [string]$TargetDirPath) {
       -p kelvin-gateway `
       -p kelvin-registry `
       -p kelvin-memory-controller `
+      -p kelvin-tui `
       --features kelvin-gateway/memory_rpc,kelvin-host/memory_legacy_fallback
 }
 
@@ -57,10 +58,14 @@ function Smoke-TestZip([string]$ZipPath, [string]$RootName) {
     Expand-Archive -Path $ZipPath -DestinationPath $WorkDir
 
     & (Join-Path $WorkDir "$RootName\\kelvin.cmd") --help | Out-Null
+    & (Join-Path $WorkDir "$RootName\\kelvin-gateway.cmd") --help | Out-Null
+    & (Join-Path $WorkDir "$RootName\\kpm.cmd") --help | Out-Null
+    & (Join-Path $WorkDir "$RootName\\kelvin-tui.cmd") --help | Out-Null
     & (Join-Path $WorkDir "$RootName\\bin\\kelvin-host.exe") --help | Out-Null
     & (Join-Path $WorkDir "$RootName\\bin\\kelvin-gateway.exe") --help | Out-Null
     & (Join-Path $WorkDir "$RootName\\bin\\kelvin-registry.exe") --help | Out-Null
     & (Join-Path $WorkDir "$RootName\\bin\\kelvin-memory-controller.exe") --help | Out-Null
+    & (Join-Path $WorkDir "$RootName\\bin\\kelvin-tui.exe") --help | Out-Null
 
     Remove-Item -Recurse -Force $WorkDir
 }
@@ -92,22 +97,24 @@ try {
     Copy-Item (Join-Path $TargetDir "$Target\\release\\kelvin-gateway.exe") (Join-Path $StageRoot "bin\\")
     Copy-Item (Join-Path $TargetDir "$Target\\release\\kelvin-registry.exe") (Join-Path $StageRoot "bin\\")
     Copy-Item (Join-Path $TargetDir "$Target\\release\\kelvin-memory-controller.exe") (Join-Path $StageRoot "bin\\")
+    Copy-Item (Join-Path $TargetDir "$Target\\release\\kelvin-tui.exe") (Join-Path $StageRoot "bin\\")
     Copy-Item (Join-Path $RootDir "LICENSE") $StageRoot
     Copy-Item (Join-Path $RootDir "README.md") $StageRoot
+    Copy-Item (Join-Path $RootDir "release\env.example") (Join-Path $StageRoot ".env.example")
     Copy-Item (Join-Path $RootDir "scripts\\kelvin-release-launcher.ps1") (Join-Path $StageRoot "kelvin.ps1")
     Copy-Item (Join-Path $RootDir "scripts\\kelvin-release-launcher.cmd") (Join-Path $StageRoot "kelvin.cmd")
+    Copy-Item (Join-Path $RootDir "scripts\\kelvin-gateway.ps1") (Join-Path $StageRoot "kelvin-gateway.ps1")
+    Copy-Item (Join-Path $RootDir "scripts\\kelvin-gateway.cmd") (Join-Path $StageRoot "kelvin-gateway.cmd")
+    Copy-Item (Join-Path $RootDir "scripts\\kpm.ps1") (Join-Path $StageRoot "kpm.ps1")
+    Copy-Item (Join-Path $RootDir "scripts\\kpm.cmd") (Join-Path $StageRoot "kpm.cmd")
+    Copy-Item (Join-Path $RootDir "scripts\\kelvin-tui.ps1") (Join-Path $StageRoot "kelvin-tui.ps1")
+    Copy-Item (Join-Path $RootDir "scripts\\kelvin-tui.cmd") (Join-Path $StageRoot "kelvin-tui.cmd")
     Copy-Item (Join-Path $RootDir "release\\official-first-party-plugins.env") (Join-Path $StageRoot "share\\official-first-party-plugins.env")
-
-    $ManifestPath = Join-Path $RootDir "release\\official-first-party-plugins.env"
-    $CliVersion = Select-String -Path $ManifestPath -Pattern '^KELVIN_CLI_VERSION="(.+)"$' | ForEach-Object { $_.Matches[0].Groups[1].Value }
-    $OpenAIVersion = Select-String -Path $ManifestPath -Pattern '^KELVIN_OPENAI_VERSION="(.+)"$' | ForEach-Object { $_.Matches[0].Groups[1].Value }
 
     @"
 version=$Version
 target=$Target
 platform=$PlatformLabel
-required_plugin=kelvin.cli@$CliVersion
-optional_plugin=kelvin.openai@$OpenAIVersion
 "@ | Set-Content -NoNewline (Join-Path $StageRoot "BUILD_INFO.txt")
 
     if (Test-Path $ArchivePath) {

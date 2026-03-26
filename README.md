@@ -79,7 +79,8 @@ Tagged releases publish executable bundles for:
 - `kelvin-gateway`
 - `kelvin-memory-controller`
 - `kelvin-registry`
-- top-level `./kelvin` launcher
+- `kelvin-tui`
+- top-level launchers: `./kelvin`, `./kelvin-gateway`, `./kpm`, `./kelvin-tui`
 
 The release workflow produces:
 
@@ -102,7 +103,9 @@ The intended Unix end-user entrypoint is:
 ```bash
 tar -xzf kelvinclaw-<version>-linux-<arch>.tar.gz
 cd kelvinclaw-<version>-linux-<arch>
-./kelvin
+cp .env.example .env   # configure provider and API key
+./kelvin-gateway start # start gateway daemon
+./kelvin-tui           # launch the TUI
 ```
 
 On first run, `./kelvin` fetches the official trust policy plus the required
@@ -112,12 +115,18 @@ bootstrapped first-party packages are:
 - `kelvin.cli@0.1.1`
 - `kelvin.openai@0.1.1` when `OPENAI_API_KEY` is available
 
-Additional published first-party model plugins can be installed explicitly from
-the plugin index, including `kelvin.anthropic` and `kelvin.openrouter`.
+Additional published first-party model plugins can be installed with `kpm`:
 
-Windows bundles ship `kelvin.cmd` and `kelvin.ps1` at the archive root. For
-manual validation without publishing a GitHub Release, run the `Release
-Executables` workflow with `workflow_dispatch`.
+```bash
+./kpm install kelvin.anthropic
+./kpm install kelvin.openrouter
+./kpm list
+```
+
+Windows bundles ship `kelvin.cmd`, `kelvin-gateway.cmd`, `kpm.cmd`, and
+`kelvin-tui.cmd` at the archive root. For manual validation without publishing
+a GitHub Release, run the `Release Executables` workflow with
+`workflow_dispatch`.
 
 Release prerequisites:
 
@@ -126,12 +135,23 @@ Release prerequisites:
 - `awk`
 - `ca-certificates` on minimal Linux images
 
-OpenAI key options for the release launcher:
+API key and provider configuration — all launchers auto-read `.env` and `.env.local`:
 
-- export `OPENAI_API_KEY` before running `./kelvin`
-- put `OPENAI_API_KEY=...` in `./.env` or `./.env.local`
-- put `OPENAI_API_KEY=...` in `~/.kelvinclaw/.env` or `~/.kelvinclaw/.env.local`
+- copy `.env.example` to `.env` and set `KELVIN_MODEL_PROVIDER` + your API key
+- or export vars before running any launcher
+- supported in `./.env`, `./.env.local`, `~/.kelvinclaw/.env`, `~/.kelvinclaw/.env.local`
 - if you run `./kelvin` interactively with no key configured, Kelvin prompts once and uses the key for that run only
+
+Gateway service management from the release bundle:
+
+```bash
+./kelvin-gateway start             # start as background daemon
+./kelvin-gateway start --foreground # run attached to terminal
+./kelvin-gateway status            # show pid, provider, uptime, log path
+./kelvin-gateway stop
+./kelvin-gateway restart
+./kelvin-gateway start -- --bind 0.0.0.0:34617  # pass args to gateway binary
+```
 
 Validated public onboarding today:
 

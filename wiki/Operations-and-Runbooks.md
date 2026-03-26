@@ -26,7 +26,20 @@ scripts/kelvin-local-profile.sh stop
 
 ## Gateway Service Management
 
-Ad hoc daemon:
+Release bundle (lifecycle manager with PID/log management):
+
+```bash
+./kelvin-gateway start             # daemon mode — PID file + log file
+./kelvin-gateway start --foreground # run attached to terminal
+./kelvin-gateway status            # pid, provider, uptime, log path
+./kelvin-gateway stop
+./kelvin-gateway restart
+./kelvin-gateway start -- --bind 0.0.0.0:34617  # extra gateway flags after --
+```
+
+State files: `$KELVIN_HOME/gateway.pid`, `$KELVIN_HOME/logs/gateway.log`
+
+Ad hoc daemon (dev/source tree):
 
 ```bash
 scripts/kelvin-gateway-daemon.sh

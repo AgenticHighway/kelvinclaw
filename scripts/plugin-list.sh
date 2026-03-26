@@ -3,6 +3,7 @@ set -euo pipefail
 
 PLUGIN_HOME_DEFAULT="${HOME}/.kelvinclaw/plugins"
 PLUGIN_HOME="${KELVIN_PLUGIN_HOME:-${PLUGIN_HOME_DEFAULT}}"
+PLUGIN_HOME="${PLUGIN_HOME/#\~/${HOME}}"
 OUTPUT_FORMAT="table"
 
 usage() {

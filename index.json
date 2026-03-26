@@ -4,6 +4,20 @@
 	"updated_at": "2026-03-25T00:00:00Z",
 	"plugins": [
 		{
+			"id": "kelvin.echo",
+			"name": "Kelvin Echo Model Plugin",
+			"version": "0.1.0",
+			"description": "First-party echo plugin — reflects the user prompt back as the assistant response. No external network calls or API keys required.",
+			"homepage": "https://github.com/AgenticHighway/kelvinclaw/tree/main/plugins/kelvin-echo-plugin",
+			"package_url": "https://raw.githubusercontent.com/AgenticHighway/kelvinclaw/main/release/vendor/kelvin.echo-0.1.0.tar.gz",
+			"sha256": "166f2b86dd7a4cfdbeb0b1599354e631b846c55c81a755bb776e4ac0ef2629e8",
+			"quality_tier": "unsigned_local",
+			"api_version": "1.0.0",
+			"min_core_version": "0.1.0",
+			"capabilities": ["model_provider"],
+			"runtime": "wasm_model_v1"
+		},
+		{
 			"id": "kelvin.cli",
 			"name": "Kelvin CLI Toolpack",
 			"version": "0.1.2",
@@ -65,14 +79,13 @@
 			"version": "0.1.0",
 			"description": "Web search tool powered by the Brave Search API — gives your agent access to live web results.",
 			"homepage": "https://github.com/AgenticHighway/kelvinclaw/tree/main/plugins/kelvin-websearch-plugin",
-			"package_url": null,
-			"sha256": null,
+			"package_url": "https://raw.githubusercontent.com/AgenticHighway/kelvinclaw/main/release/vendor/kelvin.websearch-0.1.0.tar.gz",
+			"sha256": "057f24ea98c3d68b0489a1a67829927155a27cc961e2e3a1573c8dc8fa4a2e97",
 			"quality_tier": "unsigned_local",
 			"api_version": "1.0.0",
 			"min_core_version": "0.1.0",
-			"capabilities": ["tool_provider", "network_egress"],
-			"runtime": "wasm_tool_v1",
-			"_note": "Build from source — no pre-built tarball yet. See plugins/kelvin-websearch-plugin/build.sh"
+			"capabilities": ["tool_provider", "network_egress", "env_access"],
+			"runtime": "wasm_tool_v1"
 		}
 	]
 }

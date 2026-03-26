@@ -9,9 +9,13 @@ else
 fi
 KELVIN_HOME_DEFAULT="${HOME}/.kelvinclaw"
 KELVIN_HOME="${KELVIN_HOME:-${KELVIN_HOME_DEFAULT}}"
+KELVIN_HOME="${KELVIN_HOME/#\~/${HOME}}"
 PLUGIN_HOME="${KELVIN_PLUGIN_HOME:-${KELVIN_HOME}/plugins}"
+PLUGIN_HOME="${PLUGIN_HOME/#\~/${HOME}}"
 TRUST_POLICY_PATH="${KELVIN_TRUST_POLICY_PATH:-${KELVIN_HOME}/trusted_publishers.json}"
+TRUST_POLICY_PATH="${TRUST_POLICY_PATH/#\~/${HOME}}"
 STATE_DIR="${KELVIN_STATE_DIR:-${KELVIN_HOME}/state}"
+STATE_DIR="${STATE_DIR/#\~/${HOME}}"
 DEFAULT_PROMPT="${KELVIN_DEFAULT_PROMPT:-What is KelvinClaw?}"
 PLUGIN_MANIFEST_PATH="${ROOT_DIR}/share/official-first-party-plugins.env"
 ENV_SEARCH_PATHS=(
@@ -109,16 +113,20 @@ load_env_var_from_file() {
   return 1
 }
 
-load_dotenv_defaults() {
-  local env_file=""
-  local value=""
-  [[ -n "${OPENAI_API_KEY:-}" ]] && return 0
-
+load_dotenv() {
+  local env_file line stripped key value
   for env_file in "${ENV_SEARCH_PATHS[@]}"; do
-    if value="$(load_env_var_from_file "OPENAI_API_KEY" "${env_file}")"; then
-      export OPENAI_API_KEY="${value}"
-      return 0
-    fi
+    [[ -f "${env_file}" ]] || continue
+    while IFS= read -r line || [[ -n "${line}" ]]; do
+      stripped="$(trim_whitespace "${line%%#*}")"
+      [[ -z "${stripped}" ]] && continue
+      [[ "${stripped}" =~ ^export[[:space:]]+ ]] && stripped="$(trim_whitespace "${stripped#export }")"
+      if [[ "${stripped}" =~ ^([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*=[[:space:]]*(.*)$ ]]; then
+        key="${BASH_REMATCH[1]}"
+        value="$(strip_wrapping_quotes "$(trim_whitespace "${BASH_REMATCH[2]}")")"
+        [[ -z "${!key+x}" ]] && export "${key}=${value}"
+      fi
+    done < "${env_file}"
   done
 }
 
@@ -256,7 +264,7 @@ if [[ $# -gt 0 ]]; then
   esac
 fi
 
-load_dotenv_defaults
+load_dotenv
 prompt_for_openai_api_key "$@"
 
 bootstrap_official_plugins

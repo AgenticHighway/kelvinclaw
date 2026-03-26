@@ -122,8 +122,6 @@ services:
         command:
             - --gateway-url
             - "ws://kelvin-gateway:34617"
-            - --auth-token
-            - "${KELVIN_GATEWAY_TOKEN}"
         networks:
             - kelvin-network
         depends_on:

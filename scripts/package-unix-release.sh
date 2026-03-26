@@ -50,6 +50,7 @@ build_release_binaries() {
     -p kelvin-gateway \
     -p kelvin-registry \
     -p kelvin-memory-controller \
+    -p kelvin-tui \
     --features kelvin-gateway/memory_rpc,kelvin-host/memory_legacy_fallback
 }
 
@@ -140,6 +141,10 @@ smoke_test_archive() {
   "${work_dir}/${root_name}/bin/kelvin-gateway${bin_suffix}" --help >/dev/null
   "${work_dir}/${root_name}/bin/kelvin-registry${bin_suffix}" --help >/dev/null
   "${work_dir}/${root_name}/bin/kelvin-memory-controller${bin_suffix}" --help >/dev/null
+  "${work_dir}/${root_name}/bin/kelvin-tui${bin_suffix}" --help >/dev/null
+  "${work_dir}/${root_name}/kelvin-gateway" --help >/dev/null
+  "${work_dir}/${root_name}/kpm" --help >/dev/null
+  "${work_dir}/${root_name}/kelvin-tui" --help >/dev/null
   rm -rf "${work_dir}"
 }
 
@@ -193,6 +198,7 @@ EOF
   "${extract_root}/usr/lib/kelvinclaw/bin/kelvin-gateway" --help >/dev/null
   "${extract_root}/usr/lib/kelvinclaw/bin/kelvin-registry" --help >/dev/null
   "${extract_root}/usr/lib/kelvinclaw/bin/kelvin-memory-controller" --help >/dev/null
+  "${extract_root}/usr/lib/kelvinclaw/bin/kelvin-tui" --help >/dev/null
 
   rm -rf "${work_dir}"
   echo "deb=${deb_path}"
@@ -275,11 +281,20 @@ cp "${TARGET_DIR}/${TARGET}/release/kelvin-host" "${STAGE_ROOT}/bin/"
 cp "${TARGET_DIR}/${TARGET}/release/kelvin-gateway" "${STAGE_ROOT}/bin/"
 cp "${TARGET_DIR}/${TARGET}/release/kelvin-registry" "${STAGE_ROOT}/bin/"
 cp "${TARGET_DIR}/${TARGET}/release/kelvin-memory-controller" "${STAGE_ROOT}/bin/"
+cp "${TARGET_DIR}/${TARGET}/release/kelvin-tui" "${STAGE_ROOT}/bin/"
 cp "${ROOT_DIR}/LICENSE" "${STAGE_ROOT}/"
 cp "${ROOT_DIR}/README.md" "${STAGE_ROOT}/"
+cp "${ROOT_DIR}/release/env.example" "${STAGE_ROOT}/.env.example"
 cp "${ROOT_DIR}/scripts/kelvin-release-launcher.sh" "${STAGE_ROOT}/kelvin"
+cp "${ROOT_DIR}/scripts/kelvin-gateway.sh" "${STAGE_ROOT}/kelvin-gateway"
+cp "${ROOT_DIR}/scripts/kpm.sh" "${STAGE_ROOT}/kpm"
+cp "${ROOT_DIR}/scripts/kelvin-tui.sh" "${STAGE_ROOT}/kelvin-tui"
 cp "${ROOT_DIR}/release/official-first-party-plugins.env" "${STAGE_ROOT}/share/official-first-party-plugins.env"
-chmod +x "${STAGE_ROOT}/kelvin"
+mkdir -p "${STAGE_ROOT}/share/scripts"
+cp "${ROOT_DIR}/scripts/plugin-index-install.sh" "${STAGE_ROOT}/share/scripts/"
+cp "${ROOT_DIR}/scripts/plugin-install.sh" "${STAGE_ROOT}/share/scripts/"
+chmod +x "${STAGE_ROOT}/kelvin" "${STAGE_ROOT}/kelvin-gateway" "${STAGE_ROOT}/kpm" "${STAGE_ROOT}/kelvin-tui"
+chmod +x "${STAGE_ROOT}/share/scripts/"*.sh
 
 if command -v xattr >/dev/null 2>&1; then
   xattr -rc "${STAGE_ROOT}" >/dev/null 2>&1 || true
@@ -289,8 +304,6 @@ cat > "${STAGE_ROOT}/BUILD_INFO.txt" <<EOF
 version=${VERSION}
 target=${TARGET}
 platform=${PLATFORM_LABEL}
-required_plugin=kelvin.cli@$(awk -F'"' '/^KELVIN_CLI_VERSION=/ {print $2}' "${ROOT_DIR}/release/official-first-party-plugins.env")
-optional_plugin=kelvin.openai@$(awk -F'"' '/^KELVIN_OPENAI_VERSION=/ {print $2}' "${ROOT_DIR}/release/official-first-party-plugins.env")
 EOF
 
 rm -f "${ARCHIVE_PATH}" "${CHECKSUM_PATH}"

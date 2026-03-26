@@ -80,16 +80,20 @@ function Load-EnvVarFromFile([string]$Key, [string]$FilePath) {
     return $null
 }
 
-function Load-DotenvDefaults {
-    if ($env:OPENAI_API_KEY) {
-        return
-    }
-
+function Load-Dotenv {
     foreach ($EnvFile in $EnvSearchPaths) {
-        $Value = Load-EnvVarFromFile -Key "OPENAI_API_KEY" -FilePath $EnvFile
-        if ($Value) {
-            $env:OPENAI_API_KEY = $Value
-            return
+        if (-not (Test-Path $EnvFile)) { continue }
+        foreach ($Line in Get-Content $EnvFile) {
+            $Stripped = $Line.Split("#")[0].Trim()
+            if ([string]::IsNullOrWhiteSpace($Stripped)) { continue }
+            if ($Stripped -match '^export\s+') { $Stripped = $Stripped -replace '^export\s+', '' }
+            if ($Stripped -match '^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$') {
+                $Key   = $Matches[1]
+                $Value = Strip-WrappingQuotes (Trim-Value $Matches[2])
+                if (-not [System.Environment]::GetEnvironmentVariable($Key)) {
+                    Set-Item -Path "Env:$Key" -Value $Value
+                }
+            }
         }
     }
 }
@@ -221,7 +225,7 @@ if ($CliArgs.Length -gt 0 -and ($CliArgs[0] -eq "-h" -or $CliArgs[0] -eq "--help
     exit 0
 }
 
-Load-DotenvDefaults
+Load-Dotenv
 Prompt-ForOpenAIKey $CliArgs
 Bootstrap-OfficialPlugins
 

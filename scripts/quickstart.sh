@@ -101,8 +101,11 @@ ensure_rust_toolchain_path || {
 }
 
 PLUGIN_HOME="${KELVIN_PLUGIN_HOME:-${ROOT_DIR}/.kelvin/plugins}"
+PLUGIN_HOME="${PLUGIN_HOME/#\~/${HOME}}"
 TRUST_POLICY_PATH="${KELVIN_TRUST_POLICY_PATH:-${ROOT_DIR}/.kelvin/trusted_publishers.json}"
+TRUST_POLICY_PATH="${TRUST_POLICY_PATH/#\~/${HOME}}"
 STATE_DIR="${KELVIN_STATE_DIR:-${ROOT_DIR}/.kelvin/state}"
+STATE_DIR="${STATE_DIR/#\~/${HOME}}"
 
 # Prefer explicit KELVIN_MODEL_PROVIDER; fall back to key detection.
 MODEL_PROVIDER="${KELVIN_MODEL_PROVIDER:-}"

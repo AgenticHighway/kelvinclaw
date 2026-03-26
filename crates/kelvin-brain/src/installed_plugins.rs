@@ -2129,26 +2129,22 @@ fn env_path(key: &str) -> Option<PathBuf> {
 }
 
 fn resolve_home_dir() -> KelvinResult<PathBuf> {
-    env_path("HOME").ok_or_else(|| {
-        KelvinError::InvalidInput(
-            "HOME is not set; configure KELVIN_PLUGIN_HOME and KELVIN_TRUST_POLICY_PATH explicitly"
-                .to_string(),
-        )
-    })
+    if let Some(path) = env_path("HOME") {
+        return Ok(path);
+    }
+    if let Some(path) = env_path("USERPROFILE") {
+        return Ok(path);
+    }
+    Err(KelvinError::InvalidInput(
+        "HOME is not set; configure KELVIN_PLUGIN_HOME and KELVIN_TRUST_POLICY_PATH explicitly"
+            .to_string(),
+    ))
 }
 
 fn maybe_load_trust_policy_path(path: &Path) -> KelvinResult<Option<&Path>> {
     if path.exists() {
         return Ok(Some(path));
     }
-
-    if env_path("KELVIN_TRUST_POLICY_PATH").is_some() {
-        return Err(KelvinError::InvalidInput(format!(
-            "configured trust policy file does not exist: {}",
-            path.to_string_lossy()
-        )));
-    }
-
     Ok(None)
 }
 
