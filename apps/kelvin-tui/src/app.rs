@@ -4,7 +4,8 @@ use crossterm::{
     cursor::SetCursorStyle,
     event::{
         DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste, EnableMouseCapture,
-        Event, EventStream, KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEventKind,
+        Event, EventStream, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseButton,
+        MouseEventKind,
     },
     execute,
     terminal::{enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
@@ -1018,7 +1019,7 @@ pub async fn run(config: CliConfig) -> Result<(), String> {
         let mut reader = EventStream::new();
         while let Some(Ok(event)) = reader.next().await {
             match event {
-                Event::Key(key) => {
+                Event::Key(key) if key.kind == KeyEventKind::Press => {
                     let _ = tui_tx_key.send(TuiEvent::Key(key)).await;
                 }
                 Event::Paste(text) => {
