@@ -47,6 +47,10 @@ fn parse_args() -> Result<CliConfig, String> {
 
 #[tokio::main]
 async fn main() {
+    if env::args().any(|a| a == "--help" || a == "-h") {
+        println!("Usage: kelvin-tui [--gateway-url <url>] [--auth-token <token>] [--session <id>]");
+        return;
+    }
     match parse_args() {
         Ok(config) => {
             if let Err(e) = app::run(config).await {
