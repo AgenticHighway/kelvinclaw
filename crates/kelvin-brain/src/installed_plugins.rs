@@ -2145,6 +2145,20 @@ fn maybe_load_trust_policy_path(path: &Path) -> KelvinResult<Option<&Path>> {
     if path.exists() {
         return Ok(Some(path));
     }
+
+    // If KELVIN_TRUST_POLICY_PATH is explicitly set to this path but the file
+    // does not exist, treat it as a configuration error instead of silently
+    // falling back to the default permissive policy.
+    if let Ok(env_value) = env::var("KELVIN_TRUST_POLICY_PATH") {
+        let trimmed = env_value.trim();
+        if !trimmed.is_empty() && Path::new(trimmed) == path {
+            return Err(KelvinError::InvalidInput(format!(
+                "KELVIN_TRUST_POLICY_PATH is set to '{}' but the file does not exist",
+                trimmed
+            )));
+        }
+    }
+
     Ok(None)
 }
 
