@@ -108,12 +108,8 @@ cp .env.example .env   # configure provider and API key
 ./kelvin-tui           # launch the TUI
 ```
 
-On first run, `./kelvin` fetches the official trust policy plus the required
-first-party plugins into `~/.kelvinclaw`, then starts Kelvin. The currently
-bootstrapped first-party packages are:
-
-- `kelvin.cli@0.1.1`
-- `kelvin.openai@0.1.1` when `OPENAI_API_KEY` is available
+On first run, `kelvin-gateway start` fetches the official trust policy and
+bootstraps required plugins from the plugin index into `~/.kelvinclaw`.
 
 Additional published first-party model plugins can be installed with `kpm`:
 
@@ -140,7 +136,6 @@ API key and provider configuration — all launchers auto-read `.env` and `.env.
 - copy `.env.example` to `.env` and set `KELVIN_MODEL_PROVIDER` + your API key
 - or export vars before running any launcher
 - supported in `./.env`, `./.env.local`, `~/.kelvinclaw/.env`, `~/.kelvinclaw/.env.local`
-- if you run `./kelvin` interactively with no key configured, Kelvin prompts once and uses the key for that run only
 
 Gateway service management from the release bundle:
 
@@ -157,9 +152,9 @@ Validated public onboarding today:
 
 - Linux release bundles are validated end to end on fresh Ubuntu with `curl`
   and `ca-certificates` installed.
-- The no-args `./kelvin` flow fetches trust metadata, installs official
-  plugins, and completes a real OpenAI-backed run when `OPENAI_API_KEY` is
-  configured.
+- The `./kelvin-gateway start` + `./kelvin-tui` flow fetches trust metadata,
+  installs official plugins via the plugin index, and completes a real
+  OpenAI-backed run when `OPENAI_API_KEY` is configured.
 - macOS and Windows artifacts are published from CI, but the fully documented
   and validated public onboarding path today is Linux-first.
 
