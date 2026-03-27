@@ -206,16 +206,16 @@ function Cmd-Install([string[]]$CmdArgs) {
     }
 
     if ($PluginVersion) {
-        # Inject requested version — package_url/sha may differ; warn if mismatch
-        if ($Entry.version -ne $PluginVersion) {
-            Write-Warning "Index only has $PluginId@$($Entry.version); requested $PluginVersion may not exist"
+        # When a version is requested, require an exact match in the index
+        $MatchingEntries = @($Index.plugins | Where-Object { $_.id -eq $PluginId -and $_.version -eq $PluginVersion })
+        if ($MatchingEntries.Count -eq 0) {
+            throw "Version not found in index: $PluginId@$PluginVersion"
         }
-        $Entry = [PSCustomObject]@{
-            id          = $Entry.id
-            version     = $PluginVersion
-            package_url = $Entry.package_url
-            sha256      = $null
+        if ($MatchingEntries.Count -gt 1) {
+            throw "Multiple index entries found for $PluginId@$PluginVersion; refusing to choose arbitrarily"
         }
+        # Use the exact matching entry from the index (preserving package_url and sha256)
+        $Entry = $MatchingEntries[0]
     }
 
     $env:KELVIN_PLUGIN_HOME       = $PluginHome
