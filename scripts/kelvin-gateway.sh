@@ -5,7 +5,7 @@
 #
 # Environment variables:
 #   KELVIN_MODEL_PROVIDER      Plugin id for the model provider (default: kelvin.echo)
-#   KELVIN_PLUGIN_INDEX_URL    Plugin index URL (required if KELVIN_MODEL_PROVIDER != kelvin.echo)
+#   KELVIN_PLUGIN_INDEX_URL    Plugin index URL (required to install model provider plugin)
 #   KELVIN_HOME                State root directory (default: ~/.kelvinclaw)
 #   KELVIN_PLUGIN_HOME         Override plugin install root
 #   KELVIN_TRUST_POLICY_PATH   Override trust policy path
@@ -105,9 +105,6 @@ format_uptime() {
 }
 
 ensure_plugin() {
-  if [[ "${KELVIN_MODEL_PROVIDER}" == "kelvin.echo" ]]; then
-    return 0
-  fi
   local plugin_current="${PLUGIN_HOME}/${KELVIN_MODEL_PROVIDER}/current"
   if [[ -e "${plugin_current}" ]]; then
     return 0
@@ -158,7 +155,7 @@ State files:
 
 Environment:
   KELVIN_MODEL_PROVIDER      Model provider plugin id (default: kelvin.echo)
-  KELVIN_PLUGIN_INDEX_URL    Plugin index URL (required for non-echo providers)
+  KELVIN_PLUGIN_INDEX_URL    Plugin index URL (required to install model provider plugin)
   KELVIN_GATEWAY_TOKEN       Auth token for the gateway
   KELVIN_HOME                State root (default: ~/.kelvinclaw)
   KELVIN_PLUGIN_HOME         Override plugin install root
