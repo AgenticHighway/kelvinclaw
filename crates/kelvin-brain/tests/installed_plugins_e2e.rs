@@ -395,7 +395,7 @@ fn installed_plugin_loader_rejects_missing_signature_when_required() {
 }
 
 #[test]
-fn default_loader_uses_env_paths_and_tolerates_missing_trust_policy_file() {
+fn default_loader_errors_when_trust_policy_env_set_but_file_missing() {
     let _guard = ENV_LOCK.lock().expect("lock env");
     let workspace = unique_workspace("default-loader-missing-trust");
     let plugin_home = workspace.join("plugins");
@@ -412,13 +412,57 @@ fn default_loader_uses_env_paths_and_tolerates_missing_trust_policy_file() {
         );
     }
 
-    let loaded = load_installed_tool_plugins_default("0.1.0", PluginSecurityPolicy::default())
-        .expect("missing trust policy file should be tolerated");
-    assert!(loaded.loaded_plugins.is_empty());
+    let result = load_installed_tool_plugins_default("0.1.0", PluginSecurityPolicy::default());
 
     unsafe {
         std::env::remove_var("KELVIN_PLUGIN_HOME");
         std::env::remove_var("KELVIN_TRUST_POLICY_PATH");
+    }
+
+    assert!(
+        result.is_err(),
+        "should error when KELVIN_TRUST_POLICY_PATH is set but the file does not exist"
+    );
+    let err = match result {
+        Err(e) => e,
+        Ok(_) => panic!("expected an error but got Ok"),
+    };
+    let msg = err.to_string();
+    assert!(
+        msg.contains("KELVIN_TRUST_POLICY_PATH"),
+        "error message should mention KELVIN_TRUST_POLICY_PATH, got: {msg}"
+    );
+}
+
+#[test]
+fn default_loader_falls_back_to_default_policy_when_no_env_and_default_path_missing() {
+    let _guard = ENV_LOCK.lock().expect("lock env");
+    let workspace = unique_workspace("default-loader-no-env-trust");
+    let plugin_home = workspace.join("plugins");
+
+    unsafe {
+        std::env::set_var(
+            "KELVIN_PLUGIN_HOME",
+            plugin_home.to_string_lossy().to_string(),
+        );
+        std::env::remove_var("KELVIN_TRUST_POLICY_PATH");
+    }
+
+    // Redirect $HOME so the default path (~/.kelvin/trusted_publishers.json) also
+    // does not exist and the fallback to default policy is exercised.
+    let fake_home = workspace.join("home");
+    std::fs::create_dir_all(&fake_home).expect("create fake home");
+    unsafe {
+        std::env::set_var("HOME", fake_home.to_string_lossy().to_string());
+    }
+
+    let loaded = load_installed_tool_plugins_default("0.1.0", PluginSecurityPolicy::default())
+        .expect("missing default trust policy file should be tolerated when env var is not set");
+    assert!(loaded.loaded_plugins.is_empty());
+
+    unsafe {
+        std::env::remove_var("KELVIN_PLUGIN_HOME");
+        std::env::remove_var("HOME");
     }
 }
 
