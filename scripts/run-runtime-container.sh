@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/lib/docker-cache.sh"
 IMAGE="${KELVIN_RUNTIME_IMAGE:-kelvin-runtime:dev}"
-DEFAULT_INDEX_URL=""
+DEFAULT_INDEX_URL="https://raw.githubusercontent.com/AgenticHighway/kelvinclaw-plugins/main/index.json"
 INDEX_URL="${KELVIN_PLUGIN_INDEX_URL:-${DEFAULT_INDEX_URL}}"
 BUILDER_NAME="${KELVIN_DOCKER_BUILDER:-kelvinclaw-builder}"
 CACHE_DIR="${KELVIN_RUNTIME_DOCKER_CACHE_DIR:-$(kelvin_docker_buildx_cache_dir "${ROOT_DIR}" "runtime")}"
