@@ -39,10 +39,9 @@ jobs:
                   toolchain: stable
 
             - name: Restore Rust cache
-              uses: useblacksmith/rust-cache@f53e7f127245d2a269b3d90879ccf259876842d5
+              uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4
               with:
                   workspaces: . -> target
-                  key: memory-kms-smoke
 
             - name: Run live KMS memory signer smoke
               run: cargo test -p kelvin-memory-client rpc_memory_manager_kms_signing_roundtrip -- --nocapture

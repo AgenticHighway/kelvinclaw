@@ -1,59 +1,97 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
 
 permissions:
-  contents: read
+    contents: read
+
+concurrency:
+    group: ci-${{ github.ref }}
+    cancel-in-progress: true
 
 env:
-  CARGO_TERM_COLOR: always
+    CARGO_TERM_COLOR: always
 
 jobs:
-  check:
-    name: Check, Format, Lint, Test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+    # Fast checks first (no compilation), then lint (compiles), then test
+    # (reuses compilation). Steps short-circuit on failure, so a fmt error
+    # prevents any compilation from starting.
+    check:
+        name: Format, Lint, Test
+        runs-on: blacksmith-2vcpu-ubuntu-2404
+        timeout-minutes: 30
+        steps:
+            - uses: useblacksmith/checkout@41cdeedae8edb2e684ba22896a5fd2a3cb85db6b
+              with:
+                  persist-credentials: false
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
+            - name: Install Rust toolchain
+              uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9
+              with:
+                  toolchain: stable
+                  components: rustfmt, clippy
 
-      - name: Cache cargo registry and build
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-
+            - name: Restore Rust cache
+              uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4
+              with:
+                  workspaces: . -> target
+                  cache-on-failure: true
 
-      - name: Check formatting
-        run: cargo fmt --all -- --check
+            - name: Check formatting
+              run: cargo fmt --all -- --check
 
-      - name: Clippy
-        run: cargo clippy --workspace -- -D warnings
+            - name: Clippy
+              run: cargo clippy --workspace -- -D warnings
 
-      - name: Build
-        run: cargo build --workspace
+            - name: Test
+              run: cargo test --workspace
 
-      - name: Test
-        run: cargo test --workspace
+    # cargo audit reads Cargo.lock only — no compilation needed.
+    audit:
+        name: Security Audit
+        runs-on: blacksmith-2vcpu-ubuntu-2404
+        timeout-minutes: 10
+        steps:
+            - uses: useblacksmith/checkout@41cdeedae8edb2e684ba22896a5fd2a3cb85db6b
+              with:
+                  persist-credentials: false
 
-  audit:
-    name: Security Audit
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+            - name: Install Rust toolchain
+              uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9
+              with:
+                  toolchain: stable
 
-      - name: Install cargo-audit
-        run: cargo install cargo-audit --locked
+            - name: Cache cargo-audit binary
+              id: cargo-audit-cache
+              uses: actions/cache@v4
+              with:
+                  path: ~/.cargo/bin/cargo-audit
+                  key: cargo-audit-bin-${{ runner.os }}-v1
 
-      - name: Run audit
-        run: cargo audit
+            - name: Install cargo-audit
+              if: steps.cargo-audit-cache.outputs.cache-hit != 'true'
+              run: cargo install cargo-audit --locked
+
+            - name: Run audit
+              run: cargo audit
+
+    # Flag newly introduced dependencies with known vulnerabilities on PRs.
+    dependency-review:
+        name: Dependency Review
+        if: github.event_name == 'pull_request'
+        runs-on: blacksmith-2vcpu-ubuntu-2404
+        timeout-minutes: 10
+        permissions:
+            contents: read
+            pull-requests: write
+        steps:
+            - uses: useblacksmith/checkout@41cdeedae8edb2e684ba22896a5fd2a3cb85db6b
+              with:
+                  persist-credentials: false
+
+            - name: Review dependency changes
+              uses: actions/dependency-review-action@v4

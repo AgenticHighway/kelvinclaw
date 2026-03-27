@@ -1,70 +1,67 @@
 name: Manual Verify
 
 on:
-  workflow_dispatch:
-    inputs:
-      suite:
-        description: Verification suite to run
-        required: true
-        type: choice
-        default: quick
-        options:
-          - quick
-          - contracts
-          - full
-      rust_toolchain:
-        description: Rust toolchain
-        required: true
-        type: string
-        default: stable
+    workflow_dispatch:
+        inputs:
+            suite:
+                description: Verification suite to run
+                required: true
+                type: choice
+                default: quick
+                options:
+                    - quick
+                    - contracts
+                    - full
+            rust_toolchain:
+                description: Rust toolchain
+                required: true
+                type: string
+                default: stable
 
 permissions:
-  contents: read
+    contents: read
 
 concurrency:
-  group: manual-verify-${{ github.ref }}
-  cancel-in-progress: true
+    group: manual-verify-${{ github.ref }}
+    cancel-in-progress: true
 
 jobs:
-  verify:
-    name: Verify (${{ inputs.suite }})
-    runs-on: blacksmith-2vcpu-ubuntu-2404
-    timeout-minutes: 45
-    steps:
-      - name: Checkout
-        uses: useblacksmith/checkout@41cdeedae8edb2e684ba22896a5fd2a3cb85db6b
-        with:
-          persist-credentials: false
+    verify:
+        name: Verify (${{ inputs.suite }})
+        runs-on: blacksmith-2vcpu-ubuntu-2404
+        timeout-minutes: 45
+        steps:
+            - name: Checkout
+              uses: useblacksmith/checkout@41cdeedae8edb2e684ba22896a5fd2a3cb85db6b
+              with:
+                  persist-credentials: false
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9
-        with:
-          toolchain: ${{ inputs.rust_toolchain }}
+            - name: Setup Rust
+              uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9
+              with:
+                  toolchain: ${{ inputs.rust_toolchain }}
+                  components: rustfmt, clippy
 
-      - name: Restore Rust cache
-        uses: useblacksmith/rust-cache@f53e7f127245d2a269b3d90879ccf259876842d5
-        with:
-          workspaces: . -> target
-          key: manual-verify-${{ inputs.rust_toolchain }}
+            - name: Restore Rust cache
+              uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4
+              with:
+                  workspaces: . -> target
 
-      - name: Install Rust components
-        run: rustup component add rustfmt clippy
+            - name: Cargo check (workspace)
+              run: cargo check --workspace -q
 
-      - name: Cargo check (workspace)
-        run: cargo check --workspace -q
+            - name: Contract compatibility tests
+              if: ${{ inputs.suite == 'contracts' || inputs.suite == 'full' }}
+              run: scripts/test-contracts.sh
 
-      - name: Contract compatibility tests
-        if: ${{ inputs.suite == 'contracts' || inputs.suite == 'full' }}
-        run: scripts/test-contracts.sh
+            - name: Cargo fmt check
+              if: ${{ inputs.suite == 'full' }}
+              run: cargo fmt --all -- --check
 
-      - name: Cargo fmt check
-        if: ${{ inputs.suite == 'full' }}
-        run: cargo fmt --all -- --check
+            - name: Cargo clippy
+              if: ${{ inputs.suite == 'full' }}
+              run: cargo clippy --workspace -- -D warnings
 
-      - name: Cargo clippy
-        if: ${{ inputs.suite == 'full' }}
-        run: cargo clippy --workspace -- -D warnings
-
-      - name: Cargo test (workspace)
-        if: ${{ inputs.suite == 'full' }}
-        run: cargo test --workspace -q
+            - name: Cargo test (workspace)
+              if: ${{ inputs.suite == 'full' }}
+              run: cargo test --workspace -q

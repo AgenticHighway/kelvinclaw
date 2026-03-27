@@ -29,15 +29,12 @@ jobs:
               uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9
               with:
                   toolchain: stable
+                  components: rustfmt, clippy
 
             - name: Restore Rust cache
-              uses: useblacksmith/rust-cache@f53e7f127245d2a269b3d90879ccf259876842d5
+              uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4
               with:
                   workspaces: . -> target
-                  key: plugin-abi-${{ matrix.plugin }}
-
-            - name: Install Rust components
-              run: rustup component add rustfmt clippy
 
             - name: Verify external plugin ABI compatibility
               run: scripts/test-plugin-abi-compat.sh --plugin "${{ matrix.plugin }}"
