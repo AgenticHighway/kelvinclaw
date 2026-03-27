@@ -1,7 +1,7 @@
 {
   "id": "kelvin.echo",
   "name": "Kelvin Echo Model Plugin",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "api_version": "1.0.0",
   "description": "First-party echo plugin — reflects the user prompt back as the assistant response. No external network calls.",
   "homepage": "https://github.com/agentichighway/kelvinclaw/tree/main/plugins/kelvin-echo-plugin",
