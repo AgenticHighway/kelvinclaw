@@ -193,7 +193,7 @@ cmd_start() {
   ensure_plugin
 
   if [[ "${foreground}" -eq 1 ]]; then
-    exec "${GATEWAY_BINARY}" --model-provider "${KELVIN_MODEL_PROVIDER}" "${gateway_args[@]}"
+    exec "${GATEWAY_BINARY}" --model-provider "${KELVIN_MODEL_PROVIDER}" ${gateway_args[@]+"${gateway_args[@]}"}
   fi
 
   # Daemon mode
@@ -210,7 +210,7 @@ cmd_start() {
   fi
 
   mkdir -p "${LOG_DIR}"
-  nohup "${GATEWAY_BINARY}" --model-provider "${KELVIN_MODEL_PROVIDER}" "${gateway_args[@]}" \
+  nohup "${GATEWAY_BINARY}" --model-provider "${KELVIN_MODEL_PROVIDER}" ${gateway_args[@]+"${gateway_args[@]}"} \
     >> "${LOG_FILE}" 2>&1 &
   local pid=$!
   printf '%s' "${pid}" > "${PID_FILE}"
@@ -257,7 +257,7 @@ cmd_restart() {
   if is_running; then
     cmd_stop
   fi
-  cmd_start "${passthrough[@]}"
+  cmd_start ${passthrough[@]+"${passthrough[@]}"}
 }
 
 cmd_status() {
