@@ -97,8 +97,12 @@ function Ensure-Plugin {
     Require-Command "tar"
     Write-Host "[kelvin-gateway] fetching plugin index"
     $IndexJson = Invoke-RestMethod -Uri $IndexUrl -TimeoutSec 15
-    $Entry = $IndexJson.plugins | Where-Object { $_.id -eq $ModelProvider }
-    if (-not $Entry) { throw "Plugin not found in index: $ModelProvider" }
+    $Entries = @($IndexJson.plugins | Where-Object { $_.id -eq $ModelProvider })
+    if ($Entries.Count -eq 0) { throw "Plugin not found in index: $ModelProvider" }
+    $Entry = $Entries | Sort-Object {
+        $v = $_.version -replace '[+\-].*$', ''
+        try { [System.Version]$v } catch { [System.Version]"0.0.0" }
+    } | Select-Object -Last 1
     if (-not $Entry.package_url) { throw "Plugin '$ModelProvider' has no package_url (build from source required)" }
 
     Write-Host "[kelvin-gateway] installing $ModelProvider@$($Entry.version)"
