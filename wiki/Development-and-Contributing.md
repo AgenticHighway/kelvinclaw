@@ -70,6 +70,6 @@ Run the relevant focused tests first, then the broader validation lanes needed f
 ## Reference
 
 - [AGENTS.md](https://github.com/AgenticHighway/kelvinclaw/blob/main/AGENTS.md)
-- [Core admission policy](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/CORE_ADMISSION_POLICY.md)
-- [SDK principles](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/SDK_PRINCIPLES.md)
-- [Compatibility contracts](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/compatibility-contracts.md)
+- [Core admission policy](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/architecture/core-admission-policy.md)
+- [SDK principles](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/architecture/sdk-principles.md)
+- [Compatibility contracts](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/architecture/compatibility-contracts.md)

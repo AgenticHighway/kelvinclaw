@@ -143,5 +143,5 @@ For long-running deployments, use:
 
 ## Reference
 
-- [Gateway protocol source doc](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/gateway-protocol.md)
+- [Gateway protocol source doc](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/gateway/gateway-protocol.md)
 - [Gateway service management runbook](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/runbooks/kelvin-gateway-service-management.md)
