@@ -1,9 +1,0 @@
-[advisories]
-ignore = [
-    # RUSTSEC-2023-0071: Marvin Attack timing sidechannel in the `rsa` crate.
-    # `rsa` is a transitive dependency of `jsonwebtoken` but is never exercised:
-    # this codebase uses Algorithm::EdDSA exclusively — no RSA key operations
-    # occur at runtime. No fix is available upstream; ignore until `jsonwebtoken`
-    # drops the dependency or a patched `rsa` release ships.
-    { id = "RUSTSEC-2023-0071", reason = "rsa crate is an unused transitive dep of jsonwebtoken; only EdDSA is used in this codebase" },
-]
