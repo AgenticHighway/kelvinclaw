@@ -14,6 +14,7 @@ $_KgwEnvPaths = @(
     (Join-Path $HOME ".kelvinclaw\.env")
 )
 function _KgwLoadDotenv {
+    $Dotenv = @{}
     foreach ($F in $_KgwEnvPaths) {
         if (-not (Test-Path $F)) { continue }
         foreach ($Line in Get-Content $F) {
@@ -23,19 +24,26 @@ function _KgwLoadDotenv {
             if ($S -match '^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$') {
                 $K = $Matches[1]; $V = $Matches[2].Trim()
                 if ($V.Length -ge 2 -and (($V[0] -eq '"' -and $V[-1] -eq '"') -or ($V[0] -eq "'" -and $V[-1] -eq "'"))) { $V = $V.Substring(1, $V.Length - 2) }
-                if (-not [System.Environment]::GetEnvironmentVariable($K)) { Set-Item -Path "Env:$K" -Value $V }
+                if (-not $Dotenv.ContainsKey($K)) { $Dotenv[$K] = $V }
             }
         }
     }
+    return $Dotenv
 }
-_KgwLoadDotenv
+$_KgwDotenv = _KgwLoadDotenv
+function _KgwEnv([string]$Key, [string]$Default = "") {
+    $V = [System.Environment]::GetEnvironmentVariable($Key)
+    if ($V) { return $V }
+    if ($_KgwDotenv.ContainsKey($Key)) { return $_KgwDotenv[$Key] }
+    return $Default
+}
 # ──────────────────────────────────────────────────────────────────────────────
 
-$KelvinHome      = if ($env:KELVIN_HOME)             { $env:KELVIN_HOME }             else { Join-Path $HOME ".kelvinclaw" }
-$PluginHome      = if ($env:KELVIN_PLUGIN_HOME)      { $env:KELVIN_PLUGIN_HOME }      else { Join-Path $KelvinHome "plugins" }
-$TrustPolicyPath = if ($env:KELVIN_TRUST_POLICY_PATH){ $env:KELVIN_TRUST_POLICY_PATH } else { Join-Path $KelvinHome "trusted_publishers.json" }
-$IndexUrl        = if ($env:KELVIN_PLUGIN_INDEX_URL) { $env:KELVIN_PLUGIN_INDEX_URL } else { "" }
-$ModelProvider   = if ($env:KELVIN_MODEL_PROVIDER)   { $env:KELVIN_MODEL_PROVIDER }   else { "kelvin.echo" }
+$KelvinHome      = _KgwEnv "KELVIN_HOME"              (Join-Path $HOME ".kelvinclaw")
+$PluginHome      = _KgwEnv "KELVIN_PLUGIN_HOME"       (Join-Path $KelvinHome "plugins")
+$TrustPolicyPath = _KgwEnv "KELVIN_TRUST_POLICY_PATH" (Join-Path $KelvinHome "trusted_publishers.json")
+$IndexUrl        = _KgwEnv "KELVIN_PLUGIN_INDEX_URL"  ""
+$ModelProvider   = _KgwEnv "KELVIN_MODEL_PROVIDER"    "kelvin.echo"
 $LogDir          = Join-Path $KelvinHome "logs"
 $LogFile         = Join-Path $LogDir "gateway.log"
 $ErrFile         = Join-Path $LogDir "gateway.err"
@@ -116,6 +124,25 @@ function Ensure-Plugin {
         if (Test-Path $CurrentDir) { Remove-Item -Recurse -Force $CurrentDir }
         New-Item -ItemType Directory -Force -Path $CurrentDir | Out-Null
         Copy-Item -Recurse -Force (Join-Path $VersionDir "*") $CurrentDir
+
+        if ($Entry.trust_policy_url) {
+            Write-Host "[kelvin-gateway] fetching trust policy: $($Entry.trust_policy_url)"
+            $TrustTmp = Join-Path $WorkDir "trust-policy.json"
+            Invoke-WebRequest -Uri $Entry.trust_policy_url -OutFile $TrustTmp
+            if (-not (Test-Path $TrustPolicyPath)) {
+                Copy-Item $TrustTmp $TrustPolicyPath
+            } else {
+                $Base     = Get-Content $TrustPolicyPath -Raw | ConvertFrom-Json
+                $Incoming = Get-Content $TrustTmp        -Raw | ConvertFrom-Json
+                $MergedPublishers = @(($Base.publishers + $Incoming.publishers) |
+                    Group-Object id | ForEach-Object { $_.Group[-1] })
+                $Merged = [ordered]@{
+                    require_signature = ($Base.require_signature -and $Incoming.require_signature)
+                    publishers        = $MergedPublishers
+                }
+                $Merged | ConvertTo-Json -Depth 10 | Set-Content -NoNewline $TrustPolicyPath
+            }
+        }
     } finally {
         Remove-Item -Recurse -Force $WorkDir -ErrorAction SilentlyContinue
     }

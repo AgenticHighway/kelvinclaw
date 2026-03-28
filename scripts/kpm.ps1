@@ -14,6 +14,7 @@ $_KpmEnvPaths = @(
     (Join-Path $HOME ".kelvinclaw\.env")
 )
 function _KpmLoadDotenv {
+    $Dotenv = @{}
     foreach ($F in $_KpmEnvPaths) {
         if (-not (Test-Path $F)) { continue }
         foreach ($Line in Get-Content $F) {
@@ -23,18 +24,25 @@ function _KpmLoadDotenv {
             if ($S -match '^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$') {
                 $K = $Matches[1]; $V = $Matches[2].Trim()
                 if ($V.Length -ge 2 -and (($V[0] -eq '"' -and $V[-1] -eq '"') -or ($V[0] -eq "'" -and $V[-1] -eq "'"))) { $V = $V.Substring(1, $V.Length - 2) }
-                if (-not [System.Environment]::GetEnvironmentVariable($K)) { Set-Item -Path "Env:$K" -Value $V }
+                if (-not $Dotenv.ContainsKey($K)) { $Dotenv[$K] = $V }
             }
         }
     }
+    return $Dotenv
 }
-_KpmLoadDotenv
+$_KpmDotenv = _KpmLoadDotenv
+function _KpmEnv([string]$Key, [string]$Default = "") {
+    $V = [System.Environment]::GetEnvironmentVariable($Key)
+    if ($V) { return $V }
+    if ($_KpmDotenv.ContainsKey($Key)) { return $_KpmDotenv[$Key] }
+    return $Default
+}
 # ──────────────────────────────────────────────────────────────────────────────
 
-$KelvinHome      = if ($env:KELVIN_HOME)              { $env:KELVIN_HOME }              else { Join-Path $HOME ".kelvinclaw" }
-$PluginHome      = if ($env:KELVIN_PLUGIN_HOME)       { $env:KELVIN_PLUGIN_HOME }       else { Join-Path $KelvinHome "plugins" }
-$TrustPolicyPath = if ($env:KELVIN_TRUST_POLICY_PATH) { $env:KELVIN_TRUST_POLICY_PATH } else { Join-Path $KelvinHome "trusted_publishers.json" }
-$IndexUrl        = if ($env:KELVIN_PLUGIN_INDEX_URL)  { $env:KELVIN_PLUGIN_INDEX_URL }  else { "" }
+$KelvinHome      = _KpmEnv "KELVIN_HOME"              (Join-Path $HOME ".kelvinclaw")
+$PluginHome      = _KpmEnv "KELVIN_PLUGIN_HOME"       (Join-Path $KelvinHome "plugins")
+$TrustPolicyPath = _KpmEnv "KELVIN_TRUST_POLICY_PATH" (Join-Path $KelvinHome "trusted_publishers.json")
+$IndexUrl        = _KpmEnv "KELVIN_PLUGIN_INDEX_URL"  ""
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -200,14 +208,14 @@ function Cmd-Install([string[]]$CmdArgs) {
     }
 
     $Index = Fetch-Index
-    $Entry = $Index.plugins | Where-Object { $_.id -eq $PluginId }
-    if (-not $Entry) {
+    $Entries = @($Index.plugins | Where-Object { $_.id -eq $PluginId })
+    if ($Entries.Count -eq 0) {
         throw "Plugin not found in index: $PluginId"
     }
 
     if ($PluginVersion) {
         # When a version is requested, require an exact match in the index
-        $MatchingEntries = @($Index.plugins | Where-Object { $_.id -eq $PluginId -and $_.version -eq $PluginVersion })
+        $MatchingEntries = @($Entries | Where-Object { $_.version -eq $PluginVersion })
         if ($MatchingEntries.Count -eq 0) {
             throw "Version not found in index: $PluginId@$PluginVersion"
         }
@@ -216,6 +224,12 @@ function Cmd-Install([string[]]$CmdArgs) {
         }
         # Use the exact matching entry from the index (preserving package_url and sha256)
         $Entry = $MatchingEntries[0]
+    } else {
+        # Pick the highest semver when multiple versions exist in the index
+        $Entry = $Entries | Sort-Object {
+            $v = $_.version -replace '[+\-].*$', ''
+            try { [System.Version]$v } catch { [System.Version]"0.0.0" }
+        } | Select-Object -Last 1
     }
 
     $env:KELVIN_PLUGIN_HOME       = $PluginHome
@@ -290,11 +304,15 @@ function Cmd-Update([string[]]$CmdArgs) {
         $InstalledVersion = Plugin-CurrentVersion $Id
         if (-not $InstalledVersion) { return }
 
-        $Entry = $Index.plugins | Where-Object { $_.id -eq $Id }
-        if (-not $Entry) {
+        $MatchedEntries = @($Index.plugins | Where-Object { $_.id -eq $Id })
+        if ($MatchedEntries.Count -eq 0) {
             Write-Host "  ${Id}: not found in index (skipping)"
             return
         }
+        $Entry = $MatchedEntries | Sort-Object {
+            $v = $_.version -replace '[+\-].*$', ''
+            try { [System.Version]$v } catch { [System.Version]"0.0.0" }
+        } | Select-Object -Last 1
 
         if ($InstalledVersion -eq $Entry.version) {
             Write-Host "  ${Id}: up to date ($InstalledVersion)"
