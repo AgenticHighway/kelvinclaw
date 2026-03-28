@@ -6,17 +6,12 @@ if (Test-Path (Join-Path $PSScriptRoot "bin\\kelvin-host.exe")) {
     $RootDir = Split-Path -Parent $PSScriptRoot
 }
 
-$KelvinHome = if ($env:KELVIN_HOME) { $env:KELVIN_HOME } else { Join-Path $HOME ".kelvinclaw" }
-$PluginHome = if ($env:KELVIN_PLUGIN_HOME) { $env:KELVIN_PLUGIN_HOME } else { Join-Path $KelvinHome "plugins" }
-$TrustPolicyPath = if ($env:KELVIN_TRUST_POLICY_PATH) { $env:KELVIN_TRUST_POLICY_PATH } else { Join-Path $KelvinHome "trusted_publishers.json" }
-$StateDir = if ($env:KELVIN_STATE_DIR) { $env:KELVIN_STATE_DIR } else { Join-Path $KelvinHome "state" }
-$DefaultPrompt = if ($env:KELVIN_DEFAULT_PROMPT) { $env:KELVIN_DEFAULT_PROMPT } else { "What is KelvinClaw?" }
 $PluginManifestPath = Join-Path $RootDir "share\\official-first-party-plugins.env"
-$EnvSearchPaths = @(
+$_LaunchEnvPaths = @(
     (Join-Path (Get-Location).Path ".env.local"),
     (Join-Path (Get-Location).Path ".env"),
-    (Join-Path $KelvinHome ".env.local"),
-    (Join-Path $KelvinHome ".env")
+    (Join-Path $HOME ".kelvinclaw\.env.local"),
+    (Join-Path $HOME ".kelvinclaw\.env")
 )
 
 function Show-Usage {
@@ -81,7 +76,8 @@ function Load-EnvVarFromFile([string]$Key, [string]$FilePath) {
 }
 
 function Load-Dotenv {
-    foreach ($EnvFile in $EnvSearchPaths) {
+    $Dotenv = @{}
+    foreach ($EnvFile in $_LaunchEnvPaths) {
         if (-not (Test-Path $EnvFile)) { continue }
         foreach ($Line in Get-Content $EnvFile) {
             $Stripped = $Line.Split("#")[0].Trim()
@@ -90,12 +86,17 @@ function Load-Dotenv {
             if ($Stripped -match '^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$') {
                 $Key   = $Matches[1]
                 $Value = Strip-WrappingQuotes (Trim-Value $Matches[2])
-                if (-not [System.Environment]::GetEnvironmentVariable($Key)) {
-                    Set-Item -Path "Env:$Key" -Value $Value
-                }
+                if (-not $Dotenv.ContainsKey($Key)) { $Dotenv[$Key] = $Value }
             }
         }
     }
+    return $Dotenv
+}
+function _LaunchEnv([string]$Key, [string]$Default = "") {
+    $V = [System.Environment]::GetEnvironmentVariable($Key)
+    if ($V) { return $V }
+    if ($_LaunchDotenv.ContainsKey($Key)) { return $_LaunchDotenv[$Key] }
+    return $Default
 }
 
 function Prompt-ForOpenAIKey([string[]]$CliArgs) {
@@ -225,7 +226,21 @@ if ($CliArgs.Length -gt 0 -and ($CliArgs[0] -eq "-h" -or $CliArgs[0] -eq "--help
     exit 0
 }
 
-Load-Dotenv
+$_LaunchDotenv = Load-Dotenv
+
+$KelvinHome      = _LaunchEnv "KELVIN_HOME"              (Join-Path $HOME ".kelvinclaw")
+$PluginHome      = _LaunchEnv "KELVIN_PLUGIN_HOME"       (Join-Path $KelvinHome "plugins")
+$TrustPolicyPath = _LaunchEnv "KELVIN_TRUST_POLICY_PATH" (Join-Path $KelvinHome "trusted_publishers.json")
+$StateDir        = _LaunchEnv "KELVIN_STATE_DIR"         (Join-Path $KelvinHome "state")
+$DefaultPrompt   = _LaunchEnv "KELVIN_DEFAULT_PROMPT"    "What is KelvinClaw?"
+
+# Push dotenv values into process env so downstream functions and kelvin-host inherit them.
+foreach ($KV in $_LaunchDotenv.GetEnumerator()) {
+    if (-not [System.Environment]::GetEnvironmentVariable($KV.Key)) {
+        [System.Environment]::SetEnvironmentVariable($KV.Key, $KV.Value, "Process")
+    }
+}
+
 Prompt-ForOpenAIKey $CliArgs
 Bootstrap-OfficialPlugins
 

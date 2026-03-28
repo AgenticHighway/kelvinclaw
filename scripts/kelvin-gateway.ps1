@@ -203,6 +203,14 @@ function Cmd-Start([string[]]$CmdArgs) {
     Ensure-TrustPolicy
     Ensure-Plugin
 
+    # Push dotenv values into process env so the gateway binary inherits them.
+    # Script-level vars are already resolved above, so this won't affect them.
+    foreach ($KV in $_KgwDotenv.GetEnumerator()) {
+        if (-not [System.Environment]::GetEnvironmentVariable($KV.Key)) {
+            [System.Environment]::SetEnvironmentVariable($KV.Key, $KV.Value, "Process")
+        }
+    }
+
     $FullArgs = @("--model-provider", $ModelProvider) + $GatewayArgs
 
     if ($Foreground) {
