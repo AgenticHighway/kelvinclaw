@@ -204,7 +204,7 @@ main() {
         ;;
     esac
   done
-  set -- "${forwarded[@]}"
+  set -- ${forwarded[@]+"${forwarded[@]}"}
 
   case "${command}" in
     show) cmd_show "$@" ;;

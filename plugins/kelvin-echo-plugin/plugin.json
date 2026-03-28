@@ -1,7 +1,7 @@
 {
   "id": "kelvin.echo",
   "name": "Kelvin Echo Model Plugin",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "api_version": "1.0.0",
   "description": "First-party echo plugin — reflects the user prompt back as the assistant response. No external network calls.",
   "homepage": "https://github.com/agentichighway/kelvinclaw/tree/main/plugins/kelvin-echo-plugin",
@@ -30,7 +30,7 @@
   },
   "model_name": "echo",
   "entrypoint": "plugin.wasm",
-  "entrypoint_sha256": "8cd01e8ccd172d7c0a338b20e96ea25bf40f16533853f3bf3ae5738baceb6da1",
+  "entrypoint_sha256": "9314eff70f57950a8f7ebcfcd72aa83f5451fbfa44def05e259bd1dd9ba7e514",
   "publisher": null,
   "quality_tier": "unsigned_local",
   "capability_scopes": {

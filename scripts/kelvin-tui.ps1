@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 
 if (Test-Path (Join-Path $PSScriptRoot "bin\kelvin-tui.exe")) {
     $RootDir = $PSScriptRoot
@@ -23,7 +23,7 @@ function _TuiLoadDotenv {
             if ($S -match '^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$') {
                 $K = $Matches[1]; $V = $Matches[2].Trim()
                 if ($V.Length -ge 2 -and (($V[0] -eq '"' -and $V[-1] -eq '"') -or ($V[0] -eq "'" -and $V[-1] -eq "'"))) { $V = $V.Substring(1, $V.Length - 2) }
-                if (-not [System.Environment]::GetEnvironmentVariable($K)) { Set-Item -Path "Env:$K" -Value $V }
+                [System.Environment]::SetEnvironmentVariable($K, $V, "Process")
             }
         }
     }

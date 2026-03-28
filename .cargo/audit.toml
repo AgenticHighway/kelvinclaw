@@ -1,0 +1,6 @@
+[advisories]
+# RUSTSEC-2023-0071: Marvin Attack timing sidechannel in the `rsa` crate.
+# `rsa` is a transitive dep of `jsonwebtoken` but is never exercised — this
+# codebase uses Algorithm::EdDSA exclusively, no RSA operations at runtime.
+# No fix is available upstream; revisit when jsonwebtoken drops `rsa`.
+ignore = ["RUSTSEC-2023-0071"]

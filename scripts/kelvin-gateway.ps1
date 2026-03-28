@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 
 if (Test-Path (Join-Path $PSScriptRoot "bin\kelvin-gateway.exe")) {
     $RootDir = $PSScriptRoot
@@ -14,6 +14,7 @@ $_KgwEnvPaths = @(
     (Join-Path $HOME ".kelvinclaw\.env")
 )
 function _KgwLoadDotenv {
+    $Dotenv = @{}
     foreach ($F in $_KgwEnvPaths) {
         if (-not (Test-Path $F)) { continue }
         foreach ($Line in Get-Content $F) {
@@ -23,23 +24,30 @@ function _KgwLoadDotenv {
             if ($S -match '^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$') {
                 $K = $Matches[1]; $V = $Matches[2].Trim()
                 if ($V.Length -ge 2 -and (($V[0] -eq '"' -and $V[-1] -eq '"') -or ($V[0] -eq "'" -and $V[-1] -eq "'"))) { $V = $V.Substring(1, $V.Length - 2) }
-                if (-not [System.Environment]::GetEnvironmentVariable($K)) { Set-Item -Path "Env:$K" -Value $V }
+                if (-not $Dotenv.ContainsKey($K)) { $Dotenv[$K] = $V }
             }
         }
     }
+    return $Dotenv
 }
-_KgwLoadDotenv
+$_KgwDotenv = _KgwLoadDotenv
+function _KgwEnv([string]$Key, [string]$Default = "") {
+    $V = [System.Environment]::GetEnvironmentVariable($Key)
+    if ($V) { return $V }
+    if ($_KgwDotenv.ContainsKey($Key)) { return $_KgwDotenv[$Key] }
+    return $Default
+}
 # ──────────────────────────────────────────────────────────────────────────────
 
-$KelvinHome      = if ($env:KELVIN_HOME)             { $env:KELVIN_HOME }             else { Join-Path $HOME ".kelvinclaw" }
-$PluginHome      = if ($env:KELVIN_PLUGIN_HOME)      { $env:KELVIN_PLUGIN_HOME }      else { Join-Path $KelvinHome "plugins" }
-$TrustPolicyPath = if ($env:KELVIN_TRUST_POLICY_PATH){ $env:KELVIN_TRUST_POLICY_PATH } else { Join-Path $KelvinHome "trusted_publishers.json" }
-$IndexUrl        = if ($env:KELVIN_PLUGIN_INDEX_URL) { $env:KELVIN_PLUGIN_INDEX_URL } else { "" }
-$ModelProvider   = if ($env:KELVIN_MODEL_PROVIDER)   { $env:KELVIN_MODEL_PROVIDER }   else { "kelvin.echo" }
+$KelvinHome      = _KgwEnv "KELVIN_HOME"              (Join-Path $HOME ".kelvinclaw")
+$PluginHome      = _KgwEnv "KELVIN_PLUGIN_HOME"       (Join-Path $KelvinHome "plugins")
+$TrustPolicyPath = _KgwEnv "KELVIN_TRUST_POLICY_PATH" (Join-Path $KelvinHome "trusted_publishers.json")
+$IndexUrl        = _KgwEnv "KELVIN_PLUGIN_INDEX_URL"  ""
+$ModelProvider   = _KgwEnv "KELVIN_MODEL_PROVIDER"    "kelvin.echo"
 $LogDir          = Join-Path $KelvinHome "logs"
 $LogFile         = Join-Path $LogDir "gateway.log"
 $ErrFile         = Join-Path $LogDir "gateway.err"
-$PidFile         = Join-Path $KelvinHome "gateway.pid"
+$GwPidFile         = Join-Path $KelvinHome "gateway.pid"
 $GatewayBinary   = Join-Path $RootDir "bin\kelvin-gateway.exe"
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -51,9 +59,9 @@ function Require-Command([string]$Name) {
 }
 
 function Get-GatewayProcess {
-    if (-not (Test-Path $PidFile)) { return $null }
-    $Pid = [int](Get-Content $PidFile -Raw).Trim()
-    $Proc = Get-Process -Id $Pid -ErrorAction SilentlyContinue
+    if (-not (Test-Path $GwPidFile)) { return $null }
+    $GwPid = [int](Get-Content $GwPidFile -Raw).Trim()
+    $Proc = Get-Process -Id $GwPid -ErrorAction SilentlyContinue
     if ($Proc -and -not $Proc.HasExited) { return $Proc }
     return $null
 }
@@ -82,7 +90,6 @@ function Ensure-TrustPolicy {
 }
 
 function Ensure-Plugin {
-    if ($ModelProvider -eq "kelvin.echo") { return }
     if (Plugin-IsInstalled $ModelProvider) { return }
     if (-not $IndexUrl) {
         throw "KELVIN_PLUGIN_INDEX_URL must be set to install '$ModelProvider'"
@@ -90,8 +97,12 @@ function Ensure-Plugin {
     Require-Command "tar"
     Write-Host "[kelvin-gateway] fetching plugin index"
     $IndexJson = Invoke-RestMethod -Uri $IndexUrl -TimeoutSec 15
-    $Entry = $IndexJson.plugins | Where-Object { $_.id -eq $ModelProvider }
-    if (-not $Entry) { throw "Plugin not found in index: $ModelProvider" }
+    $Entries = @($IndexJson.plugins | Where-Object { $_.id -eq $ModelProvider })
+    if ($Entries.Count -eq 0) { throw "Plugin not found in index: $ModelProvider" }
+    $Entry = $Entries | Sort-Object {
+        $v = $_.version -replace '[+\-].*$', ''
+        try { [System.Version]$v } catch { [System.Version]"0.0.0" }
+    } | Select-Object -Last 1
     if (-not $Entry.package_url) { throw "Plugin '$ModelProvider' has no package_url (build from source required)" }
 
     Write-Host "[kelvin-gateway] installing $ModelProvider@$($Entry.version)"
@@ -117,6 +128,25 @@ function Ensure-Plugin {
         if (Test-Path $CurrentDir) { Remove-Item -Recurse -Force $CurrentDir }
         New-Item -ItemType Directory -Force -Path $CurrentDir | Out-Null
         Copy-Item -Recurse -Force (Join-Path $VersionDir "*") $CurrentDir
+
+        if ($Entry.trust_policy_url) {
+            Write-Host "[kelvin-gateway] fetching trust policy: $($Entry.trust_policy_url)"
+            $TrustTmp = Join-Path $WorkDir "trust-policy.json"
+            Invoke-WebRequest -Uri $Entry.trust_policy_url -OutFile $TrustTmp
+            if (-not (Test-Path $TrustPolicyPath)) {
+                Copy-Item $TrustTmp $TrustPolicyPath
+            } else {
+                $Base     = Get-Content $TrustPolicyPath -Raw | ConvertFrom-Json
+                $Incoming = Get-Content $TrustTmp        -Raw | ConvertFrom-Json
+                $MergedPublishers = @(($Base.publishers + $Incoming.publishers) |
+                    Group-Object id | ForEach-Object { $_.Group[-1] })
+                $Merged = [ordered]@{
+                    require_signature = ($Base.require_signature -and $Incoming.require_signature)
+                    publishers        = $MergedPublishers
+                }
+                $Merged | ConvertTo-Json -Depth 10 | Set-Content -NoNewline -Encoding utf8 $TrustPolicyPath
+            }
+        }
     } finally {
         Remove-Item -Recurse -Force $WorkDir -ErrorAction SilentlyContinue
     }
@@ -149,7 +179,7 @@ State files:
 
 Environment:
   KELVIN_MODEL_PROVIDER      Model provider plugin id (default: kelvin.echo)
-  KELVIN_PLUGIN_INDEX_URL    Plugin index URL (required for non-echo providers)
+  KELVIN_PLUGIN_INDEX_URL    Plugin index URL (required to install model provider plugin)
   KELVIN_GATEWAY_TOKEN       Auth token for the gateway
   KELVIN_HOME                State root (default: ~\.kelvinclaw)
   KELVIN_PLUGIN_HOME         Override plugin install root
@@ -173,6 +203,14 @@ function Cmd-Start([string[]]$CmdArgs) {
     Ensure-TrustPolicy
     Ensure-Plugin
 
+    # Push dotenv values into process env so the gateway binary inherits them.
+    # Script-level vars are already resolved above, so this won't affect them.
+    foreach ($KV in $_KgwDotenv.GetEnumerator()) {
+        if (-not [System.Environment]::GetEnvironmentVariable($KV.Key)) {
+            [System.Environment]::SetEnvironmentVariable($KV.Key, $KV.Value, "Process")
+        }
+    }
+
     $FullArgs = @("--model-provider", $ModelProvider) + $GatewayArgs
 
     if ($Foreground) {
@@ -181,8 +219,8 @@ function Cmd-Start([string[]]$CmdArgs) {
     }
 
     # Daemon mode
-    if (Test-Path $PidFile) {
-        $ExistingPid = [int](Get-Content $PidFile -Raw).Trim()
+    if (Test-Path $GwPidFile) {
+        $ExistingPid = [int](Get-Content $GwPidFile -Raw).Trim()
         $ExistingProc = Get-Process -Id $ExistingPid -ErrorAction SilentlyContinue
         if ($ExistingProc -and -not $ExistingProc.HasExited) {
             Write-Error "gateway is already running (pid=$ExistingPid)"
@@ -190,51 +228,51 @@ function Cmd-Start([string[]]$CmdArgs) {
             exit 1
         }
         Write-Host "[kelvin-gateway] removing stale PID file (pid=$ExistingPid)"
-        Remove-Item -Force $PidFile
+        Remove-Item -Force $GwPidFile
     }
 
     New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
     $Process = Start-Process -FilePath $GatewayBinary -ArgumentList $FullArgs `
         -RedirectStandardOutput $LogFile -RedirectStandardError $ErrFile `
         -WindowStyle Hidden -PassThru
-    [string]$Process.Id | Set-Content -NoNewline $PidFile
+    [string]$Process.Id | Set-Content -NoNewline $GwPidFile
     Write-Host "[kelvin-gateway] started (pid=$($Process.Id))"
     Write-Host "[kelvin-gateway] log: $LogFile"
-    Write-Host "[kelvin-gateway] pid: $PidFile"
+    Write-Host "[kelvin-gateway] pid: $GwPidFile"
 }
 
 function Cmd-Stop {
-    if (-not (Test-Path $PidFile)) {
+    if (-not (Test-Path $GwPidFile)) {
         Write-Error "gateway is not running (no PID file)"
         exit 1
     }
 
-    $Pid = [int](Get-Content $PidFile -Raw).Trim()
-    $Proc = Get-Process -Id $Pid -ErrorAction SilentlyContinue
+    $GwPid = [int](Get-Content $GwPidFile -Raw).Trim()
+    $Proc = Get-Process -Id $GwPid -ErrorAction SilentlyContinue
 
     if (-not $Proc -or $Proc.HasExited) {
-        Write-Host "[kelvin-gateway] not running (stale PID $Pid); removing PID file"
-        Remove-Item -Force $PidFile
+        Write-Host "[kelvin-gateway] not running (stale PID $GwPid); removing PID file"
+        Remove-Item -Force $GwPidFile
         exit 0
     }
 
-    Write-Host "[kelvin-gateway] stopping (pid=$Pid)"
-    Stop-Process -Id $Pid -ErrorAction SilentlyContinue
+    Write-Host "[kelvin-gateway] stopping (pid=$GwPid)"
+    Stop-Process -Id $GwPid -ErrorAction SilentlyContinue
 
     $Elapsed = 0
     while ($true) {
         Start-Sleep -Milliseconds 500
         $Elapsed += 500
-        $Check = Get-Process -Id $Pid -ErrorAction SilentlyContinue
+        $Check = Get-Process -Id $GwPid -ErrorAction SilentlyContinue
         if (-not $Check -or $Check.HasExited) { break }
         if ($Elapsed -ge 3000) {
             Write-Host "[kelvin-gateway] process did not stop; sending SIGKILL"
-            Stop-Process -Id $Pid -Force -ErrorAction SilentlyContinue
+            Stop-Process -Id $GwPid -Force -ErrorAction SilentlyContinue
             break
         }
     }
 
-    Remove-Item -Force $PidFile -ErrorAction SilentlyContinue
+    Remove-Item -Force $GwPidFile -ErrorAction SilentlyContinue
     Write-Host "[kelvin-gateway] stopped"
 }
 
@@ -251,23 +289,23 @@ function Cmd-Status {
     "log: $LogFile"
     ""
 
-    if (-not (Test-Path $PidFile)) {
+    if (-not (Test-Path $GwPidFile)) {
         "status: stopped"
         return
     }
 
-    $Pid = [int](Get-Content $PidFile -Raw).Trim()
-    $Proc = Get-Process -Id $Pid -ErrorAction SilentlyContinue
+    $GwPid = [int](Get-Content $GwPidFile -Raw).Trim()
+    $Proc = Get-Process -Id $GwPid -ErrorAction SilentlyContinue
 
     if (-not $Proc -or $Proc.HasExited) {
-        "status: stopped (stale PID file: $Pid)"
+        "status: stopped (stale PID file: $GwPid)"
         return
     }
 
     $Uptime = (Get-Date) - $Proc.StartTime
     $UptimeStr = Format-Uptime $Uptime
     "status: running (up $UptimeStr)"
-    "pid:    $Pid"
+    "pid:    $GwPid"
 }
 
 # ── dispatch ──────────────────────────────────────────────────────────────────
