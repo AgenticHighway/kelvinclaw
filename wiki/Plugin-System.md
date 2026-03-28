@@ -232,7 +232,7 @@ export ANTHROPIC_API_KEY=<your-key>
 
 ## Reference
 
-- [Kelvin Core SDK](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/KELVIN_CORE_SDK.md)
+- [Kelvin Core SDK](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/architecture/kelvin-core-sdk.md)
 - [Plugin author kit](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/plugins/plugin-author-kit.md)
 - [Model plugin ABI](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/plugins/model-plugin-abi.md)
 - [Tool plugin ABI](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/plugins/tool-plugin-abi.md)

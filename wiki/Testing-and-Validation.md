@@ -109,6 +109,6 @@ For a high-confidence release candidate:
 
 ## Reference
 
-- [SDK test matrix](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/SDK_TEST_MATRIX.md)
-- [SDK OWASP Top 10 AI coverage](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/SDK_OWASP_TOP10_AI_2025.md)
-- [SDK NIST AI RMF coverage](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/SDK_NIST_AI_RMF_1_0.md)
+- [SDK test matrix](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/security/sdk-test-matrix.md)
+- [SDK OWASP Top 10 AI coverage](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/security/sdk-owasp-top10-ai-2025.md)
+- [SDK NIST AI RMF coverage](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/security/sdk-nist-ai-rmf-1-0.md)
