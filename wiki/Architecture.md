@@ -99,6 +99,6 @@ Implemented today:
 
 ## Reference
 
-- [Architecture source doc](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/architecture.md)
-- [Kelvin Core SDK](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/KELVIN_CORE_SDK.md)
-- [Memory control/data plane split](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/memory-control-data-plane.md)
+- [Architecture source doc](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/architecture/architecture.md)
+- [Kelvin Core SDK](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/architecture/kelvin-core-sdk.md)
+- [Memory control/data plane split](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/memory/memory-control-data-plane.md)

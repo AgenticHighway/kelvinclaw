@@ -196,6 +196,6 @@ Broader validation:
 
 ## Reference
 
-- [Repository quick start](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/GETTING_STARTED.md)
-- [Rust developer quickstart](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/RUST_DEVELOPER_QUICKSTART.md)
-- [Runtime container first run](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/runtime-container-first-run.md)
+- [Repository quick start](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/getting-started/GETTING_STARTED.md)
+- [Rust developer quickstart](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/getting-started/rust-developer-quickstart.md)
+- [Runtime container first run](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/getting-started/runtime-container-first-run.md)
