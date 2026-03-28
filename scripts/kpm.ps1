@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 
 if (Test-Path (Join-Path $PSScriptRoot "bin\kelvin-gateway.exe")) {
     $RootDir = $PSScriptRoot

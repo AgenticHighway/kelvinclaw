@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 
 if (Test-Path (Join-Path $PSScriptRoot "bin\kelvin-gateway.exe")) {
     $RootDir = $PSScriptRoot
@@ -39,7 +39,7 @@ $ModelProvider   = if ($env:KELVIN_MODEL_PROVIDER)   { $env:KELVIN_MODEL_PROVIDE
 $LogDir          = Join-Path $KelvinHome "logs"
 $LogFile         = Join-Path $LogDir "gateway.log"
 $ErrFile         = Join-Path $LogDir "gateway.err"
-$PidFile         = Join-Path $KelvinHome "gateway.pid"
+$GwPidFile         = Join-Path $KelvinHome "gateway.pid"
 $GatewayBinary   = Join-Path $RootDir "bin\kelvin-gateway.exe"
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -51,9 +51,9 @@ function Require-Command([string]$Name) {
 }
 
 function Get-GatewayProcess {
-    if (-not (Test-Path $PidFile)) { return $null }
-    $Pid = [int](Get-Content $PidFile -Raw).Trim()
-    $Proc = Get-Process -Id $Pid -ErrorAction SilentlyContinue
+    if (-not (Test-Path $GwPidFile)) { return $null }
+    $GwPid = [int](Get-Content $GwPidFile -Raw).Trim()
+    $Proc = Get-Process -Id $GwPid -ErrorAction SilentlyContinue
     if ($Proc -and -not $Proc.HasExited) { return $Proc }
     return $null
 }
@@ -82,7 +82,6 @@ function Ensure-TrustPolicy {
 }
 
 function Ensure-Plugin {
-    if ($ModelProvider -eq "kelvin.echo") { return }
     if (Plugin-IsInstalled $ModelProvider) { return }
     if (-not $IndexUrl) {
         throw "KELVIN_PLUGIN_INDEX_URL must be set to install '$ModelProvider'"
@@ -149,7 +148,7 @@ State files:
 
 Environment:
   KELVIN_MODEL_PROVIDER      Model provider plugin id (default: kelvin.echo)
-  KELVIN_PLUGIN_INDEX_URL    Plugin index URL (required for non-echo providers)
+  KELVIN_PLUGIN_INDEX_URL    Plugin index URL (required to install model provider plugin)
   KELVIN_GATEWAY_TOKEN       Auth token for the gateway
   KELVIN_HOME                State root (default: ~\.kelvinclaw)
   KELVIN_PLUGIN_HOME         Override plugin install root
@@ -181,8 +180,8 @@ function Cmd-Start([string[]]$CmdArgs) {
     }
 
     # Daemon mode
-    if (Test-Path $PidFile) {
-        $ExistingPid = [int](Get-Content $PidFile -Raw).Trim()
+    if (Test-Path $GwPidFile) {
+        $ExistingPid = [int](Get-Content $GwPidFile -Raw).Trim()
         $ExistingProc = Get-Process -Id $ExistingPid -ErrorAction SilentlyContinue
         if ($ExistingProc -and -not $ExistingProc.HasExited) {
             Write-Error "gateway is already running (pid=$ExistingPid)"
@@ -190,51 +189,51 @@ function Cmd-Start([string[]]$CmdArgs) {
             exit 1
         }
         Write-Host "[kelvin-gateway] removing stale PID file (pid=$ExistingPid)"
-        Remove-Item -Force $PidFile
+        Remove-Item -Force $GwPidFile
     }
 
     New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
     $Process = Start-Process -FilePath $GatewayBinary -ArgumentList $FullArgs `
         -RedirectStandardOutput $LogFile -RedirectStandardError $ErrFile `
         -WindowStyle Hidden -PassThru
-    [string]$Process.Id | Set-Content -NoNewline $PidFile
+    [string]$Process.Id | Set-Content -NoNewline $GwPidFile
     Write-Host "[kelvin-gateway] started (pid=$($Process.Id))"
     Write-Host "[kelvin-gateway] log: $LogFile"
-    Write-Host "[kelvin-gateway] pid: $PidFile"
+    Write-Host "[kelvin-gateway] pid: $GwPidFile"
 }
 
 function Cmd-Stop {
-    if (-not (Test-Path $PidFile)) {
+    if (-not (Test-Path $GwPidFile)) {
         Write-Error "gateway is not running (no PID file)"
         exit 1
     }
 
-    $Pid = [int](Get-Content $PidFile -Raw).Trim()
-    $Proc = Get-Process -Id $Pid -ErrorAction SilentlyContinue
+    $GwPid = [int](Get-Content $GwPidFile -Raw).Trim()
+    $Proc = Get-Process -Id $GwPid -ErrorAction SilentlyContinue
 
     if (-not $Proc -or $Proc.HasExited) {
-        Write-Host "[kelvin-gateway] not running (stale PID $Pid); removing PID file"
-        Remove-Item -Force $PidFile
+        Write-Host "[kelvin-gateway] not running (stale PID $GwPid); removing PID file"
+        Remove-Item -Force $GwPidFile
         exit 0
     }
 
-    Write-Host "[kelvin-gateway] stopping (pid=$Pid)"
-    Stop-Process -Id $Pid -ErrorAction SilentlyContinue
+    Write-Host "[kelvin-gateway] stopping (pid=$GwPid)"
+    Stop-Process -Id $GwPid -ErrorAction SilentlyContinue
 
     $Elapsed = 0
     while ($true) {
         Start-Sleep -Milliseconds 500
         $Elapsed += 500
-        $Check = Get-Process -Id $Pid -ErrorAction SilentlyContinue
+        $Check = Get-Process -Id $GwPid -ErrorAction SilentlyContinue
         if (-not $Check -or $Check.HasExited) { break }
         if ($Elapsed -ge 3000) {
             Write-Host "[kelvin-gateway] process did not stop; sending SIGKILL"
-            Stop-Process -Id $Pid -Force -ErrorAction SilentlyContinue
+            Stop-Process -Id $GwPid -Force -ErrorAction SilentlyContinue
             break
         }
     }
 
-    Remove-Item -Force $PidFile -ErrorAction SilentlyContinue
+    Remove-Item -Force $GwPidFile -ErrorAction SilentlyContinue
     Write-Host "[kelvin-gateway] stopped"
 }
 
@@ -251,23 +250,23 @@ function Cmd-Status {
     "log: $LogFile"
     ""
 
-    if (-not (Test-Path $PidFile)) {
+    if (-not (Test-Path $GwPidFile)) {
         "status: stopped"
         return
     }
 
-    $Pid = [int](Get-Content $PidFile -Raw).Trim()
-    $Proc = Get-Process -Id $Pid -ErrorAction SilentlyContinue
+    $GwPid = [int](Get-Content $GwPidFile -Raw).Trim()
+    $Proc = Get-Process -Id $GwPid -ErrorAction SilentlyContinue
 
     if (-not $Proc -or $Proc.HasExited) {
-        "status: stopped (stale PID file: $Pid)"
+        "status: stopped (stale PID file: $GwPid)"
         return
     }
 
     $Uptime = (Get-Date) - $Proc.StartTime
     $UptimeStr = Format-Uptime $Uptime
     "status: running (up $UptimeStr)"
-    "pid:    $Pid"
+    "pid:    $GwPid"
 }
 
 # ── dispatch ──────────────────────────────────────────────────────────────────
