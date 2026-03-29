@@ -29,7 +29,7 @@
       "openrouter.ai"
     ]
   },
-  "model_name": "google/gemini-2.5-flash-lite",
+  "model_name": "qwen/qwen3.5-flash-02-23",
   "entrypoint": "plugin.wasm",
   "entrypoint_sha256": "82d6b34bc30027c9b8e59a0f91163da41a4b20b4aa7b76c99079dec35f71432a",
   "publisher": null,
