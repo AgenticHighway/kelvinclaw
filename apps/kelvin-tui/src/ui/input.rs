@@ -46,7 +46,8 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
     let paragraph = Paragraph::new(Text::from(lines)).block(
         Block::default()
             .borders(Borders::ALL)
-            .title(" Input (Enter=submit, ^C^C=quit) "),
+            .border_style(Style::default().fg(Color::Rgb(255, 165, 0)))
+            .title(" Input (Enter=submit, ^T=tools, ^C^C=quit) "),
     );
 
     f.render_widget(paragraph, area);

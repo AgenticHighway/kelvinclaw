@@ -101,6 +101,7 @@ pub enum ChatMessage {
     User(String),
     Assistant { text: String, complete: bool },
     System(String),
+    ToolCall { tool_name: String, phase: ToolPhase, summary: Option<String> },
 }
 
 #[derive(Debug, Clone)]
@@ -286,7 +287,7 @@ impl App {
             chat_scroll: 0,
             chat_pinned: true,
             chat_max_scroll: 0,
-            tools_visible: true,
+            tools_visible: false,
             tools_scroll: 0,
             tools_pinned: true,
             tools_max_scroll: 0,
@@ -537,23 +538,46 @@ impl App {
                         started_ms: ts_ms,
                         ended_ms: None,
                     });
-                } else if let Some(entry) = self
-                    .tools
-                    .iter_mut()
-                    .rev()
-                    .find(|t| t.tool_name == tool_name && matches!(t.phase, ToolPhase::Start))
-                {
-                    entry.phase = phase;
-                    entry.summary = summary.or(entry.summary.clone());
-                    entry.ended_ms = Some(ts_ms);
-                } else {
-                    self.tools.push(ToolEntry {
+                    self.chat.push(ChatMessage::ToolCall {
                         tool_name,
-                        phase,
-                        summary,
-                        started_ms: ts_ms,
-                        ended_ms: Some(ts_ms),
+                        phase: ToolPhase::Start,
+                        summary: None,
                     });
+                    self.chat_pinned = true;
+                } else {
+                    // Update tools vec
+                    if let Some(entry) = self
+                        .tools
+                        .iter_mut()
+                        .rev()
+                        .find(|t| t.tool_name == tool_name && matches!(t.phase, ToolPhase::Start))
+                    {
+                        entry.phase = phase.clone();
+                        entry.summary = summary.clone().or(entry.summary.clone());
+                        entry.ended_ms = Some(ts_ms);
+                    } else {
+                        self.tools.push(ToolEntry {
+                            tool_name: tool_name.clone(),
+                            phase: phase.clone(),
+                            summary: summary.clone(),
+                            started_ms: ts_ms,
+                            ended_ms: Some(ts_ms),
+                        });
+                    }
+                    // Update inline chat entry
+                    if let Some(ChatMessage::ToolCall {
+                        tool_name: _n,
+                        phase: p,
+                        summary: s,
+                    }) = self
+                        .chat
+                        .iter_mut()
+                        .rev()
+                        .find(|m| matches!(m, ChatMessage::ToolCall { tool_name: n, phase: ToolPhase::Start, .. } if n == &tool_name))
+                    {
+                        *p = phase;
+                        *s = summary.or(s.clone());
+                    }
                 }
             }
             AgentEventData::Lifecycle {

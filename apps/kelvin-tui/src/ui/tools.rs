@@ -74,7 +74,12 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         Row::new(vec!["Tool", "Phase", "Summary", "Duration"])
             .style(Style::default().add_modifier(Modifier::UNDERLINED)),
     )
-    .block(Block::default().borders(Borders::ALL).title(" Tools "));
+    .block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(Color::Blue))
+            .title(" Tools "),
+    );
 
     let mut state = TableState::default();
     *state.offset_mut() = offset;
