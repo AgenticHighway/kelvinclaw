@@ -65,6 +65,8 @@ services:
             KELVIN_TELEGRAM_WEBHOOK_SECRET_TOKEN: ${KELVIN_TELEGRAM_WEBHOOK_SECRET_TOKEN:-}
             KELVIN_TELEGRAM_PAIRING_ENABLED: ${KELVIN_TELEGRAM_PAIRING_ENABLED:-false}
             KELVIN_TELEGRAM_ALLOW_CHAT_IDS: ${KELVIN_TELEGRAM_ALLOW_CHAT_IDS:-}
+            KELVIN_TELEGRAM_OWNER_CHAT_IDS: ${KELVIN_TELEGRAM_OWNER_CHAT_IDS:-}
+            KELVIN_CHANNEL_ROUTING_RULES_JSON: ${KELVIN_CHANNEL_ROUTING_RULES_JSON:-}
             RUST_LOG: ${RUST_LOG:-info}
         command:
             - --bind
@@ -78,6 +80,7 @@ services:
         volumes:
             - kelvin-home:/kelvin
             - kelvin-workspace:/kelvin/workspace
+            - ./ctf:/kelvin/ctf:ro
         ports:
             - "127.0.0.1:${KELVIN_GATEWAY_WS_PORT:-34617}:34617"
             - "127.0.0.1:${KELVIN_GATEWAY_INGRESS_PORT:-34618}:34618"
