@@ -35,6 +35,28 @@ const DEFAULT_CIRCUIT_BREAKER_COOLDOWN_MS: u64 = 30_000;
 const DEFAULT_PLUGIN_HOME_RELATIVE: &str = ".kelvinclaw/plugins";
 const DEFAULT_TRUST_POLICY_RELATIVE: &str = ".kelvinclaw/trusted_publishers.json";
 
+/// ### Brief
+/// 
+/// represents a successfully loaded and instantiated plugin that has been registered in the plugin system
+///
+/// ### Description
+/// 
+/// captures a plugin's metadata and runtime identity, allowing the plugin system to track, manage, 
+/// and invoke plugins at runtime. a `LoadedInstalledPlugin` can represent any plugin type.
+/// 
+/// ### Note
+/// 
+/// plugins may be both a tool and model provider simultaneously.
+///
+/// ### Fields
+/// * `id` - unique identifier for this plugin instance (typically stored as publisher.plugin)
+/// * `version` - semantic version of the loaded plugin
+/// * `tool_name` - the registered tool/skill name if this plugin provides tools, None otherwise
+/// * `provider_name` - the registered model provider name if this plugin provides model providers, None otherwise
+/// * `model_name` - the specific model name provided by this plugin if it's a model provider, None otherwise
+/// * `provider_profile` - configuration profile name for the provider (e.g., "default", "gpt-4"), None if not applicable
+/// * `runtime` - the runtime environment where this plugin executes (e.g., "wasm_tool_v1", "wasm_model_v1")
+/// * `publisher` - the publisher/author of this plugin, None if unpublished or self-hosted
 #[derive(Debug, Clone)]
 pub struct LoadedInstalledPlugin {
     pub id: String,
@@ -47,6 +69,21 @@ pub struct LoadedInstalledPlugin {
     pub publisher: Option<String>,
 }
 
+/// ### Brief
+///
+/// aggregation wrapper for installed plugins' registries
+///
+/// ### Description
+///
+/// a wrapper the aggregates all loaded plugins and their respective registries, plus an ownership vector
+/// of loaded plugins. this is here to provide unified access to all plugin metadata and runtime
+/// ids.
+///
+/// ### Fields
+/// * `plugin_registry` - generic plugin registry
+/// * `tool_registry` - plugin registry for `tool_provider` type plugins
+/// * `model_registry` - plugin registry for `model_provider` type plugins
+/// * `loaded_plugins` - vector that holds plugin structs' ownership
 #[derive(Clone)]
 pub struct LoadedInstalledPlugins {
     pub plugin_registry: Arc<InMemoryPluginRegistry>,
@@ -55,6 +92,20 @@ pub struct LoadedInstalledPlugins {
     pub loaded_plugins: Vec<LoadedInstalledPlugin>,
 }
 
+/// ### Brief
+///
+/// config object for the plugin loaders
+///
+/// ### Description
+///
+/// specifies directory location, version, and security/trust policies. created (immut) before loading plugins. this
+/// is here to standardize discovery and policy enforcement.
+///
+/// ### Fields
+/// * `plugin_home` - directory location of plugin
+/// * `core_version` - kelvin version
+/// * `security_policy` - global security policy
+/// * `trust_policy` - global trust policy
 #[derive(Debug, Clone)]
 pub struct InstalledPluginLoaderConfig {
     pub plugin_home: PathBuf,
@@ -63,7 +114,11 @@ pub struct InstalledPluginLoaderConfig {
     pub trust_policy: PublisherTrustPolicy,
 }
 
+/// configuration construction for plugin loading
 impl InstalledPluginLoaderConfig {
+    /// ### Brief
+    ///
+    /// construct a new loader configuration with a plugin home directory
     pub fn new(plugin_home: impl Into<PathBuf>) -> Self {
         Self {
             plugin_home: plugin_home.into(),
@@ -74,6 +129,12 @@ impl InstalledPluginLoaderConfig {
     }
 }
 
+/// ### Brief
+///
+/// retrieves the KELVIN_PLUGIN_HOME env var
+///
+/// ### Returns
+/// env var for KELVIN_PLUGIN_HOME as PathBuf
 pub fn default_plugin_home() -> KelvinResult<PathBuf> {
     if let Some(path) = env_path("KELVIN_PLUGIN_HOME") {
         return Ok(path);
@@ -81,6 +142,12 @@ pub fn default_plugin_home() -> KelvinResult<PathBuf> {
     Ok(resolve_home_dir()?.join(DEFAULT_PLUGIN_HOME_RELATIVE))
 }
 
+/// ### Brief
+///
+/// retrieves the KELVIN_TRUST_POLICY_PATH env var
+///
+/// ### Returns
+/// env var for KELVIN_TRUST_POLICY_PATH as PathBuf
 pub fn default_trust_policy_path() -> KelvinResult<PathBuf> {
     if let Some(path) = env_path("KELVIN_TRUST_POLICY_PATH") {
         return Ok(path);
@@ -88,6 +155,16 @@ pub fn default_trust_policy_path() -> KelvinResult<PathBuf> {
     Ok(resolve_home_dir()?.join(DEFAULT_TRUST_POLICY_RELATIVE))
 }
 
+/// ### Brief
+///
+/// callback for `load_installed_plugins_default()`
+///
+/// ### Arguments
+/// * `core_version` - kelvin version
+/// * `security_policy` - security policy
+/// 
+/// ### Returns
+/// a `LoadedInstalledPlugins` instance containing default plugins
 pub fn load_installed_tool_plugins_default(
     core_version: impl Into<String>,
     security_policy: PluginSecurityPolicy,
@@ -95,6 +172,16 @@ pub fn load_installed_tool_plugins_default(
     load_installed_plugins_default(core_version, security_policy)
 }
 
+/// ### Brief
+///
+/// callback for `load_installed_plugins()` with default plugin home and auto-loaded trust policy
+///
+/// ### Arguments
+/// * `core_version` - kelvin version
+/// * `security_policy` - security policy
+///
+/// ### Returns
+/// a `LoadedInstalledPlugins` instance containing default plugins
 pub fn load_installed_plugins_default(
     core_version: impl Into<String>,
     security_policy: PluginSecurityPolicy,
@@ -114,6 +201,18 @@ pub fn load_installed_plugins_default(
     })
 }
 
+/// ### Brief
+///
+/// defines per-plugin granular scopes for the plugin security sandbox
+///
+/// ### Description
+///
+/// generally contains whitelists for various access options. these are declared by plugin authors.
+///
+/// ### Fields
+/// * `fs_read_paths` - what paths the plugin is allowed to read from
+/// * `network_allow_hosts` - what hosts the plugin is allowed to fetch from
+/// * `env_allow` - what env vars the plugin is allowed to access
 #[derive(Debug, Clone, Default)]
 pub struct CapabilityScopes {
     pub fs_read_paths: Vec<String>,
@@ -121,6 +220,20 @@ pub struct CapabilityScopes {
     pub env_allow: Vec<String>,
 }
 
+/// ### Brief
+///
+/// defines operational config items for a plugin
+///
+/// ### Description
+///
+/// generally consists of hard runtime limits. these are declared by plugin authors.
+///
+/// ### Fields
+/// * `timeout_ms` - max time kelvin waits for a plugin to respond
+/// * `max_retries` - max number of times kelvin core can retry a plugin if internal execution fails
+/// * `max_calls_per_minute` - max calls to this plugin per minute
+/// * `circuit_breaker_failures` - number of failed attempts to trip circuit breaker
+/// * `circuit_breaker_cooldown_ms` - how long to block the plugin after the circuit breaker trips
 #[derive(Debug, Clone)]
 pub struct OperationalControls {
     pub timeout_ms: u64,
@@ -142,6 +255,20 @@ impl Default for OperationalControls {
     }
 }
 
+/// ### Brief
+///
+/// defines the kelvin trust policy for all publishers
+///
+/// ### Description
+///
+/// manages trusted/revoked publisher public keys, signature requirements, and plugin-publisher mappings. this
+/// is defined by the user (with restrictive defaults). revoked publisher ids
+///
+/// ### Fields
+/// * `require_signature` - whether to require and check plugin signatures
+/// * `trusted_publishers` - hashmap of trusted publishers' ids -> their public keys
+/// * `revoked_publishers` - hashset of revoked publishers; ids
+/// * `pinned_plugin_publishers` - hashmap of plugin ids -> publisher ids
 #[derive(Debug, Clone)]
 pub struct PublisherTrustPolicy {
     pub require_signature: bool,
@@ -150,6 +277,9 @@ pub struct PublisherTrustPolicy {
     pinned_plugin_publishers: HashMap<String, String>,
 }
 
+/// ### Brief
+///
+/// default for trust policy: requires signatures, but trusted/revoked/map are empty
 impl Default for PublisherTrustPolicy {
     fn default() -> Self {
         Self {
@@ -161,12 +291,54 @@ impl Default for PublisherTrustPolicy {
     }
 }
 
+/// builder methods and core trust verification for plugin publishers
 impl PublisherTrustPolicy {
+    /// ### Brief
+    ///
+    /// chainable consuming function that sets the signature requirement to true or false
+    ///
+    /// ### Arguments
+    /// * `required` - whether to require a signature
+    ///
+    /// ### Returns
+    /// the `PublisherTrustPolicy` instance
+    ///
+    /// ### Example
+    /// ```
+    /// use kelvin_brain::installed_plugins::PublisherTrustPolicy;
+    /// 
+    /// let policy = PublisherTrustPolicy::default();
+    /// 
+    /// assert_eq!(policy.require_signature, true);
+    /// assert_eq!(policy.with_signature_requirement(false).require_signature, false);
+    /// ```
     pub fn with_signature_requirement(mut self, required: bool) -> Self {
         self.require_signature = required;
         self
     }
 
+    /// ### Brief
+    ///
+    /// chainable consuming function that inserts a new trusted publisher id/public key pair
+    ///
+    /// ### Arguments
+    /// * `publisher_id` - publisher id
+    /// * `ed25519_public_key_base64` - public key
+    ///
+    /// ### Returns
+    /// the `PublisherTrustPolicy` instance
+    ///
+    /// ### Errors
+    /// - invalid base64 encoding
+    /// - invalid ed25519 public key format
+    ///
+    /// ### Example
+    /// ```
+    /// use kelvin_brain::installed_plugins::PublisherTrustPolicy;
+    ///
+    /// let policy = PublisherTrustPolicy::default();
+    /// let new_policy = policy.with_publisher_key("acme", "DEADBEEF");
+    /// ```
     pub fn with_publisher_key(
         mut self,
         publisher_id: &str,
@@ -178,17 +350,97 @@ impl PublisherTrustPolicy {
         Ok(self)
     }
 
+    /// ### Brief
+    ///
+    /// chainable consuming function that inserts a revoked publisher id
+    ///
+    /// ### Arguments
+    /// * `publisher_id` - publisher id
+    ///
+    /// ### Returns
+    /// the `PublisherTrustPolicy` instance
+    ///
+    /// ### Example
+    /// ```
+    /// use kelvin_brain::installed_plugins::PublisherTrustPolicy;
+    ///
+    /// let policy = PublisherTrustPolicy::default();
+    /// let new_policy = policy.with_revoked_publisher("weyland-yutani-corp");
+    /// ```
     pub fn with_revoked_publisher(mut self, publisher_id: &str) -> Self {
         self.revoked_publishers.insert(publisher_id.to_string());
         self
     }
 
+    /// ### Brief
+    ///
+    /// chainable consuming function that inserts a plugin -> publisher mapping
+    ///
+    /// ### Arguments
+    /// * `plugin_id` - plugin id
+    /// * `publisher_id` - publisher id
+    ///
+    /// ### Returns
+    /// the `PublisherTrustPolicy` instance
+    ///
+    /// ### Example
+    /// ```
+    /// use kelvin_brain::installed_plugins::PublisherTrustPolicy;
+    ///
+    /// let policy = PublisherTrustPolicy::default();
+    /// let new_policy = policy.with_pinned_plugin_publisher("microsoft.backwards_compat", "microsoft-official");
+    /// ```
     pub fn with_pinned_plugin_publisher(mut self, plugin_id: &str, publisher_id: &str) -> Self {
         self.pinned_plugin_publishers
             .insert(plugin_id.to_string(), publisher_id.to_string());
         self
     }
 
+    /// ### Brief
+    ///
+    /// load a `PublisherTrustPolicy` from a json file
+    ///
+    /// ### Description
+    ///
+    /// parses a JSON file containing publisher trust configuration, including whether to require 
+    /// signatures, trusted publishers, revoked publishers, and plugin-to-publisher pinnings. returns 
+    /// an error if the file is missing, invalid JSON, or contains invalid ed25519 keys.
+    ///
+    /// ### Arguments
+    /// * `path` - path to trust policy JSON file
+    ///
+    /// ### Returns
+    /// a `PublisherTrustPolicy` instance with all configured publishers, revoked entries, and pinnings
+    ///
+    /// ### Errors
+    /// - file I/O error
+    /// - invalid JSON format
+    /// - invalid ed25519 public keys in the file
+    ///
+    /// ### Example
+    /// ```no_run
+    /// use kelvin_brain::installed_plugins::PublisherTrustPolicy;
+    /// use std::fs;
+    ///
+    /// // example trust policy JSON file:
+    /// // {
+    /// //   "require_signature": true,
+    /// //   "publishers": [
+    /// //     {
+    /// //       "id": "acme-corp",
+    /// //       "ed25519_public_key": "MCowBQYDK2VwAyEAu7..."
+    /// //     }
+    /// //   ],
+    /// //   "revoked_publishers": ["malicious-pub"],
+    /// //   "pinned_plugin_publishers": {
+    /// //     "kelvin.echo": "acme-corp"
+    /// //   }
+    /// // }
+    ///
+    /// let policy = PublisherTrustPolicy::from_json_file("/home/user/.kelvinclaw/trusted_publishers.json")?;
+    /// assert!(policy.require_signature);
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     pub fn from_json_file(path: impl AsRef<Path>) -> KelvinResult<Self> {
         let text = fs::read_to_string(path.as_ref())?;
         let parsed: PublisherTrustPolicyFile = serde_json::from_str(&text).map_err(|err| {
@@ -223,6 +475,31 @@ impl PublisherTrustPolicy {
         Ok(policy)
     }
 
+    /// ### Brief
+    ///
+    /// verifies that a plugin manifest passes all trust policy checks and has a valid signature
+    ///
+    /// ### Description
+    ///
+    /// checks the manifest against pinned publishers, revoked publishers, and signature requirements.
+    /// validates the manifest signature using the trusted publisher's ed25519 key if required by policy.
+    /// returns an error if any trust policy is violated or signature verification fails.
+    ///
+    /// ### Arguments
+    /// * `manifest` - the plugin package manifest to verify
+    /// * `manifest_bytes` - the raw manifest bytes for signature verification
+    /// * `version_dir` - the plugin version directory containing the optional signature file (plugin.sig)
+    ///
+    /// ### Returns
+    /// none
+    ///
+    /// ### Errors
+    /// - pinned publisher mismatch or missing when required
+    /// - publisher is revoked
+    /// - signature file missing when required
+    /// - signature file empty or invalid format
+    /// - invalid ed25519 signature
+    /// - publisher is not trusted
     fn verify_manifest_signature(
         &self,
         manifest: &InstalledPluginPackageManifest,
@@ -321,6 +598,21 @@ impl PublisherTrustPolicy {
     }
 }
 
+/// ### Brief
+///
+/// JSON deserialization format for publisher trust policy configuration
+///
+/// ### Description
+///
+/// internal struct for deserializing trust policy from JSON. all fields are optional with
+/// sensible defaults. the loaded data is transformed into a `PublisherTrustPolicy` instance
+/// which enforces trust and signature verification rules.
+///
+/// ### Fields
+/// * `require_signature` - whether plugin signatures are mandatory; defaults to true if unspecified
+/// * `publishers` - list of trusted publishers with their ed25519 public keys
+/// * `revoked_publishers` - list of publisher IDs that are no longer trusted
+/// * `pinned_plugin_publishers` - mapping of plugin IDs to their required publisher
 #[derive(Debug, Deserialize)]
 struct PublisherTrustPolicyFile {
     #[serde(default)]
@@ -333,12 +625,52 @@ struct PublisherTrustPolicyFile {
     pinned_plugin_publishers: HashMap<String, String>,
 }
 
+/// ### Brief
+///
+/// JSON deserialization format for a trusted publisher entry
+///
+/// ### Fields
+/// * `id` - publisher id
+/// * `ed25519_public_key` - base64-encoded ed25519 public key
 #[derive(Debug, Deserialize)]
 struct TrustedPublisherEntry {
     id: String,
     ed25519_public_key: String,
 }
 
+/// ### Brief
+///
+/// JSON deserialization format for a plugin package manifest
+///
+/// ### Description
+///
+/// captures plugin metadata, capabilities, operational controls, and deployment configuration.
+/// converted to a `PluginManifest` after validation. fields may have different defaults or
+/// resolution logic (e.g., `tool_name` may be derived from `name` if not specified).
+///
+/// ### Fields
+/// * `id` - unique plugin id (e.g., "publisher.plugin_name")
+/// * `name` - human-readable name
+/// * `version` - semantic version
+/// * `api_version` - plugin API version
+/// * `description` - optional description
+/// * `homepage` - optional homepage URL
+/// * `capabilities` - plugin capabilities (tool provider, model provider, etc.)
+/// * `experimental` - whether this is an experimental plugin
+/// * `min_core_version` - optional minimum kelvin core version required
+/// * `max_core_version` - optional maximum kelvin core version allowed
+/// * `runtime` - optional runtime kind override
+/// * `tool_name` - optional registered tool/skill name
+/// * `provider_name` - optional model provider name
+/// * `provider_profile` - optional model provider profile configuration
+/// * `model_name` - optional specific model name
+/// * `entrypoint` - relative path to plugin entrypoint within payload/
+/// * `entrypoint_sha256` - optional SHA-256 checksum of entrypoint for integrity verification
+/// * `publisher` - optional publisher/author id
+/// * `quality_tier` - optional quality tier (e.g., "unsigned_local", "signed_trusted")
+/// * `capability_scopes` - scoped access rules for capabilities
+/// * `operational_controls` - runtime limits (timeouts, retries, rate limiting)
+/// * `tool_input_schema` - optional JSON schema for tool input validation
 #[derive(Debug, Clone, Deserialize)]
 struct InstalledPluginPackageManifest {
     id: String,
@@ -370,6 +702,14 @@ struct InstalledPluginPackageManifest {
     tool_input_schema: Option<Value>,
 }
 
+/// ### Brief
+///
+/// JSON deserialization format for capability scopes within a plugin manifest
+///
+/// ### Fields
+/// * `fs_read_paths` - allowed file system paths for reading
+/// * `network_allow_hosts` - allowed network hosts (wildcard patterns supported)
+/// * `env_allow` - allowed environment variables
 #[derive(Debug, Clone, Default, Deserialize)]
 struct CapabilityScopesManifest {
     #[serde(default)]
@@ -380,6 +720,17 @@ struct CapabilityScopesManifest {
     env_allow: Vec<String>,
 }
 
+/// ### Brief
+///
+/// JSON deserialization format for operational controls within a plugin manifest
+///
+/// ### Fields
+/// * `timeout_ms` - execution timeout in milliseconds
+/// * `max_retries` - maximum number of retries on failure
+/// * `max_calls_per_minute` - rate limit for calls per minute
+/// * `circuit_breaker_failures` - threshold number of failures before circuit breaker trips
+/// * `circuit_breaker_cooldown_ms` - cooldown duration in milliseconds after circuit breaker trip
+/// * `fuel_budget` - optional WASM fuel budget override; omit to use runtime default
 #[derive(Debug, Clone, Deserialize)]
 struct OperationalControlsManifest {
     #[serde(default = "default_timeout_ms")]
@@ -392,11 +743,11 @@ struct OperationalControlsManifest {
     circuit_breaker_failures: u32,
     #[serde(default = "default_circuit_breaker_cooldown_ms")]
     circuit_breaker_cooldown_ms: u64,
-    /// Override the WASM fuel budget for this plugin. Omit to use the runtime default.
     #[serde(default)]
     fuel_budget: Option<u64>,
 }
 
+/// default operational controls with standard timeout and rate limitingconstruct default operational controls from constant defaults
 impl Default for OperationalControlsManifest {
     fn default() -> Self {
         Self {
@@ -430,7 +781,13 @@ fn default_circuit_breaker_cooldown_ms() -> u64 {
     DEFAULT_CIRCUIT_BREAKER_COOLDOWN_MS
 }
 
+/// ### Brief
+/// 
+/// name and version resolution, format conversion, and field validation
 impl InstalledPluginPackageManifest {
+    /// ### Brief
+    ///
+    /// convert to a core plugin manifest
     fn to_core_manifest(&self) -> PluginManifest {
         PluginManifest {
             id: self.id.clone(),
@@ -446,6 +803,9 @@ impl InstalledPluginPackageManifest {
         }
     }
 
+    /// ### Brief
+    ///
+    /// get the runtime kind, defaulting to "wasm_tool_v1"
     fn runtime_kind(&self) -> &str {
         self.runtime
             .as_deref()
@@ -453,6 +813,9 @@ impl InstalledPluginPackageManifest {
             .trim()
     }
 
+    /// ### Brief
+    ///
+    /// get the quality tier, defaulting to "unsigned_local"
     fn quality_tier(&self) -> &str {
         self.quality_tier
             .as_deref()
@@ -460,7 +823,23 @@ impl InstalledPluginPackageManifest {
             .trim()
     }
 
-    fn resolved_tool_name(&self) -> KelvinResult<String> {
+    /// ### Brief
+    ///
+    /// resolve the tool name with fallback logic and validation
+    ///
+    /// ### Description
+    ///
+    /// uses the explicit `tool_name` if provided, otherwise derives it from the plugin `id`
+    /// by replacing dots with underscores. validates that the name is non-empty and contains
+    /// only alphanumeric characters, underscores, hyphens, or dots.
+    ///
+    /// ### Returns
+    /// resolved tool name
+    ///
+    /// ### Errors
+    /// - resolved name is empty
+    /// - resolved name contains invalid characters
+    fn resolve_tool_name(&self) -> KelvinResult<String> {
         let fallback = self.id.replace('.', "_");
         let candidate = self
             .tool_name
@@ -486,7 +865,27 @@ impl InstalledPluginPackageManifest {
         Ok(candidate)
     }
 
-    fn resolved_provider_name(
+    /// ### Brief
+    ///
+    /// resolve the provider name with fallback and consistency validation
+    ///
+    /// ### Description
+    ///
+    /// uses the explicit `provider_name` if provided. if absent, derives from the provider profile name
+    /// or falls back to the plugin `id` with dots replaced by underscores. validates non-emptiness,
+    /// allowed characters, and consistency with the provider profile if present.
+    ///
+    /// ### Arguments
+    /// * `provider_profile` - optional model provider profile for fallback and consistency checking
+    ///
+    /// ### Returns
+    /// resolved provider name
+    ///
+    /// ### Errors
+    /// - resolved name is empty
+    /// - resolved name contains invalid characters
+    /// - resolved name does not match provider profile name
+    fn resolve_model_provider_name(
         &self,
         provider_profile: Option<&ModelProviderProfile>,
     ) -> KelvinResult<String> {
@@ -525,6 +924,12 @@ impl InstalledPluginPackageManifest {
         Ok(candidate)
     }
 
+    /// ### Brief
+    ///
+    /// resolve the model name, defaulting to "default"
+    ///
+    /// ### Returns
+    /// resolved model name
     fn resolved_model_name(&self) -> KelvinResult<String> {
         let fallback = "default";
         let candidate = self
@@ -542,6 +947,16 @@ impl InstalledPluginPackageManifest {
         Ok(candidate)
     }
 
+    /// ### Brief
+    ///
+    /// get and validate the provider profile
+    ///
+    /// ### Returns
+    /// model provider profile
+    ///
+    /// ### Errors
+    /// - provider profile is missing
+    /// - provider profile is invalid
     fn resolved_provider_profile(&self) -> KelvinResult<ModelProviderProfile> {
         let Some(profile) = self.provider_profile.clone() else {
             return Err(KelvinError::InvalidInput(format!(
@@ -554,6 +969,13 @@ impl InstalledPluginPackageManifest {
     }
 }
 
+/// ### Brief
+///
+/// tracks which ABI imports a model plugin uses
+///
+/// ### Fields
+/// * `uses_openai_import` - whether the plugin imports the openai ABI module
+/// * `uses_provider_profile_import` - whether the plugin imports the provider_profile ABI module
 #[derive(Debug, Clone, Copy, Default)]
 struct ModelPluginAbiUsage {
     uses_openai_import: bool,
@@ -576,6 +998,14 @@ fn resolve_model_provider_profile(
     Ok(Some(profile))
 }
 
+/// ### Brief
+///
+/// shared runtime state for a plugin's call history and circuit breaker
+///
+/// ### Fields
+/// * `call_timestamps` - queue of recent call timestamps for rate limiting
+/// * `consecutive_failures` - count of consecutive call failures
+/// * `circuit_open_until` - optional deadline when circuit breaker will close, if currently open
 #[derive(Debug, Default)]
 struct OperationalState {
     call_timestamps: VecDeque<Instant>,
@@ -583,6 +1013,28 @@ struct OperationalState {
     circuit_open_until: Option<Instant>,
 }
 
+/// ### Brief
+///
+/// a WASM tool plugin loaded and ready for execution
+///
+/// ### Description
+///
+/// wraps a WASM skill (tool) with its metadata, sandbox configuration, scopes, runtime controls,
+/// and shared operational state (for rate limiting and circuit breaking). implements the `Tool` trait
+/// to be called by the skill invocation system.
+///
+/// ### Fields
+/// * `plugin_id` - unique plugin identifier
+/// * `plugin_version` - semantic version
+/// * `tool_name` - registered tool/skill name
+/// * `tool_description` - human-readable description
+/// * `tool_input_schema` - JSON schema for input validation
+/// * `entrypoint_abs` - absolute path to the WASM module
+/// * `host` - WASM runtime host for skill execution
+/// * `sandbox_policy` - sandbox configuration (capabilities, imports allowed)
+/// * `scopes` - capability scopes (fs read paths, network hosts, env vars)
+/// * `controls` - operational limits (timeout, retries, rate limit)
+/// * `state` - shared runtime state under lock (call timestamps, failures, circuit breaker)
 #[derive(Clone)]
 struct InstalledWasmTool {
     plugin_id: String,
@@ -598,7 +1050,11 @@ struct InstalledWasmTool {
     state: Arc<Mutex<OperationalState>>,
 }
 
+/// construction, execution control, and safety enforcement for installed tools
 impl InstalledWasmTool {
+    /// ### Brief
+    ///
+    /// construct a new installed WASM tool
     #[allow(clippy::too_many_arguments)]
     fn new(
         plugin_id: String,
@@ -627,6 +1083,19 @@ impl InstalledWasmTool {
         }
     }
 
+    /// ### Brief
+    ///
+    /// validate tool arguments against capability scopes (e.g., fs_read paths)
+    ///
+    /// ### Arguments
+    /// * `args` - tool arguments as JSON value
+    ///
+    /// ### Returns
+    /// unit on success
+    ///
+    /// ### Errors
+    /// - required argument missing or wrong type
+    /// - argument value does not match scoped allowlist
     fn enforce_scoped_arguments(&self, args: &serde_json::Value) -> KelvinResult<()> {
         if self.sandbox_policy.allow_fs_read {
             let target_path = args
@@ -654,6 +1123,18 @@ impl InstalledWasmTool {
         Ok(())
     }
 
+    /// ### Brief
+    ///
+    /// check circuit breaker and rate limit before allowing a call
+    ///
+    /// ### Description
+    ///
+    /// mutates shared state under lock: checks if circuit breaker is open, updates call timestamp queue,
+    /// and verifies call rate is within limit.
+    ///
+    /// ### Errors
+    /// - circuit breaker is open
+    /// - call rate limit exceeded
     async fn reserve_call_budget(&self) -> KelvinResult<()> {
         let now = Instant::now();
         let mut state = self.state.lock().await;
@@ -688,11 +1169,22 @@ impl InstalledWasmTool {
         Ok(())
     }
 
+    /// ### Brief
+    ///
+    /// reset consecutive failures to zero on a successful call
     async fn mark_success(&self) {
         let mut state = self.state.lock().await;
         state.consecutive_failures = 0;
     }
 
+    /// ### Brief
+    ///
+    /// increment consecutive failures and conditionally trip the circuit breaker
+    ///
+    /// ### Note
+    ///
+    /// when consecutive failures reach the circuit breaker threshold, the circuit opens
+    /// and rejects subsequent calls until the cooldown period expires.
     async fn mark_failure(&self) {
         let mut state = self.state.lock().await;
         state.consecutive_failures = state.consecutive_failures.saturating_add(1);
@@ -704,6 +1196,20 @@ impl InstalledWasmTool {
         }
     }
 
+    /// ### Brief
+    ///
+    /// execute the tool once with the given arguments under timeout
+    ///
+    /// ### Arguments
+    /// * `arguments` - tool arguments as JSON
+    ///
+    /// ### Returns
+    /// skill execution result
+    ///
+    /// ### Errors
+    /// - JSON serialization failure
+    /// - WASM execution timeout
+    /// - WASM execution error
     async fn execute_once(&self, arguments: &Value) -> KelvinResult<kelvin_wasm::SkillExecution> {
         let host = self.host.clone();
         let entrypoint = self.entrypoint_abs.clone();
@@ -732,6 +1238,27 @@ impl InstalledWasmTool {
     }
 }
 
+/// ### Brief
+///
+/// a WASM model provider plugin loaded and ready for inference
+///
+/// ### Description
+///
+/// wraps a WASM model (inference engine) with its metadata, provider profile, scopes, runtime controls,
+/// and shared operational state (for rate limiting and circuit breaking). implements the `ModelProvider` trait
+/// to be called by the model invocation system.
+///
+/// ### Fields
+/// * `plugin_id` - unique plugin identifier
+/// * `plugin_version` - semantic version
+/// * `provider_name` - registered model provider name
+/// * `model_name` - specific model name
+/// * `provider_profile` - optional model provider profile (protocol family, API keys, etc.)
+/// * `entrypoint_abs` - absolute path to the WASM module
+/// * `host` - WASM runtime host for model execution
+/// * `scopes` - capability scopes (fs read paths, network hosts, env vars)
+/// * `controls` - operational limits (timeout, retries, rate limit)
+/// * `state` - shared runtime state under lock (call timestamps, failures, circuit breaker)
 #[derive(Clone)]
 struct InstalledWasmModelProvider {
     plugin_id: String,
@@ -746,7 +1273,11 @@ struct InstalledWasmModelProvider {
     state: Arc<Mutex<OperationalState>>,
 }
 
+/// construction, execution control, and profile management for installed model providers
 impl InstalledWasmModelProvider {
+    /// ### Brief
+    ///
+    /// construct a new installed WASM model provider
     #[allow(clippy::too_many_arguments)]
     fn new(
         plugin_id: String,
@@ -773,6 +1304,12 @@ impl InstalledWasmModelProvider {
         }
     }
 
+    /// ### Brief
+    ///
+    /// build a sandbox policy for this model provider
+    ///
+    /// ### Returns
+    /// model sandbox policy with network scopes and timeout
     fn sandbox_policy(&self) -> ModelSandboxPolicy {
         ModelSandboxPolicy {
             network_allow_hosts: self.scopes.network_allow_hosts.clone(),
@@ -783,6 +1320,18 @@ impl InstalledWasmModelProvider {
         }
     }
 
+    /// ### Brief
+    ///
+    /// check circuit breaker and rate limit before allowing a call
+    ///
+    /// ### Description
+    ///
+    /// mutates shared state under lock: checks if circuit breaker is open, updates call timestamp queue,
+    /// and verifies call rate is within limit.
+    ///
+    /// ### Errors
+    /// - circuit breaker is open
+    /// - call rate limit exceeded
     async fn reserve_call_budget(&self) -> KelvinResult<()> {
         let now = Instant::now();
         let mut state = self.state.lock().await;
@@ -817,11 +1366,22 @@ impl InstalledWasmModelProvider {
         Ok(())
     }
 
+    /// ### Brief
+    ///
+    /// reset consecutive failures to zero on a successful call
     async fn mark_success(&self) {
         let mut state = self.state.lock().await;
         state.consecutive_failures = 0;
     }
 
+    /// ### Brief
+    ///
+    /// increment consecutive failures and conditionally trip the circuit breaker
+    ///
+    /// ### Note
+    ///
+    /// when consecutive failures reach the circuit breaker threshold, the circuit opens
+    /// and rejects subsequent calls until the cooldown period expires.
     async fn mark_failure(&self) {
         let mut state = self.state.lock().await;
         state.consecutive_failures = state.consecutive_failures.saturating_add(1);
@@ -833,6 +1393,19 @@ impl InstalledWasmModelProvider {
         }
     }
 
+    /// ### Brief
+    ///
+    /// execute the model provider once with the given input under timeout
+    ///
+    /// ### Arguments
+    /// * `input_json` - input as JSON string
+    ///
+    /// ### Returns
+    /// output as JSON string
+    ///
+    /// ### Errors
+    /// - WASM execution timeout
+    /// - WASM execution error
     async fn execute_once(&self, input_json: String) -> KelvinResult<String> {
         let host = self.host.clone();
         let entrypoint = self.entrypoint_abs.clone();
@@ -854,6 +1427,27 @@ impl InstalledWasmModelProvider {
         }
     }
 
+    /// ### Brief
+    ///
+    /// parse and validate model output, adapting provider-specific formats if needed
+    ///
+    /// ### Description
+    ///
+    /// parses JSON output from the model plugin. checks for error fields, validates against
+    /// `ModelOutput` schema, and attempts provider-profile-aware format adaptation if the
+    /// direct deserialization fails. returns the normalized `ModelOutput`.
+    ///
+    /// ### Arguments
+    /// * `output_json` - model output as JSON string
+    ///
+    /// ### Returns
+    /// normalized model output
+    ///
+    /// ### Errors
+    /// - invalid JSON format
+    /// - model returned an error message
+    /// - output schema validation failed
+    /// - no valid output format found
     fn decode_output_payload(&self, output_json: &str) -> KelvinResult<ModelOutput> {
         let value: Value = serde_json::from_str(output_json).map_err(|err| {
             KelvinError::InvalidInput(format!(
@@ -900,7 +1494,9 @@ impl InstalledWasmModelProvider {
     }
 }
 
-/// Helper to get the JSON type name for error messages.
+/// ### Brief
+///
+/// get the JSON type name of a value for error messages
 fn json_type_name(value: &Value) -> &'static str {
     match value {
         Value::Null => "null",
@@ -912,7 +1508,21 @@ fn json_type_name(value: &Value) -> &'static str {
     }
 }
 
-/// Validates that a JSON value matches the expected ModelOutput schema.
+/// ### Brief
+///
+/// validate that a JSON value matches the expected `ModelOutput` schema
+///
+/// ### Description
+///
+/// checks that the value is a JSON object with required fields: `assistant_text` (string) and
+/// `tool_calls` (array). each tool call must have `id`, `name`, and `arguments` fields with
+/// proper types (`name` non-empty string, `arguments` JSON object).
+///
+/// ### Arguments
+/// * `value` - the JSON value to validate
+///
+/// ### Returns
+/// unit on success, or an error message describing the validation failure
 fn validate_model_output_schema(value: &Value) -> Result<(), String> {
     let obj = value.as_object().ok_or("response is not a JSON object")?;
 
@@ -979,7 +1589,20 @@ fn validate_model_output_schema(value: &Value) -> Result<(), String> {
     Ok(())
 }
 
-/// Validates OpenAI Responses format before adaptation.
+/// ### Brief
+///
+/// validate that a JSON value matches the openai responses format
+///
+/// ### Description
+///
+/// checks that the value has either an `output_text` string field or an `output` array field.
+/// if `output` exists, validates that each element has `message` (with `type` field) or `function_call` fields.
+///
+/// ### Arguments
+/// * `value` - the JSON value to validate
+///
+/// ### Returns
+/// unit on success, or an error message describing the validation failure
 fn validate_openai_response_schema(value: &Value) -> Result<(), String> {
     let obj = value.as_object().ok_or("response is not a JSON object")?;
 
@@ -1038,7 +1661,20 @@ fn validate_openai_response_schema(value: &Value) -> Result<(), String> {
     Ok(())
 }
 
-/// Validates Anthropic Messages format before adaptation.
+/// ### Brief
+///
+/// validate that a JSON value matches the anthropic messages format
+///
+/// ### Description
+///
+/// checks that the value has a `content` array field. each content block must have either a `type` field
+/// for text blocks or `input` field for tool_use blocks.
+///
+/// ### Arguments
+/// * `value` - the JSON value to validate
+///
+/// ### Returns
+/// unit on success, or an error message describing the validation failure
 fn validate_anthropic_response_schema(value: &Value) -> Result<(), String> {
     let obj = value.as_object().ok_or("response is not a JSON object")?;
 
@@ -1087,7 +1723,20 @@ fn validate_anthropic_response_schema(value: &Value) -> Result<(), String> {
     Ok(())
 }
 
-/// Validates OpenAI Chat Completions format before adaptation.
+/// ### Brief
+///
+/// validate that a JSON value matches the openai chat completions format
+///
+/// ### Description
+///
+/// checks that the value has a non-empty `choices` array. the first element must have a `message`
+/// object field with a `role` field present.
+///
+/// ### Arguments
+/// * `value` - the JSON value to validate
+///
+/// ### Returns
+/// unit on success, or an error message describing the validation failure
 fn validate_openai_chat_completions_schema(value: &Value) -> Result<(), String> {
     let obj = value.as_object().ok_or("response is not a JSON object")?;
 
@@ -1386,20 +2035,50 @@ fn adapt_openrouter_usage(usage: &Value) -> Option<kelvin_core::ModelUsage> {
     })
 }
 
+/// tool interface for executing WASM-based tools with budget and scoping
 #[async_trait]
 impl Tool for InstalledWasmTool {
+    /// ### Brief
+    ///
+    /// get the tool name
     fn name(&self) -> &str {
         &self.tool_name
     }
 
+    /// ### Brief
+    ///
+    /// get the tool description
     fn description(&self) -> &str {
         &self.tool_description
     }
 
+    /// ### Brief
+    ///
+    /// get the tool input schema
     fn input_schema(&self) -> Value {
         self.tool_input_schema.clone()
     }
 
+    /// ### Brief
+    ///
+    /// call the tool with scope enforcement, budget limits, and retry logic
+    ///
+    /// ### Description
+    ///
+    /// enforces scoped arguments, reserves call budget (rate limit, circuit breaker), and executes
+    /// the tool with up to `max_retries` attempts. marks success or failure on the operational state.
+    ///
+    /// ### Arguments
+    /// * `input` - tool call input with arguments
+    ///
+    /// ### Returns
+    /// tool call result with output or error
+    ///
+    /// ### Errors
+    /// - scoped arguments validation fails
+    /// - circuit breaker is open
+    /// - call rate limit exceeded
+    /// - all retry attempts failed
     async fn call(&self, input: ToolCallInput) -> KelvinResult<ToolCallResult> {
         self.enforce_scoped_arguments(&input.arguments)?;
         self.reserve_call_budget().await?;
@@ -1467,16 +2146,43 @@ impl Tool for InstalledWasmTool {
     }
 }
 
+/// model provider interface for executing WASM-based models with budget and output validation
 #[async_trait]
 impl ModelProvider for InstalledWasmModelProvider {
+    /// ### Brief
+    ///
+    /// get the provider name
     fn provider_name(&self) -> &str {
         &self.provider_name
     }
 
+    /// ### Brief
+    ///
+    /// get the model name
     fn model_name(&self) -> &str {
         &self.model_name
     }
 
+    /// ### Brief
+    ///
+    /// infer with the model using budget limits and retry logic
+    ///
+    /// ### Description
+    ///
+    /// reserves call budget (rate limit, circuit breaker), serializes input, and executes the model
+    /// with up to `max_retries` attempts. parses and validates output, marks success or failure
+    /// on the operational state.
+    ///
+    /// ### Arguments
+    /// * `input` - model input with messages and configuration
+    ///
+    /// ### Returns
+    /// model output with text and tool calls
+    ///
+    /// ### Errors
+    /// - circuit breaker is open
+    /// - call rate limit exceeded
+    /// - all retry attempts failed
     async fn infer(&self, input: ModelInput) -> KelvinResult<ModelOutput> {
         self.reserve_call_budget().await?;
         let input_json = serde_json::to_string(&input).map_err(|err| {
@@ -1513,21 +2219,39 @@ impl ModelProvider for InstalledWasmModelProvider {
     }
 }
 
+/// ### Brief
+///
+/// factory for creating tool and model provider instances from a loaded plugin
+///
+/// ### Fields
+/// * `manifest` - plugin metadata and configuration
+/// * `tool` - optional instantiated tool plugin
+/// * `model_provider` - optional instantiated model provider plugin
 struct InstalledWasmPluginFactory {
     manifest: PluginManifest,
     tool: Option<Arc<InstalledWasmTool>>,
     model_provider: Option<Arc<InstalledWasmModelProvider>>,
 }
 
+/// trait implementation for instantiated plugin access
 impl PluginFactory for InstalledWasmPluginFactory {
+    /// ### Brief
+    ///
+    /// get the plugin manifest
     fn manifest(&self) -> &PluginManifest {
         &self.manifest
     }
 
+    /// ### Brief
+    ///
+    /// get the tool if this plugin provides one
     fn tool(&self) -> Option<Arc<dyn Tool>> {
         self.tool.clone().map(|tool| tool as Arc<dyn Tool>)
     }
 
+    /// ### Brief
+    ///
+    /// get the model provider if this plugin provides one
     fn model_provider(&self) -> Option<Arc<dyn ModelProvider>> {
         self.model_provider
             .clone()
@@ -1535,12 +2259,45 @@ impl PluginFactory for InstalledWasmPluginFactory {
     }
 }
 
+/// ### Brief
+///
+/// load installed plugins from the configured directory
+///
+/// ### Arguments
+/// * `config` - loader configuration with plugin home and policies
+///
+/// ### Returns
+/// loaded plugins with tool and model registries
 pub fn load_installed_tool_plugins(
     config: InstalledPluginLoaderConfig,
 ) -> KelvinResult<LoadedInstalledPlugins> {
     load_installed_plugins(config)
 }
 
+/// ### Brief
+///
+/// main entrypoint to discover, load, and register all installed plugins
+///
+/// ### Description
+///
+/// walks the plugin home directory, validates each plugin against trust policies, initializes
+/// WASM hosts, populates tool and model registries, and returns all loaded plugins. enforces
+/// security policies, signature verification, and capability scoping.
+///
+/// ### Arguments
+/// * `config` - loader configuration with plugin home, core version, and policies
+///
+/// ### Returns
+/// loaded plugins with aggregated tool and model provider registries
+///
+/// ### Errors
+/// - plugin home directory not found or not readable
+/// - trust policy file invalid
+/// - plugin manifest missing or invalid JSON
+/// - trust policy violation (revoked publisher, signature required, etc.)
+/// - manifest validation failure (missing fields, invalid versions, etc.)
+/// - entrypoint file not found or invalid
+/// - WASM host initialization failure
 pub fn load_installed_plugins(
     config: InstalledPluginLoaderConfig,
 ) -> KelvinResult<LoadedInstalledPlugins> {
@@ -1568,6 +2325,7 @@ pub fn load_installed_plugins(
     for plugin_dir in plugin_dirs {
         let plugin = load_one_plugin(&plugin_dir, &config, skill_host.clone(), model_host.clone())?;
 
+        // define plugin registry entry
         let loaded = LoadedInstalledPlugin {
             id: plugin.manifest.id.clone(),
             version: plugin.manifest.version.clone(),
@@ -1589,6 +2347,7 @@ pub fn load_installed_plugins(
             publisher: plugin.publisher.clone(),
         };
 
+        // insert plugin to generic registry (Arc ref)
         plugin_registry.register(
             Arc::new(InstalledWasmPluginFactory {
                 manifest: plugin.manifest,
@@ -1598,6 +2357,8 @@ pub fn load_installed_plugins(
             &config.core_version,
             &config.security_policy,
         )?;
+
+        // insert to vector (owned)
         loaded_plugins.push(loaded);
     }
 
@@ -1626,6 +2387,16 @@ pub fn load_installed_plugins(
     })
 }
 
+/// ### Brief
+///
+/// intermediate data for a loaded plugin before registry registration
+///
+/// ### Fields
+/// * `manifest` - validated core plugin manifest
+/// * `tool` - optional instantiated tool plugin
+/// * `model_provider` - optional instantiated model provider plugin
+/// * `runtime` - runtime kind (e.g., "wasm_tool_v1")
+/// * `publisher` - optional publisher/author id
 struct LoadedPluginFactoryData {
     manifest: PluginManifest,
     tool: Option<Arc<InstalledWasmTool>>,
@@ -1634,6 +2405,32 @@ struct LoadedPluginFactoryData {
     publisher: Option<String>,
 }
 
+/// ### Brief
+///
+/// load and validate a single plugin from its directory
+///
+/// ### Description
+///
+/// reads and parses the plugin manifest, verifies trust policies and signatures, resolves the
+/// version directory, validates the manifest, extracts scopes and controls, and instantiates
+/// tool/model plugins as needed. returns intermediate factory data ready for registration.
+///
+/// ### Arguments
+/// * `plugin_dir` - directory containing the plugin
+/// * `config` - loader configuration
+/// * `skill_host` - WASM runtime host for tools
+/// * `model_host` - WASM runtime host for models
+///
+/// ### Returns
+/// loaded plugin factory data with instantiated tool and/or model provider
+///
+/// ### Errors
+/// - plugin id or manifest missing/invalid
+/// - trust policy violation
+/// - manifest validation failure
+/// - entrypoint or payload missing
+/// - scope/control validation failure
+/// - WASM host instantiation error
 fn load_one_plugin(
     plugin_dir: &Path,
     config: &InstalledPluginLoaderConfig,
@@ -1735,7 +2532,7 @@ fn load_one_plugin(
             )));
         }
 
-        let tool_name = package_manifest.resolved_tool_name()?;
+        let tool_name = package_manifest.resolve_tool_name()?;
         let sandbox_policy = sandbox_from_manifest(&package_manifest)?;
         let tool_description = package_manifest.description.clone().unwrap_or_default();
         let tool_input_schema = package_manifest
@@ -1783,7 +2580,7 @@ fn load_one_plugin(
         let entrypoint_bytes = fs::read(&entrypoint_abs)?;
         let abi_usage = validate_model_plugin_imports(&entrypoint_bytes, &package_manifest.id)?;
         let provider_profile = resolve_model_provider_profile(&package_manifest, abi_usage)?;
-        let provider_name = package_manifest.resolved_provider_name(provider_profile.as_ref())?;
+        let provider_name = package_manifest.resolve_model_provider_name(provider_profile.as_ref())?;
         let model_name = package_manifest.resolved_model_name()?;
         model_provider = Some(Arc::new(InstalledWasmModelProvider::new(
             package_manifest.id.clone(),
@@ -1807,6 +2604,18 @@ fn load_one_plugin(
     })
 }
 
+/// ### Brief
+///
+/// collect all plugin directories in the plugin home
+///
+/// ### Arguments
+/// * `plugin_home` - plugin home directory
+///
+/// ### Returns
+/// sorted list of subdirectories
+///
+/// ### Errors
+/// - plugin home directory not readable
 fn collect_plugin_dirs(plugin_home: &Path) -> KelvinResult<Vec<PathBuf>> {
     let mut dirs = Vec::new();
     for entry in fs::read_dir(plugin_home)? {
@@ -1820,6 +2629,25 @@ fn collect_plugin_dirs(plugin_home: &Path) -> KelvinResult<Vec<PathBuf>> {
     Ok(dirs)
 }
 
+/// ### Brief
+///
+/// resolve the active plugin version directory via symlink or semver selection
+///
+/// ### Description
+///
+/// checks for a "current" symlink; if present, resolves its target. otherwise, scans subdirectories
+/// for the highest semver version match. returns the active version directory.
+///
+/// ### Arguments
+/// * `plugin_dir` - plugin home directory
+///
+/// ### Returns
+/// absolute path to the active version directory
+///
+/// ### Errors
+/// - symlink target is invalid or doesn't exist
+/// - no version directories found
+/// - version directory resolution failed
 fn resolve_version_dir(plugin_dir: &Path) -> KelvinResult<PathBuf> {
     let current = plugin_dir.join("current");
     if current.is_symlink() {
@@ -1864,6 +2692,21 @@ fn resolve_version_dir(plugin_dir: &Path) -> KelvinResult<PathBuf> {
     })
 }
 
+/// ### Brief
+///
+/// normalize and validate a safe relative path (reject traversal and absolute paths)
+///
+/// ### Arguments
+/// * `raw` - raw path string
+/// * `field_name` - field name for error messages
+///
+/// ### Returns
+/// normalized relative path
+///
+/// ### Errors
+/// - path is empty or whitespace-only
+/// - path is absolute
+/// - path contains parent directory (..) or root components
 fn normalize_safe_relative_path(raw: &str, field_name: &str) -> KelvinResult<String> {
     let normalized = raw.trim().replace('\\', "/");
     if normalized.is_empty() {
@@ -1888,6 +2731,25 @@ fn normalize_safe_relative_path(raw: &str, field_name: &str) -> KelvinResult<Str
     Ok(normalized)
 }
 
+/// ### Brief
+///
+/// normalize and validate capability scopes against declared plugin capabilities
+///
+/// ### Description
+///
+/// cross-validates that declared capabilities match their scope declarations. for example, if
+/// `fs_read` is declared, `fs_read_paths` must be provided; if `network_egress` or model runtime
+/// is declared, `network_allow_hosts` must be provided. normalizes and validates host patterns.
+///
+/// ### Arguments
+/// * `manifest` - plugin manifest with capabilities and scopes
+///
+/// ### Returns
+/// normalized capability scopes
+///
+/// ### Errors
+/// - declared capability missing required scope
+/// - invalid scope values (empty paths, bad host patterns)
 fn normalize_scopes(manifest: &InstalledPluginPackageManifest) -> KelvinResult<CapabilityScopes> {
     let has_fs_read = manifest.capabilities.contains(&PluginCapability::FsRead);
     let has_network = manifest
@@ -1940,6 +2802,21 @@ fn normalize_scopes(manifest: &InstalledPluginPackageManifest) -> KelvinResult<C
     })
 }
 
+/// ### Brief
+///
+/// normalize and validate operational control bounds (timeout, retries, rate limits)
+///
+/// ### Arguments
+/// * `manifest` - plugin manifest with operational controls
+///
+/// ### Returns
+/// validated operational controls
+///
+/// ### Errors
+/// - timeout_ms is 0 or exceeds maximum
+/// - max_retries exceeds maximum
+/// - max_calls_per_minute is 0
+/// - circuit breaker values are invalid
 fn normalize_controls(
     manifest: &InstalledPluginPackageManifest,
 ) -> KelvinResult<OperationalControls> {
@@ -1985,6 +2862,24 @@ fn normalize_controls(
     })
 }
 
+/// ### Brief
+///
+/// build a sandbox policy from the manifest capabilities and scopes
+///
+/// ### Description
+///
+/// initializes a locked-down sandbox policy and selectively enables capabilities (fs_read, network_egress,
+/// env_access, command_execution) based on what the manifest declares. validates that env_access and
+/// command_execution are only enabled when fs_write is also enabled.
+///
+/// ### Arguments
+/// * `manifest` - plugin manifest with capabilities
+///
+/// ### Returns
+/// sandbox policy with capabilities enabled as declared
+///
+/// ### Errors
+/// - env_access or command_execution enabled without fs_write
 fn sandbox_from_manifest(manifest: &InstalledPluginPackageManifest) -> KelvinResult<SandboxPolicy> {
     let mut policy = SandboxPolicy::locked_down();
     if manifest.capabilities.contains(&PluginCapability::FsRead) {
@@ -2023,6 +2918,26 @@ fn sandbox_from_manifest(manifest: &InstalledPluginPackageManifest) -> KelvinRes
     Ok(policy)
 }
 
+/// ### Brief
+///
+/// parse and validate WASM model plugin imports against the allowed ABI
+///
+/// ### Description
+///
+/// inspects the WASM binary's import section to detect which ABI modules the plugin uses
+/// (e.g., openai, provider_profile). validates that only allowed module/function combinations
+/// are imported. tracks which ABI imports are used for later profile compatibility checks.
+///
+/// ### Arguments
+/// * `wasm_bytes` - WASM binary bytes
+/// * `plugin_id` - plugin id for error messages
+///
+/// ### Returns
+/// record of which ABI modules are imported
+///
+/// ### Errors
+/// - invalid WASM binary format
+/// - disallowed ABI import
 fn validate_model_plugin_imports(
     wasm_bytes: &[u8],
     plugin_id: &str,
@@ -2069,6 +2984,15 @@ fn validate_model_plugin_imports(
     Ok(usage)
 }
 
+/// ### Brief
+///
+/// compute sha-256 hash and return as lowercase hex string
+///
+/// ### Arguments
+/// * `bytes` - data to hash
+///
+/// ### Returns
+/// hex-encoded sha-256 digest
 fn sha256_hex(bytes: &[u8]) -> String {
     let digest = Sha256::digest(bytes);
     let mut out = String::with_capacity(digest.len() * 2);
@@ -2078,6 +3002,20 @@ fn sha256_hex(bytes: &[u8]) -> String {
     out
 }
 
+/// ### Brief
+///
+/// parse a base64-encoded ed25519 public key
+///
+/// ### Arguments
+/// * `key_base64` - base64-encoded ed25519 public key
+///
+/// ### Returns
+/// parsed ed25519 verifying key
+///
+/// ### Errors
+/// - invalid base64 encoding
+/// - decoded key is not 32 bytes
+/// - invalid ed25519 key format
 fn parse_public_key(key_base64: &str) -> KelvinResult<VerifyingKey> {
     let bytes = STANDARD
         .decode(key_base64.trim())
@@ -2093,6 +3031,26 @@ fn parse_public_key(key_base64: &str) -> KelvinResult<VerifyingKey> {
         .map_err(|err| KelvinError::InvalidInput(format!("invalid ed25519 public key: {err}")))
 }
 
+/// ### Brief
+///
+/// normalize and validate a network host pattern for the allowlist
+///
+/// ### Description
+///
+/// lowercases and trims the input. validates that the pattern contains only alphanumeric
+/// characters, dots, hyphens, asterisks (for wildcards), and colons (for ports).
+/// rejects empty strings and control/whitespace characters.
+///
+/// ### Arguments
+/// * `input` - host pattern (e.g., "*.example.com", "api.example.com:8080")
+///
+/// ### Returns
+/// normalized lowercase host pattern
+///
+/// ### Errors
+/// - pattern is empty or whitespace-only
+/// - pattern contains control or whitespace characters
+/// - pattern contains invalid characters
 fn normalize_host_pattern(input: &str) -> KelvinResult<String> {
     let cleaned = input.trim().to_ascii_lowercase();
     if cleaned.is_empty() {
@@ -2119,6 +3077,15 @@ fn normalize_host_pattern(input: &str) -> KelvinResult<String> {
     Ok(cleaned)
 }
 
+/// ### Brief
+///
+/// get an environment variable as a trimmed path, returning None if unset or empty
+///
+/// ### Arguments
+/// * `key` - environment variable name
+///
+/// ### Returns
+/// path from environment variable if set and non-empty
 fn env_path(key: &str) -> Option<PathBuf> {
     let value = env::var(key).ok()?;
     let trimmed = value.trim();
@@ -2128,6 +3095,15 @@ fn env_path(key: &str) -> Option<PathBuf> {
     Some(PathBuf::from(trimmed))
 }
 
+/// ### Brief
+///
+/// resolve the user's home directory from HOME or USERPROFILE environment variables
+///
+/// ### Returns
+/// home directory path
+///
+/// ### Errors
+/// - HOME and USERPROFILE are both unset or empty
 fn resolve_home_dir() -> KelvinResult<PathBuf> {
     if let Some(path) = env_path("HOME") {
         return Ok(path);
@@ -2141,6 +3117,24 @@ fn resolve_home_dir() -> KelvinResult<PathBuf> {
     ))
 }
 
+/// ### Brief
+///
+/// check if a trust policy file exists; error if env var explicitly points to a missing file
+///
+/// ### Description
+///
+/// returns the path if it exists. if the path doesn't exist but KELVIN_TRUST_POLICY_PATH
+/// environment variable is set to this exact path, returns an error (to avoid silently
+/// falling back when the user explicitly configured the path). otherwise returns None.
+///
+/// ### Arguments
+/// * `path` - path to check
+///
+/// ### Returns
+/// the path if it exists, or None if it doesn't exist and wasn't explicitly configured
+///
+/// ### Errors
+/// - KELVIN_TRUST_POLICY_PATH is set to this path but the file doesn't exist
 fn maybe_load_trust_policy_path(path: &Path) -> KelvinResult<Option<&Path>> {
     if path.exists() {
         return Ok(Some(path));
@@ -2162,6 +3156,16 @@ fn maybe_load_trust_policy_path(path: &Path) -> KelvinResult<Option<&Path>> {
     Ok(None)
 }
 
+/// ### Brief
+///
+/// check if a host matches any pattern in the allowlist (supports wildcard patterns)
+///
+/// ### Arguments
+/// * `target` - host to check
+/// * `allowlist` - list of allowed host patterns (e.g., "*.example.com", "api.example.com")
+///
+/// ### Returns
+/// true if the target matches any pattern in the allowlist
 #[allow(dead_code)]
 fn host_allowed(target: &str, allowlist: &[String]) -> bool {
     let candidate = target.trim().to_ascii_lowercase();
@@ -2176,6 +3180,16 @@ fn host_allowed(target: &str, allowlist: &[String]) -> bool {
     })
 }
 
+/// ### Brief
+///
+/// check if a path matches a scope allowlist (exact match or prefix with /)
+///
+/// ### Arguments
+/// * `target` - path to check
+/// * `allowlist` - list of allowed scopes
+///
+/// ### Returns
+/// true if target matches a scope exactly or is a path under a scope
 fn scope_match(target: &str, allowlist: &[String]) -> bool {
     allowlist.iter().any(|scope| {
         target == scope
@@ -2186,6 +3200,15 @@ fn scope_match(target: &str, allowlist: &[String]) -> bool {
     })
 }
 
+/// ### Brief
+///
+/// serialize a claw system call to JSON
+///
+/// ### Arguments
+/// * `call` - claw call enum variant
+///
+/// ### Returns
+/// JSON object with "kind" field and call-specific fields
 fn claw_call_json(call: &ClawCall) -> serde_json::Value {
     match call {
         ClawCall::SendMessage { message_code } => json!({
