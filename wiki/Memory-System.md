@@ -93,7 +93,7 @@ The repository still includes in-process memory backends for migration and fallb
 
 ## Reference
 
-- [Memory control/data plane split](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/memory-control-data-plane.md)
-- [Memory RPC contract](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/memory-rpc-contract.md)
-- [Memory controller deployment profiles](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/memory-controller-deployment-profiles.md)
-- [Memory module SDK](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/memory-module-sdk.md)
+- [Memory control/data plane split](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/memory/memory-control-data-plane.md)
+- [Memory RPC contract](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/memory/memory-rpc-contract.md)
+- [Memory controller deployment profiles](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/memory/memory-controller-deployment-profiles.md)
+- [Memory module SDK](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/memory/memory-module-sdk.md)
