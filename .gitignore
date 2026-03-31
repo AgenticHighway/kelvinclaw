@@ -8,6 +8,11 @@ dist/
 
 # Editor/IDE
 .idea/
+.vscode/
+.vscode-server/
+.vscode-test/
+*.code-workspace
+.history/
 *.swp
 *.swo
 *~
