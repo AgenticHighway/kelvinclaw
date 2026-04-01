@@ -40,6 +40,14 @@ const MIN_DEFAULT_TIMEOUT_MS: u64 = 100;
 const MAX_DEFAULT_TIMEOUT_MS: u64 = 300_000;
 const MAX_CONFIG_ID_LEN: usize = 128;
 
+/// ### Brief
+///
+/// memory backend selection for the knowledge memory store
+///
+/// ### Variants
+/// * `Markdown` - markdown file-backed memory store
+/// * `InMemory` - in-memory vector store
+/// * `Fallback` - in-memory vector store with markdown fallback
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum KelvinCliMemoryMode {
     Markdown,
@@ -47,7 +55,17 @@ pub enum KelvinCliMemoryMode {
     Fallback,
 }
 
+/// memory mode parsing and backend mapping
 impl KelvinCliMemoryMode {
+    /// ### Brief
+    ///
+    /// parse a memory mode string, defaulting to `Markdown` on unrecognized input
+    ///
+    /// ### Arguments
+    /// * `input` - string to parse; accepts "markdown", "md", "in-memory", "memory", "inmemory", "fallback", "with-fallback"
+    ///
+    /// ### Returns
+    /// parsed `KelvinCliMemoryMode`; unrecognized values fall back to `Markdown`
     pub fn parse(input: &str) -> Self {
         let normalized = input.trim().to_lowercase();
         match normalized.as_str() {
@@ -58,6 +76,12 @@ impl KelvinCliMemoryMode {
         }
     }
 
+    /// ### Brief
+    ///
+    /// convert to the corresponding `MemoryBackendKind` used by `kelvin_memory`
+    ///
+    /// ### Returns
+    /// `MemoryBackendKind` variant matching this mode
     #[cfg(any(not(feature = "memory_rpc"), feature = "memory_legacy_fallback"))]
     fn as_backend_kind(self) -> MemoryBackendKind {
         match self {
@@ -68,6 +92,31 @@ impl KelvinCliMemoryMode {
     }
 }
 
+/// ### Brief
+///
+/// configuration for a kelvin SDK runtime
+///
+/// ### Description
+///
+/// holds all settings needed to initialize and run a kelvin agent session, including model selection,
+/// memory persistence, timeout settings, security policies, and session management parameters.
+///
+/// ### Fields
+/// * `prompt` - initial user prompt for the agent
+/// * `session_id` - unique identifier for this session
+/// * `workspace_dir` - workspace directory path
+/// * `memory_mode` - memory backend selection
+/// * `timeout_ms` - execution timeout in milliseconds
+/// * `system_prompt` - optional system prompt override
+/// * `core_version` - kelvin core version
+/// * `plugin_security_policy` - security policy for plugins
+/// * `load_installed_plugins` - whether to load plugins from disk
+/// * `model_provider` - model provider selection
+/// * `state_dir` - optional directory for runtime state persistence
+/// * `persist_runs` - whether to persist run records
+/// * `max_session_history_messages` - maximum messages to keep in memory
+/// * `compact_to_messages` - compact session history to this size when exceeded
+/// * `max_tool_iterations` - maximum iterations for tool loops
 #[derive(Debug, Clone)]
 pub struct KelvinSdkConfig {
     pub prompt: String,
@@ -87,7 +136,20 @@ pub struct KelvinSdkConfig {
     pub max_tool_iterations: usize,
 }
 
+/// configuration validation and construction
 impl KelvinSdkConfig {
+    /// ### Brief
+    ///
+    /// validate configuration against constraints and requirements
+    ///
+    /// ### Errors
+    /// - prompt is empty
+    /// - session id is invalid
+    /// - workspace directory doesn't exist or is invalid
+    /// - timeout is out of range
+    /// - core version is malformed
+    /// - state directory is invalid
+    /// - model selection is invalid
     pub fn validate(&self) -> KelvinResult<()> {
         if self.prompt.trim().is_empty() {
             return Err(KelvinError::InvalidInput(
@@ -106,6 +168,15 @@ impl KelvinSdkConfig {
         Ok(())
     }
 
+    /// ### Brief
+    ///
+    /// construct a config with sensible defaults for a single prompt
+    ///
+    /// ### Arguments
+    /// * `prompt` - initial user prompt
+    ///
+    /// ### Returns
+    /// configuration with defaults (markdown memory, echo model, current directory workspace)
     pub fn for_prompt(prompt: impl Into<String>) -> Self {
         Self {
             prompt: prompt.into(),
@@ -127,6 +198,14 @@ impl KelvinSdkConfig {
     }
 }
 
+/// ### Brief
+///
+/// model provider selection for agent inference
+///
+/// ### Variants
+/// * `Echo` - built-in echo model that echoes input as output
+/// * `InstalledPlugin` - use a specific installed model plugin by id
+/// * `InstalledPluginFailover` - failover across multiple plugins with retries and backoff
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum KelvinSdkModelSelection {
     Echo,
@@ -140,6 +219,16 @@ pub enum KelvinSdkModelSelection {
     },
 }
 
+/// ### Brief
+///
+/// summary metadata for a completed agent run
+///
+/// ### Fields
+/// * `run_id` - unique run identifier
+/// * `accepted_at_ms` - timestamp when run was accepted (milliseconds since epoch)
+/// * `provider` - model provider name
+/// * `model` - model name
+/// * `duration_ms` - total execution duration in milliseconds
 #[derive(Debug, Clone)]
 pub struct KelvinRunSummary {
     pub run_id: String,
@@ -152,6 +241,31 @@ pub struct KelvinRunSummary {
     pub cli_plugin_preflight: String,
 }
 
+/// ### Brief
+///
+/// runtime configuration for the kelvin SDK
+///
+/// ### Description
+///
+/// derived from `KelvinSdkConfig` but includes additional runtime settings like event emission
+/// and tool requirements. used to initialize the runtime after configuration validation.
+///
+/// ### Fields
+/// * `workspace_dir` - workspace directory path
+/// * `default_session_id` - default session identifier
+/// * `memory_mode` - memory backend selection
+/// * `default_timeout_ms` - default execution timeout
+/// * `default_system_prompt` - default system prompt
+/// * `core_version` - kelvin core version
+/// * `plugin_security_policy` - security policy for plugins
+/// * `load_installed_plugins` - whether to load plugins from disk
+/// * `model_provider` - model provider selection
+/// * `require_cli_plugin_tool` - whether to require CLI plugin tool
+/// * `emit_stdout_events` - whether to emit events to stdout
+/// * `state_dir` - optional state directory
+/// * `persist_runs` - whether to persist runs
+/// * `max_session_history_messages` - max messages in session
+/// * `compact_to_messages` - compact history to this size
 #[derive(Debug, Clone)]
 pub struct KelvinSdkRuntimeConfig {
     pub workspace_dir: PathBuf,
@@ -172,7 +286,16 @@ pub struct KelvinSdkRuntimeConfig {
     pub max_tool_iterations: usize,
 }
 
+/// runtime configuration validation and construction
 impl KelvinSdkRuntimeConfig {
+    /// ### Brief
+    ///
+    /// validate runtime configuration against constraints
+    ///
+    /// ### Errors
+    /// - session id, timeout, or core version invalid
+    /// - workspace or state directories invalid
+    /// - model selection invalid
     pub fn validate(&self) -> KelvinResult<()> {
         validate_config_identifier("default session id", &self.default_session_id)?;
         validate_workspace_dir(&self.workspace_dir, "workspace_dir")?;
@@ -186,6 +309,9 @@ impl KelvinSdkRuntimeConfig {
         Ok(())
     }
 
+    /// ### Brief
+    ///
+    /// construct runtime configuration from a single-run SDK config
     pub fn from_run_config(config: &KelvinSdkConfig) -> Self {
         Self {
             workspace_dir: config.workspace_dir.clone(),
@@ -211,6 +337,18 @@ impl KelvinSdkRuntimeConfig {
     }
 }
 
+/// ### Brief
+///
+/// request to run an agent with a prompt
+///
+/// ### Fields
+/// * `prompt` - user prompt for the agent
+/// * `session_id` - optional session id (uses default if not provided)
+/// * `workspace_dir` - optional workspace directory override
+/// * `timeout_ms` - optional timeout override
+/// * `system_prompt` - optional system prompt override
+/// * `memory_query` - optional memory search query
+/// * `run_id` - optional run id (generated if not provided)
 #[derive(Debug, Clone)]
 pub struct KelvinSdkRunRequest {
     pub prompt: String,
@@ -222,7 +360,11 @@ pub struct KelvinSdkRunRequest {
     pub run_id: Option<String>,
 }
 
+/// run request construction
 impl KelvinSdkRunRequest {
+    /// ### Brief
+    ///
+    /// construct a run request with only a prompt; all other fields optional
     pub fn for_prompt(prompt: impl Into<String>) -> Self {
         Self {
             prompt: prompt.into(),
@@ -236,6 +378,14 @@ impl KelvinSdkRunRequest {
     }
 }
 
+/// ### Brief
+///
+/// metadata for an accepted run
+///
+/// ### Fields
+/// * `run_id` - unique run identifier
+/// * `accepted_at_ms` - timestamp when run was accepted
+/// * `cli_plugin_preflight` - optional CLI plugin preflight output
 #[derive(Debug, Clone)]
 pub struct KelvinSdkAcceptedRun {
     pub run_id: String,
@@ -243,6 +393,18 @@ pub struct KelvinSdkAcceptedRun {
     pub cli_plugin_preflight: Option<String>,
 }
 
+/// ### Brief
+///
+/// validate that a path is a non-empty, existing directory
+///
+/// ### Arguments
+/// * `path` - path to validate
+/// * `label` - field name used in error messages
+///
+/// ### Errors
+/// - path is empty
+/// - path does not exist
+/// - path is not a directory
 fn validate_workspace_dir(path: &Path, label: &str) -> KelvinResult<()> {
     if path.as_os_str().is_empty() {
         return Err(KelvinError::InvalidInput(format!(
@@ -264,6 +426,16 @@ fn validate_workspace_dir(path: &Path, label: &str) -> KelvinResult<()> {
     Ok(())
 }
 
+/// ### Brief
+///
+/// validate that a timeout value falls within the allowed range
+///
+/// ### Arguments
+/// * `value` - timeout in milliseconds
+/// * `label` - field name used in error messages
+///
+/// ### Errors
+/// - value is below `MIN_DEFAULT_TIMEOUT_MS` or above `MAX_DEFAULT_TIMEOUT_MS`
 fn validate_timeout_ms(value: u64, label: &str) -> KelvinResult<()> {
     if !(MIN_DEFAULT_TIMEOUT_MS..=MAX_DEFAULT_TIMEOUT_MS).contains(&value) {
         return Err(KelvinError::InvalidInput(format!(
@@ -273,6 +445,18 @@ fn validate_timeout_ms(value: u64, label: &str) -> KelvinResult<()> {
     Ok(())
 }
 
+/// ### Brief
+///
+/// validate that session history compaction settings are internally consistent
+///
+/// ### Arguments
+/// * `max_session_history_messages` - maximum messages before compaction triggers
+/// * `compact_to_messages` - number of messages to retain after compaction
+///
+/// ### Errors
+/// - `max_session_history_messages` is less than 4
+/// - `compact_to_messages` is less than 2
+/// - `compact_to_messages` is not strictly less than `max_session_history_messages`
 fn validate_persistence_policy(
     max_session_history_messages: usize,
     compact_to_messages: usize,
@@ -295,6 +479,16 @@ fn validate_persistence_policy(
     Ok(())
 }
 
+/// ### Brief
+///
+/// validate that a state directory path is usable
+///
+/// ### Arguments
+/// * `path` - state directory path to validate
+///
+/// ### Errors
+/// - path is empty
+/// - path exists but is not a directory
 fn validate_state_dir(path: &Path) -> KelvinResult<()> {
     if path.as_os_str().is_empty() {
         return Err(KelvinError::InvalidInput(
@@ -310,6 +504,16 @@ fn validate_state_dir(path: &Path) -> KelvinResult<()> {
     Ok(())
 }
 
+/// ### Brief
+///
+/// validate that a core version string is non-empty valid semver
+///
+/// ### Arguments
+/// * `value` - semver version string
+///
+/// ### Errors
+/// - value is empty
+/// - value is not valid semver
 fn validate_core_version(value: &str) -> KelvinResult<()> {
     if value.trim().is_empty() {
         return Err(KelvinError::InvalidInput(
@@ -322,6 +526,18 @@ fn validate_core_version(value: &str) -> KelvinResult<()> {
     Ok(())
 }
 
+/// ### Brief
+///
+/// validate a configuration identifier string for length and character constraints
+///
+/// ### Arguments
+/// * `label` - field name used in error messages
+/// * `value` - identifier to validate
+///
+/// ### Errors
+/// - value is empty after trimming
+/// - value exceeds `MAX_CONFIG_ID_LEN` characters
+/// - value contains control characters
 fn validate_config_identifier(label: &str, value: &str) -> KelvinResult<()> {
     let trimmed = value.trim();
     if trimmed.is_empty() {
@@ -342,6 +558,19 @@ fn validate_config_identifier(label: &str, value: &str) -> KelvinResult<()> {
     Ok(())
 }
 
+/// ### Brief
+///
+/// validate that a model selection is compatible with the current plugin loading configuration
+///
+/// ### Arguments
+/// * `selection` - model provider selection to validate
+/// * `load_installed_plugins` - whether installed plugins will be loaded at runtime
+///
+/// ### Errors
+/// - plugin-based selection used when `load_installed_plugins` is false
+/// - plugin id is invalid
+/// - failover chain has no plugin ids or contains duplicates
+/// - `retry_backoff_ms` is zero
 fn validate_model_selection(
     selection: &KelvinSdkModelSelection,
     load_installed_plugins: bool,
@@ -392,6 +621,20 @@ fn validate_model_selection(
     }
 }
 
+/// ### Brief
+///
+/// handles session and run persistence for the SDK runtime
+///
+/// ### Description
+///
+/// owns the state directory layout and coordinates atomic writes for session descriptors,
+/// session message history, and run records. compaction policy is also stored here.
+///
+/// ### Fields
+/// * `state_dir` - root directory for persisted state; persistence is skipped when `None`
+/// * `persist_runs` - whether to write run records to disk
+/// * `max_session_history_messages` - session compaction threshold
+/// * `compact_to_messages` - number of messages to retain after compaction
 #[derive(Debug, Clone)]
 struct RuntimePersistence {
     state_dir: Option<PathBuf>,
@@ -400,7 +643,25 @@ struct RuntimePersistence {
     compact_to_messages: usize,
 }
 
+/// persistence construction, directory management, and state I/O
 impl RuntimePersistence {
+    /// ### Brief
+    ///
+    /// construct a `RuntimePersistence` and initialize the on-disk directory layout
+    ///
+    /// ### Arguments
+    /// * `state_dir` - root state directory; persistence is skipped when `None`
+    /// * `persist_runs` - whether run records should be written to disk
+    /// * `max_session_history_messages` - compaction threshold for session history
+    /// * `compact_to_messages` - number of messages to retain after compaction
+    ///
+    /// ### Returns
+    /// initialized `RuntimePersistence` with directories created
+    ///
+    /// ### Errors
+    /// - compaction policy values are invalid
+    /// - state directory is invalid
+    /// - required subdirectories could not be created
     fn new(
         state_dir: Option<PathBuf>,
         persist_runs: bool,
@@ -422,14 +683,23 @@ impl RuntimePersistence {
         Ok(persistence)
     }
 
+    /// ### Brief
+    ///
+    /// return the sessions subdirectory path, or `None` if no state directory is configured
     fn sessions_dir(&self) -> Option<PathBuf> {
         self.state_dir.as_ref().map(|root| root.join("sessions"))
     }
 
+    /// ### Brief
+    ///
+    /// return the runs subdirectory path, or `None` if no state directory is configured
     fn runs_dir(&self) -> Option<PathBuf> {
         self.state_dir.as_ref().map(|root| root.join("runs"))
     }
 
+    /// ### Brief
+    ///
+    /// ensure the sessions and runs subdirectories exist
     fn ensure_layout(&self) -> KelvinResult<()> {
         if let Some(root) = &self.state_dir {
             fs::create_dir_all(root.join("sessions"))
@@ -440,6 +710,9 @@ impl RuntimePersistence {
         Ok(())
     }
 
+    /// ### Brief
+    ///
+    /// hash a string to a hex-encoded SHA256 digest for use as a safe filename
     fn key_hex(value: &str) -> String {
         let mut hasher = Sha256::new();
         hasher.update(value.as_bytes());
@@ -451,16 +724,32 @@ impl RuntimePersistence {
         out
     }
 
+    /// ### Brief
+    ///
+    /// return the hashed session directory path for a session id
     fn session_dir_for(&self, session_id: &str) -> Option<PathBuf> {
         self.sessions_dir()
             .map(|dir| dir.join(Self::key_hex(session_id)))
     }
 
+    /// ### Brief
+    ///
+    /// return the run record file path for a run id
     fn run_file_for(&self, run_id: &str) -> Option<PathBuf> {
         self.runs_dir()
             .map(|dir| dir.join(format!("{}.json", Self::key_hex(run_id))))
     }
 
+    /// ### Brief
+    ///
+    /// load all persisted sessions and message history from disk
+    ///
+    /// ### Description
+    ///
+    /// skips missing or corrupt session files with warnings. returns empty maps if no state dir is configured.
+    ///
+    /// ### Returns
+    /// tuple of (session descriptors, session messages); corrupt files are quarantined
     fn load_session_data(&self) -> KelvinResult<(SessionDescriptorMap, SessionMessagesMap)> {
         let mut sessions: SessionDescriptorMap = HashMap::new();
         let mut messages: SessionMessagesMap = HashMap::new();
@@ -533,6 +822,15 @@ impl RuntimePersistence {
         Ok((sessions, messages))
     }
 
+    /// ### Brief
+    ///
+    /// parse a JSONL file of session messages, quarantining on parse errors
+    ///
+    /// ### Arguments
+    /// * `path` - path to messages.jsonl file
+    ///
+    /// ### Returns
+    /// vector of parsed session messages; returns empty on any corruption
     fn read_messages_file(&self, path: &PathBuf) -> Vec<SessionMessage> {
         let file = match File::open(path) {
             Ok(file) => file,
@@ -578,6 +876,12 @@ impl RuntimePersistence {
         out
     }
 
+    /// ### Brief
+    ///
+    /// atomically write a session descriptor to disk
+    ///
+    /// ### Arguments
+    /// * `session` - session descriptor to persist
     fn persist_session_descriptor(&self, session: &SessionDescriptor) -> KelvinResult<()> {
         let Some(session_dir) = self.session_dir_for(&session.session_id) else {
             return Ok(());
@@ -590,6 +894,13 @@ impl RuntimePersistence {
         write_atomic(&descriptor_path, &bytes)
     }
 
+    /// ### Brief
+    ///
+    /// atomically write session message history as JSONL to disk
+    ///
+    /// ### Arguments
+    /// * `session_id` - session identifier
+    /// * `messages` - message slice to persist
     fn persist_session_messages(
         &self,
         session_id: &str,
@@ -610,6 +921,13 @@ impl RuntimePersistence {
         write_atomic(&session_dir.join("messages.jsonl"), &bytes)
     }
 
+    /// ### Brief
+    ///
+    /// merge a JSON record into the run record file, creating or updating atomically
+    ///
+    /// ### Arguments
+    /// * `run_id` - run identifier
+    /// * `record` - JSON value to merge; new keys added, existing keys overwritten
     fn persist_run_record(&self, run_id: &str, record: serde_json::Value) -> KelvinResult<()> {
         if !self.persist_runs {
             return Ok(());
@@ -645,6 +963,18 @@ impl RuntimePersistence {
     }
 }
 
+/// ### Brief
+///
+/// atomically write bytes to a file via a temporary file and rename
+///
+/// ### Arguments
+/// * `path` - target file path
+/// * `bytes` - bytes to write
+///
+/// ### Errors
+/// - temporary file creation/write fails
+/// - file sync fails
+/// - rename fails
 fn write_atomic(path: &PathBuf, bytes: &[u8]) -> KelvinResult<()> {
     let tmp_path = path.with_extension("tmp");
     let mut file = File::create(&tmp_path)
@@ -657,6 +987,13 @@ fn write_atomic(path: &PathBuf, bytes: &[u8]) -> KelvinResult<()> {
     Ok(())
 }
 
+/// ### Brief
+///
+/// rename a corrupt state file with a timestamp suffix and emit a warning
+///
+/// ### Arguments
+/// * `path` - file to quarantine
+/// * `reason` - human-readable explanation of the corruption
 fn quarantine_corrupt_file(path: &Path, reason: &str) {
     let Some(file_name) = path.file_name().and_then(|item| item.to_str()) else {
         eprintln!(
@@ -683,12 +1020,27 @@ fn quarantine_corrupt_file(path: &Path, reason: &str) {
     }
 }
 
+/// ### Brief
+///
+/// file-backed implementation of `SessionStore`
+///
+/// ### Description
+///
+/// loads all sessions and message history from disk on construction and keeps an in-memory
+/// cache for fast reads. writes are flushed atomically to disk after every mutation.
+/// applies compaction when session message history exceeds the configured threshold.
+///
+/// ### Fields
+/// * `sessions` - in-memory session descriptor cache
+/// * `messages` - in-memory session message history cache
+/// * `persistence` - persistence layer for flushing state to disk
 struct FileBackedSessionStore {
     sessions: RwLock<SessionDescriptorMap>,
     messages: RwLock<SessionMessagesMap>,
     persistence: RuntimePersistence,
 }
 
+/// session store construction and history compaction
 impl FileBackedSessionStore {
     fn load(persistence: RuntimePersistence) -> KelvinResult<Self> {
         let (sessions, messages) = persistence.load_session_data()?;
@@ -699,6 +1051,13 @@ impl FileBackedSessionStore {
         })
     }
 
+    /// ### Brief
+    ///
+    /// compact session message history by dropping old messages and inserting a summary message
+    ///
+    /// ### Arguments
+    /// * `session_id` - session identifier (used in summary message)
+    /// * `messages` - mutable reference to message list; modified in place if compaction triggers
     fn compact_messages(&self, session_id: &str, messages: &mut Vec<SessionMessage>) {
         if messages.len() <= self.persistence.max_session_history_messages {
             return;
@@ -745,6 +1104,7 @@ impl FileBackedSessionStore {
     }
 }
 
+/// `SessionStore` implementation backed by the file-based persistence layer
 #[async_trait]
 impl SessionStore for FileBackedSessionStore {
     async fn upsert_session(&self, session: SessionDescriptor) -> KelvinResult<()> {
@@ -788,9 +1148,13 @@ impl SessionStore for FileBackedSessionStore {
     }
 }
 
+/// ### Brief
+///
+/// event sink that writes agent events as JSON lines to stdout
 #[derive(Debug, Default)]
 struct StdoutEventSink;
 
+/// stdout `EventSink` implementation
 #[async_trait]
 impl EventSink for StdoutEventSink {
     async fn emit(&self, event: AgentEvent) -> KelvinResult<()> {
@@ -799,12 +1163,20 @@ impl EventSink for StdoutEventSink {
     }
 }
 
+/// ### Brief
+///
+/// event sink that forwards events to a broadcast channel and optionally to stdout
+///
+/// ### Fields
+/// * `emit_stdout` - whether to also print events as JSON lines to stdout
+/// * `broadcast_tx` - broadcast channel sender for agent events
 #[derive(Clone)]
 struct MultiplexEventSink {
     emit_stdout: bool,
     broadcast_tx: broadcast::Sender<AgentEvent>,
 }
 
+/// multiplex event sink construction
 impl MultiplexEventSink {
     fn new(emit_stdout: bool, broadcast_tx: broadcast::Sender<AgentEvent>) -> Self {
         Self {
@@ -814,6 +1186,7 @@ impl MultiplexEventSink {
     }
 }
 
+/// `EventSink` implementation that fans out to broadcast channel and optional stdout
 #[async_trait]
 impl EventSink for MultiplexEventSink {
     async fn emit(&self, event: AgentEvent) -> KelvinResult<()> {
@@ -825,11 +1198,18 @@ impl EventSink for MultiplexEventSink {
     }
 }
 
+/// ### Brief
+///
+/// in-memory `ToolRegistry` backed by a `HashMap`
+///
+/// ### Fields
+/// * `tools` - map of tool name to tool instance
 #[derive(Default)]
 struct HashMapToolRegistry {
     tools: std::sync::RwLock<HashMap<String, Arc<dyn Tool>>>,
 }
 
+/// tool registration
 impl HashMapToolRegistry {
     fn register<T>(&self, tool: T)
     where
@@ -843,6 +1223,7 @@ impl HashMapToolRegistry {
     }
 }
 
+/// `ToolRegistry` implementation over the internal `HashMap`
 impl ToolRegistry for HashMapToolRegistry {
     fn get(&self, name: &str) -> Option<Arc<dyn Tool>> {
         self.tools
@@ -862,17 +1243,25 @@ impl ToolRegistry for HashMapToolRegistry {
     }
 }
 
+/// ### Brief
+///
+/// `ToolRegistry` that delegates lookups across an ordered list of registries
+///
+/// ### Fields
+/// * `registries` - ordered list of registries; first match wins on `get`
 #[derive(Clone)]
 struct CombinedToolRegistry {
     registries: Vec<Arc<dyn ToolRegistry>>,
 }
 
+/// combined registry construction
 impl CombinedToolRegistry {
     fn new(registries: Vec<Arc<dyn ToolRegistry>>) -> Self {
         Self { registries }
     }
 }
 
+/// `ToolRegistry` implementation that searches registries in order
 impl ToolRegistry for CombinedToolRegistry {
     fn get(&self, name: &str) -> Option<Arc<dyn Tool>> {
         for registry in &self.registries {
@@ -899,9 +1288,13 @@ type LoadedInstalledPlugins = (Arc<dyn ToolRegistry>, InstalledModelProviders, u
 type SessionDescriptorMap = HashMap<String, SessionDescriptor>;
 type SessionMessagesMap = HashMap<String, Vec<SessionMessage>>;
 
+/// ### Brief
+///
+/// built-in tool that returns the current local time
 #[derive(Debug, Clone)]
 struct TimeTool;
 
+/// `Tool` implementation for the built-in time tool
 #[async_trait]
 impl Tool for TimeTool {
     fn name(&self) -> &str {
@@ -925,12 +1318,20 @@ impl Tool for TimeTool {
     }
 }
 
+/// ### Brief
+///
+/// built-in tool that always returns a fixed text response
+///
+/// ### Fields
+/// * `name` - tool name exposed to the agent
+/// * `text` - static text returned on every call
 #[derive(Debug, Clone)]
 struct StaticTextTool {
     name: String,
     text: String,
 }
 
+/// static text tool construction
 impl StaticTextTool {
     fn new(name: &str, text: &str) -> Self {
         Self {
@@ -940,6 +1341,7 @@ impl StaticTextTool {
     }
 }
 
+/// `Tool` implementation for the static text tool
 #[async_trait]
 impl Tool for StaticTextTool {
     fn name(&self) -> &str {
@@ -956,6 +1358,21 @@ impl Tool for StaticTextTool {
     }
 }
 
+/// ### Brief
+///
+/// `ModelProvider` that retries across a chain of providers on retryable failures
+///
+/// ### Description
+///
+/// iterates through `providers` in order, retrying each up to `max_retries_per_provider` times
+/// with `retry_backoff_ms` delay between attempts. non-retryable errors short-circuit immediately.
+/// fails if all providers are exhausted.
+///
+/// ### Fields
+/// * `providers` - ordered list of model providers to try
+/// * `chain_label` - human-readable label summarizing the failover chain
+/// * `max_retries_per_provider` - number of retry attempts per provider before moving to the next
+/// * `retry_backoff_ms` - delay between retry attempts in milliseconds
 #[derive(Clone)]
 struct FailoverModelProvider {
     providers: Vec<Arc<dyn ModelProvider>>,
@@ -964,6 +1381,7 @@ struct FailoverModelProvider {
     retry_backoff_ms: u64,
 }
 
+/// retryability check for the failover provider
 impl FailoverModelProvider {
     fn is_retryable(err: &KelvinError) -> bool {
         matches!(
@@ -973,6 +1391,7 @@ impl FailoverModelProvider {
     }
 }
 
+/// `ModelProvider` implementation with retry-and-failover logic
 #[async_trait]
 impl ModelProvider for FailoverModelProvider {
     fn provider_name(&self) -> &str {
@@ -1013,6 +1432,29 @@ impl ModelProvider for FailoverModelProvider {
     }
 }
 
+/// ### Brief
+///
+/// main entry point for running kelvin agents
+///
+/// ### Description
+///
+/// initialized from runtime configuration, manages agent execution, session persistence, tool registry,
+/// and event broadcasting. provides methods to submit runs, wait for outcomes, and manage scheduler tasks.
+/// handles memory persistence, plugin loading, and CLI tool integration.
+///
+/// ### Fields
+/// * `runtime` - core execution runtime
+/// * `default_workspace_dir` - workspace directory for runs
+/// * `default_session_id` - default session identifier
+/// * `default_timeout_ms` - default timeout for runs
+/// * `default_system_prompt` - default system prompt for agents
+/// * `cli_plugin_tool` - optional CLI plugin tool for execution
+/// * `loaded_installed_plugins` - count of loaded installed plugins
+/// * `event_tx` - broadcast channel for agent events
+/// * `persistence` - session and run persistence layer
+/// * `scheduler_store` - store for scheduled tasks
+/// * `tool_registry` - registry of available tools
+/// * `session_store` - store for session messages
 #[derive(Clone)]
 pub struct KelvinSdkRuntime {
     runtime: CoreRuntime,
@@ -1029,7 +1471,27 @@ pub struct KelvinSdkRuntime {
     session_store: Arc<dyn SessionStore>,
 }
 
+/// runtime initialization, agent execution, and session management
 impl KelvinSdkRuntime {
+    /// ### Brief
+    ///
+    /// initialize the runtime from configuration
+    ///
+    /// ### Description
+    ///
+    /// creates the core runtime, initializes persistence layers, loads installed plugins, and sets up
+    /// tool registries. must be called before submitting any runs.
+    ///
+    /// ### Arguments
+    /// * `config` - validated runtime configuration
+    ///
+    /// ### Returns
+    /// initialized runtime instance
+    ///
+    /// ### Errors
+    /// - configuration validation fails
+    /// - plugin loading fails
+    /// - state directory initialization fails
     pub async fn initialize(config: KelvinSdkRuntimeConfig) -> KelvinResult<Self> {
         config.validate()?;
         let persistence = RuntimePersistence::new(
@@ -1163,38 +1625,87 @@ impl KelvinSdkRuntime {
         })
     }
 
+    /// ### Brief
+    ///
+    /// return the count of loaded installed plugins
     pub fn loaded_installed_plugins(&self) -> usize {
         self.loaded_installed_plugins
     }
 
+    /// ### Brief
+    ///
+    /// get tool definitions for all available tools
     pub fn tool_definitions(&self) -> Vec<kelvin_core::ToolDefinition> {
         self.tool_registry.definitions()
     }
 
+    /// ### Brief
+    ///
+    /// clear all message history for a session
+    ///
+    /// ### Arguments
+    /// * `session_id` - session identifier
     pub async fn clear_session_history(&self, session_id: &str) -> KelvinResult<()> {
         self.session_store.clear_history(session_id).await
     }
 
+    /// ### Brief
+    ///
+    /// create or update a session descriptor
+    ///
+    /// ### Arguments
+    /// * `session` - session descriptor to persist
     pub async fn upsert_session(&self, session: SessionDescriptor) -> KelvinResult<()> {
         self.session_store.upsert_session(session).await
     }
 
+    /// ### Brief
+    ///
+    /// return the configured default workspace directory
     pub fn default_workspace_dir(&self) -> &Path {
         &self.default_workspace_dir
     }
 
+    /// ### Brief
+    ///
+    /// return the configured state directory, or `None` if persistence is disabled
     pub fn state_dir(&self) -> Option<&Path> {
         self.persistence.state_dir.as_deref()
     }
 
+    /// ### Brief
+    ///
+    /// return a reference to the scheduler store for scheduled task management
     pub fn scheduler_store(&self) -> Arc<SchedulerStore> {
         self.scheduler_store.clone()
     }
 
+    /// ### Brief
+    ///
+    /// subscribe to the broadcast channel for agent runtime events
     pub fn subscribe_events(&self) -> broadcast::Receiver<AgentEvent> {
         self.event_tx.subscribe()
     }
 
+    /// ### Brief
+    ///
+    /// submit an agent run request and return immediately after acceptance
+    ///
+    /// ### Description
+    ///
+    /// validates the request, executes the CLI plugin tool preflight if configured, and submits to the core runtime.
+    /// persists run metadata to disk. the agent executes asynchronously; use `wait` to check progress.
+    ///
+    /// ### Arguments
+    /// * `request` - run request with prompt and optional overrides
+    ///
+    /// ### Returns
+    /// accepted run metadata including run_id and optional CLI plugin preflight output
+    ///
+    /// ### Errors
+    /// - prompt is empty
+    /// - CLI plugin preflight fails
+    /// - core runtime rejects the submission
     pub async fn submit(&self, request: KelvinSdkRunRequest) -> KelvinResult<KelvinSdkAcceptedRun> {
         let prompt = request.prompt.trim().to_string();
         if prompt.is_empty() {
@@ -1267,6 +1778,15 @@ impl KelvinSdkRuntime {
         })
     }
 
+    /// ### Brief
+    ///
+    /// get the current execution state for a run
+    ///
+    /// ### Arguments
+    /// * `run_id` - run identifier
+    ///
+    /// ### Returns
+    /// current run state from the core runtime
     pub async fn state(&self, run_id: &str) -> KelvinResult<RunState> {
         let state = self.runtime.state(run_id).await?;
         self.persistence
@@ -1274,6 +1794,16 @@ impl KelvinSdkRuntime {
         Ok(state)
     }
 
+    /// ### Brief
+    ///
+    /// wait for run progress up to a timeout and return the result
+    ///
+    /// ### Arguments
+    /// * `run_id` - run identifier
+    /// * `timeout_ms` - maximum time to wait in milliseconds
+    ///
+    /// ### Returns
+    /// wait result from the core runtime
     pub async fn wait(&self, run_id: &str, timeout_ms: u64) -> KelvinResult<AgentWaitResult> {
         let wait = self.runtime.wait(run_id, timeout_ms).await?;
         self.persistence
@@ -1281,6 +1811,20 @@ impl KelvinSdkRuntime {
         Ok(wait)
     }
 
+    /// ### Brief
+    ///
+    /// wait for a run to complete and return the final outcome
+    ///
+    /// ### Description
+    ///
+    /// blocks until the run is completed, failed, or times out. persists the outcome to disk.
+    ///
+    /// ### Arguments
+    /// * `run_id` - run identifier
+    /// * `timeout_ms` - maximum time to wait in milliseconds
+    ///
+    /// ### Returns
+    /// completed result, error, or timeout outcome
     pub async fn wait_for_outcome(
         &self,
         run_id: &str,
@@ -1306,6 +1850,27 @@ impl KelvinSdkRuntime {
     }
 }
 
+/// ### Brief
+///
+/// resolve a model provider selection to a concrete `ModelProvider` implementation
+///
+/// ### Description
+///
+/// maps `KelvinSdkModelSelection` variants to actual model providers. wraps failover selections
+/// in a retry layer with backoff. the echo model is always available.
+///
+/// ### Arguments
+/// * `selection` - model selection variant
+/// * `installed_models` - list of loaded installed model providers
+/// * `load_installed_plugins` - whether plugins are loaded; plugin selections fail if false
+///
+/// ### Returns
+/// `ModelProvider` instance wrapped in `Arc`
+///
+/// ### Errors
+/// - plugin-based selection used when `load_installed_plugins` is false
+/// - plugin id not found in loaded plugins
+/// - failover chain is empty after resolution
 fn resolve_model_provider(
     selection: &KelvinSdkModelSelection,
     installed_models: &InstalledModelProviders,
@@ -1371,6 +1936,26 @@ fn resolve_model_provider(
     }
 }
 
+/// ### Brief
+///
+/// run an agent synchronously using a single SDK config, returning a summary when complete
+///
+/// ### Description
+///
+/// high-level convenience function that initializes a runtime, submits a run request, and blocks until
+/// completion. suitable for simple use cases where asynchronous control is not needed.
+///
+/// ### Arguments
+/// * `config` - SDK configuration 
+///
+/// ### Returns
+/// run summary with execution metadata, provider info, and outcomes
+///
+/// ### Errors
+/// - configuration validation fails
+/// - runtime initialization fails
+/// - run submission fails
+/// - run completes with error or times out
 pub async fn run_with_sdk(config: KelvinSdkConfig) -> KelvinResult<KelvinRunSummary> {
     config.validate()?;
     let runtime =
