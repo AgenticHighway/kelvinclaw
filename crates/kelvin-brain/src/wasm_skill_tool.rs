@@ -16,6 +16,20 @@ const DEFAULT_MEMORY_APPEND_PATH: &str = "memory/skill-events.md";
 pub const WASM_SKILL_PLUGIN_ID: &str = "kelvin.wasm_skill";
 pub const WASM_SKILL_PLUGIN_NAME: &str = "Kelvin WASM Skill Tool";
 
+/// ### Brief
+///
+/// engine-side wrapper for `WasmSkillHost`. handles tool execution and tracking
+///
+/// ### Description
+///
+/// this wrapper is used to execute WASM skills in a sandboxed environment. it also
+/// tracks execution calls and logs results in workspace memory files
+///
+/// ### Fields
+/// * `name` - tool name
+/// * `host` - pointer to the `WasmSkillHost` for this wasm skill tool
+/// * `default_policy` - fallback policy if
+/// * `default_memory_append_path` - location to append execution tracking info
 #[derive(Clone)]
 pub struct WasmSkillTool {
     name: String,
@@ -24,6 +38,9 @@ pub struct WasmSkillTool {
     default_memory_append_path: String,
 }
 
+/// ### Brief
+///
+/// main implementation of `WasmSkillTool`
 impl WasmSkillTool {
     pub fn new(
         name: impl Into<String>,
@@ -38,6 +55,18 @@ impl WasmSkillTool {
         }
     }
 
+    /// ### Brief
+    ///
+    /// helper for loading json value to serde_json `Map`; errors if `value` is empty or not a json object
+    ///
+    /// ### Arguments
+    /// * `value` - serde_json value to convert
+    ///
+    /// ### Returns
+    /// a serde_json `Map` type from subvalues in `value`
+    ///
+    /// ### Errors
+    /// - JSON parse error
     fn require_args_object<'a>(
         &self,
         value: &'a Value,
@@ -47,6 +76,20 @@ impl WasmSkillTool {
         })
     }
 
+    /// ### Brief
+    ///
+    /// helper for loading a required string value by key from a serde_json `Map`
+    ///
+    /// ### Arguments
+    /// * `args` - value map
+    /// * `key` - which string value to retrieve
+    ///
+    /// ### Returns
+    /// value from map as a `&str`
+    ///
+    /// ### Errors
+    /// - JSON parse error if value is not a string
+    /// - JSON parse error if value doesn't exist
     fn require_string(
         &self,
         args: &serde_json::Map<String, Value>,
@@ -63,6 +106,19 @@ impl WasmSkillTool {
         })
     }
 
+    /// ### Brief
+    ///
+    /// helper for loading an optional string value by key from a serde_json `Map`
+    ///
+    /// ### Arguments
+    /// * `args` - value map
+    /// * `key` - which string value to retrieve
+    ///
+    /// ### Returns
+    /// optional value from map as a `&str`
+    ///
+    /// ### Errors
+    /// - JSON parse error if value is not a string
     fn optional_string(
         &self,
         args: &serde_json::Map<String, Value>,
@@ -79,6 +135,19 @@ impl WasmSkillTool {
         }
     }
 
+    /// ### Brief
+    ///
+    /// helper for loading an optional bool value by key from a serde_json `Map`
+    ///
+    /// ### Arguments
+    /// * `args` - value map
+    /// * `key` - which bool value to retrieve
+    ///
+    /// ### Returns
+    /// optional value from map as a boolean
+    ///
+    /// ### Errors
+    /// - JSON parse error if value is not a bool
     fn optional_bool(
         &self,
         args: &serde_json::Map<String, Value>,
@@ -93,6 +162,19 @@ impl WasmSkillTool {
         }
     }
 
+    /// ### Brief
+    ///
+    /// helper for loading an array of string values by key from a serde_json `Map`
+    ///
+    /// ### Arguments
+    /// * `args` - value map
+    /// * `key` - which array value to retrieve
+    ///
+    /// ### Returns
+    /// optional vector of string values
+    ///
+    /// ### Errors
+    /// - JSON parse error if value is not an array of strings
     fn optional_string_array(
         &self,
         args: &serde_json::Map<String, Value>,
@@ -120,6 +202,19 @@ impl WasmSkillTool {
         }
     }
 
+    /// ### Brief
+    ///
+    /// helper for loading an optional u64 value by key from a serde_json `Map`
+    ///
+    /// ### Arguments
+    /// * `args` - value map
+    /// * `key` - which u64 value to retrieve
+    ///
+    /// ### Returns
+    /// optional value from map as a u64
+    ///
+    /// ### Errors
+    /// - JSON parse error if value is not a u64
     fn optional_u64(
         &self,
         args: &serde_json::Map<String, Value>,
@@ -134,6 +229,19 @@ impl WasmSkillTool {
         }
     }
 
+    /// ### Brief
+    ///
+    /// helper for loading an optional usize value by key from a serde_json `Map`
+    ///
+    /// ### Arguments
+    /// * `args` - value map
+    /// * `key` - which usize value to retrieve
+    ///
+    /// ### Returns
+    /// optional value from map as a usize
+    ///
+    /// ### Errors
+    /// - JSON parse error if value is not a usize
     fn optional_usize(
         &self,
         args: &serde_json::Map<String, Value>,
@@ -154,6 +262,37 @@ impl WasmSkillTool {
         }
     }
 
+    /// ### Brief
+    ///
+    /// sanitizes a workspace path by checking that its relative and checking for traversals
+    ///
+    /// ### Description
+    ///
+    /// Optional longer description explaining the purpose, behavior, and any important details.
+    ///
+    /// ### Arguments
+    /// * `raw` - path string
+    /// * `field` - name of associated field
+    ///
+    /// ### Returns
+    /// sanitized path as an owned String
+    ///
+    /// ### Errors
+    /// - path is empty
+    /// - path is absolute 
+    /// - path contains traversals
+    ///
+    /// ### Example
+    /// ```no_run
+    /// use kelvin_brain::wasm_skill_tool::WasmSkillTool;
+    /// 
+    /// let wasm_skill_tool = WasmSkillTool::default();
+    /// 
+    /// assert!(wasm_skill_tool.sanitize_rel_path("this/is/good", "test_dir").is_ok());
+    /// assert!(wasm_skill_tool.sanitize_rel_path("", "test_dir").is_err());
+    /// assert!(wasm_skill_tool.sanitize_rel_path("/home/username/this/is/bad", "test_dir").is_err());
+    /// assert!(wasm_skill_tool.sanitize_rel_path("../this/is/bad", "test_dir").is_err());
+    /// ```
     fn sanitize_rel_path(&self, raw: &str, field: &str) -> KelvinResult<String> {
         let normalized = raw.trim().replace('\\', "/");
         if normalized.is_empty() {
@@ -178,6 +317,19 @@ impl WasmSkillTool {
         Ok(normalized)
     }
 
+    /// ### Brief
+    ///
+    /// validates that a memory path is `MEMORY.md` or `memory/*.md`
+    /// 
+    /// ### Arguments
+    /// * `memory_rel_path` - path to memory relative to workspace
+    ///
+    /// ### Returns
+    /// none
+    ///
+    /// ### Errors
+    /// - path is not a valid memory location
+    /// - path doesnt resolve to a markdown file
     fn validate_memory_path_scope(&self, memory_rel_path: &str) -> KelvinResult<()> {
         let is_memory_root = memory_rel_path == "MEMORY.md";
         let is_memory_daily =
@@ -190,6 +342,31 @@ impl WasmSkillTool {
         Ok(())
     }
 
+    /// ### Brief
+    ///
+    /// resolves fields in args to `SandboxPolicy`
+    ///
+    /// ### Description
+    ///
+    /// extracts 5 fields from the args json map:
+    /// 
+    /// - `allow_move_servo` - bool for whether to allow moving a servo
+    /// - `allow_fs_read` - bool for whether to allow reading files in general
+    /// - `network_allow_hosts` - string array of allowed hosts for connection requests
+    /// - `max_module_bytes` - maximum size in bytes of the WASM module
+    /// - `fuel_budget` - maximum allowed computation for the WASM module
+    /// 
+    /// uses default values from `SandboxPolicy` if not present in args
+    ///
+    /// ### Arguments
+    /// * `args` - value map
+    /// * `default_policy` - fallback `SandboxPolicy`; used if args doesn't specify a policy
+    ///
+    /// ### Returns
+    /// the resolved sandbox policy
+    ///
+    /// ### Errors
+    /// - unknown policy_preset in args. valid options are "locked_down", "dev_local", or "hardware_control"
     fn resolve_policy(
         &self,
         args: &serde_json::Map<String, Value>,
@@ -223,6 +400,9 @@ impl WasmSkillTool {
     }
 }
 
+/// ### Brief
+///
+/// default fields for a `WasmSkillTool`
 impl Default for WasmSkillTool {
     fn default() -> Self {
         Self::new(
@@ -233,12 +413,28 @@ impl Default for WasmSkillTool {
     }
 }
 
+/// ### Brief
+///
+/// factory/discovery-side wrapper for `WasmSkillTool`
+///
+/// ### Description
+///
+/// holds manifest metadata for describing the plugin to the system. it also implements `PluginFactory` to
+/// provide access tool. this is here to allow `WasmSkillTool` types to integrate with the rest of the
+/// plugin system.
+///
+/// ### Fields
+/// * `manifest` - typed copy of the plugin manifest
+/// * `tool` - tool struct
 #[derive(Clone)]
 pub struct WasmSkillPlugin {
     manifest: PluginManifest,
     tool: Arc<WasmSkillTool>,
 }
 
+/// ### Brief
+///
+/// base implementation for `WasmSkillPlugin`
 impl WasmSkillPlugin {
     pub fn new(tool: Arc<WasmSkillTool>) -> Self {
         Self {
@@ -247,6 +443,13 @@ impl WasmSkillPlugin {
         }
     }
 
+    /// ### Brief
+    /// 
+    /// creates default plugin manifest using predefined constants
+    /// 
+    /// ### Returns
+    /// 
+    /// default plugin manifest as a `PluginManifest`
     pub fn default_manifest() -> PluginManifest {
         PluginManifest {
             id: WASM_SKILL_PLUGIN_ID.to_string(),
@@ -270,12 +473,18 @@ impl WasmSkillPlugin {
     }
 }
 
+/// ### Brief
+///
+/// defaults for a wasm skill plugin
 impl Default for WasmSkillPlugin {
     fn default() -> Self {
         Self::new(Arc::new(WasmSkillTool::default()))
     }
 }
 
+/// ### Brief
+///
+/// implement `PluginFactory` so we can get tools out
 impl PluginFactory for WasmSkillPlugin {
     fn manifest(&self) -> &PluginManifest {
         &self.manifest
@@ -286,6 +495,9 @@ impl PluginFactory for WasmSkillPlugin {
     }
 }
 
+/// ### Brief
+///
+/// implement tool trait
 #[async_trait]
 impl Tool for WasmSkillTool {
     fn name(&self) -> &str {
@@ -360,6 +572,9 @@ impl Tool for WasmSkillTool {
     }
 }
 
+/// ### Brief
+///
+/// serialize a claw call to a human-readable label string
 fn claw_call_label(call: &ClawCall) -> String {
     match call {
         ClawCall::SendMessage { message_code } => format!("send_message({message_code})"),
@@ -371,6 +586,9 @@ fn claw_call_label(call: &ClawCall) -> String {
     }
 }
 
+/// ### Brief
+///
+/// serialize a claw call to JSON
 fn claw_call_json(call: &ClawCall) -> Value {
     match call {
         ClawCall::SendMessage { message_code } => json!({
