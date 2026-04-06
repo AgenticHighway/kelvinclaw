@@ -198,7 +198,7 @@ impl ChannelEngine {
         let trust_tier = match request.sender_tier {
             Some(value) => SenderTrustTier::parse(&value).ok_or_else(|| {
                 KelvinError::InvalidInput(format!(
-                    "invalid sender_tier '{}' (expected trusted|standard|probation|blocked)",
+                    "invalid sender_tier '{}' (expected owner|trusted|standard|probation|blocked)",
                     value
                 ))
             })?,
@@ -359,9 +359,11 @@ struct ChannelPolicy {
     ingress_token: Option<String>,
     allow_accounts: HashSet<String>,
     allow_senders: HashSet<String>,
+    owner_senders: HashSet<String>,
     trusted_senders: HashSet<String>,
     probation_senders: HashSet<String>,
     blocked_senders: HashSet<String>,
+    quota_owner_per_minute: usize,
     quota_standard_per_minute: usize,
     quota_trusted_per_minute: usize,
     quota_probation_per_minute: usize,
@@ -431,14 +433,17 @@ impl TextChannelConfig {
         }
 
         let mut allow_senders = read_env_csv_set(&format!("{prefix}_ALLOW_SENDER_IDS"));
+        let mut owner_senders = read_env_csv_set(&format!("{prefix}_OWNER_IDS"));
         let mut trusted_senders = read_env_csv_set(&format!("{prefix}_TRUSTED_SENDER_IDS"));
         let mut probation_senders = read_env_csv_set(&format!("{prefix}_PROBATION_SENDER_IDS"));
         let mut blocked_senders = read_env_csv_set(&format!("{prefix}_BLOCKED_SENDER_IDS"));
 
         if kind == ChannelKind::Telegram {
+            let owner_chat_ids = read_env_csv_set("KELVIN_TELEGRAM_OWNER_CHAT_IDS");
             let trusted_chat_ids = read_env_csv_set("KELVIN_TELEGRAM_TRUSTED_CHAT_IDS");
             let probation_chat_ids = read_env_csv_set("KELVIN_TELEGRAM_PROBATION_CHAT_IDS");
             let blocked_chat_ids = read_env_csv_set("KELVIN_TELEGRAM_BLOCKED_CHAT_IDS");
+            owner_senders.extend(owner_chat_ids.iter().cloned());
             trusted_senders.extend(trusted_chat_ids.iter().cloned());
             probation_senders.extend(probation_chat_ids.iter().cloned());
             blocked_senders.extend(blocked_chat_ids.iter().cloned());
@@ -447,6 +452,12 @@ impl TextChannelConfig {
 
         let quota_standard_per_minute =
             read_env_usize(&format!("{prefix}_MAX_MESSAGES_PER_MINUTE"), 20, 1, 20_000)?;
+        let quota_owner_per_minute = read_env_usize(
+            &format!("{prefix}_MAX_MESSAGES_PER_MINUTE_OWNER"),
+            quota_standard_per_minute.saturating_mul(4).max(1),
+            1,
+            80_000,
+        )?;
         let quota_trusted_per_minute = read_env_usize(
             &format!("{prefix}_MAX_MESSAGES_PER_MINUTE_TRUSTED"),
             quota_standard_per_minute.saturating_mul(2).max(1),
@@ -507,9 +518,11 @@ impl TextChannelConfig {
                     .filter(|value| !value.is_empty()),
                 allow_accounts,
                 allow_senders,
+                owner_senders,
                 trusted_senders,
                 probation_senders,
                 blocked_senders,
+                quota_owner_per_minute,
                 quota_standard_per_minute,
                 quota_trusted_per_minute,
                 quota_probation_per_minute,
@@ -998,10 +1011,12 @@ impl TextChannelAdapter {
             "cooldown_account_count": self.cooldown_until_ms.len(),
             "allow_account_size": self.config.policy.allow_accounts.len(),
             "allow_sender_size": self.config.policy.allow_senders.len(),
+            "owner_sender_size": self.config.policy.owner_senders.len(),
             "trusted_sender_size": self.config.policy.trusted_senders.len(),
             "probation_sender_size": self.config.policy.probation_senders.len(),
             "blocked_sender_size": self.config.policy.blocked_senders.len(),
             "quota_per_minute": {
+                "owner": self.config.policy.quota_owner_per_minute,
                 "trusted": self.config.policy.quota_trusted_per_minute,
                 "standard": self.config.policy.quota_standard_per_minute,
                 "probation": self.config.policy.quota_probation_per_minute,
@@ -1279,28 +1294,30 @@ impl TextChannelAdapter {
     }
 
     fn enforce_policy(&mut self, envelope: &ChannelEnvelope) -> KelvinErrorOr<SenderTrustTier> {
-        if !self.config.policy.allow_accounts.is_empty()
-            && !self
-                .config
-                .policy
-                .allow_accounts
-                .contains(&envelope.account_id)
-        {
-            self.metrics.policy_denied_total = self.metrics.policy_denied_total.saturating_add(1);
-            return Err(KelvinError::NotFound(format!(
-                "{} account '{}' is not allowlisted",
-                self.config.kind.as_str(),
-                envelope.account_id
-            )));
-        }
-
         let sender_tier = SenderTrustTier::from_policy(&self.config.policy, &envelope.sender_id);
+
         if sender_tier == SenderTrustTier::Blocked {
             self.metrics.policy_denied_total = self.metrics.policy_denied_total.saturating_add(1);
             return Err(KelvinError::NotFound(format!(
                 "{} sender '{}' is blocked",
                 self.config.kind.as_str(),
                 envelope.sender_id
+            )));
+        }
+
+        if !self.config.policy.allow_accounts.is_empty()
+            && !self
+                .config
+                .policy
+                .allow_accounts
+                .contains(&envelope.account_id)
+            && sender_tier != SenderTrustTier::Owner
+        {
+            self.metrics.policy_denied_total = self.metrics.policy_denied_total.saturating_add(1);
+            return Err(KelvinError::NotFound(format!(
+                "{} account '{}' is not allowlisted",
+                self.config.kind.as_str(),
+                envelope.account_id
             )));
         }
 
@@ -1362,6 +1379,7 @@ impl TextChannelAdapter {
         }
 
         let quota = match sender_tier {
+            SenderTrustTier::Owner => self.config.policy.quota_owner_per_minute,
             SenderTrustTier::Trusted => self.config.policy.quota_trusted_per_minute,
             SenderTrustTier::Standard => self.config.policy.quota_standard_per_minute,
             SenderTrustTier::Probation => self.config.policy.quota_probation_per_minute,
@@ -1451,6 +1469,17 @@ impl TextChannelAdapter {
         runtime: &KelvinSdkRuntime,
         entry: &QueuedEnvelope,
     ) -> KelvinErrorOr<Value> {
+        let sender_context = format!(
+            "[Channel: {} | Sender: {} | Tier: {}]",
+            self.config.kind.as_str(),
+            entry.envelope.sender_id,
+            entry.route.sender_tier,
+        );
+        let system_prompt = match &entry.route.system_prompt {
+            Some(existing) => Some(format!("{sender_context}\n{existing}")),
+            None => Some(sender_context),
+        };
+
         let accepted = runtime
             .submit(KelvinSdkRunRequest {
                 prompt: entry.envelope.text.clone(),
@@ -1461,7 +1490,7 @@ impl TextChannelAdapter {
                     .as_ref()
                     .map(std::path::PathBuf::from),
                 timeout_ms: entry.envelope.timeout_ms,
-                system_prompt: entry.route.system_prompt.clone(),
+                system_prompt,
                 memory_query: None,
                 run_id: None,
             })
@@ -1670,6 +1699,7 @@ impl TextChannelAdapter {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 enum SenderTrustTier {
+    Owner,
     Trusted,
     Standard,
     Probation,
@@ -1679,6 +1709,7 @@ enum SenderTrustTier {
 impl SenderTrustTier {
     fn as_str(self) -> &'static str {
         match self {
+            Self::Owner => "owner",
             Self::Trusted => "trusted",
             Self::Standard => "standard",
             Self::Probation => "probation",
@@ -1688,6 +1719,7 @@ impl SenderTrustTier {
 
     fn parse(input: &str) -> Option<Self> {
         match input.trim().to_ascii_lowercase().as_str() {
+            "owner" => Some(Self::Owner),
             "trusted" => Some(Self::Trusted),
             "standard" => Some(Self::Standard),
             "probation" => Some(Self::Probation),
@@ -1699,6 +1731,8 @@ impl SenderTrustTier {
     fn from_policy(policy: &ChannelPolicy, sender_id: &str) -> Self {
         if policy.blocked_senders.contains(sender_id) {
             Self::Blocked
+        } else if policy.owner_senders.contains(sender_id) {
+            Self::Owner
         } else if policy.trusted_senders.contains(sender_id) {
             Self::Trusted
         } else if policy.probation_senders.contains(sender_id) {
@@ -2151,9 +2185,11 @@ mod tests {
             ingress_token: None,
             allow_accounts: HashSet::new(),
             allow_senders: HashSet::new(),
+            owner_senders: HashSet::from(["dave".to_string()]),
             trusted_senders: HashSet::from(["alice".to_string()]),
             probation_senders: HashSet::from(["bob".to_string()]),
-            blocked_senders: HashSet::from(["alice".to_string()]),
+            blocked_senders: HashSet::from(["alice".to_string(), "dave".to_string()]),
+            quota_owner_per_minute: 40,
             quota_standard_per_minute: 10,
             quota_trusted_per_minute: 20,
             quota_probation_per_minute: 5,
@@ -2163,8 +2199,14 @@ mod tests {
             max_text_bytes: 100,
         };
 
+        // blocked overrides trusted
         assert_eq!(
             SenderTrustTier::from_policy(&policy, "alice"),
+            SenderTrustTier::Blocked
+        );
+        // blocked overrides owner
+        assert_eq!(
+            SenderTrustTier::from_policy(&policy, "dave"),
             SenderTrustTier::Blocked
         );
         assert_eq!(
@@ -2174,6 +2216,16 @@ mod tests {
         assert_eq!(
             SenderTrustTier::from_policy(&policy, "carol"),
             SenderTrustTier::Standard
+        );
+
+        // owner tier resolves correctly when not blocked
+        let policy_owner = ChannelPolicy {
+            blocked_senders: HashSet::new(),
+            ..policy.clone()
+        };
+        assert_eq!(
+            SenderTrustTier::from_policy(&policy_owner, "dave"),
+            SenderTrustTier::Owner
         );
     }
 
@@ -2193,9 +2245,11 @@ mod tests {
                 ingress_token: Some("token".to_string()),
                 allow_accounts: HashSet::new(),
                 allow_senders: HashSet::new(),
+                owner_senders: HashSet::new(),
                 trusted_senders: HashSet::new(),
                 probation_senders: HashSet::new(),
                 blocked_senders: HashSet::new(),
+                quota_owner_per_minute: 40,
                 quota_standard_per_minute: 10,
                 quota_trusted_per_minute: 20,
                 quota_probation_per_minute: 5,
@@ -2258,9 +2312,11 @@ mod tests {
                 ingress_token: Some("token".to_string()),
                 allow_accounts: HashSet::new(),
                 allow_senders: HashSet::new(),
+                owner_senders: HashSet::new(),
                 trusted_senders: HashSet::new(),
                 probation_senders: HashSet::new(),
                 blocked_senders: HashSet::new(),
+                quota_owner_per_minute: 40,
                 quota_standard_per_minute: 10,
                 quota_trusted_per_minute: 20,
                 quota_probation_per_minute: 5,
