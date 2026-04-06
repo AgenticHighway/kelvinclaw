@@ -29,6 +29,33 @@ const ENV_TOOLPACK_ENABLE_SCHEDULER_WRITE: &str = "KELVIN_TOOLPACK_ENABLE_SCHEDU
 const ENV_TOOLPACK_ENABLE_SESSION_CLEAR: &str = "KELVIN_TOOLPACK_ENABLE_SESSION_CLEAR";
 const ENV_TOOLPACK_WEB_ALLOW_HOSTS: &str = "KELVIN_TOOLPACK_WEB_ALLOW_HOSTS";
 
+/// ### Brief
+///
+/// global policy information for a toolpack
+///
+/// ### Description
+///
+/// aggregates restrictions and allowlists for what tools are allowed to do. this is here
+/// to standardize how tools interact with the kelvin core. the policy is loaded from env
+/// variables:
+/// 
+/// ```bash
+/// # .env
+/// KELVIN_TOOLPACK_ENABLE_FS_WRITE
+/// KELVIN_TOOLPACK_ENABLE_WEB_FETCH
+/// KELVIN_TOOLPACK_ENABLE_SCHEDULER_WRITE
+/// KELVIN_TOOLPACK_ENABLE_SESSION_CLEAR
+/// KELVIN_TOOLPACK_WEB_ALLOW_HOSTS
+/// ```
+///
+/// ### Fields
+/// * `allow_fs_write` - whether to allow tools to write to filesystem
+/// * `allow_web_fetch` - whether to allow tools to web fetch
+/// * `allow_scheduler_write` - whether to allow tools to edit cron scheduler info
+/// * `allow_session_clear` - whether to allow tools to clear sessions
+/// * `max_read_bytes` - max number of bytes to read from a file
+/// * `max_fetch_bytes` - max number of bytes to fetch from web source
+/// * `web_allow_hosts` - list of allowed web hosts
 #[derive(Clone)]
 struct ToolPackPolicy {
     allow_fs_write: bool,
@@ -40,6 +67,13 @@ struct ToolPackPolicy {
     web_allow_hosts: Vec<String>,
 }
 
+/// ### Brief
+///
+/// loader for getting toolpack policy from env
+/// 
+/// ### Note
+/// 
+/// read/write max bytes arent from env; hard coded
 impl ToolPackPolicy {
     fn from_env() -> Self {
         Self {
@@ -57,6 +91,9 @@ impl ToolPackPolicy {
     }
 }
 
+/// ### Brief
+/// 
+/// fetches a boolean valued key from environment with `default` fallback
 fn env_bool(key: &str, default: bool) -> bool {
     match std::env::var(key) {
         Ok(raw) => {
@@ -67,6 +104,19 @@ fn env_bool(key: &str, default: bool) -> bool {
     }
 }
 
+/// ### Brief
+/// 
+/// parse host allowlist string into string vec
+/// 
+/// ### Description
+/// 
+/// parser uses:
+/// - delimits by commas
+/// - converts to ascii lowercase
+/// 
+/// ### Returns
+/// 
+/// sorted and deduped string vec containing allowed host names
 fn parse_host_allowlist(raw: &str) -> Vec<String> {
     let mut out = raw
         .split(',')
@@ -79,6 +129,16 @@ fn parse_host_allowlist(raw: &str) -> Vec<String> {
     out
 }
 
+/// Brief
+/// 
+/// parses a json value `args` into a json object type
+/// 
+/// ### Returns
+/// 
+/// object as a `serde_json::Map` type
+/// 
+/// ### Errors
+/// - args is not a json object
 fn args_object<'a>(
     args: &'a Value,
     tool_name: &str,
@@ -88,6 +148,22 @@ fn args_object<'a>(
     })
 }
 
+/// ### Brief
+///
+/// extracts and validates a required string from the json args map, disallowing control characters
+///
+/// ### Arguments
+/// * `args` - json args map
+/// * `field` - field name of string to get
+/// * `tool_name` - name of the tool being used
+///
+/// ### Returns
+/// the string value in `args` from the field name
+///
+/// ### Errors
+/// - field value not found
+/// - field value is empty
+/// - **field value contains control characters**
 fn required_string(
     args: &serde_json::Map<String, Value>,
     field: &str,
@@ -110,8 +186,21 @@ fn required_string(
     Ok(trimmed.to_string())
 }
 
-/// Like `required_string` but allows control characters (newlines, tabs, etc.).
-/// Use this for content fields where arbitrary text is expected (file contents, notes).
+/// ### Brief
+///
+/// extracts and validates a required string from the json args map, allowing control characters
+///
+/// ### Arguments
+/// * `args` - json args map
+/// * `field` - field name of string to get
+/// * `tool_name` - name of the tool being used
+///
+/// ### Returns
+/// the string value in `args` from the field name
+///
+/// ### Errors
+/// - field value not found
+/// - field value is empty
 fn required_string_content(
     args: &serde_json::Map<String, Value>,
     field: &str,
@@ -128,6 +217,9 @@ fn required_string_content(
     Ok(value.to_string())
 }
 
+/// ### Brief
+/// 
+/// optionally extracts a u64 field from `args`
 fn optional_u64(
     args: &serde_json::Map<String, Value>,
     field: &str,
@@ -141,6 +233,9 @@ fn optional_u64(
     }
 }
 
+/// ### Brief
+/// 
+/// optionally extracts a string from `args`
 fn optional_string(
     args: &serde_json::Map<String, Value>,
     field: &str,
@@ -154,6 +249,21 @@ fn optional_string(
     }
 }
 
+/// ### Brief
+///
+/// normalize a given relative path
+///
+/// ### Arguments
+/// * `path` - path string
+/// * `field_name` - name of tool used
+///
+/// ### Returns
+/// normalized path string
+///
+/// ### Error
+/// - path string is empty
+/// - path string is not relative
+/// - contains traversals
 fn normalize_workspace_relative_path(path: &str, field_name: &str) -> KelvinResult<String> {
     let normalized = path.trim().replace('\\', "/");
     if normalized.is_empty() {
@@ -177,6 +287,20 @@ fn normalize_workspace_relative_path(path: &str, field_name: &str) -> KelvinResu
     Ok(normalized)
 }
 
+/// ### Brief
+/// 
+/// boolean for path is or starts with a sensitive name
+/// 
+/// ### Description
+/// 
+/// this helper uses hard coded conditions for a sensitive path:
+/// - path is ".env"
+/// - path starts with ".env"
+/// - path starts with ".git/"
+/// - path starts with ".kelvin/plugins"
+/// 
+/// ### Returns
+/// true if path is sensitive
 fn deny_sensitive_read_path(path: &str) -> bool {
     let lower = path.to_ascii_lowercase();
     lower == ".env"
@@ -185,6 +309,41 @@ fn deny_sensitive_read_path(path: &str) -> bool {
         || lower.starts_with(".kelvin/plugins/")
 }
 
+/// ### Brief
+///
+/// performs a basic validation of the "approval" field for a sensitive tool (e.g. fs_safe_write)
+///
+/// ### Description
+///
+/// the "approval" field is a json object generated by the LLM in a tool call. the basic structure is:
+/// 
+/// ```json
+/// "approval": {
+///     "granted": true,
+///     "reason": "this reason for approval must be between 1 and 256 characters"
+/// }
+/// ```
+/// 
+/// the purpose of this design is to require kelvin to fill out an approval reason to successfully 
+/// execute a tool call. this acts as a light countermeasure against context flooding, in which case
+/// the LLM may exceed the maximum approval reason length or include control characters. in this case, 
+/// the tool call will be blocked and kelvin will be told "approval.reason for '{capability}' is invalid"
+/// 
+/// this is not a hard, deterministic security measure.
+///
+/// ### Arguments
+/// * `args` - json args map
+/// * `capability` - the capability exercised in this tool use
+///
+/// ### Returns
+/// the approval reason as a string
+///
+/// ### Errors
+/// - "approval" field is empty or non-existent
+/// - subfield "granted" is false, non-boolean, or non-existent
+/// - subfield "reason" is empty
+/// - subfield "reason" is longer than 256 characters
+/// - subfiled "reason" contains control characters
 fn require_sensitive_approval(
     args: &serde_json::Map<String, Value>,
     capability: &str,
@@ -221,6 +380,19 @@ fn require_sensitive_approval(
     Ok(reason.to_string())
 }
 
+/// ### Brief
+/// 
+/// returns true if host is in allowlist
+/// 
+/// ### Description
+/// 
+/// check if host is in allowlist by:
+/// - looking for direct matches
+/// - looking at versions with prefix stripped
+/// 
+/// ### Returns
+/// 
+/// true if the host appears in the allowlist as described
 fn host_allowed(host: &str, allowlist: &[String]) -> bool {
     let candidate = host.trim().to_ascii_lowercase();
     if candidate.is_empty() {
@@ -235,6 +407,9 @@ fn host_allowed(host: &str, allowlist: &[String]) -> bool {
     })
 }
 
+/// ### Brief
+/// 
+/// clamps `raw: u64` down to `max_allowed: usize`; returns clamped value as usize
 fn clamp_usize(raw: u64, max_allowed: usize) -> usize {
     match usize::try_from(raw) {
         Ok(value) => value.min(max_allowed),
@@ -242,11 +417,23 @@ fn clamp_usize(raw: u64, max_allowed: usize) -> usize {
     }
 }
 
+/// ### Brief
+///
+/// struct def for the safe filesystem reading tool
+///
+/// ### Description
+///
+/// only field is an owned copy of the global tool pack policy; this is mainly
+/// here so the read tool can implement the `Tool` trait
+///
+/// ### Fields
+/// * `policy` - global tool pack policy
 #[derive(Clone)]
 struct SafeFsReadTool {
     policy: ToolPackPolicy,
 }
 
+/// implement tool trait for `SafeFsReadTool`
 #[async_trait]
 impl Tool for SafeFsReadTool {
     fn name(&self) -> &str {
@@ -280,6 +467,8 @@ impl Tool for SafeFsReadTool {
             &required_string(args, "path", self.name())?,
             "path",
         )?;
+
+        // check for attempts to read from sensitive paths
         if deny_sensitive_read_path(&path) {
             return Err(KelvinError::InvalidInput(format!(
                 "{} denied path '{}' by policy",
@@ -288,11 +477,13 @@ impl Tool for SafeFsReadTool {
             )));
         }
 
+        // get read limit from args (clamped to policy max), use policy max as default
         let requested_limit = optional_u64(args, "max_bytes", self.name())?
             .map(|value| clamp_usize(value, self.policy.max_read_bytes))
             .unwrap_or(self.policy.max_read_bytes);
         let read_limit = requested_limit.max(1);
 
+        // check path existence
         let abs = Path::new(&input.workspace_dir).join(&path);
         if !abs.is_file() {
             return Err(KelvinError::NotFound(format!(
@@ -302,6 +493,7 @@ impl Tool for SafeFsReadTool {
             )));
         }
 
+        // read file contents to buffer
         let mut file = File::open(&abs)?;
         let mut buffer = Vec::new();
         std::io::Read::by_ref(&mut file)
@@ -312,13 +504,18 @@ impl Tool for SafeFsReadTool {
             buffer.truncate(read_limit);
         }
 
+        // convert to string from utf8
         let content = String::from_utf8_lossy(&buffer).to_string();
+
+        // form output json
         let output = json!({
             "path": path,
             "bytes": buffer.len(),
             "truncated": truncated,
             "content": content,
         });
+
+        // form summary
         let summary = format!(
             "{} read '{}' ({} bytes{})",
             self.name(),
@@ -326,6 +523,8 @@ impl Tool for SafeFsReadTool {
             buffer.len(),
             if truncated { ", truncated" } else { "" }
         );
+
+        // return tool call result
         Ok(ToolCallResult {
             summary: summary.clone(),
             output: Some(output.to_string()),
@@ -335,11 +534,23 @@ impl Tool for SafeFsReadTool {
     }
 }
 
+/// ### Brief
+///
+/// struct def for the safe filesystem writing tool
+///
+/// ### Description
+///
+/// only field is an owned copy of the global tool pack policy; this is mainly
+/// here so the write tool can implement the `Tool` trait
+///
+/// ### Fields
+/// * `policy` - global tool pack policy
 #[derive(Clone)]
 struct SafeFsWriteTool {
     policy: ToolPackPolicy,
 }
 
+/// implement flag function for checking allowed write paths
 impl SafeFsWriteTool {
     fn write_scope_allowed(path: &str) -> bool {
         path.starts_with(".kelvin/sandbox/")
@@ -348,6 +559,7 @@ impl SafeFsWriteTool {
     }
 }
 
+/// implement tool trait for `SafeFsReadTool`
 #[async_trait]
 impl Tool for SafeFsWriteTool {
     fn name(&self) -> &str {
@@ -396,6 +608,8 @@ impl Tool for SafeFsWriteTool {
     }
 
     async fn call(&self, input: ToolCallInput) -> KelvinResult<ToolCallResult> {
+
+        // check if policy allows fs writes
         if !self.policy.allow_fs_write {
             return Err(KelvinError::InvalidInput(format!(
                 "{} is disabled by runtime policy; set {}=1 to enable",
@@ -409,6 +623,8 @@ impl Tool for SafeFsWriteTool {
             &required_string(args, "path", self.name())?,
             "path",
         )?;
+
+        // check if write path allowed
         if !Self::write_scope_allowed(&path) {
             return Err(KelvinError::InvalidInput(format!(
                 "{} denied path '{}'; allowed roots are .kelvin/sandbox/, memory/, notes/",
@@ -416,7 +632,11 @@ impl Tool for SafeFsWriteTool {
                 path
             )));
         }
+
+        // parse content; DOES allow control characters (e.g. newlines)
         let content = required_string_content(args, "content", self.name())?;
+
+        // check mode; currently supports "overwrite" and "append"
         let mode = optional_string(args, "mode", self.name())?
             .unwrap_or_else(|| "overwrite".to_string())
             .to_ascii_lowercase();
@@ -427,6 +647,8 @@ impl Tool for SafeFsWriteTool {
             )));
         }
 
+        // write the file
+        // NOTE writer is closed by scope drop
         let abs = Path::new(&input.workspace_dir).join(&path);
         if let Some(parent) = abs.parent() {
             fs::create_dir_all(parent)?;
@@ -440,12 +662,15 @@ impl Tool for SafeFsWriteTool {
         writer.write_all(content.as_bytes())?;
         writer.flush()?;
 
+        // form output json
         let output = json!({
             "path": path,
             "mode": mode,
             "bytes_written": content.len(),
             "approval_reason": approval_reason,
         });
+
+        // form summary
         let summary = format!(
             "{} wrote {} bytes to '{}' ({})",
             self.name(),
@@ -453,6 +678,8 @@ impl Tool for SafeFsWriteTool {
             path,
             mode
         );
+
+        // return tool call result object
         Ok(ToolCallResult {
             summary: summary.clone(),
             output: Some(output.to_string()),
@@ -462,12 +689,25 @@ impl Tool for SafeFsWriteTool {
     }
 }
 
+/// ### Brief
+///
+/// struct def for the safe web fetch tool
+///
+/// ### Description
+/// 
+/// this struct is similar to other tools, but also includes an instance of the reqwest client; the 
+/// builder can fail. the internal reqwest client is hard coded to deny all redirects.
+///
+/// ### Fields
+/// * `policy` - owned copy of global tool pack policy
+/// * `client` - composite instance of `reqwest::async_impl::Client`
 #[derive(Clone)]
 struct SafeWebFetchTool {
     policy: ToolPackPolicy,
     client: Client,
 }
 
+/// implement a failable constructor for the safe web fetch tool
 impl SafeWebFetchTool {
     fn try_new(policy: ToolPackPolicy) -> KelvinResult<Self> {
         let client = Client::builder()
@@ -479,6 +719,7 @@ impl SafeWebFetchTool {
     }
 }
 
+/// implement tool trait for `SafeWebFetchTool`
 #[async_trait]
 impl Tool for SafeWebFetchTool {
     fn name(&self) -> &str {
@@ -527,6 +768,8 @@ impl Tool for SafeWebFetchTool {
     }
 
     async fn call(&self, input: ToolCallInput) -> KelvinResult<ToolCallResult> {
+
+        // check policy allows fetches
         if !self.policy.allow_web_fetch {
             return Err(KelvinError::InvalidInput(format!(
                 "{} is disabled by runtime policy; set {}=1 to enable",
@@ -545,9 +788,12 @@ impl Tool for SafeWebFetchTool {
             .unwrap_or(self.policy.max_fetch_bytes)
             .max(1);
 
+        // parse url validity using url crate
         let parsed = Url::parse(&url_raw).map_err(|err| {
             KelvinError::InvalidInput(format!("{} invalid url '{}': {err}", self.name(), url_raw))
         })?;
+
+        // only allow http + https
         let scheme = parsed.scheme().to_ascii_lowercase();
         if scheme != "https" && scheme != "http" {
             return Err(KelvinError::InvalidInput(format!(
@@ -555,6 +801,8 @@ impl Tool for SafeWebFetchTool {
                 self.name()
             )));
         }
+
+        // validate host
         let host = parsed.host_str().ok_or_else(|| {
             KelvinError::InvalidInput(format!("{} url host is required", self.name()))
         })?;
@@ -567,6 +815,7 @@ impl Tool for SafeWebFetchTool {
             )));
         }
 
+        // make request and await response with timeout
         let response = self
             .client
             .get(parsed.clone())
@@ -582,9 +831,13 @@ impl Tool for SafeWebFetchTool {
             .get(reqwest::header::CONTENT_TYPE)
             .and_then(|value| value.to_str().ok())
             .map(str::to_string);
+
+        // await reading response bytes
         let body_bytes = response.bytes().await.map_err(|err| {
             KelvinError::Backend(format!("{} read body failed: {err}", self.name()))
         })?;
+
+        // size clamp
         if body_bytes.len() > max_bytes {
             return Err(KelvinError::InvalidInput(format!(
                 "{} response size {} exceeds limit {}",
@@ -593,8 +846,11 @@ impl Tool for SafeWebFetchTool {
                 max_bytes
             )));
         }
+
+        // convert to string from utf8
         let body_text = String::from_utf8_lossy(&body_bytes).to_string();
 
+        // form output json
         let output = json!({
             "url": parsed.as_str(),
             "host": host,
@@ -604,6 +860,8 @@ impl Tool for SafeWebFetchTool {
             "body": body_text,
             "approval_reason": approval_reason,
         });
+
+        // form summary 
         let summary = format!(
             "{} fetched {} (status={}, bytes={})",
             self.name(),
@@ -611,6 +869,8 @@ impl Tool for SafeWebFetchTool {
             status,
             body_bytes.len()
         );
+
+        // return tool call result object
         Ok(ToolCallResult {
             summary: summary.clone(),
             output: Some(output.to_string()),
@@ -620,12 +880,26 @@ impl Tool for SafeWebFetchTool {
     }
 }
 
+/// ### Brief
+///
+/// struct def for the scheduler tool
+///
+/// ### Description
+/// 
+/// this struct is similar to other tools, but also includes an atomic mutable reference to the
+/// global scheduler store. the `SchedulerStore` is access-controlled by an internal mutex lock;
+/// mutabile writes are controlled by the lock.
+///
+/// ### Fields
+/// * `policy` - owned copy of global tool pack policy
+/// * `store` - arc for mutable scheduler store
 #[derive(Clone)]
 struct SchedulerTool {
     policy: ToolPackPolicy,
     store: Arc<SchedulerStore>,
 }
 
+/// tool implementation for `SchedulerTool`
 #[async_trait]
 impl Tool for SchedulerTool {
     fn name(&self) -> &str {
@@ -685,6 +959,8 @@ impl Tool for SchedulerTool {
         match action.as_str() {
             "list" => {}
             "add" => {
+
+                // check policy for sched write
                 if !self.policy.allow_scheduler_write {
                     return Err(KelvinError::InvalidInput(format!(
                         "{} add is disabled by runtime policy; set {}=1",
@@ -700,9 +976,13 @@ impl Tool for SchedulerTool {
                             "schedule_cron add requires 'task' or 'prompt'".to_string(),
                         )
                     })?;
+
+                // parse scheduler reply target
                 let reply_target = parse_reply_target(args, self.name())?;
                 let id = optional_string(args, "id", self.name())?
                     .unwrap_or_else(|| format!("task-{}", now_ms()));
+
+                // add entry to scheduler store
                 self.store.add_schedule(NewScheduledTask {
                     id,
                     cron: required_string(args, "cron", self.name())?,
@@ -720,6 +1000,8 @@ impl Tool for SchedulerTool {
                 })?;
             }
             "remove" => {
+
+                // check policy allows sched write
                 if !self.policy.allow_scheduler_write {
                     return Err(KelvinError::InvalidInput(format!(
                         "{} remove is disabled by runtime policy; set {}=1",
@@ -729,6 +1011,8 @@ impl Tool for SchedulerTool {
                 }
                 let approval_reason = require_sensitive_approval(args, "schedule_mutation")?;
                 let id = required_string(args, "id", self.name())?;
+
+                // remove entry from sched store
                 let _ = self
                     .store
                     .remove_schedule(&id, &input.session_id, &approval_reason)?;
@@ -741,6 +1025,7 @@ impl Tool for SchedulerTool {
             }
         }
 
+        // get updated sched list
         let schedules = self.store.list_schedules()?;
         let tasks = schedules
             .iter()
@@ -764,13 +1049,18 @@ impl Tool for SchedulerTool {
             })
             .collect::<Vec<_>>();
 
+        // form summary
         let summary = format!("{} action='{}' tasks={}", self.name(), action, tasks.len());
+
+        // form output json
         let output = json!({
             "action": action,
             "count": tasks.len(),
             "tasks": tasks,
             "state_path": self.store.state_path().to_string_lossy(),
         });
+
+        // return tool call result object
         Ok(ToolCallResult {
             summary: summary.clone(),
             output: Some(output.to_string()),
@@ -780,6 +1070,22 @@ impl Tool for SchedulerTool {
     }
 }
 
+/// ### Brief
+///
+/// parse and validate the scheduler reply target from args (optional)
+///
+/// ### Description
+///
+/// this is a helper for the scheduler tool. the default is firing silently
+///
+/// ### Arguments
+/// * `arg_name` - description
+///
+/// ### Returns
+/// Description of the return value
+///
+/// ### Errors
+/// - json parse error
 fn parse_reply_target(
     args: &serde_json::Map<String, Value>,
     tool_name: &str,
@@ -794,11 +1100,23 @@ fn parse_reply_target(
         })
 }
 
+/// ### Brief
+///
+/// struct def for the session toolset tool
+///
+/// ### Description
+///
+/// only field is an owned copy of the global tool pack policy; this is mainly
+/// here so the session tools tool can implement the `Tool` trait
+///
+/// ### Fields
+/// * `policy` - global tool pack policy
 #[derive(Clone)]
 struct SessionToolsTool {
     policy: ToolPackPolicy,
 }
 
+/// get state path from workspace + current session id
 impl SessionToolsTool {
     fn state_path(workspace: &str, session_id: &str) -> std::path::PathBuf {
         Path::new(workspace)
@@ -807,6 +1125,7 @@ impl SessionToolsTool {
     }
 }
 
+/// implement tool trait for session toolset
 #[async_trait]
 impl Tool for SessionToolsTool {
     fn name(&self) -> &str {
@@ -860,6 +1179,8 @@ impl Tool for SessionToolsTool {
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)?;
         }
+
+        // open notes file content as mutable state map
         let mut state = if path.is_file() {
             let bytes = fs::read(&path)?;
             serde_json::from_slice::<Map<String, Value>>(&bytes).map_err(|err| {
@@ -872,10 +1193,15 @@ impl Tool for SessionToolsTool {
             state.insert("notes".to_string(), json!([]));
         }
 
+        // action map
         match action.as_str() {
             "list_notes" => {}
             "append_note" => {
+
+                // parse note from args. control character allowed
                 let note = required_string_content(args, "note", self.name())?;
+
+                // write note
                 let notes = state
                     .get_mut("notes")
                     .and_then(Value::as_array_mut)
@@ -889,6 +1215,8 @@ impl Tool for SessionToolsTool {
                 }));
             }
             "clear_notes" => {
+
+                // check policy for clearing notes
                 if !self.policy.allow_session_clear {
                     return Err(KelvinError::InvalidInput(format!(
                         "{} clear is disabled by runtime policy; set {}=1",
@@ -907,19 +1235,26 @@ impl Tool for SessionToolsTool {
             }
         }
 
+        // overwrite notes file with new state and get new count
         fs::write(&path, serde_json::to_vec_pretty(&state).unwrap_or_default())?;
         let note_count = state
             .get("notes")
             .and_then(Value::as_array)
             .map(|items| items.len())
             .unwrap_or(0);
+
+        // form summary
         let summary = format!("{} action='{}' notes={}", self.name(), action, note_count);
+
+        // form output json
         let output = json!({
             "action": action,
             "session_id": input.session_id,
             "state_path": path.to_string_lossy(),
             "notes": state.get("notes").cloned().unwrap_or_else(|| json!([])),
         });
+
+        // return tool call result object
         Ok(ToolCallResult {
             summary: summary.clone(),
             output: Some(output.to_string()),
@@ -929,6 +1264,9 @@ impl Tool for SessionToolsTool {
     }
 }
 
+/// ### Brief
+/// 
+/// convenience type for loading default toolpack
 #[derive(Clone)]
 struct SingleToolPlugin {
     manifest: PluginManifest,
@@ -965,6 +1303,24 @@ fn manifest(
     }
 }
 
+/// ### Brief
+///
+/// creates the `toolpack_tools` registry for the default toolpack
+///
+/// ### Description
+///
+/// this creates one of the parts of the central tool registry; critical
+///
+/// ### Arguments
+/// * `core_version` - kelvin core version
+/// * `scheduler_store` - arc to the aggregate scheduler store (for the scheduler tool)
+///
+/// ### Returns
+/// tuple containing the tool registry for the default toolpack and the number of tools in it
+///
+/// ### Errors
+/// - web fetch tool init fails
+/// - internal SdkToolRegistry failure
 pub fn load_default_toolpack_plugins(
     core_version: &str,
     scheduler_store: Arc<SchedulerStore>,

@@ -19,23 +19,193 @@ pub const MAX_PLUGIN_DESCRIPTION_LEN: usize = 4_096;
 pub const MAX_PLUGIN_HOMEPAGE_LEN: usize = 2_048;
 pub const MAX_PLUGIN_CAPABILITIES: usize = 32;
 
+/// ### Brief
+///
+/// defines explicit capabilities for a plugin
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]
 pub enum PluginCapability {
+
+    /// ### Brief
+    ///
+    /// plugin provides an LLM model backend
+    ///
+    /// ### Description
+    ///
+    /// declares that the plugin implements `ModelProvider` and can serve inference requests.
+    /// wasm model plugins that declare this are loaded into `SdkModelProviderRegistry` and
+    /// selected via `KELVIN_MODEL_PROVIDER`. `FsRead`, `FsWrite`, and `CommandExecution` are
+    /// rejected when combined with this capability for model-runtime plugins.
+    ///
+    /// ### Currently Used
+    ///
+    /// yes — active for installed WASM model plugins and built-in model providers
     ModelProvider,
+
+    /// ### Brief
+    ///
+    /// plugin provides a memory search backend
+    ///
+    /// ### Description
+    ///
+    /// declares that the plugin implements `MemorySearchManager`. defined in `PluginFactory`
+    /// as `memory_provider()` but no installed plugin loader currently wires this up at
+    /// runtime; only appears in tests.
+    ///
+    /// ### Currently Used
+    ///
+    /// no — declared but not wired in any user-facing loading path
     MemoryProvider,
+
+    /// ### Brief
+    ///
+    /// plugin provides a session store backend
+    ///
+    /// ### Description
+    ///
+    /// declares that the plugin implements `SessionStore`. defined in `PluginFactory` as
+    /// `session_store()` but no installed plugin loader currently wires this up at runtime.
+    ///
+    /// ### Currently Used
+    ///
+    /// no — declared but not wired in any user-facing loading path
     SessionStore,
+
+    /// ### Brief
+    ///
+    /// plugin provides an event sink backend
+    ///
+    /// ### Description
+    ///
+    /// declares that the plugin implements `EventSink` for consuming runtime events. defined
+    /// in `PluginFactory` as `event_sink()` but no installed plugin loader currently wires
+    /// this up at runtime.
+    ///
+    /// ### Currently Used
+    ///
+    /// no — declared but not wired in any user-facing loading path
     EventSink,
+
+    /// ### Brief
+    ///
+    /// plugin exposes a tool callable by the LLM
+    ///
+    /// ### Description
+    ///
+    /// declares that the plugin implements `Tool` and should be registered in the tool
+    /// registry. `SdkToolRegistry` enforces that this capability and a non-nil `tool()`
+    /// return must agree — a mismatch is a hard registration error. Currently used by all toolpack
+    /// tools and installed WASM skill plugins.
+    ///
+    /// ### Currently Used
+    ///
+    /// yes — required for all tool plugins, both built-in and installed
     ToolProvider,
+
+    /// ### Brief
+    ///
+    /// plugin reads from the filesystem
+    ///
+    /// ### Description
+    ///
+    /// declares that the plugin needs filesystem read access. checked against
+    /// `PluginSecurityPolicy::allow_fs_read` at registration time; plugins will be rejected
+    /// if the host policy disallows it. for WASM tool plugins, this also sets
+    /// `SandboxPolicy::allow_fs_read` on the wasm sandbox.
+    ///
+    /// ### Currently Used
+    ///
+    /// yes — declared by `kelvin.tool.fs_read` and any installed WASM tool that reads files
     FsRead,
+
+    /// ### Brief
+    ///
+    /// plugin writes to the filesystem
+    ///
+    /// ### Description
+    ///
+    /// declares that the plugin needs filesystem write access. checked against
+    /// `PluginSecurityPolicy::allow_fs_write` at registration time. currently rejected
+    /// outright for installed WASM tool plugins — only the built-in toolpack
+    /// `kelvin.tool.fs_write` uses this capability.
+    ///
+    /// ### Currently Used
+    ///
+    /// partially — active for the built-in toolpack only; blocked for user-installed WASM plugins
     FsWrite,
+
+    /// ### Brief
+    ///
+    /// plugin makes outbound network requests
+    ///
+    /// ### Description
+    ///
+    /// declares that the plugin needs outbound network access. checked against
+    /// `PluginSecurityPolicy::allow_network_egress` at registration time. for WASM plugins,
+    /// the allowed hosts are further constrained by `capability_scopes.network_allow_hosts`
+    /// in the manifest. Currently used by `kelvin.tool.web_fetch` and WASM model plugins.
+    ///
+    /// ### Currently Used
+    ///
+    /// yes — active for web fetch toolpack tool and installed WASM model plugins
     NetworkEgress,
+
+    /// ### Brief
+    ///
+    /// plugin executes shell commands
+    ///
+    /// ### Description
+    ///
+    /// declares that the plugin needs to run arbitrary shell commands. checked against
+    /// `PluginSecurityPolicy::allow_command_execution` at registration time. currently
+    /// rejected for all installed WASM tool and model plugins — it exists in the enum and
+    /// security policy but no runtime path permits it for user plugins. only appears in
+    /// security tests as an expected-rejection case.
+    ///
+    /// ### Currently Used
+    ///
+    /// no — defined and policy-gated but blocked for all user-installed plugins
     CommandExecution,
+
+    /// ### Brief
+    ///
+    /// plugin provides slash commands to the gateway
+    ///
+    /// ### Description
+    ///
+    /// declares that the plugin implements `CommandProvider` and exposes slash commands
+    /// via `list_commands` / `execute_command`. defined in `PluginFactory` as
+    /// `command_provider()` but no installed plugin loader currently wires this up at runtime.
+    ///
+    /// ### Currently Used
+    ///
+    /// no — declared but not wired in any user-facing loading path
     CommandProvider,
+
+    /// ### Brief
+    ///
+    /// plugin reads specific environment variables
+    ///
+    /// ### Description
+    ///
+    /// declares that the plugin needs access to environment variables listed in
+    /// `capability_scopes.env_allow` in the manifest. declaring `env_allow` scopes without
+    /// this capability is a hard registration error. the allowed vars are passed into the
+    /// WASM sandbox policy and are the only env vars the plugin can read.
+    ///
+    /// ### Currently Used
+    ///
+    /// yes — required for any installed WASM plugin that declares `env_allow` scopes
     EnvAccess,
 }
 
-/// Metadata describing a single slash command provided by the gateway or a plugin.
+/// ### Brief
+/// 
+/// metadata describing a single slash command provided by the gateway or a plugin.
+/// 
+/// ### Fields
+/// * `name` - 
+/// 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SlashCommandMeta {
     pub name: String,
@@ -44,23 +214,53 @@ pub struct SlashCommandMeta {
     pub category: String,
 }
 
-/// Context passed to a command handler during execution.
+/// ### Brief
+/// 
+/// context passed to a command handler during execution.
 #[derive(Debug, Clone)]
 pub struct CommandContext {
     pub session_id: String,
     pub workspace_dir: String,
 }
 
-/// The result returned by a command execution.
+/// ### Brief
+/// 
+/// the result returned by a command execution.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CommandOutput {
     pub message: String,
     pub data: Option<Value>,
 }
 
-/// Trait implemented by plugins that provide slash commands.
+/// ### Brief
+/// 
+/// trait implemented by plugins that provide slash commands
+/// 
+/// ### Description
+/// 
+/// this is only for installed plugins; not used for internal slash commands
 pub trait CommandProvider: Send + Sync {
+
+    /// ### Brief
+    /// 
+    /// list slash command(s) provided by a command provider
     fn list_commands(&self) -> Vec<SlashCommandMeta>;
+
+    /// ### Brief
+    /// 
+    /// execute a slash command
+    /// 
+    /// ### Description
+    /// 
+    /// ### Arguments
+    /// * `name` - name of the command to execute
+    /// * `args` - arguments provided to command
+    /// * `ctx` - context in which to execute command
+    /// 
+    /// ### Returns
+    /// command output object
+    /// 
+    /// ### Errors
     fn execute_command(
         &self,
         name: &str,
@@ -69,6 +269,34 @@ pub trait CommandProvider: Send + Sync {
     ) -> KelvinResult<CommandOutput>;
 }
 
+/// ### Brief
+///
+/// registry-level definition of a plugin manifest
+///
+/// ### Description
+///
+/// a plugin manifest is the static declaration a plugin provides to describe itself to the
+/// kelvin core registry. it carries identity fields (`id`, `name`, `version`), an api
+/// compatibility marker (`api_version`), optional metadata (`description`, `homepage`),
+/// the set of capabilities the plugin claims (`capabilities`), a flag for experimental status,
+/// and optional semver bounds that constrain which core versions the plugin is compatible with.
+///
+/// at registration time `PluginManifest::validate` checks the manifest for well-formedness
+/// and `check_plugin_compatibility` cross-checks it against the running core version and the
+/// active `PluginSecurityPolicy`. a manifest that fails either check causes registration to
+/// be rejected with a `KelvinError::InvalidInput`.
+///
+/// ### Fields
+/// * `id` - plugin id
+/// * `name` - human-readable display name (max 128 chars)
+/// * `version` - semver string for the plugin release
+/// * `api_version` - semver string for the kelvin sdk api the plugin was built against
+/// * `description` - optional short description of the plugin (max 4096 chars)
+/// * `homepage` - optional url pointing to documentation or a project page (max 2048 chars)
+/// * `capabilities` - explicit list of `PluginCapability` values the plugin declares (max 32)
+/// * `experimental` - if true, the plugin is only accepted when the security policy permits experimental plugins
+/// * `min_core_version` - optional lower bound on the core semver version required to run this plugin
+/// * `max_core_version` - optional upper bound on the core semver version this plugin is compatible with
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PluginManifest {
     pub id: String,
@@ -83,6 +311,7 @@ pub struct PluginManifest {
     pub max_core_version: Option<String>,
 }
 
+/// top-level manifest validation routine
 impl PluginManifest {
     pub fn validate(&self) -> KelvinResult<()> {
         validate_plugin_id(&self.id)?;
@@ -108,6 +337,9 @@ impl PluginManifest {
     }
 }
 
+/// ### Brief
+/// 
+/// validate a semver string
 fn validate_semver(label: &str, value: &str) -> KelvinResult<()> {
     if value.trim().is_empty() {
         return Err(KelvinError::InvalidInput(format!(
@@ -123,6 +355,14 @@ fn validate_semver(label: &str, value: &str) -> KelvinResult<()> {
     Ok(())
 }
 
+/// ### Brief
+/// 
+/// validate a plugin id string
+/// 
+/// ### Description
+/// 
+/// - the length must be in: 0 < length <= 128
+/// - must be all alphanumeric, but allowing '_', '-', and '.'
 fn validate_plugin_id(value: &str) -> KelvinResult<()> {
     let cleaned = value.trim();
     if cleaned.is_empty() {
@@ -152,6 +392,14 @@ fn validate_plugin_id(value: &str) -> KelvinResult<()> {
     Ok(())
 }
 
+/// ### Brief
+/// 
+/// validate a plugin name string
+/// 
+/// ### Description
+/// 
+/// - the length must be in: 0 < length <= 128
+/// - must be all alphanumeric
 fn validate_plugin_name(value: &str) -> KelvinResult<()> {
     let cleaned = value.trim();
     if cleaned.is_empty() {
@@ -172,6 +420,14 @@ fn validate_plugin_name(value: &str) -> KelvinResult<()> {
     Ok(())
 }
 
+/// ### Brief
+/// 
+/// validate an optional string field
+/// 
+/// ### Description
+/// 
+/// - the length must be in: 0 < length <= max_len
+/// - must not have control characters
 fn validate_optional_text_field(
     label: &str,
     value: Option<&str>,
@@ -199,6 +455,15 @@ fn validate_optional_text_field(
     Ok(())
 }
 
+/// ### Brief
+/// 
+/// validate an optional home URL
+/// 
+/// ### Description
+/// 
+/// - the length must be in: 0 < length <= 2048
+/// - must not have control characters or whitespace
+/// - must be an http URL
 fn validate_homepage(value: Option<&str>) -> KelvinResult<()> {
     let Some(raw) = value else {
         return Ok(());
@@ -230,6 +495,13 @@ fn validate_homepage(value: Option<&str>) -> KelvinResult<()> {
     Ok(())
 }
 
+/// ### Brief
+/// 
+/// validate the capabilities field
+/// 
+/// ### Description
+/// 
+/// - one plugin is allowed a maximum of 32 capabilities (hard coded)
 fn validate_capabilities(capabilities: &[PluginCapability]) -> KelvinResult<()> {
     if capabilities.len() > MAX_PLUGIN_CAPABILITIES {
         return Err(KelvinError::InvalidInput(format!(
@@ -248,6 +520,9 @@ fn validate_capabilities(capabilities: &[PluginCapability]) -> KelvinResult<()> 
     Ok(())
 }
 
+/// ### Brief
+/// 
+/// generate preview string for a plugin manifest (as a JSON object)
 fn preview(value: &str, max_chars: usize) -> String {
     let mut shown = String::new();
     for (idx, ch) in value.chars().enumerate() {
@@ -260,6 +535,22 @@ fn preview(value: &str, max_chars: usize) -> String {
     shown
 }
 
+/// ### Brief
+///
+/// set of capability gates passed to the registry at plugin registration time
+///
+/// ### Description
+///
+/// constructed by the host per invocation and handed to `PluginRegistry::register`, which
+/// forwards it to `check_plugin_compatibility`. any capability declared in the plugin's
+/// manifest that is not permitted by the policy causes registration to be rejected.
+///
+/// ### Fields
+/// * `allow_experimental` - if false, plugins with `experimental: true` in their manifest are rejected
+/// * `allow_fs_read` - permits plugins that declare `PluginCapability::FsRead`
+/// * `allow_network_egress` - permits plugins that declare `PluginCapability::NetworkEgress`
+/// * `allow_fs_write` - permits plugins that declare `PluginCapability::FsWrite`
+/// * `allow_command_execution` - permits plugins that declare `PluginCapability::CommandExecution`
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub struct PluginSecurityPolicy {
     pub allow_experimental: bool,
@@ -269,12 +560,26 @@ pub struct PluginSecurityPolicy {
     pub allow_command_execution: bool,
 }
 
+/// ### Brief
+///
+/// result of a plugin compatibility check against the running core and security policy
+///
+/// ### Description
+///
+/// returned by `check_plugin_compatibility`. if `compatible` is false, `reasons` contains
+/// one entry per rejection — api version mismatches, semver range violations, policy-blocked
+/// capabilities, and manifest validation failures all append to the same list.
+///
+/// ### Fields
+/// * `compatible` - true if all checks passed and the plugin may be registered
+/// * `reasons` - human-readable rejection messages; empty when `compatible` is true
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PluginCompatibilityReport {
     pub compatible: bool,
     pub reasons: Vec<String>,
 }
 
+/// success and failure constructors
 impl PluginCompatibilityReport {
     pub fn success() -> Self {
         Self {
@@ -291,6 +596,23 @@ impl PluginCompatibilityReport {
     }
 }
 
+/// ### Brief
+///
+/// checks whether a plugin manifest is compatible with the running core and security policy
+///
+/// ### Description
+///
+/// validates the manifest, then checks api major version alignment, semver range bounds,
+/// experimental flag, and each declared capability against the policy. does not short circuit.
+///
+/// ### Arguments
+/// * `manifest` - the plugin's self-reported manifest to validate and check
+/// * `core_version` - semver string of the running kelvin core
+/// * `security_policy` - capability gates for this registration call
+///
+/// ### Returns
+/// a `PluginCompatibilityReport` with `compatible: true` if all checks passed, or
+/// `compatible: false` with one `reasons` entry per failure
 pub fn check_plugin_compatibility(
     manifest: &PluginManifest,
     core_version: &str,
@@ -392,34 +714,63 @@ pub fn check_plugin_compatibility(
     }
 }
 
+/// ### Brief
+///
+/// trait implemented by every plugin to expose its manifest and optional capability objects
+///
+/// ### Description
+///
+/// the primary interface between a plugin and the kelvin registry. `manifest()` is the only
+/// required method; all capability accessors (`tool`, `model_provider`, `memory_provider`,
+/// `session_store`, `event_sink`, `command_provider`) default to `None` and are overridden
+/// only by plugins that declare the corresponding `PluginCapability`. the registry enforces
+/// that declared capabilities and non-`None` accessors agree — a mismatch is a hard
+/// registration error.
 pub trait PluginFactory: Send + Sync {
+    /// returns the plugin's manifest
     fn manifest(&self) -> &PluginManifest;
 
+    /// returns the plugin's `Tool` implementation, if it declares `PluginCapability::ToolProvider`
     fn tool(&self) -> Option<Arc<dyn Tool>> {
         None
     }
 
+    /// returns the plugin's `MemorySearchManager` implementation, if it declares `PluginCapability::MemoryProvider`
     fn memory_provider(&self) -> Option<Arc<dyn MemorySearchManager>> {
         None
     }
 
+    /// returns the plugin's `ModelProvider` implementation, if it declares `PluginCapability::ModelProvider`
     fn model_provider(&self) -> Option<Arc<dyn ModelProvider>> {
         None
     }
 
+    /// returns the plugin's `SessionStore` implementation, if it declares `PluginCapability::SessionStore`
     fn session_store(&self) -> Option<Arc<dyn SessionStore>> {
         None
     }
 
+    /// returns the plugin's `EventSink` implementation, if it declares `PluginCapability::EventSink`
     fn event_sink(&self) -> Option<Arc<dyn EventSink>> {
         None
     }
 
+    /// returns the plugin's `CommandProvider` implementation, if it declares `PluginCapability::CommandExecution`
     fn command_provider(&self) -> Option<Arc<dyn CommandProvider>> {
         None
     }
 }
 
+/// ### Brief
+///
+/// trait for storing and retrieving registered plugins
+///
+/// ### Description
+///
+/// implemented by `InMemoryPluginRegistry`. `register` runs compatibility and policy checks
+/// before inserting; `get` retrieves a plugin by id; `manifests` returns a snapshot of all
+/// registered manifests, used by `SdkToolRegistry` and `SdkModelProviderRegistry` during
+/// their build phase.
 pub trait PluginRegistry: Send + Sync {
     fn register(
         &self,
@@ -433,6 +784,18 @@ pub trait PluginRegistry: Send + Sync {
     fn manifests(&self) -> Vec<PluginManifest>;
 }
 
+/// ### Brief
+///
+/// `RwLock`-backed, in-process implementation of `PluginRegistry`
+///
+/// ### Description
+///
+/// stores plugins in a `HashMap` keyed by plugin id. duplicate registration is rejected.
+/// used as the default registry in the kelvin sdk runtime; not intended for cross-process
+/// or persistent storage.
+///
+/// ### Fields
+/// * `plugins` - internal map of plugin id to `PluginFactory` instance
 pub struct InMemoryPluginRegistry {
     plugins: RwLock<HashMap<String, Arc<dyn PluginFactory>>>,
 }
@@ -500,6 +863,20 @@ impl PluginRegistry for InMemoryPluginRegistry {
     }
 }
 
+/// ### Brief
+///
+/// `ToolRegistry` built from the set of tool-capable plugins in a `PluginRegistry`
+///
+/// ### Description
+///
+/// constructed via `from_plugin_registry`, which iterates all registered manifests in
+/// deterministic (sorted) order and collects tools from plugins that declare
+/// `PluginCapability::ToolProvider`. it enforces that the capability declaration and the
+/// `tool()` return value agree, and that no two plugins expose a tool with the same name.
+/// implements `ToolRegistry` for use by the agent runtime.
+///
+/// ### Fields
+/// * `tools` - map of tool name to `Tool` implementation
 pub struct SdkToolRegistry {
     tools: HashMap<String, Arc<dyn Tool>>,
 }
@@ -571,6 +948,22 @@ impl ToolRegistry for SdkToolRegistry {
     }
 }
 
+/// ### Brief
+///
+/// model provider registry built from the set of model-capable plugins in a `PluginRegistry`
+///
+/// ### Description
+///
+/// constructed via `from_plugin_registry`, which iterates all registered manifests in
+/// deterministic (sorted) order and collects model providers from plugins that declare
+/// `PluginCapability::ModelProvider`. it enforces that the capability declaration and the
+/// `model_provider()` return value agree, and that no two plugins expose a provider with
+/// the same `provider_name::model_name` key. providers are indexed both by plugin id
+/// and by that composite key for flexible lookup.
+///
+/// ### Fields
+/// * `by_plugin_id` - map of plugin id to `ModelProvider` implementation
+/// * `by_provider_model` - map of `"provider_name::model_name"` key to `ModelProvider` implementation
 pub struct SdkModelProviderRegistry {
     by_plugin_id: HashMap<String, Arc<dyn ModelProvider>>,
     by_provider_model: HashMap<String, Arc<dyn ModelProvider>>,

@@ -1,0 +1,50 @@
+{
+  "id": "kelvin.wiki",
+  "name": "Kelvin Wiki",
+  "version": "0.2.0",
+  "api_version": "1.0.0",
+  "description": "Query the KelvinClaw documentation via DeepWiki (mcp.deepwiki.com).",
+  "homepage": "https://github.com/AgenticHighway/kelvinclaw",
+  "capabilities": [
+    "tool_provider",
+    "network_egress"
+  ],
+  "experimental": false,
+  "min_core_version": "0.1.0",
+  "max_core_version": null,
+  "runtime": "wasm_tool_v1",
+  "entrypoint": "plugin.wasm",
+  "entrypoint_sha256": "0f05647b1ed732eaf5a94e45f65518ce357b267975f40f66fe0b66b3fd5f823d",
+  "publisher": null,
+  "quality_tier": "unsigned_local",
+  "capability_scopes": {
+    "fs_read_paths": [],
+    "network_allow_hosts": [
+      "mcp.deepwiki.com"
+    ],
+    "env_allow": []
+  },
+  "operational_controls": {
+    "timeout_ms": 30000,
+    "max_retries": 1,
+    "max_calls_per_minute": 20,
+    "circuit_breaker_failures": 5,
+    "circuit_breaker_cooldown_ms": 60000,
+    "fuel_budget": 10000000
+  },
+  "tool_name": "kelvin_wiki_fetch",
+  "tool_input_schema": {
+    "type": "object",
+    "properties": {
+      "topic": {
+        "type": "string",
+        "description": "A DeepWiki documentation topic to fetch. Use the exact topic name shown in the table of contents (call with no arguments first to see available topics). Example: 'Architecture Overview', 'Plugin System'. Cannot be combined with 'question'."
+      },
+      "question": {
+        "type": "string",
+        "description": "A natural-language question about the KelvinClaw repository. DeepWiki will answer it from the codebase. Example: 'How does the plugin trust model work?', 'What channels does the gateway support?'. Cannot be combined with 'topic'."
+      }
+    },
+    "required": []
+  }
+}

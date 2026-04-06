@@ -7,9 +7,145 @@ use ratatui::{
 };
 use unicode_width::UnicodeWidthChar;
 
-use crate::app::{App, ChatLineInfo, ChatMessage, SelectionTarget};
+use crate::app::{App, ChatLineInfo, ChatMessage, SelectionTarget, ToolPhase};
+
+/// Parse inline markdown (`*italic*`, `**bold**`, `***bold+italic***`) from `src`.
+///
+/// Returns `(spans, plain_text)` where `plain_text` has all markers stripped.
+/// `plain_text` is what gets stored in `chat_line_texts` so that display-column
+/// offsets used by the selection/copy machinery still align correctly.
+fn parse_inline_markdown(src: &str, base_style: Style) -> (Vec<Span<'static>>, String) {
+    let mut spans: Vec<Span<'static>> = Vec::new();
+    let mut plain = String::new();
+    let mut remaining = src;
+
+    while !remaining.is_empty() {
+        // Find the earliest delimiter; at equal positions prefer the longest.
+        let mut best_pos: Option<usize> = None;
+        let mut best_len: usize = 0;
+        for &delim in &["***", "**", "*"] {
+            if let Some(pos) = remaining.find(delim) {
+                let better = match best_pos {
+                    None => true,
+                    Some(bp) => pos < bp || (pos == bp && delim.len() > best_len),
+                };
+                if better {
+                    best_pos = Some(pos);
+                    best_len = delim.len();
+                }
+            }
+        }
+
+        let (pos, delim_len) = match best_pos {
+            None => {
+                // No more delimiters — flush the rest.
+                plain.push_str(remaining);
+                spans.push(Span::styled(remaining.to_string(), base_style));
+                break;
+            }
+            Some(p) => (p, best_len),
+        };
+
+        // Push literal text before the opening delimiter.
+        if pos > 0 {
+            let before = &remaining[..pos];
+            plain.push_str(before);
+            spans.push(Span::styled(before.to_string(), base_style));
+        }
+
+        let delim_str = &remaining[pos..pos + delim_len];
+        let after_open = &remaining[pos + delim_len..];
+
+        // Find the matching closing delimiter.
+        if let Some(close_pos) = after_open.find(delim_str) {
+            let inner = &after_open[..close_pos];
+            if inner.is_empty() {
+                // Empty pair — treat as literals (e.g. `****` → `****`).
+                let literal = format!("{}{}", delim_str, delim_str);
+                plain.push_str(&literal);
+                spans.push(Span::styled(literal, base_style));
+            } else {
+                let modifier = match delim_len {
+                    3 => Modifier::BOLD | Modifier::ITALIC,
+                    2 => Modifier::BOLD,
+                    _ => Modifier::ITALIC,
+                };
+                plain.push_str(inner);
+                spans.push(Span::styled(
+                    inner.to_string(),
+                    base_style.add_modifier(modifier),
+                ));
+            }
+            remaining = &after_open[close_pos + delim_len..];
+        } else {
+            // No closing delimiter — treat opening as a literal.
+            plain.push_str(delim_str);
+            spans.push(Span::styled(delim_str.to_string(), base_style));
+            remaining = after_open;
+        }
+    }
+
+    (spans, plain)
+}
 
 const HL_BG: Color = Color::Indexed(238); // dark gray selection highlight
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ratatui::style::Modifier;
+
+    fn spans_and_plain(src: &str) -> (Vec<(String, bool, bool)>, String) {
+        let (spans, plain) = parse_inline_markdown(src, Style::default());
+        let info = spans
+            .iter()
+            .map(|s| {
+                let bold = s.style.add_modifier.contains(Modifier::BOLD);
+                let italic = s.style.add_modifier.contains(Modifier::ITALIC);
+                (s.content.to_string(), bold, italic)
+            })
+            .collect();
+        (info, plain)
+    }
+
+    #[test]
+    fn test_bold() {
+        let (spans, plain) = spans_and_plain("hello **world** end");
+        assert_eq!(plain, "hello world end");
+        assert_eq!(spans[0], ("hello ".to_string(), false, false));
+        assert_eq!(spans[1], ("world".to_string(), true, false));
+        assert_eq!(spans[2], (" end".to_string(), false, false));
+    }
+
+    #[test]
+    fn test_italic() {
+        let (spans, plain) = spans_and_plain("*hi*");
+        assert_eq!(plain, "hi");
+        assert_eq!(spans[0], ("hi".to_string(), false, true));
+    }
+
+    #[test]
+    fn test_bold_italic() {
+        let (spans, plain) = spans_and_plain("***hi***");
+        assert_eq!(plain, "hi");
+        assert_eq!(spans[0], ("hi".to_string(), true, true));
+    }
+
+    #[test]
+    fn test_no_closing() {
+        let (spans, plain) = spans_and_plain("**no close");
+        assert_eq!(plain, "**no close");
+        assert!(!spans.iter().any(|(_, bold, _)| *bold));
+    }
+
+    #[test]
+    fn test_plain() {
+        let (spans, plain) = spans_and_plain("just text");
+        assert_eq!(plain, "just text");
+        assert_eq!(spans.len(), 1);
+        assert_eq!(spans[0], ("just text".to_string(), false, false));
+    }
+}
 
 pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     let inner_width = area.width.saturating_sub(2) as usize;
@@ -23,22 +159,26 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
 
     for (i, msg) in app.chat.iter().enumerate() {
         if i > 0 {
-            lines.push(Line::from(Span::styled(
-                sep_str.clone(),
-                Style::default().fg(Color::DarkGray),
-            )));
-            line_info.push(ChatLineInfo {
-                prefix_width: inner_width,
-                is_separator: true,
-            });
-            line_texts.push(String::new());
-            // blank spacer line between messages
-            lines.push(Line::from(vec![]));
-            line_info.push(ChatLineInfo {
-                prefix_width: 0,
-                is_separator: false,
-            });
-            line_texts.push(String::new());
+            let prev_is_tool = matches!(app.chat[i - 1], ChatMessage::ToolCall { .. });
+            let curr_is_tool = matches!(msg, ChatMessage::ToolCall { .. });
+            if !prev_is_tool && !curr_is_tool {
+                lines.push(Line::from(Span::styled(
+                    sep_str.clone(),
+                    Style::default().fg(Color::DarkGray),
+                )));
+                line_info.push(ChatLineInfo {
+                    prefix_width: inner_width,
+                    is_separator: true,
+                });
+                line_texts.push(String::new());
+                // blank spacer line between messages
+                lines.push(Line::from(vec![]));
+                line_info.push(ChatLineInfo {
+                    prefix_width: 0,
+                    is_separator: false,
+                });
+                line_texts.push(String::new());
+            }
         }
         match msg {
             ChatMessage::User(text) => {
@@ -58,21 +198,20 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
                 };
                 let mut first = true;
                 for src_line in src_lines {
-                    let line = if first {
-                        Line::from(vec![
-                            Span::styled("> ", Style::default().fg(Color::Cyan)),
-                            Span::raw(src_line.to_string()),
-                        ])
+                    let (md_spans, plain) = parse_inline_markdown(src_line, Style::default());
+                    let mut line_spans: Vec<Span<'static>> = if first {
+                        vec![Span::styled("> ", Style::default().fg(Color::Cyan))]
                     } else {
-                        Line::from(vec![Span::raw("  "), Span::raw(src_line.to_string())])
+                        vec![Span::raw("  ")]
                     };
+                    line_spans.extend(md_spans);
                     first = false;
-                    lines.push(line);
+                    lines.push(Line::from(line_spans));
                     line_info.push(ChatLineInfo {
                         prefix_width: 2,
                         is_separator: false,
                     });
-                    line_texts.push(src_line.to_string());
+                    line_texts.push(plain);
                 }
             }
             ChatMessage::Assistant { text, .. } => {
@@ -92,21 +231,20 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
                 };
                 let mut first = true;
                 for src_line in src_lines {
-                    let line = if first {
-                        Line::from(vec![
-                            Span::styled("● ", Style::default().fg(Color::White)),
-                            Span::raw(src_line.to_string()),
-                        ])
+                    let (md_spans, plain) = parse_inline_markdown(src_line, Style::default());
+                    let mut line_spans: Vec<Span<'static>> = if first {
+                        vec![Span::styled("● ", Style::default().fg(Color::White))]
                     } else {
-                        Line::from(vec![Span::raw("  "), Span::raw(src_line.to_string())])
+                        vec![Span::raw("  ")]
                     };
+                    line_spans.extend(md_spans);
                     first = false;
-                    lines.push(line);
+                    lines.push(Line::from(line_spans));
                     line_info.push(ChatLineInfo {
                         prefix_width: 2,
                         is_separator: false,
                     });
-                    line_texts.push(src_line.to_string());
+                    line_texts.push(plain);
                 }
             }
             ChatMessage::System(text) => {
@@ -127,6 +265,29 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
                     });
                     line_texts.push(src_line.to_string());
                 }
+            }
+            ChatMessage::ToolCall { tool_name, phase, .. } => {
+                let (icon, style) = match phase {
+                    ToolPhase::Start => (
+                        "⚙",
+                        Style::default().fg(Color::Yellow),
+                    ),
+                    ToolPhase::End => (
+                        "⚙",
+                        Style::default().fg(Color::DarkGray),
+                    ),
+                    ToolPhase::Error => (
+                        "⚙",
+                        Style::default().fg(Color::Red),
+                    ),
+                };
+                let text = format!("  {} {}", icon, tool_name);
+                lines.push(Line::from(Span::styled(text.clone(), style)));
+                line_info.push(ChatLineInfo {
+                    prefix_width: 0,
+                    is_separator: false,
+                });
+                line_texts.push(text);
             }
         }
     }
