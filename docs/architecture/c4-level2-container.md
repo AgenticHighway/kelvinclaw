@@ -11,6 +11,7 @@ flowchart TD
         Bots["💬 Chat Platforms\n(Telegram/Slack/Discord/WhatsApp)"]
         LLMs["🤖 LLM Providers\n(OpenAI/Anthropic/OpenRouter)"]
         Search["🔍 Search APIs"]
+        DeepWiki["📚 DeepWiki MCP API"]
         KMS["🔐 AWS KMS"]
     end
 
@@ -41,6 +42,7 @@ flowchart TD
     Brain -->|implements| Core
     WASM -->|host-mediated HTTPS| LLMs
     WASM -->|host-mediated HTTPS| Search
+    WASM -->|host-mediated HTTPS| DeepWiki
     MemClient -->|"gRPC :50051"| MemCtrl
     MemClient -->|"sign JWTs"| KMS
     MemCtrl -->|"executes memory\nWASM modules"| WASM
@@ -51,18 +53,18 @@ flowchart TD
 
 ## Container Descriptions
 
-| Container                    | Technology                 | Port(s)                    | Purpose                                                                                                                                      |
-| ---------------------------- | -------------------------- | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| **kelvin-gateway**           | Rust / Tokio / Tungstenite | `:34617` WS, `:34618` HTTP | Primary long-running service. WebSocket API for clients, HTTP ingress for chat platform webhooks. Manages sessions, scheduling, idempotency. |
-| **kelvin-host**              | Rust CLI binary            | —                          | Thin CLI for single-prompt or interactive agent runs. Direct user-facing.                                                                    |
-| **kelvin-tui**               | Rust / Ratatui             | —                          | Terminal UI that connects to gateway over WebSocket.                                                                                         |
-| **kelvin-registry**          | Rust / Axum HTTP           | `:34619`                   | Optional plugin discovery and index query service.                                                                                           |
-| **kelvin-memory-controller** | Rust / Tonic gRPC          | `:50051`                   | Memory data plane. Validates JWT delegation tokens, executes WASM memory modules, replay protection.                                         |
-| **kelvin-sdk**               | Rust library               | —                          | Composition layer wiring brain, memory, plugins, sessions, and runtime config. Used by gateway and host.                                     |
-| **kelvin-brain**             | Rust library               | —                          | Agent loop: prompt → model → tool → persist. Plugin loading and execution.                                                                   |
-| **kelvin-wasm**              | Rust / Wasmtime            | —                          | Trusted WASM sandbox host. Executes untrusted model, tool, channel, and memory plugins.                                                      |
-| **kelvin-core**              | Rust library               | —                          | Pure domain models and trait contracts. Zero external dependencies. The stable API surface.                                                  |
-| **kelvin-memory-client**     | Rust library               | —                          | gRPC client implementing `MemorySearchManager`. Mints JWT delegation tokens.                                                                 |
+| Container                    | Technology                 | Port(s)                    | Purpose                                                                                                                                                                                   |
+| ---------------------------- | -------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **kelvin-gateway**           | Rust / Tokio / Tungstenite | `:34617` WS, `:34618` HTTP | Primary long-running service. WebSocket API for clients, HTTP ingress for chat platform webhooks. Manages sessions, scheduling, idempotency.                                              |
+| **kelvin-host**              | Rust CLI binary            | —                          | Thin CLI for single-prompt or interactive agent runs. Direct user-facing.                                                                                                                 |
+| **kelvin-tui**               | Rust / Ratatui             | —                          | Terminal UI that connects to gateway over WebSocket.                                                                                                                                      |
+| **kelvin-registry**          | Rust / Axum HTTP           | `:34619`                   | Optional plugin discovery and index query service.                                                                                                                                        |
+| **kelvin-memory-controller** | Rust / Tonic gRPC          | `:50051`                   | Memory data plane. Validates JWT delegation tokens, executes WASM memory modules, replay protection.                                                                                      |
+| **kelvin-sdk**               | Rust library               | —                          | Composition layer wiring brain, memory, plugins, sessions, and runtime config. Includes ToolPack built-in tools (fs read/write, web fetch, scheduler, session). Used by gateway and host. |
+| **kelvin-brain**             | Rust library               | —                          | Agent loop: prompt → model → tool → persist. Plugin loading and execution.                                                                                                                |
+| **kelvin-wasm**              | Rust / Wasmtime            | —                          | Trusted WASM sandbox host. Executes untrusted model, tool, channel, and memory plugins.                                                                                                   |
+| **kelvin-core**              | Rust library               | —                          | Pure domain models and trait contracts. Zero external dependencies. The stable API surface.                                                                                               |
+| **kelvin-memory-client**     | Rust library               | —                          | gRPC client implementing `MemorySearchManager`. Mints JWT delegation tokens.                                                                                                              |
 
 ## Communication Protocols
 

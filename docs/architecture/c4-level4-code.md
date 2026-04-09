@@ -41,6 +41,7 @@ sequenceDiagram
     alt Tool calls present
         loop For each tool_call
             KB->>TL: call(ToolCallInput)
+            Note over TL: WASM plugin tool OR<br/>ToolPack built-in tool
             TL-->>KB: ToolCallResult
             KB->>SS: append(ToolMessage)
             KB->>ES: emit(ToolResult)
@@ -225,4 +226,101 @@ flowchart LR
     TCR -->|"stored as"| SM
     AE --> AED
     ARRes --> RO
+```
+
+## ToolPack Built-in Tool Execution
+
+```mermaid
+sequenceDiagram
+    participant B as KelvinBrain
+    participant TR as SdkToolRegistry
+    participant TP as ToolPackPolicy
+    participant T as Built-in Tool
+    participant FS as Filesystem
+    participant Web as External HTTP
+
+    B->>TR: lookup(tool_name)
+    TR-->>B: Tool impl (SafeFsRead / SafeFsWrite / SafeWebFetch / Scheduler / Session)
+    B->>T: call(ToolCallInput)
+
+    alt SafeFsReadTool
+        T->>TP: Check max_read_bytes
+        T->>T: Validate path (no traversal)
+        T->>FS: Read file
+        FS-->>T: file contents
+    end
+
+    alt SafeFsWriteTool
+        T->>TP: Check allow_fs_write
+        T->>T: Validate path (no traversal, no control chars)
+        T->>FS: Write file
+        FS-->>T: ok
+    end
+
+    alt SafeWebFetchTool
+        T->>TP: Check allow_web_fetch + web_allow_hosts
+        T->>T: Validate URL hostname against allowlist
+        T->>Web: GET request (with timeout + max bytes)
+        Web-->>T: response body
+    end
+
+    T-->>B: ToolCallResult
+```
+
+## Wiki Plugin (DeepWiki) Execution
+
+```mermaid
+sequenceDiagram
+    participant B as KelvinBrain
+    participant WST as WasmSkillTool
+    participant WSH as WasmSkillHost
+    participant WM as kelvin.wiki WASM
+    participant ABI as claw ABI
+    participant DW as mcp.deepwiki.com
+
+    B->>WST: call({topic or question})
+    WST->>WSH: execute(wiki_module, args)
+    WSH->>WM: handle_tool_call(ptr, len)
+
+    alt topic provided
+        WM->>ABI: http_call(POST mcp.deepwiki.com, read_wiki_contents)
+    end
+    alt question provided
+        WM->>ABI: http_call(POST mcp.deepwiki.com, ask_question)
+    end
+    alt neither
+        WM->>ABI: http_call(POST mcp.deepwiki.com, read_wiki_structure)
+    end
+
+    ABI->>ABI: Validate host = mcp.deepwiki.com
+    ABI->>DW: HTTPS POST (MCP JSON-RPC)
+    DW-->>ABI: Documentation response
+    ABI-->>WM: response bytes
+    WM-->>WSH: ToolCallResult JSON
+    WSH-->>WST: ToolCallResult
+    WST-->>B: ToolCallResult
+```
+
+## Telegram Channel Flow
+
+```mermaid
+sequenceDiagram
+    participant TG as Telegram Bot API
+    participant GW as kelvin-gateway
+    participant CE as ChannelEngine
+    participant TA as TextChannelAdapter
+    participant SDK as KelvinSdkRuntime
+    participant Brain as KelvinBrain
+
+    TG->>GW: POST /telegram/webhook (update JSON)
+    GW->>CE: telegram_ingest(request)
+    CE->>TA: ingest(envelope)
+    TA->>TA: Validate auth + pairing
+    TA->>SDK: submit_run(prompt, session_id)
+    SDK->>Brain: run()
+    Brain-->>SDK: AgentRunResult
+    SDK-->>TA: result
+    TA->>TG: HTTPS POST sendMessage(chat_id, response)
+    TA-->>CE: ok
+    CE-->>GW: response JSON
 ```

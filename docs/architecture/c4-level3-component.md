@@ -9,7 +9,7 @@ flowchart TD
     subgraph Gateway["kelvin-gateway"]
         WS["WebSocket Server\n(:34617)\nJSON envelope protocol"]
         Ingress["HTTP Ingress\n(:34618)\nWebhook receiver"]
-        ChannelEngine["ChannelEngine\nRoutes inbound messages\nto agent sessions"]
+        ChannelEngine["ChannelEngine\nRoutes inbound messages\nto agent sessions\nTelegram sender data pipe"]
         Scheduler["RuntimeScheduler\nCron + interval triggers\nfor scheduled agent runs"]
         IdempCache["IdempotencyCache\nDeduplicates\nrepeated requests"]
         OpConsole["Operator Console\noperator.* methods\nfor admin queries"]
@@ -92,11 +92,13 @@ flowchart TD
         MemMode["KelvinCliMemoryMode\nRPC / Legacy / Off"]
         Preflight["Plugin Preflight\nVerify plugin health\nbefore run"]
         RunSummary["KelvinRunSummary\nToken counts, latency,\ntool call stats"]
+        ToolPack["ToolPack\nBuilt-in safe tools\nwith policy controls"]
 
         SdkConfig --> ModelSelection
         SdkConfig --> MemMode
         SdkRuntime --> SdkConfig
         SdkRuntime --> Preflight
+        SdkRuntime --> ToolPack
         SdkRuntime -->|"orchestrates"| BrainRef["kelvin-brain"]
         SdkRuntime -->|"wires"| MemClientRef["kelvin-memory-client"]
         SdkRuntime --> RunSummary
@@ -104,6 +106,29 @@ flowchart TD
 
     GW["kelvin-gateway"] -->|uses| SdkRuntime
     Host["kelvin-host"] -->|uses| SdkRuntime
+```
+
+## ToolPack Built-in Tools
+
+```mermaid
+flowchart TD
+    subgraph ToolPack["ToolPack (kelvin-sdk)"]
+        Policy["ToolPackPolicy\nLoaded from env vars\nControls tool availability"]
+        FsRead["SafeFsReadTool\nPath-traversal safe\nfile reading"]
+        FsWrite["SafeFsWriteTool\nPolicy-gated\nfilesystem writing"]
+        WebFetch["SafeWebFetchTool\nHost-allowlisted\nHTTP fetching"]
+        SchedTool["SchedulerTool\nCron task management\nvia SDK scheduler"]
+        SessionTool["SessionToolsTool\nSession clear /\nhistory management"]
+
+        Policy -->|"gates"| FsRead
+        Policy -->|"gates"| FsWrite
+        Policy -->|"gates"| WebFetch
+        Policy -->|"gates"| SchedTool
+        Policy -->|"gates"| SessionTool
+    end
+
+    SdkRuntime["KelvinSdkRuntime"] -->|"registers"| ToolPack
+    ToolPack -->|"registered into"| ToolReg["SdkToolRegistry"]
 ```
 
 ## Memory Subsystem Components
@@ -152,6 +177,7 @@ flowchart LR
         PluginFactory["trait PluginFactory\nbuild plugins from config"]
         PluginRegistry["trait PluginRegistry\nlist / resolve plugins"]
         RunRegistry["trait RunRegistry\nsubmit / track / outcome"]
+        CommandProv["trait CommandProvider\nregister CLI commands"]
         CoreRuntime["struct CoreRuntime\nComposite runtime\nwires all traits"]
     end
 
@@ -163,4 +189,5 @@ flowchart LR
     CoreRuntime --> SessionStore
     CoreRuntime --> EventSink
     CoreRuntime --> RunRegistry
+    CoreRuntime --> CommandProv
 ```
