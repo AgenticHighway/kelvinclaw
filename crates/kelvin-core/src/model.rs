@@ -71,7 +71,8 @@ pub struct ModelProviderProfile {
     pub id: String,
     pub provider_name: String,
     pub protocol_family: ModelProviderProtocolFamily,
-    pub api_key_env: String,
+    #[serde(default)]
+    pub api_key_env: Option<String>,
     pub base_url_env: String,
     pub default_base_url: String,
     pub endpoint_path: String,
@@ -79,18 +80,22 @@ pub struct ModelProviderProfile {
     pub auth_scheme: ModelProviderAuthScheme,
     pub static_headers: Vec<ModelProviderHeader>,
     pub default_allow_hosts: Vec<String>,
+    #[serde(default)]
+    pub dynamic_base_url: bool,
 }
 
 impl ModelProviderProfile {
     pub fn validate(&self) -> KelvinResult<()> {
         validate_identifier("provider_profile.id", &self.id)?;
         validate_identifier("provider_profile.provider_name", &self.provider_name)?;
-        validate_identifier("provider_profile.api_key_env", &self.api_key_env)?;
+        if let Some(ref env_name) = self.api_key_env {
+            validate_identifier("provider_profile.api_key_env", env_name)?;
+        }
         validate_identifier("provider_profile.base_url_env", &self.base_url_env)?;
         validate_header_name("provider_profile.auth_header", &self.auth_header)?;
         validate_http_url("provider_profile.default_base_url", &self.default_base_url)?;
         validate_endpoint_path(&self.endpoint_path)?;
-        if self.default_allow_hosts.is_empty() {
+        if !self.dynamic_base_url && self.default_allow_hosts.is_empty() {
             return Err(KelvinError::InvalidInput(
                 "provider_profile.default_allow_hosts must not be empty".to_string(),
             ));
@@ -115,7 +120,7 @@ impl ModelProviderProfile {
                 id: OPENAI_RESPONSES_PROFILE_ID.to_string(),
                 provider_name: "openai".to_string(),
                 protocol_family: ModelProviderProtocolFamily::OpenAiResponses,
-                api_key_env: "OPENAI_API_KEY".to_string(),
+                api_key_env: Some("OPENAI_API_KEY".to_string()),
                 base_url_env: "OPENAI_BASE_URL".to_string(),
                 default_base_url: "https://api.openai.com".to_string(),
                 endpoint_path: "v1/responses".to_string(),
@@ -123,12 +128,13 @@ impl ModelProviderProfile {
                 auth_scheme: ModelProviderAuthScheme::Bearer,
                 static_headers: Vec::new(),
                 default_allow_hosts: vec!["api.openai.com".to_string()],
+                dynamic_base_url: false,
             },
             ANTHROPIC_MESSAGES_PROFILE_ID => Self {
                 id: ANTHROPIC_MESSAGES_PROFILE_ID.to_string(),
                 provider_name: "anthropic".to_string(),
                 protocol_family: ModelProviderProtocolFamily::AnthropicMessages,
-                api_key_env: "ANTHROPIC_API_KEY".to_string(),
+                api_key_env: Some("ANTHROPIC_API_KEY".to_string()),
                 base_url_env: "ANTHROPIC_BASE_URL".to_string(),
                 default_base_url: "https://api.anthropic.com".to_string(),
                 endpoint_path: "v1/messages".to_string(),
@@ -139,6 +145,7 @@ impl ModelProviderProfile {
                     value: "2023-06-01".to_string(),
                 }],
                 default_allow_hosts: vec!["api.anthropic.com".to_string()],
+                dynamic_base_url: false,
             },
             _ => return None,
         };
@@ -263,6 +270,49 @@ mod tests {
         ModelProviderAuthScheme, ModelProviderProfile, ModelProviderProtocolFamily,
         ANTHROPIC_MESSAGES_PROFILE_ID, OPENAI_RESPONSES_PROFILE_ID,
     };
+
+    #[test]
+    fn dynamic_base_url_profile_validates_without_api_key_or_allow_hosts() {
+        let profile = ModelProviderProfile {
+            id: "ollama.chat".to_string(),
+            provider_name: "ollama".to_string(),
+            protocol_family: ModelProviderProtocolFamily::OpenAiChatCompletions,
+            api_key_env: None,
+            base_url_env: "OLLAMA_BASE_URL".to_string(),
+            default_base_url: "http://localhost:11434".to_string(),
+            endpoint_path: "api/chat".to_string(),
+            auth_header: "authorization".to_string(),
+            auth_scheme: ModelProviderAuthScheme::Bearer,
+            static_headers: Vec::new(),
+            default_allow_hosts: Vec::new(),
+            dynamic_base_url: true,
+        };
+        profile
+            .validate()
+            .expect("dynamic_base_url profile should validate");
+    }
+
+    #[test]
+    fn static_profile_requires_allow_hosts() {
+        let profile = ModelProviderProfile {
+            id: "example.chat".to_string(),
+            provider_name: "example".to_string(),
+            protocol_family: ModelProviderProtocolFamily::OpenAiChatCompletions,
+            api_key_env: Some("EXAMPLE_API_KEY".to_string()),
+            base_url_env: "EXAMPLE_BASE_URL".to_string(),
+            default_base_url: "https://api.example.com".to_string(),
+            endpoint_path: "v1/chat".to_string(),
+            auth_header: "authorization".to_string(),
+            auth_scheme: ModelProviderAuthScheme::Bearer,
+            static_headers: Vec::new(),
+            default_allow_hosts: Vec::new(),
+            dynamic_base_url: false,
+        };
+        assert!(
+            profile.validate().is_err(),
+            "static profile with empty default_allow_hosts should fail"
+        );
+    }
 
     #[test]
     fn builtin_provider_profiles_cover_openai_and_anthropic() {

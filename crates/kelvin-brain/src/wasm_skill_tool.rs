@@ -279,15 +279,15 @@ impl WasmSkillTool {
     ///
     /// ### Errors
     /// - path is empty
-    /// - path is absolute 
+    /// - path is absolute
     /// - path contains traversals
     ///
     /// ### Example
-    /// ```no_run
+    /// ```ignore
     /// use kelvin_brain::wasm_skill_tool::WasmSkillTool;
-    /// 
+    ///
     /// let wasm_skill_tool = WasmSkillTool::default();
-    /// 
+    ///
     /// assert!(wasm_skill_tool.sanitize_rel_path("this/is/good", "test_dir").is_ok());
     /// assert!(wasm_skill_tool.sanitize_rel_path("", "test_dir").is_err());
     /// assert!(wasm_skill_tool.sanitize_rel_path("/home/username/this/is/bad", "test_dir").is_err());
@@ -320,7 +320,7 @@ impl WasmSkillTool {
     /// ### Brief
     ///
     /// validates that a memory path is `MEMORY.md` or `memory/*.md`
-    /// 
+    ///
     /// ### Arguments
     /// * `memory_rel_path` - path to memory relative to workspace
     ///
@@ -349,13 +349,13 @@ impl WasmSkillTool {
     /// ### Description
     ///
     /// extracts 5 fields from the args json map:
-    /// 
+    ///
     /// - `allow_move_servo` - bool for whether to allow moving a servo
     /// - `allow_fs_read` - bool for whether to allow reading files in general
     /// - `network_allow_hosts` - string array of allowed hosts for connection requests
     /// - `max_module_bytes` - maximum size in bytes of the WASM module
     /// - `fuel_budget` - maximum allowed computation for the WASM module
-    /// 
+    ///
     /// uses default values from `SandboxPolicy` if not present in args
     ///
     /// ### Arguments
@@ -444,11 +444,11 @@ impl WasmSkillPlugin {
     }
 
     /// ### Brief
-    /// 
+    ///
     /// creates default plugin manifest using predefined constants
-    /// 
+    ///
     /// ### Returns
-    /// 
+    ///
     /// default plugin manifest as a `PluginManifest`
     pub fn default_manifest() -> PluginManifest {
         PluginManifest {

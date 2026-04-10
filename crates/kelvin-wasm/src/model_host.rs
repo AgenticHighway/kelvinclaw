@@ -83,14 +83,17 @@ impl OpenAiResponsesTransport for EnvProviderProfileTransport {
         let host = endpoint.host_str().ok_or_else(|| {
             KelvinError::InvalidInput(format!("{} endpoint is missing host", profile.id))
         })?;
-        if !host_allowed(host, &policy.network_allow_hosts) {
+        if !profile.dynamic_base_url && !host_allowed(host, &policy.network_allow_hosts) {
             return Err(KelvinError::InvalidInput(format!(
                 "{} endpoint host '{}' is not in network allowlist",
                 profile.id, host
             )));
         }
 
-        let api_key = provider_api_key(profile)?;
+        let api_key = match &profile.api_key_env {
+            Some(_) => Some(provider_api_key(profile)?),
+            None => None,
+        };
 
         let client = reqwest::blocking::Client::builder()
             .timeout(Duration::from_millis(policy.timeout_ms))
@@ -102,14 +105,16 @@ impl OpenAiResponsesTransport for EnvProviderProfileTransport {
         let mut response = client
             .post(endpoint)
             .header("content-type", "application/json");
-        response = match profile.auth_scheme {
-            ModelProviderAuthScheme::Bearer => {
-                response.header(profile.auth_header.as_str(), format!("Bearer {api_key}"))
-            }
-            ModelProviderAuthScheme::Raw => {
-                response.header(profile.auth_header.as_str(), api_key.as_str())
-            }
-        };
+        if let Some(ref key) = api_key {
+            response = match profile.auth_scheme {
+                ModelProviderAuthScheme::Bearer => {
+                    response.header(profile.auth_header.as_str(), format!("Bearer {key}"))
+                }
+                ModelProviderAuthScheme::Raw => {
+                    response.header(profile.auth_header.as_str(), key.as_str())
+                }
+            };
+        }
         for header in &profile.static_headers {
             response = response.header(header.name.as_str(), header.value.as_str());
         }
@@ -415,14 +420,20 @@ fn normalize_openai_request(mut request: Value) -> Value {
 }
 
 fn provider_api_key(profile: &ModelProviderProfile) -> KelvinResult<String> {
-    std::env::var(&profile.api_key_env)
+    let env_name = profile.api_key_env.as_ref().ok_or_else(|| {
+        KelvinError::InvalidInput(format!(
+            "api_key_env not configured for {} model plugins",
+            profile.provider_name
+        ))
+    })?;
+    std::env::var(env_name)
         .ok()
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty())
         .ok_or_else(|| {
             KelvinError::InvalidInput(format!(
                 "{} is required for {} model plugins",
-                profile.api_key_env, profile.provider_name
+                env_name, profile.provider_name
             ))
         })
 }
@@ -1061,7 +1072,7 @@ mod tests {
             id: "openrouter.chat".to_string(),
             provider_name: "openrouter".to_string(),
             protocol_family: ModelProviderProtocolFamily::OpenAiChatCompletions,
-            api_key_env: "OPENROUTER_API_KEY".to_string(),
+            api_key_env: Some("OPENROUTER_API_KEY".to_string()),
             base_url_env: "OPENROUTER_BASE_URL".to_string(),
             default_base_url: "https://openrouter.ai/api/v1".to_string(),
             endpoint_path: "chat/completions".to_string(),
@@ -1069,6 +1080,7 @@ mod tests {
             auth_scheme: ModelProviderAuthScheme::Bearer,
             static_headers: Vec::new(),
             default_allow_hosts: vec!["openrouter.ai".to_string()],
+            dynamic_base_url: false,
         };
         let normalized = normalize_provider_request(
             &profile,

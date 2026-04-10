@@ -108,7 +108,7 @@ fn parse_args() -> Result<CliConfig, String> {
     let mut default_session_id = "main".to_string();
     let mut workspace_dir = env::current_dir().map_err(|err| err.to_string())?;
     let mut memory_mode = KelvinCliMemoryMode::Markdown;
-    let mut default_timeout_ms = 30_000_u64;
+    let mut default_timeout_ms = 300_000_u64;
     let mut state_dir: Option<PathBuf> = None;
     let mut persist_runs = true;
     let mut max_session_history_messages = 128_usize;
@@ -498,7 +498,7 @@ async fn main() {
                 memory_mode: config.memory_mode,
                 default_timeout_ms: config.default_timeout_ms,
                 default_system_prompt: None,
-                core_version: "0.1.0".to_string(),
+                core_version: env!("CARGO_PKG_VERSION").to_string(),
                 plugin_security_policy,
                 load_installed_plugins: config.load_installed_plugins,
                 model_provider: config.model_provider,

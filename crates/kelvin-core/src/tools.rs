@@ -30,11 +30,10 @@ pub struct ToolCallResult {
 }
 
 /// ### Brief
-/// 
+///
 /// Abstract, engine-level definition for a tool callable by the LLM at runtime
 #[async_trait]
 pub trait Tool: Send + Sync {
-
     /// ### Brief
     ///
     /// returns the unique identifier for this tool
@@ -67,7 +66,7 @@ pub trait Tool: Send + Sync {
     fn description(&self) -> &str {
         ""
     }
-    
+
     /// ### Brief
     ///
     /// returns the JSON Schema describing the arguments this tool accepts

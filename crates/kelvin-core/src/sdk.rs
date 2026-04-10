@@ -25,7 +25,6 @@ pub const MAX_PLUGIN_CAPABILITIES: usize = 32;
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]
 pub enum PluginCapability {
-
     /// ### Brief
     ///
     /// plugin provides an LLM model backend
@@ -200,12 +199,12 @@ pub enum PluginCapability {
 }
 
 /// ### Brief
-/// 
+///
 /// metadata describing a single slash command provided by the gateway or a plugin.
-/// 
+///
 /// ### Fields
-/// * `name` - 
-/// 
+/// * `name` -
+///
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SlashCommandMeta {
     pub name: String,
@@ -215,7 +214,7 @@ pub struct SlashCommandMeta {
 }
 
 /// ### Brief
-/// 
+///
 /// context passed to a command handler during execution.
 #[derive(Debug, Clone)]
 pub struct CommandContext {
@@ -224,7 +223,7 @@ pub struct CommandContext {
 }
 
 /// ### Brief
-/// 
+///
 /// the result returned by a command execution.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CommandOutput {
@@ -233,33 +232,32 @@ pub struct CommandOutput {
 }
 
 /// ### Brief
-/// 
+///
 /// trait implemented by plugins that provide slash commands
-/// 
+///
 /// ### Description
-/// 
+///
 /// this is only for installed plugins; not used for internal slash commands
 pub trait CommandProvider: Send + Sync {
-
     /// ### Brief
-    /// 
+    ///
     /// list slash command(s) provided by a command provider
     fn list_commands(&self) -> Vec<SlashCommandMeta>;
 
     /// ### Brief
-    /// 
+    ///
     /// execute a slash command
-    /// 
+    ///
     /// ### Description
-    /// 
+    ///
     /// ### Arguments
     /// * `name` - name of the command to execute
     /// * `args` - arguments provided to command
     /// * `ctx` - context in which to execute command
-    /// 
+    ///
     /// ### Returns
     /// command output object
-    /// 
+    ///
     /// ### Errors
     fn execute_command(
         &self,
@@ -338,7 +336,7 @@ impl PluginManifest {
 }
 
 /// ### Brief
-/// 
+///
 /// validate a semver string
 fn validate_semver(label: &str, value: &str) -> KelvinResult<()> {
     if value.trim().is_empty() {
@@ -356,11 +354,11 @@ fn validate_semver(label: &str, value: &str) -> KelvinResult<()> {
 }
 
 /// ### Brief
-/// 
+///
 /// validate a plugin id string
-/// 
+///
 /// ### Description
-/// 
+///
 /// - the length must be in: 0 < length <= 128
 /// - must be all alphanumeric, but allowing '_', '-', and '.'
 fn validate_plugin_id(value: &str) -> KelvinResult<()> {
@@ -393,11 +391,11 @@ fn validate_plugin_id(value: &str) -> KelvinResult<()> {
 }
 
 /// ### Brief
-/// 
+///
 /// validate a plugin name string
-/// 
+///
 /// ### Description
-/// 
+///
 /// - the length must be in: 0 < length <= 128
 /// - must be all alphanumeric
 fn validate_plugin_name(value: &str) -> KelvinResult<()> {
@@ -421,11 +419,11 @@ fn validate_plugin_name(value: &str) -> KelvinResult<()> {
 }
 
 /// ### Brief
-/// 
+///
 /// validate an optional string field
-/// 
+///
 /// ### Description
-/// 
+///
 /// - the length must be in: 0 < length <= max_len
 /// - must not have control characters
 fn validate_optional_text_field(
@@ -456,11 +454,11 @@ fn validate_optional_text_field(
 }
 
 /// ### Brief
-/// 
+///
 /// validate an optional home URL
-/// 
+///
 /// ### Description
-/// 
+///
 /// - the length must be in: 0 < length <= 2048
 /// - must not have control characters or whitespace
 /// - must be an http URL
@@ -496,11 +494,11 @@ fn validate_homepage(value: Option<&str>) -> KelvinResult<()> {
 }
 
 /// ### Brief
-/// 
+///
 /// validate the capabilities field
-/// 
+///
 /// ### Description
-/// 
+///
 /// - one plugin is allowed a maximum of 32 capabilities (hard coded)
 fn validate_capabilities(capabilities: &[PluginCapability]) -> KelvinResult<()> {
     if capabilities.len() > MAX_PLUGIN_CAPABILITIES {
@@ -521,7 +519,7 @@ fn validate_capabilities(capabilities: &[PluginCapability]) -> KelvinResult<()> 
 }
 
 /// ### Brief
-/// 
+///
 /// generate preview string for a plugin manifest (as a JSON object)
 fn preview(value: &str, max_chars: usize) -> String {
     let mut shown = String::new();

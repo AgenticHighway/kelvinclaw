@@ -43,7 +43,7 @@ fn parse_args() -> Result<CliConfig, String> {
     let mut session_id = "main".to_string();
     let mut workspace_dir = env::current_dir().map_err(|err| err.to_string())?;
     let mut memory_mode = KelvinCliMemoryMode::Markdown;
-    let mut timeout_ms = 30_000_u64;
+    let mut timeout_ms = 300_000_u64;
     let mut system_prompt: Option<String> = None;
     let mut model_provider_plugin_id: Option<String> = None;
     let mut state_dir: Option<PathBuf> = None;
@@ -193,7 +193,7 @@ fn runtime_config_from_cli(config: &CliConfig) -> KelvinSdkRuntimeConfig {
         memory_mode: config.memory_mode,
         default_timeout_ms: config.timeout_ms,
         default_system_prompt: config.system_prompt.clone(),
-        core_version: "0.1.0".to_string(),
+        core_version: env!("CARGO_PKG_VERSION").to_string(),
         plugin_security_policy,
         load_installed_plugins: true,
         model_provider,
@@ -220,7 +220,7 @@ async fn run_single(config: CliConfig) -> Result<(), KelvinError> {
         memory_mode: config.memory_mode,
         timeout_ms: config.timeout_ms,
         system_prompt: config.system_prompt,
-        core_version: "0.1.0".to_string(),
+        core_version: env!("CARGO_PKG_VERSION").to_string(),
         plugin_security_policy,
         load_installed_plugins: true,
         model_provider,

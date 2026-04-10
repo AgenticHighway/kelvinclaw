@@ -183,7 +183,7 @@ impl KelvinSdkConfig {
             session_id: "main".to_string(),
             workspace_dir: std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")),
             memory_mode: KelvinCliMemoryMode::Markdown,
-            timeout_ms: 30_000,
+            timeout_ms: 300_000,
             system_prompt: None,
             core_version: "0.1.0".to_string(),
             plugin_security_policy: PluginSecurityPolicy::default(),
@@ -1946,7 +1946,7 @@ fn resolve_model_provider(
 /// completion. suitable for simple use cases where asynchronous control is not needed.
 ///
 /// ### Arguments
-/// * `config` - SDK configuration 
+/// * `config` - SDK configuration
 ///
 /// ### Returns
 /// run summary with execution metadata, provider info, and outcomes
@@ -2414,7 +2414,7 @@ mod tests {
                 id: "openrouter.chat".to_string(),
                 provider_name: "openrouter".to_string(),
                 protocol_family: ModelProviderProtocolFamily::OpenAiChatCompletions,
-                api_key_env: "OPENROUTER_API_KEY".to_string(),
+                api_key_env: Some("OPENROUTER_API_KEY".to_string()),
                 base_url_env: "OPENROUTER_BASE_URL".to_string(),
                 default_base_url: "https://openrouter.ai/api/v1".to_string(),
                 endpoint_path: "chat/completions".to_string(),
@@ -2422,6 +2422,7 @@ mod tests {
                 auth_scheme: ModelProviderAuthScheme::Bearer,
                 static_headers: Vec::new(),
                 default_allow_hosts: vec!["openrouter.ai".to_string()],
+                dynamic_base_url: false,
             },
             "openai/gpt-4.1-mini",
             allow_host,
