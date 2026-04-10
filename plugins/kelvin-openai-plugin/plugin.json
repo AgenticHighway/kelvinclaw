@@ -1,7 +1,7 @@
 {
   "id": "kelvin.openai",
   "name": "Kelvin OpenAI Model Plugin",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "api_version": "1.0.0",
   "description": "First-party OpenAI model plugin using Kelvin's provider_profile host routing.",
   "homepage": "https://github.com/agentichighway/kelvinclaw/tree/main/plugins/kelvin-openai-plugin",
@@ -31,7 +31,7 @@
   },
   "model_name": "gpt-4.1-mini",
   "entrypoint": "plugin.wasm",
-  "entrypoint_sha256": "82d6b34bc30027c9b8e59a0f91163da41a4b20b4aa7b76c99079dec35f71432a",
+  "entrypoint_sha256": "95e56a767278f83fa5372b4afa55475318e5e85071fbdc88f296fbeb09235050",
   "publisher": null,
   "quality_tier": "unsigned_local",
   "capability_scopes": {
@@ -41,7 +41,7 @@
     ]
   },
   "operational_controls": {
-    "timeout_ms": 30000,
+    "timeout_ms": 120000,
     "max_retries": 0,
     "max_calls_per_minute": 120,
     "circuit_breaker_failures": 3,

@@ -3,5 +3,5 @@
 version = 4
 
 [[package]]
-name = "kelvin-openrouter-plugin"
-version = "0.2.1"
+name = "kelvin-ollama-plugin"
+version = "0.1.0"

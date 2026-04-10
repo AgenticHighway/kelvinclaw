@@ -1,0 +1,4 @@
+# Build artifacts — do not commit compiled WASM binaries or distribution archives.
+/dist/
+/target/
+/payload/*.wasm

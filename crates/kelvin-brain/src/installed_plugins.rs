@@ -2782,7 +2782,11 @@ fn normalize_scopes(manifest: &InstalledPluginPackageManifest) -> KelvinResult<C
     for host in &manifest.capability_scopes.network_allow_hosts {
         network_allow_hosts.push(normalize_host_pattern(host)?);
     }
-    if network_scope_required && network_allow_hosts.is_empty() {
+    let has_dynamic_base_url = manifest
+        .provider_profile
+        .as_ref()
+        .map_or(false, |p| p.dynamic_base_url);
+    if network_scope_required && network_allow_hosts.is_empty() && !has_dynamic_base_url {
         return Err(KelvinError::InvalidInput(format!(
             "plugin '{}' requires network allowlist but has no network allow hosts",
             manifest.id
@@ -2821,9 +2825,9 @@ fn normalize_controls(
     manifest: &InstalledPluginPackageManifest,
 ) -> KelvinResult<OperationalControls> {
     let controls = &manifest.operational_controls;
-    if controls.timeout_ms == 0 || controls.timeout_ms > 120_000 {
+    if controls.timeout_ms == 0 || controls.timeout_ms > 600_000 {
         return Err(KelvinError::InvalidInput(format!(
-            "plugin '{}' timeout_ms must be between 1 and 120000",
+            "plugin '{}' timeout_ms must be between 1 and 600000",
             manifest.id
         )));
     }
@@ -3464,7 +3468,7 @@ mod tests {
             id: "openrouter.chat".to_string(),
             provider_name: "openrouter".to_string(),
             protocol_family: ModelProviderProtocolFamily::OpenAiChatCompletions,
-            api_key_env: "OPENROUTER_API_KEY".to_string(),
+            api_key_env: Some("OPENROUTER_API_KEY".to_string()),
             base_url_env: "OPENROUTER_BASE_URL".to_string(),
             default_base_url: "https://openrouter.ai/api/v1".to_string(),
             endpoint_path: "chat/completions".to_string(),
@@ -3472,6 +3476,7 @@ mod tests {
             auth_scheme: ModelProviderAuthScheme::Bearer,
             static_headers: Vec::new(),
             default_allow_hosts: vec!["openrouter.ai".to_string()],
+            dynamic_base_url: false,
         }
     }
 

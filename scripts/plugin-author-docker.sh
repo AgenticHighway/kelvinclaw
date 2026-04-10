@@ -105,7 +105,7 @@ docker_args=(
 maybe_mount_external_path "${PLUGIN_HOME}"
 maybe_mount_external_path "${TRUST_POLICY_PATH}"
 
-for env_name in OPENAI_API_KEY ANTHROPIC_API_KEY KELVIN_PLUGIN_INDEX_URL; do
+for env_name in OPENAI_API_KEY ANTHROPIC_API_KEY OLLAMA_BASE_URL KELVIN_PLUGIN_INDEX_URL; do
   [[ -n "${!env_name:-}" ]] && docker_args+=(-e "${env_name}=${!env_name}")
 done
 
