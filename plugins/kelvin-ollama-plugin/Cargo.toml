@@ -1,0 +1,25 @@
+# Kelvin model plugin crate.
+# Compiled to wasm32-unknown-unknown and loaded by the Kelvin runtime as a
+# wasm_model_v1 plugin. Distributed as a .wasm binary, not published to crates.io.
+
+[package]
+name = "kelvin-ollama-plugin"
+# edition = "2021" is the minimum for stable wasm32 support.
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+# cdylib produces a .wasm with C ABI exports (alloc, dealloc, infer).
+# Do NOT add rlib here; Kelvin loads only the .wasm cdylib.
+name = "kelvin_ollama_plugin"
+crate-type = ["cdylib"]
+
+# Uncomment to optimise for binary size (typical plugin .wasm < 2 KiB):
+# [profile.release]
+# opt-level = "z"     # optimise for size
+# lto = true          # link-time optimisation across the single crate
+# strip = "symbols"   # strip debug symbols
+
+# Empty [workspace] prevents Cargo from walking up to a parent workspace.
+[workspace]

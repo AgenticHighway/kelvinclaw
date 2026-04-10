@@ -1169,6 +1169,8 @@ Options:
   --auth-header <name>      Model runtime: auth header name (default: authorization)
   --auth-scheme <name>      Model runtime: bearer|raw (default: bearer)
   --allow-host <host>       Model runtime: allowed host pattern (repeatable)
+  --no-api-key              Model runtime: skip API key requirement (for unauthenticated providers)
+  --dynamic-base-url        Model runtime: derive allowed host from OLLAMA_BASE_URL at runtime
   --model-name <name>       Model runtime: model name (default: protocol-family default)
   --entrypoint <path>       Relative wasm payload path (default: plugin.wasm)
   --quality-tier <tier>     unsigned_local|signed_community|signed_trusted (default: unsigned_local)
@@ -1379,7 +1381,7 @@ validate_manifest_and_layout() {
       (.provider_profile.provider_name | type=="string" and length>0) and
       ((.provider_name == null) or (.provider_name == .provider_profile.provider_name)) and
       (.provider_profile.protocol_family | type=="string" and (. == "openai_responses" or . == "openai_chat_completions" or . == "anthropic_messages")) and
-      (.provider_profile.api_key_env | type=="string" and length>0) and
+      ((.provider_profile.api_key_env == null) or (.provider_profile.api_key_env | type=="string" and length>0)) and
       (.provider_profile.base_url_env | type=="string" and length>0) and
       (.provider_profile.default_base_url | type=="string" and length>0) and
       (.provider_profile.endpoint_path | type=="string" and length>0) and
@@ -1387,14 +1389,18 @@ validate_manifest_and_layout() {
       (.provider_profile.auth_scheme | type=="string" and (. == "bearer" or . == "raw")) and
       (.provider_profile.static_headers | type=="array") and
       ([.provider_profile.static_headers[]? | (.name | type=="string" and length>0) and (.value | type=="string" and length>0)] | all) and
-      (.provider_profile.default_allow_hosts | type=="array" and length>0) and
+      (.provider_profile.default_allow_hosts | type=="array") and
+      ((.provider_profile.dynamic_base_url == true) or (.provider_profile.default_allow_hosts | length>0)) and
       ([.provider_profile.default_allow_hosts[] | type=="string" and length>0] | all)
     ' "${manifest_path}" >/dev/null || {
       echo "wasm_model_v1 requires a structured provider_profile object" >&2
       return 1
     }
-    jq -e '.capability_scopes.network_allow_hosts | type=="array" and length>0 and ([.[] | type=="string" and length>0] | all)' "${manifest_path}" >/dev/null || {
-      echo "wasm_model_v1 requires non-empty capability_scopes.network_allow_hosts" >&2
+    jq -e '
+      (.provider_profile.dynamic_base_url == true) or
+      (.capability_scopes.network_allow_hosts | type=="array" and length>0 and ([.[] | type=="string" and length>0] | all))
+    ' "${manifest_path}" >/dev/null || {
+      echo "wasm_model_v1 requires non-empty capability_scopes.network_allow_hosts (or dynamic_base_url: true)" >&2
       return 1
     }
     jq -e '.model_name | type=="string" and length>0' "${manifest_path}" >/dev/null || {
@@ -1486,7 +1492,7 @@ cmd_new() {
   local provider_name="" provider_profile_id="" protocol_family="" api_key_env="" base_url_env=""
   local default_base_url="" endpoint_path="" auth_header="" auth_scheme="bearer"
   local model_name="default" entrypoint="plugin.wasm" quality_tier="unsigned_local"
-  local force="0"
+  local force="0" no_api_key="0" dynamic_base_url="0"
   local -a allow_hosts=()
 
   while [[ $# -gt 0 ]]; do
@@ -1511,6 +1517,8 @@ cmd_new() {
       --entrypoint) entrypoint="${2:?missing value for --entrypoint}"; shift 2 ;;
       --quality-tier) quality_tier="${2:?missing value for --quality-tier}"; shift 2 ;;
       --force) force="1"; shift ;;
+      --no-api-key) no_api_key="1"; shift ;;
+      --dynamic-base-url) dynamic_base_url="1"; shift ;;
       -h|--help) new_usage; exit 0 ;;
       *) echo "Unknown argument: $1" >&2; new_usage; exit 1 ;;
     esac
@@ -1584,8 +1592,8 @@ cmd_new() {
       exit 1
     }
     [[ -n "${provider_name}" ]] || provider_name="$(tr '.-' '_' <<< "${id}")"
-    [[ -n "${api_key_env}" ]] || {
-      echo "wasm_model_v1 requires --api-key-env" >&2
+    [[ "${no_api_key}" == "1" || -n "${api_key_env}" ]] || {
+      echo "wasm_model_v1 requires --api-key-env (or --no-api-key for unauthenticated providers)" >&2
       exit 1
     }
     [[ -n "${base_url_env}" ]] || {
@@ -1605,27 +1613,38 @@ cmd_new() {
       echo "wasm_model_v1 --auth-scheme must be bearer or raw" >&2
       exit 1
     }
-    [[ "${#allow_hosts[@]}" -gt 0 ]] || {
-      echo "wasm_model_v1 requires at least one --allow-host (or a builtin profile default)" >&2
+    [[ "${dynamic_base_url}" == "1" || "${#allow_hosts[@]}" -gt 0 ]] || {
+      echo "wasm_model_v1 requires at least one --allow-host (or --dynamic-base-url for user-configured hosts)" >&2
       exit 1
     }
     if [[ "${model_name}" == "default" ]]; then
       model_name="$(protocol_family_default_model_name "${protocol_family}" "${provider_name}")"
     fi
-    network_allow_hosts="$(printf '%s\n' "${allow_hosts[@]}" | jq -R . | jq -s .)"
+    if [[ "${#allow_hosts[@]}" -gt 0 ]]; then
+      network_allow_hosts="$(printf '%s\n' "${allow_hosts[@]}" | jq -R . | jq -s .)"
+    else
+      network_allow_hosts='[]'
+    fi
     timeout_ms="30000"
     capabilities='["model_provider","network_egress"]'
+    local api_key_env_json
+    if [[ "${no_api_key}" == "1" ]]; then
+      api_key_env_json="null"
+    else
+      api_key_env_json="$(jq -cn --arg v "${api_key_env}" '$v')"
+    fi
     provider_profile_json="$(jq -cn \
       --arg id "${provider_profile_id}" \
       --arg provider_name "${provider_name}" \
       --arg protocol_family "${protocol_family}" \
-      --arg api_key_env "${api_key_env}" \
+      --argjson api_key_env "${api_key_env_json}" \
       --arg base_url_env "${base_url_env}" \
       --arg default_base_url "${default_base_url}" \
       --arg endpoint_path "${endpoint_path}" \
       --arg auth_header "${auth_header}" \
       --arg auth_scheme "${auth_scheme}" \
       --argjson default_allow_hosts "${network_allow_hosts}" \
+      --argjson dynamic_base_url "$([ "${dynamic_base_url}" == "1" ] && echo 'true' || echo 'false')" \
       '{
         id:$id,
         provider_name:$provider_name,
@@ -1637,7 +1656,8 @@ cmd_new() {
         auth_header:$auth_header,
         auth_scheme:$auth_scheme,
         static_headers:[],
-        default_allow_hosts:$default_allow_hosts
+        default_allow_hosts:$default_allow_hosts,
+        dynamic_base_url:$dynamic_base_url
       }')"
     if [[ -n "${builtin_profile_json}" ]]; then
       provider_profile_json="$(jq -cn \
@@ -1978,7 +1998,7 @@ cmd_smoke() {
     echo "smoke currently supports wasm_model_v1 plugins only" >&2
     exit 1
   fi
-  api_key_env="$(jq -er '.provider_profile.api_key_env' "${manifest}")"
+  api_key_env="$(jq -r '.provider_profile.api_key_env // ""' "${manifest}")"
 
   temp_dir="$(mktemp -d)"
   keep_temp_value="${keep_temp}"
@@ -2032,9 +2052,10 @@ cmd_smoke() {
   set -e
 
   local key_present="0"
-  [[ -n "${!api_key_env:-}" ]] && key_present="1"
+  [[ -n "${api_key_env}" && -n "${!api_key_env:-}" ]] && key_present="1"
 
-  if [[ "${key_present}" == "0" ]]; then
+  if [[ -n "${api_key_env}" && "${key_present}" == "0" ]]; then
+    # Plugin requires an API key but it is not set — expect a clear error message.
     if grep -Fq "${api_key_env} is required" "${host_output}"; then
       if [[ "${json_output}" == "1" ]]; then
         jq -cn \
