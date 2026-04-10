@@ -2825,9 +2825,9 @@ fn normalize_controls(
     manifest: &InstalledPluginPackageManifest,
 ) -> KelvinResult<OperationalControls> {
     let controls = &manifest.operational_controls;
-    if controls.timeout_ms == 0 || controls.timeout_ms > 120_000 {
+    if controls.timeout_ms == 0 || controls.timeout_ms > 600_000 {
         return Err(KelvinError::InvalidInput(format!(
-            "plugin '{}' timeout_ms must be between 1 and 120000",
+            "plugin '{}' timeout_ms must be between 1 and 600000",
             manifest.id
         )));
     }

@@ -81,6 +81,8 @@ services:
             - "true"
             - --model-provider
             - ${KELVIN_MODEL_PROVIDER:-kelvin.echo}
+            - --timeout-ms
+            - "${KELVIN_RUN_TIMEOUT_MS:-300000}"
         volumes:
             - kelvin-home:/kelvin
             - kelvin-workspace:/kelvin/workspace

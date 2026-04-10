@@ -183,7 +183,7 @@ impl KelvinSdkConfig {
             session_id: "main".to_string(),
             workspace_dir: std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")),
             memory_mode: KelvinCliMemoryMode::Markdown,
-            timeout_ms: 30_000,
+            timeout_ms: 300_000,
             system_prompt: None,
             core_version: "0.1.0".to_string(),
             plugin_security_policy: PluginSecurityPolicy::default(),

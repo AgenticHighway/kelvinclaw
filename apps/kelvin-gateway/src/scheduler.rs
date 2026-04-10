@@ -205,7 +205,7 @@ impl RuntimeScheduler {
             metrics.submitted_total = metrics.submitted_total.saturating_add(1);
         }
 
-        let timeout_ms = schedule.timeout_ms.unwrap_or(30_000).saturating_add(3_000);
+        let timeout_ms = schedule.timeout_ms.unwrap_or(300_000).saturating_add(3_000);
         match runtime.wait_for_outcome(&accepted.run_id, timeout_ms).await {
             Ok(RunOutcome::Completed(result)) => {
                 let preview = join_payloads(

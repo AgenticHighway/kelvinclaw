@@ -43,7 +43,7 @@ fn parse_args() -> Result<CliConfig, String> {
     let mut session_id = "main".to_string();
     let mut workspace_dir = env::current_dir().map_err(|err| err.to_string())?;
     let mut memory_mode = KelvinCliMemoryMode::Markdown;
-    let mut timeout_ms = 30_000_u64;
+    let mut timeout_ms = 300_000_u64;
     let mut system_prompt: Option<String> = None;
     let mut model_provider_plugin_id: Option<String> = None;
     let mut state_dir: Option<PathBuf> = None;
