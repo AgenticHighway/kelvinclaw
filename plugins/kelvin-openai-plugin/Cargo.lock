@@ -3,5 +3,5 @@
 version = 4
 
 [[package]]
-name = "kelvin-openrouter-plugin"
+name = "kelvin-openai-plugin"
 version = "0.2.1"
