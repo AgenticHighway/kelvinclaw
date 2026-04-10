@@ -7,6 +7,7 @@
 #   KELVIN_MODEL_PROVIDER      Plugin id for the model provider (default: kelvin.echo)
 #   KELVIN_PLUGIN_INDEX_URL    Plugin index URL (required to install model provider plugin)
 #   KELVIN_HOME                State root directory (default: ~/.kelvinclaw)
+#   KELVIN_STATE_DIR           Override gateway state dir (default: $KELVIN_HOME/state)
 #   KELVIN_PLUGIN_HOME         Override plugin install root
 #   KELVIN_TRUST_POLICY_PATH   Override trust policy path
 #   KELVIN_GATEWAY_TOKEN       Auth token for the gateway
@@ -158,6 +159,7 @@ Environment:
   KELVIN_PLUGIN_INDEX_URL    Plugin index URL (required to install model provider plugin)
   KELVIN_GATEWAY_TOKEN       Auth token for the gateway
   KELVIN_HOME                State root (default: ~/.kelvinclaw)
+  KELVIN_STATE_DIR           Override gateway state dir (default: $KELVIN_HOME/state)
   KELVIN_PLUGIN_HOME         Override plugin install root
   KELVIN_TRUST_POLICY_PATH   Override trust policy path
 
@@ -192,8 +194,12 @@ cmd_start() {
   ensure_trust_policy
   ensure_plugin
 
+  local state_dir="${KELVIN_STATE_DIR:-${KELVIN_HOME}/state}"
+  state_dir="${state_dir/#\~/${HOME}}"
+  mkdir -p "${state_dir}"
+
   if [[ "${foreground}" -eq 1 ]]; then
-    exec "${GATEWAY_BINARY}" --model-provider "${KELVIN_MODEL_PROVIDER}" ${gateway_args[@]+"${gateway_args[@]}"}
+    exec "${GATEWAY_BINARY}" --model-provider "${KELVIN_MODEL_PROVIDER}" --state-dir "${state_dir}" ${gateway_args[@]+"${gateway_args[@]}"}
   fi
 
   # Daemon mode
@@ -210,7 +216,7 @@ cmd_start() {
   fi
 
   mkdir -p "${LOG_DIR}"
-  nohup "${GATEWAY_BINARY}" --model-provider "${KELVIN_MODEL_PROVIDER}" ${gateway_args[@]+"${gateway_args[@]}"} \
+  nohup "${GATEWAY_BINARY}" --model-provider "${KELVIN_MODEL_PROVIDER}" --state-dir "${state_dir}" ${gateway_args[@]+"${gateway_args[@]}"} \
     >> "${LOG_FILE}" 2>&1 &
   local pid=$!
   printf '%s' "${pid}" > "${PID_FILE}"

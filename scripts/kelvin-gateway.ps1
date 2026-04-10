@@ -40,6 +40,7 @@ function _KgwEnv([string]$Key, [string]$Default = "") {
 # ──────────────────────────────────────────────────────────────────────────────
 
 $KelvinHome      = _KgwEnv "KELVIN_HOME"              (Join-Path $HOME ".kelvinclaw")
+$StateDir        = _KgwEnv "KELVIN_STATE_DIR"         (Join-Path $KelvinHome "state")
 $PluginHome      = _KgwEnv "KELVIN_PLUGIN_HOME"       (Join-Path $KelvinHome "plugins")
 $TrustPolicyPath = _KgwEnv "KELVIN_TRUST_POLICY_PATH" (Join-Path $KelvinHome "trusted_publishers.json")
 $IndexUrl        = _KgwEnv "KELVIN_PLUGIN_INDEX_URL"  ""
@@ -182,6 +183,7 @@ Environment:
   KELVIN_PLUGIN_INDEX_URL    Plugin index URL (required to install model provider plugin)
   KELVIN_GATEWAY_TOKEN       Auth token for the gateway
   KELVIN_HOME                State root (default: ~\.kelvinclaw)
+  KELVIN_STATE_DIR           Override gateway state dir (default: $KELVIN_HOME\state)
   KELVIN_PLUGIN_HOME         Override plugin install root
   KELVIN_TRUST_POLICY_PATH   Override trust policy path
 "@
@@ -211,7 +213,8 @@ function Cmd-Start([string[]]$CmdArgs) {
         }
     }
 
-    $FullArgs = @("--model-provider", $ModelProvider) + $GatewayArgs
+    New-Item -ItemType Directory -Force -Path $StateDir | Out-Null
+    $FullArgs = @("--model-provider", $ModelProvider, "--state-dir", $StateDir) + $GatewayArgs
 
     if ($Foreground) {
         & $GatewayBinary @FullArgs
