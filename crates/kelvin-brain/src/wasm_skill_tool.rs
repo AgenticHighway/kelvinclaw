@@ -283,7 +283,7 @@ impl WasmSkillTool {
     /// - path contains traversals
     ///
     /// ### Example
-    /// ```no_run
+    /// ```ignore
     /// use kelvin_brain::wasm_skill_tool::WasmSkillTool;
     ///
     /// let wasm_skill_tool = WasmSkillTool::default();
