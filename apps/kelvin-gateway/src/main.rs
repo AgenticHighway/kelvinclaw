@@ -498,7 +498,7 @@ async fn main() {
                 memory_mode: config.memory_mode,
                 default_timeout_ms: config.default_timeout_ms,
                 default_system_prompt: None,
-                core_version: "0.1.0".to_string(),
+                core_version: env!("CARGO_PKG_VERSION").to_string(),
                 plugin_security_policy,
                 load_installed_plugins: config.load_installed_plugins,
                 model_provider: config.model_provider,
