@@ -2786,7 +2786,7 @@ fn normalize_scopes(manifest: &InstalledPluginPackageManifest) -> KelvinResult<C
     let has_dynamic_base_url = manifest
         .provider_profile
         .as_ref()
-        .map_or(false, |p| p.dynamic_base_url);
+        .is_some_and(|p| p.dynamic_base_url);
     if network_scope_required && network_allow_hosts.is_empty() && !has_dynamic_base_url {
         return Err(KelvinError::InvalidInput(format!(
             "plugin '{}' requires network allowlist but has no network allow hosts",
