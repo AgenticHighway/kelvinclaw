@@ -22,7 +22,7 @@
     "network_allow_hosts": []
   },
   "operational_controls": {
-    "timeout_ms": 120000,
+    "timeout_ms": 300000,
     "max_retries": 0,
     "max_calls_per_minute": 120,
     "circuit_breaker_failures": 3,
