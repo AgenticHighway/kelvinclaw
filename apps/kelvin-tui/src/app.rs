@@ -99,9 +99,16 @@ pub enum TuiEvent {
 #[derive(Debug, Clone)]
 pub enum ChatMessage {
     User(String),
-    Assistant { text: String, complete: bool },
+    Assistant {
+        text: String,
+        complete: bool,
+    },
     System(String),
-    ToolCall { tool_name: String, phase: ToolPhase, summary: Option<String> },
+    ToolCall {
+        tool_name: String,
+        phase: ToolPhase,
+        summary: Option<String>,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -546,11 +553,10 @@ impl App {
                     self.chat_pinned = true;
                 } else {
                     // Update tools vec
-                    if let Some(entry) = self
-                        .tools
-                        .iter_mut()
-                        .rev()
-                        .find(|t| t.tool_name == tool_name && matches!(t.phase, ToolPhase::Start))
+                    if let Some(entry) =
+                        self.tools.iter_mut().rev().find(|t| {
+                            t.tool_name == tool_name && matches!(t.phase, ToolPhase::Start)
+                        })
                     {
                         entry.phase = phase.clone();
                         entry.summary = summary.clone().or(entry.summary.clone());

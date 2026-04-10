@@ -1946,7 +1946,7 @@ fn resolve_model_provider(
 /// completion. suitable for simple use cases where asynchronous control is not needed.
 ///
 /// ### Arguments
-/// * `config` - SDK configuration 
+/// * `config` - SDK configuration
 ///
 /// ### Returns
 /// run summary with execution metadata, provider info, and outcomes

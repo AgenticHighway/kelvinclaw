@@ -36,16 +36,16 @@ const DEFAULT_PLUGIN_HOME_RELATIVE: &str = ".kelvinclaw/plugins";
 const DEFAULT_TRUST_POLICY_RELATIVE: &str = ".kelvinclaw/trusted_publishers.json";
 
 /// ### Brief
-/// 
+///
 /// represents a successfully loaded and instantiated plugin that has been registered in the plugin system
 ///
 /// ### Description
-/// 
-/// captures a plugin's metadata and runtime identity, allowing the plugin system to track, manage, 
+///
+/// captures a plugin's metadata and runtime identity, allowing the plugin system to track, manage,
 /// and invoke plugins at runtime. a `LoadedInstalledPlugin` can represent any plugin type.
-/// 
+///
 /// ### Note
-/// 
+///
 /// plugins may be both a tool and model provider simultaneously.
 ///
 /// ### Fields
@@ -162,7 +162,7 @@ pub fn default_trust_policy_path() -> KelvinResult<PathBuf> {
 /// ### Arguments
 /// * `core_version` - kelvin version
 /// * `security_policy` - security policy
-/// 
+///
 /// ### Returns
 /// a `LoadedInstalledPlugins` instance containing default plugins
 pub fn load_installed_tool_plugins_default(
@@ -306,9 +306,9 @@ impl PublisherTrustPolicy {
     /// ### Example
     /// ```
     /// use kelvin_brain::installed_plugins::PublisherTrustPolicy;
-    /// 
+    ///
     /// let policy = PublisherTrustPolicy::default();
-    /// 
+    ///
     /// assert_eq!(policy.require_signature, true);
     /// assert_eq!(policy.with_signature_requirement(false).require_signature, false);
     /// ```
@@ -402,8 +402,8 @@ impl PublisherTrustPolicy {
     ///
     /// ### Description
     ///
-    /// parses a JSON file containing publisher trust configuration, including whether to require 
-    /// signatures, trusted publishers, revoked publishers, and plugin-to-publisher pinnings. returns 
+    /// parses a JSON file containing publisher trust configuration, including whether to require
+    /// signatures, trusted publishers, revoked publishers, and plugin-to-publisher pinnings. returns
     /// an error if the file is missing, invalid JSON, or contains invalid ed25519 keys.
     ///
     /// ### Arguments
@@ -782,7 +782,7 @@ fn default_circuit_breaker_cooldown_ms() -> u64 {
 }
 
 /// ### Brief
-/// 
+///
 /// name and version resolution, format conversion, and field validation
 impl InstalledPluginPackageManifest {
     /// ### Brief
@@ -2580,7 +2580,8 @@ fn load_one_plugin(
         let entrypoint_bytes = fs::read(&entrypoint_abs)?;
         let abi_usage = validate_model_plugin_imports(&entrypoint_bytes, &package_manifest.id)?;
         let provider_profile = resolve_model_provider_profile(&package_manifest, abi_usage)?;
-        let provider_name = package_manifest.resolve_model_provider_name(provider_profile.as_ref())?;
+        let provider_name =
+            package_manifest.resolve_model_provider_name(provider_profile.as_ref())?;
         let model_name = package_manifest.resolved_model_name()?;
         model_provider = Some(Arc::new(InstalledWasmModelProvider::new(
             package_manifest.id.clone(),

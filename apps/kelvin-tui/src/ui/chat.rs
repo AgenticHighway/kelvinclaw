@@ -266,20 +266,13 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
                     line_texts.push(src_line.to_string());
                 }
             }
-            ChatMessage::ToolCall { tool_name, phase, .. } => {
+            ChatMessage::ToolCall {
+                tool_name, phase, ..
+            } => {
                 let (icon, style) = match phase {
-                    ToolPhase::Start => (
-                        "⚙",
-                        Style::default().fg(Color::Yellow),
-                    ),
-                    ToolPhase::End => (
-                        "⚙",
-                        Style::default().fg(Color::DarkGray),
-                    ),
-                    ToolPhase::Error => (
-                        "⚙",
-                        Style::default().fg(Color::Red),
-                    ),
+                    ToolPhase::Start => ("⚙", Style::default().fg(Color::Yellow)),
+                    ToolPhase::End => ("⚙", Style::default().fg(Color::DarkGray)),
+                    ToolPhase::Error => ("⚙", Style::default().fg(Color::Red)),
                 };
                 let text = format!("  {} {}", icon, tool_name);
                 lines.push(Line::from(Span::styled(text.clone(), style)));

@@ -287,7 +287,9 @@ mod tests {
             default_allow_hosts: Vec::new(),
             dynamic_base_url: true,
         };
-        profile.validate().expect("dynamic_base_url profile should validate");
+        profile
+            .validate()
+            .expect("dynamic_base_url profile should validate");
     }
 
     #[test]
@@ -306,7 +308,10 @@ mod tests {
             default_allow_hosts: Vec::new(),
             dynamic_base_url: false,
         };
-        assert!(profile.validate().is_err(), "static profile with empty default_allow_hosts should fail");
+        assert!(
+            profile.validate().is_err(),
+            "static profile with empty default_allow_hosts should fail"
+        );
     }
 
     #[test]
