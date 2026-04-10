@@ -144,7 +144,7 @@ function Ensure-Plugin {
                     require_signature = ($Base.require_signature -and $Incoming.require_signature)
                     publishers        = $MergedPublishers
                 }
-                $Merged | ConvertTo-Json -Depth 10 | Set-Content -NoNewline -Encoding utf8 $TrustPolicyPath
+                [System.IO.File]::WriteAllText($TrustPolicyPath, ($Merged | ConvertTo-Json -Depth 10), [System.Text.UTF8Encoding]::new($false))
             }
         }
     } finally {
