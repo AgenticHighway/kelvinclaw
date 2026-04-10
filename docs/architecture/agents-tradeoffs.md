@@ -68,4 +68,4 @@ Why:
 Risk control:
 
 - Explicit operation approval still required.
-- Host allowlist is overrideable with `KELVIN_TOOLPACK_WEB_ALLOW_HOSTS`.
+- Host allowlist is overridable with `KELVIN_TOOLPACK_WEB_ALLOW_HOSTS`.
