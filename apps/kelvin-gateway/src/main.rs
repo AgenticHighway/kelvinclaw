@@ -20,8 +20,8 @@ use bin_consts::{
 
 use kelvin_core::PluginSecurityPolicy;
 use kelvin_gateway::{
-    run_gateway, run_gateway_doctor, GatewayConfig, GatewayDoctorConfig, GatewayIngressConfig,
-    GatewaySecurityConfig, GatewayTlsConfig,
+    run_approve_pairing, run_gateway, run_gateway_doctor, GatewayApprovePairingConfig, GatewayConfig,
+    GatewayDoctorConfig, GatewayIngressConfig, GatewaySecurityConfig, GatewayTlsConfig,
 };
 use kelvin_sdk::{KelvinCliMemoryMode, KelvinSdkModelSelection, KelvinSdkRuntimeConfig};
 
@@ -41,6 +41,7 @@ struct CliConfig {
     load_installed_plugins: bool,
     require_cli_plugin_tool: bool,
     doctor_mode: bool,
+    approve_pairing_code: Option<String>,
     doctor_endpoint: String,
     doctor_plugin_home: PathBuf,
     doctor_trust_policy_path: PathBuf,
@@ -133,6 +134,7 @@ fn parse_args() -> Result<CliConfig, String> {
     let mut load_installed_plugins = true;
     let mut require_cli_plugin_tool = false;
     let mut doctor_mode = false;
+    let mut approve_pairing_code: Option<String> = None;
     let mut doctor_endpoint = DOCTOR_ENDPOINT.to_string();
     let mut doctor_timeout_ms = DOCTOR_TIMEOUT_MS;
     let mut doctor_plugin_home = PathBuf::from(DOCTOR_PLUGIN_HOME);
@@ -181,6 +183,12 @@ fn parse_args() -> Result<CliConfig, String> {
             }
             "--doctor" => {
                 doctor_mode = true;
+            }
+            "--approve-pairing" => {
+                let value = args
+                    .next()
+                    .ok_or_else(|| "missing value for --approve-pairing".to_string())?;
+                approve_pairing_code = Some(value.trim().to_string());
             }
             "--endpoint" => {
                 doctor_endpoint = args
@@ -457,6 +465,7 @@ fn parse_args() -> Result<CliConfig, String> {
         load_installed_plugins,
         require_cli_plugin_tool,
         doctor_mode,
+        approve_pairing_code,
         doctor_endpoint,
         doctor_plugin_home,
         doctor_trust_policy_path,
@@ -485,6 +494,21 @@ fn selection_requires_network(_policy: &KelvinSdkModelSelection) -> bool {
 async fn main() {
     match parse_args() {
         Ok(config) => {
+            if let Some(code) = config.approve_pairing_code {
+                if let Err(err) = run_approve_pairing(GatewayApprovePairingConfig {
+                    endpoint: config.doctor_endpoint,
+                    auth_token: config.auth_token,
+                    code,
+                    timeout_ms: config.doctor_timeout_ms,
+                })
+                .await
+                {
+                    eprintln!("{err}");
+                    std::process::exit(1);
+                }
+                return;
+            }
+
             if config.doctor_mode {
                 let report = run_gateway_doctor(GatewayDoctorConfig {
                     endpoint: config.doctor_endpoint,

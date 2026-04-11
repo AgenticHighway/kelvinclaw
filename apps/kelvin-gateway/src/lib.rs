@@ -550,6 +550,85 @@ fn build_doctor_check(id: &str, ok: bool, message: String, remediation: &str) ->
     })
 }
 
+#[derive(Debug, Clone)]
+pub struct GatewayApprovePairingConfig {
+    pub endpoint: String,
+    pub auth_token: Option<String>,
+    pub code: String,
+    pub timeout_ms: u64,
+}
+
+pub async fn run_approve_pairing(config: GatewayApprovePairingConfig) -> Result<(), String> {
+    let (mut socket, _) =
+        tokio::time::timeout(
+            Duration::from_millis(config.timeout_ms.max(250)),
+            connect_async(config.endpoint.clone()),
+        )
+        .await
+        .map_err(|_| format!("timed out connecting to {}", config.endpoint))?
+        .map_err(|err| format!("failed to connect to {}: {err}", config.endpoint))?;
+
+    let connect_payload = json!({
+        "type": "req",
+        "id": "ap-connect",
+        "method": "connect",
+        "params": {
+            "auth": config.auth_token.as_ref().map(|token| json!({ "token": token })),
+            "client_id": "kelvin-approve-pairing"
+        }
+    });
+    socket
+        .send(Message::Text(connect_payload.to_string()))
+        .await
+        .map_err(|err| format!("failed to send connect request: {err}"))?;
+
+    let connect_resp = wait_for_response(&mut socket, "ap-connect").await?;
+    if !connect_resp
+        .get("ok")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false)
+    {
+        let message = connect_resp
+            .get("error")
+            .and_then(|v| v.get("message"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("connect failed");
+        return Err(format!("gateway rejected connection: {message}"));
+    }
+
+    let approve_payload = json!({
+        "type": "req",
+        "id": "ap-approve",
+        "method": "channel.telegram.pair.approve",
+        "params": { "code": config.code.trim() }
+    });
+    socket
+        .send(Message::Text(approve_payload.to_string()))
+        .await
+        .map_err(|err| format!("failed to send approve request: {err}"))?;
+
+    let approve_resp = wait_for_response(&mut socket, "ap-approve").await?;
+    if approve_resp
+        .get("ok")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false)
+    {
+        let account_id = approve_resp
+            .pointer("/payload/account_id")
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown");
+        println!("approved: chat_id {account_id} is now paired");
+        Ok(())
+    } else {
+        let message = approve_resp
+            .get("error")
+            .and_then(|v| v.get("message"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("approve failed");
+        Err(format!("pairing approval failed: {message}"))
+    }
+}
+
 async fn wait_for_response(
     socket: &mut tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<TcpStream>>,
     target_id: &str,
@@ -672,8 +751,12 @@ pub async fn run_gateway_with_listener_secure_and_ingress(
         ))),
         connection_semaphore: Arc::new(Semaphore::new(security.max_connections)),
     };
+    let telegram_polling = ingress.telegram_polling.clone();
     if let Some(listener) = ingress_listener {
         ingress::spawn_server(listener, state.clone(), ingress);
+    }
+    if telegram_polling.enabled {
+        ingress::spawn_telegram_poller(state.clone(), telegram_polling);
     }
 
     loop {

@@ -17,13 +17,15 @@ use tokio::net::TcpListener;
 use crate::channels::{ChannelDirectIngressStatusConfig, ChannelIngressExposure, ChannelKind};
 use crate::consts::{
     DEFAULT_INGRESS_BASE_PATH, DEFAULT_INGRESS_MAX_BODY_SIZE_BYTES,
-    DEFAULT_SLACK_REPLAY_WINDOW_SECS, ENV_DISCORD_INTERACTIONS_PUBLIC_KEY,
-    ENV_GATEWAY_INGRESS_BASE_PATH, ENV_GATEWAY_INGRESS_BIND, ENV_GATEWAY_INGRESS_MAX_BODY_BYTES,
-    ENV_SLACK_SIGNING_SECRET, ENV_SLACK_WEBHOOK_REPLAY_WINDOW_SECS,
+    DEFAULT_SLACK_REPLAY_WINDOW_SECS, DEFAULT_TELEGRAM_POLLING_TIMEOUT_SECS,
+    ENV_DISCORD_INTERACTIONS_PUBLIC_KEY, ENV_GATEWAY_INGRESS_BASE_PATH, ENV_GATEWAY_INGRESS_BIND,
+    ENV_GATEWAY_INGRESS_MAX_BODY_BYTES, ENV_SLACK_SIGNING_SECRET,
+    ENV_SLACK_WEBHOOK_REPLAY_WINDOW_SECS, ENV_TELEGRAM_POLLING_TIMEOUT_SECS,
     ENV_TELEGRAM_WEBHOOK_SECRET_TOKEN, ENV_WHATSAPP_APP_SECRET, ENV_WHATSAPP_WEBHOOK_VERIFY_TOKEN,
-    MAX_INGRESS_MAX_BODY_SIZE_BYTES, MIN_INGRESS_MAX_BODY_SIZE_BYTES, OPERATOR_UI_PATH,
-    SECONDS_PER_DAY, VERIFICATION_METHOD_DISCORD, VERIFICATION_METHOD_SLACK,
-    VERIFICATION_METHOD_TELEGRAM, VERIFICATION_METHOD_WHATSAPP,
+    MAX_INGRESS_MAX_BODY_SIZE_BYTES,
+    MIN_INGRESS_MAX_BODY_SIZE_BYTES, OPERATOR_UI_PATH, SECONDS_PER_DAY,
+    VERIFICATION_METHOD_DISCORD, VERIFICATION_METHOD_SLACK, VERIFICATION_METHOD_TELEGRAM,
+    VERIFICATION_METHOD_TELEGRAM_POLLING, VERIFICATION_METHOD_WHATSAPP,
 };
 use crate::GatewayState;
 
@@ -34,6 +36,7 @@ pub struct GatewayIngressConfig {
     pub max_body_size_bytes: usize,
     pub allow_insecure_public_bind: bool,
     telegram: TelegramWebhookConfig,
+    pub(crate) telegram_polling: TelegramPollingConfig,
     slack: SlackWebhookConfig,
     discord: DiscordWebhookConfig,
     pub(crate) whatsapp: WhatsappWebhookConfig,
@@ -42,6 +45,13 @@ pub struct GatewayIngressConfig {
 #[derive(Debug, Clone)]
 struct TelegramWebhookConfig {
     secret_token: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct TelegramPollingConfig {
+    pub(crate) enabled: bool,
+    pub(crate) bot_token: Option<String>,
+    pub(crate) poll_timeout_secs: u64,
 }
 
 #[derive(Debug, Clone)]
@@ -82,6 +92,11 @@ impl Default for GatewayIngressConfig {
             max_body_size_bytes: DEFAULT_INGRESS_MAX_BODY_SIZE_BYTES,
             allow_insecure_public_bind: false,
             telegram: TelegramWebhookConfig { secret_token: None },
+            telegram_polling: TelegramPollingConfig {
+                enabled: true,
+                bot_token: None,
+                poll_timeout_secs: DEFAULT_TELEGRAM_POLLING_TIMEOUT_SECS,
+            },
             slack: SlackWebhookConfig {
                 signing_secret: None,
                 replay_window_secs: DEFAULT_SLACK_REPLAY_WINDOW_SECS,
@@ -127,6 +142,16 @@ impl GatewayIngressConfig {
         let telegram = TelegramWebhookConfig {
             secret_token: read_optional_trimmed_env(ENV_TELEGRAM_WEBHOOK_SECRET_TOKEN),
         };
+        let telegram_polling = TelegramPollingConfig {
+            enabled: telegram.secret_token.is_none(),
+            bot_token: read_optional_trimmed_env("KELVIN_TELEGRAM_BOT_TOKEN"),
+            poll_timeout_secs: read_env_u64(
+                ENV_TELEGRAM_POLLING_TIMEOUT_SECS,
+                DEFAULT_TELEGRAM_POLLING_TIMEOUT_SECS,
+                1,
+                120,
+            )?,
+        };
         let slack = SlackWebhookConfig {
             signing_secret: read_optional_trimmed_env(ENV_SLACK_SIGNING_SECRET),
             replay_window_secs: read_env_u64(
@@ -149,6 +174,7 @@ impl GatewayIngressConfig {
             max_body_size_bytes,
             allow_insecure_public_bind,
             telegram,
+            telegram_polling,
             slack,
             discord,
             whatsapp,
@@ -190,10 +216,19 @@ impl GatewayIngressConfig {
         let base_path = runtime.map(|item| item.base_path.as_str());
         ChannelIngressExposure {
             telegram: ChannelDirectIngressStatusConfig {
-                listener_enabled: runtime.is_some(),
-                webhook_path: base_path.map(|base| format!("{base}/telegram")),
-                verification_method: Some(VERIFICATION_METHOD_TELEGRAM.to_string()),
-                verification_configured: self.telegram.secret_token.is_some(),
+                listener_enabled: self.telegram_polling.enabled || runtime.is_some(),
+                webhook_path: if self.telegram_polling.enabled {
+                    None
+                } else {
+                    base_path.map(|base| format!("{base}/telegram"))
+                },
+                verification_method: Some(if self.telegram_polling.enabled {
+                    VERIFICATION_METHOD_TELEGRAM_POLLING.to_string()
+                } else {
+                    VERIFICATION_METHOD_TELEGRAM.to_string()
+                }),
+                verification_configured: self.telegram_polling.enabled
+                    || self.telegram.secret_token.is_some(),
             },
             slack: ChannelDirectIngressStatusConfig {
                 listener_enabled: runtime.is_some(),
@@ -258,6 +293,10 @@ pub(crate) fn spawn_server(
             eprintln!("gateway HTTP ingress server error: {err}");
         }
     });
+}
+
+pub(crate) fn spawn_telegram_poller(gateway: GatewayState, config: TelegramPollingConfig) {
+    telegram::spawn_poller(gateway, config);
 }
 
 pub(crate) fn json_response(status: StatusCode, payload: Value) -> Response {
