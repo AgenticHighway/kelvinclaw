@@ -336,6 +336,10 @@ impl KelvinBrain {
             .collect::<Vec<_>>();
 
         let system_prompt = system_prompt::build(system_prompt::SystemPromptParams {
+            run_id: &req.run_id,
+            session_id: &req.session_id,
+            model_provider: self.model.provider_name(),
+            model_name: self.model.model_name(),
             workspace_dir: &req.workspace_dir,
             tools: &self.tools.definitions(),
             extra_system_prompt: req.extra_system_prompt.as_deref(),
