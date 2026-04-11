@@ -1288,7 +1288,7 @@ fn manifest(
         homepage: Some("https://github.com/agentichighway/kelvinclaw".to_string()),
         capabilities,
         experimental: false,
-        min_core_version: Some("0.1.0".to_string()),
+        min_core_version: None,
         max_core_version: None,
     }
 }

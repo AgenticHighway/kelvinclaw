@@ -338,10 +338,7 @@ impl KelvinBrain {
         let system_prompt = req
             .extra_system_prompt
             .clone()
-            .unwrap_or_else(|| {
-                "KelvinClaw-style Kelvin brain"
-                    .to_string()
-            });
+            .unwrap_or_else(|| "KelvinClaw-style Kelvin brain".to_string());
 
         let max_iter = req.max_tool_iterations.unwrap_or(self.max_tool_iterations);
         let mut iteration = 0usize;

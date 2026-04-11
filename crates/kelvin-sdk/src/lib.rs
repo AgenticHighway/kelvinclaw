@@ -324,10 +324,14 @@ impl KelvinSdkRuntimeConfig {
             model_provider: config.model_provider.clone(),
             require_cli_plugin_tool: true,
             emit_stdout_events: true,
-            state_dir: config
-                .state_dir
-                .clone()
-                .or_else(|| Some(config.workspace_dir.join(crate::consts::KELVIN_DIR_NAME).join(crate::consts::STATE_DIR_NAME))),
+            state_dir: config.state_dir.clone().or_else(|| {
+                Some(
+                    config
+                        .workspace_dir
+                        .join(crate::consts::KELVIN_DIR_NAME)
+                        .join(crate::consts::STATE_DIR_NAME),
+                )
+            }),
             persist_runs: config.persist_runs,
             max_session_history_messages: config.max_session_history_messages,
             compact_to_messages: config.compact_to_messages,
@@ -686,14 +690,18 @@ impl RuntimePersistence {
     ///
     /// return the sessions subdirectory path, or `None` if no state directory is configured
     fn sessions_dir(&self) -> Option<PathBuf> {
-        self.state_dir.as_ref().map(|root| root.join(crate::consts::STATE_SESSIONS_SUBDIR))
+        self.state_dir
+            .as_ref()
+            .map(|root| root.join(crate::consts::STATE_SESSIONS_SUBDIR))
     }
 
     /// ### Brief
     ///
     /// return the runs subdirectory path, or `None` if no state directory is configured
     fn runs_dir(&self) -> Option<PathBuf> {
-        self.state_dir.as_ref().map(|root| root.join(crate::consts::STATE_RUNS_SUBDIR))
+        self.state_dir
+            .as_ref()
+            .map(|root| root.join(crate::consts::STATE_RUNS_SUBDIR))
     }
 
     /// ### Brief
@@ -948,7 +956,10 @@ impl RuntimePersistence {
         }
         if let Some(object) = merged.as_object_mut() {
             object.insert(crate::consts::JSON_KEY_RUN_ID.to_string(), json!(run_id));
-            object.insert(crate::consts::JSON_KEY_UPDATED_AT_MS.to_string(), json!(now_ms()));
+            object.insert(
+                crate::consts::JSON_KEY_UPDATED_AT_MS.to_string(),
+                json!(now_ms()),
+            );
             if let Some(incoming) = record.as_object() {
                 for (key, value) in incoming {
                     object.insert(key.clone(), value.clone());
@@ -1788,8 +1799,10 @@ impl KelvinSdkRuntime {
     /// current run state from the core runtime
     pub async fn state(&self, run_id: &str) -> KelvinResult<RunState> {
         let state = self.runtime.state(run_id).await?;
-        self.persistence
-            .persist_run_record(run_id, json!({ (crate::consts::JSON_KEY_LAST_STATE): state }))?;
+        self.persistence.persist_run_record(
+            run_id,
+            json!({ (crate::consts::JSON_KEY_LAST_STATE): state }),
+        )?;
         Ok(state)
     }
 
@@ -1843,8 +1856,10 @@ impl KelvinSdkRuntime {
                 (crate::consts::JSON_KEY_STATUS): crate::consts::JSON_KEY_TIMEOUT,
             }),
         };
-        self.persistence
-            .persist_run_record(run_id, json!({ (crate::consts::JSON_KEY_LAST_OUTCOME): persisted_outcome }))?;
+        self.persistence.persist_run_record(
+            run_id,
+            json!({ (crate::consts::JSON_KEY_LAST_OUTCOME): persisted_outcome }),
+        )?;
         Ok(outcome)
     }
 }
@@ -1900,7 +1915,10 @@ fn resolve_model_provider(
     };
 
     match selection {
-        KelvinSdkModelSelection::Echo => Ok(Arc::new(EchoModelProvider::new(crate::consts::MODEL_PROVIDER_KELVIN, crate::consts::MODEL_VERSION_ECHO_V1))),
+        KelvinSdkModelSelection::Echo => Ok(Arc::new(EchoModelProvider::new(
+            crate::consts::MODEL_PROVIDER_KELVIN,
+            crate::consts::MODEL_VERSION_ECHO_V1,
+        ))),
         KelvinSdkModelSelection::InstalledPlugin { plugin_id } => resolve_installed(plugin_id),
         KelvinSdkModelSelection::InstalledPluginFailover {
             plugin_ids,

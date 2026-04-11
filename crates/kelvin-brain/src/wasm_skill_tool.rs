@@ -467,7 +467,7 @@ impl WasmSkillPlugin {
                 PluginCapability::FsWrite,
             ],
             experimental: false,
-            min_core_version: Some(consts::WASM_SKILL_MIN_CORE_VERSION.to_string()),
+            min_core_version: None,
             max_core_version: None,
         }
     }
