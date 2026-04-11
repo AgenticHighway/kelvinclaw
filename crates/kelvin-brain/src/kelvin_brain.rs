@@ -339,7 +339,7 @@ impl KelvinBrain {
             .extra_system_prompt
             .clone()
             .unwrap_or_else(|| {
-                "KelvinClaw-style Kelvin brain\n\nIMPORTANT: Do not call the same tool multiple times with identical or nearly identical inputs. If a tool call did not achieve the desired outcome, either try a different tool, modify your approach, or ask the user for clarification instead of retrying."
+                "KelvinClaw-style Kelvin brain"
                     .to_string()
             });
 
