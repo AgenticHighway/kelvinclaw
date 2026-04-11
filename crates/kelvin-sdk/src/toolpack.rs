@@ -1282,7 +1282,7 @@ fn manifest(
     PluginManifest {
         id: id.to_string(),
         name: name.to_string(),
-        version: "0.1.0".to_string(),
+        version: env!("CARGO_PKG_VERSION").to_string(),
         api_version: KELVIN_CORE_API_VERSION.to_string(),
         description: Some(description.to_string()),
         homepage: Some("https://github.com/agentichighway/kelvinclaw".to_string()),

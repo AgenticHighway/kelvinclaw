@@ -125,9 +125,6 @@ pub const APPROVAL_FIELD_NAME: &str = "approval";
 // --- Plugin Quality Tiers ---
 pub const QUALITY_TIER_UNSIGNED_LOCAL: &str = "unsigned_local";
 
-// --- Core Version ---
-pub const KELVIN_CORE_DEFAULT_VERSION: &str = "0.1.0"; // HARDCODED VERSION
-
 // --- UTF-8 Conversion ---
 pub const UTF8_FORMAT_STRING: &str = "{:02x}";
 

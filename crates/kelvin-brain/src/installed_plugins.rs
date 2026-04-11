@@ -114,7 +114,7 @@ impl InstalledPluginLoaderConfig {
     pub fn new(plugin_home: impl Into<PathBuf>) -> Self {
         Self {
             plugin_home: plugin_home.into(),
-            core_version: consts::KELVIN_CORE_DEFAULT_VERSION.to_string(),
+            core_version: env!("CARGO_PKG_VERSION").to_string(),
             security_policy: PluginSecurityPolicy::default(),
             trust_policy: PublisherTrustPolicy::default(),
         }

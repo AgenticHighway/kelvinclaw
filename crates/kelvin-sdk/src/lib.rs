@@ -184,7 +184,7 @@ impl KelvinSdkConfig {
             memory_mode: KelvinCliMemoryMode::Markdown,
             timeout_ms: 300_000,
             system_prompt: None,
-            core_version: "0.1.0".to_string(), // HARDCODED VERSION
+            core_version: env!("CARGO_PKG_VERSION").to_string(),
             plugin_security_policy: PluginSecurityPolicy::default(),
             load_installed_plugins: true,
             model_provider: KelvinSdkModelSelection::Echo,
