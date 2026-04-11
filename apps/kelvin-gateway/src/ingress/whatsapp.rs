@@ -7,6 +7,11 @@ use serde::Deserialize;
 use serde_json::json;
 
 use crate::channels::{ChannelKind, WhatsappIngressRequest};
+use crate::consts::{
+    API_CODE_CHANNEL_DISABLED, API_CODE_INVALID_PAYLOAD, API_CODE_UNAUTHORIZED,
+    API_CODE_VERIFICATION_UNAVAILABLE, WHATSAPP_HUB_SIGNATURE_256_HEADER,
+    WHATSAPP_SIGNATURE_PREFIX, WHATSAPP_SUBSCRIBE_MODE, WHATSAPP_TEXT_MESSAGE_TYPE,
+};
 
 use super::{
     channel_enabled, decode_hex, json_error, json_response, record_webhook_denied,
@@ -77,7 +82,7 @@ pub(super) async fn handle_verify(
     if !channel_enabled(&state.gateway, kind).await {
         return json_error(
             StatusCode::NOT_FOUND,
-            "channel_disabled",
+            API_CODE_CHANNEL_DISABLED,
             "whatsapp channel is not enabled",
         );
     }
@@ -94,7 +99,7 @@ pub(super) async fn handle_verify(
         .await;
         return json_error(
             StatusCode::SERVICE_UNAVAILABLE,
-            "verification_unavailable",
+            API_CODE_VERIFICATION_UNAVAILABLE,
             message,
         );
     };
@@ -103,10 +108,13 @@ pub(super) async fn handle_verify(
     let token = query.hub_verify_token.as_deref().unwrap_or_default();
     let challenge = query.hub_challenge.as_deref().unwrap_or_default();
 
-    if mode != "subscribe" {
-        let message = "whatsapp webhook verification: hub.mode is not 'subscribe'";
-        record_webhook_denied(&state.gateway, kind, StatusCode::FORBIDDEN, false, message).await;
-        return json_error(StatusCode::FORBIDDEN, "verification_failed", message);
+    if mode != WHATSAPP_SUBSCRIBE_MODE {
+        let message = format!(
+            "whatsapp webhook verification: hub.mode is not '{}'",
+            WHATSAPP_SUBSCRIBE_MODE
+        );
+        record_webhook_denied(&state.gateway, kind, StatusCode::FORBIDDEN, false, &message).await;
+        return json_error(StatusCode::FORBIDDEN, "verification_failed", &message);
     }
 
     if token != configured_token {
@@ -131,7 +139,7 @@ pub(super) async fn handle_post(
     if !channel_enabled(&state.gateway, kind).await {
         return json_error(
             StatusCode::NOT_FOUND,
-            "channel_disabled",
+            API_CODE_CHANNEL_DISABLED,
             "whatsapp channel is not enabled",
         );
     }
@@ -148,7 +156,7 @@ pub(super) async fn handle_post(
         .await;
         return json_error(
             StatusCode::SERVICE_UNAVAILABLE,
-            "verification_unavailable",
+            API_CODE_VERIFICATION_UNAVAILABLE,
             message,
         );
     };
@@ -162,7 +170,7 @@ pub(super) async fn handle_post(
             &message,
         )
         .await;
-        return json_error(StatusCode::UNAUTHORIZED, "unauthorized", &message);
+        return json_error(StatusCode::UNAUTHORIZED, API_CODE_UNAUTHORIZED, &message);
     }
 
     let payload = match serde_json::from_slice::<WhatsappWebhookPayload>(&body) {
@@ -177,7 +185,7 @@ pub(super) async fn handle_post(
                 &message,
             )
             .await;
-            return json_error(StatusCode::BAD_REQUEST, "invalid_payload", &message);
+            return json_error(StatusCode::BAD_REQUEST, API_CODE_INVALID_PAYLOAD, &message);
         }
     };
 
@@ -229,7 +237,7 @@ fn extract_requests(payload: WhatsappWebhookPayload) -> Vec<WhatsappIngressReque
             };
             for message in messages {
                 let msg_type = message.kind.as_deref().unwrap_or_default();
-                if msg_type != "text" {
+                if msg_type != WHATSAPP_TEXT_MESSAGE_TYPE {
                     continue;
                 }
                 let msg_id = message.id.unwrap_or_default();
@@ -260,14 +268,22 @@ fn extract_requests(payload: WhatsappWebhookPayload) -> Vec<WhatsappIngressReque
 
 fn verify_signature(app_secret: &str, headers: &HeaderMap, body: &[u8]) -> Result<(), String> {
     let signature_header = headers
-        .get("x-hub-signature-256")
+        .get(WHATSAPP_HUB_SIGNATURE_256_HEADER)
         .and_then(|v| v.to_str().ok())
         .map(str::trim)
         .filter(|v| !v.is_empty())
-        .ok_or_else(|| "missing x-hub-signature-256 header for whatsapp webhook".to_string())?;
+        .ok_or_else(|| {
+            format!(
+                "missing {} header for whatsapp webhook",
+                WHATSAPP_HUB_SIGNATURE_256_HEADER
+            )
+        })?;
 
-    let Some(encoded_signature) = signature_header.strip_prefix("sha256=") else {
-        return Err("whatsapp signature must start with 'sha256='".to_string());
+    let Some(encoded_signature) = signature_header.strip_prefix(WHATSAPP_SIGNATURE_PREFIX) else {
+        return Err(format!(
+            "whatsapp signature must start with '{}'",
+            WHATSAPP_SIGNATURE_PREFIX
+        ));
     };
     let signature = decode_hex(encoded_signature)?;
     let key = hmac::Key::new(hmac::HMAC_SHA256, app_secret.as_bytes());

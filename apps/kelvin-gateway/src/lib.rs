@@ -1,7 +1,7 @@
 #![recursion_limit = "256"]
 
 mod channels;
-pub mod consts;
+mod consts;
 mod ingress;
 mod operator;
 mod scheduler;
@@ -46,9 +46,8 @@ use tokio_tungstenite::tungstenite::{self, Message};
 pub use consts::{
     DEFAULT_AUTH_FAILURE_BACKOFF_MS, DEFAULT_AUTH_FAILURE_THRESHOLD, DEFAULT_HANDSHAKE_TIMEOUT_MS,
     DEFAULT_MAX_CONNECTIONS, DEFAULT_MAX_FRAME_BYTES, DEFAULT_MAX_MESSAGE_BYTES,
-    DEFAULT_MAX_OUTBOUND_MESSAGES_PER_CONNECTION,
+    DEFAULT_MAX_OUTBOUND_MESSAGES_PER_CONNECTION, GATEWAY_METHODS_V1, GATEWAY_PROTOCOL_VERSION,
 };
-pub use consts::{GATEWAY_METHODS_V1, GATEWAY_PROTOCOL_VERSION};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GatewayTlsConfig {

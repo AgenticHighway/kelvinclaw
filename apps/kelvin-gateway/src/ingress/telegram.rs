@@ -6,6 +6,10 @@ use serde::Deserialize;
 use serde_json::json;
 
 use crate::channels::{ChannelKind, TelegramIngressRequest};
+use crate::consts::{
+    API_CODE_CHANNEL_DISABLED, API_CODE_INVALID_PAYLOAD, API_CODE_UNAUTHORIZED,
+    API_CODE_VERIFICATION_UNAVAILABLE, TELEGRAM_BOT_API_SECRET_HEADER,
+};
 
 use super::{
     channel_enabled, json_error, json_response, record_webhook_denied, record_webhook_verified,
@@ -40,7 +44,7 @@ pub(super) async fn handle(
     if !channel_enabled(&state.gateway, kind).await {
         return json_error(
             StatusCode::NOT_FOUND,
-            "channel_disabled",
+            API_CODE_CHANNEL_DISABLED,
             "telegram channel is not enabled",
         );
     }
@@ -57,13 +61,13 @@ pub(super) async fn handle(
         .await;
         return json_error(
             StatusCode::SERVICE_UNAVAILABLE,
-            "verification_unavailable",
+            API_CODE_VERIFICATION_UNAVAILABLE,
             message,
         );
     };
 
     let provided_secret = headers
-        .get("x-telegram-bot-api-secret-token")
+        .get(TELEGRAM_BOT_API_SECRET_HEADER)
         .and_then(|value| value.to_str().ok())
         .map(str::trim)
         .filter(|value| !value.is_empty());
@@ -77,7 +81,7 @@ pub(super) async fn handle(
             message,
         )
         .await;
-        return json_error(StatusCode::UNAUTHORIZED, "unauthorized", message);
+        return json_error(StatusCode::UNAUTHORIZED, API_CODE_UNAUTHORIZED, message);
     }
 
     let update = match serde_json::from_slice::<TelegramUpdate>(&body) {
@@ -92,7 +96,7 @@ pub(super) async fn handle(
                 &message,
             )
             .await;
-            return json_error(StatusCode::BAD_REQUEST, "invalid_payload", &message);
+            return json_error(StatusCode::BAD_REQUEST, API_CODE_INVALID_PAYLOAD, &message);
         }
     };
 

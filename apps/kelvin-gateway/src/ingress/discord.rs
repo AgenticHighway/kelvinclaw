@@ -7,6 +7,11 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 
 use crate::channels::{ChannelKind, DiscordIngressRequest};
+use crate::consts::{
+    API_CODE_CHANNEL_DISABLED, API_CODE_INVALID_PAYLOAD, API_CODE_UNAUTHORIZED,
+    API_CODE_VERIFICATION_UNAVAILABLE, DISCORD_MESSAGE_FLAGS, DISCORD_MESSAGE_TYPE,
+    DISCORD_PING_TYPE, DISCORD_SIGNATURE_HEADER, DISCORD_SIGNATURE_TIMESTAMP_HEADER,
+};
 
 use super::{
     channel_enabled, decode_hex, json_error, json_response, record_webhook_denied,
@@ -56,7 +61,7 @@ pub(super) async fn handle(
     if !channel_enabled(&state.gateway, kind).await {
         return json_error(
             StatusCode::NOT_FOUND,
-            "channel_disabled",
+            API_CODE_CHANNEL_DISABLED,
             "discord channel is not enabled",
         );
     }
@@ -73,12 +78,12 @@ pub(super) async fn handle(
         .await;
         return json_error(
             StatusCode::SERVICE_UNAVAILABLE,
-            "verification_unavailable",
+            API_CODE_VERIFICATION_UNAVAILABLE,
             message,
         );
     };
 
-    let timestamp = match header_str(&headers, "x-signature-timestamp") {
+    let timestamp = match header_str(&headers, DISCORD_SIGNATURE_TIMESTAMP_HEADER) {
         Ok(value) => value,
         Err(()) => {
             record_webhook_denied(
@@ -91,12 +96,12 @@ pub(super) async fn handle(
             .await;
             return json_error(
                 StatusCode::UNAUTHORIZED,
-                "unauthorized",
-                "missing x-signature-timestamp",
+                API_CODE_UNAUTHORIZED,
+                &format!("missing {}", DISCORD_SIGNATURE_TIMESTAMP_HEADER),
             );
         }
     };
-    let signature = match header_str(&headers, "x-signature-ed25519") {
+    let signature = match header_str(&headers, DISCORD_SIGNATURE_HEADER) {
         Ok(value) => value,
         Err(()) => {
             record_webhook_denied(
@@ -109,8 +114,8 @@ pub(super) async fn handle(
             .await;
             return json_error(
                 StatusCode::UNAUTHORIZED,
-                "unauthorized",
-                "missing x-signature-ed25519",
+                API_CODE_UNAUTHORIZED,
+                &format!("missing {}", DISCORD_SIGNATURE_HEADER),
             );
         }
     };
@@ -124,7 +129,7 @@ pub(super) async fn handle(
             &message,
         )
         .await;
-        return json_error(StatusCode::UNAUTHORIZED, "unauthorized", &message);
+        return json_error(StatusCode::UNAUTHORIZED, API_CODE_UNAUTHORIZED, &message);
     }
 
     let interaction = match serde_json::from_slice::<DiscordInteraction>(&body) {
@@ -139,24 +144,24 @@ pub(super) async fn handle(
                 &message,
             )
             .await;
-            return json_error(StatusCode::BAD_REQUEST, "invalid_payload", &message);
+            return json_error(StatusCode::BAD_REQUEST, API_CODE_INVALID_PAYLOAD, &message);
         }
     };
 
     match into_request(interaction) {
         DiscordAction::Ping => {
             record_webhook_verified(&state.gateway, kind, StatusCode::OK, false).await;
-            json_response(StatusCode::OK, json!({ "type": 1 }))
+            json_response(StatusCode::OK, json!({ "type": DISCORD_PING_TYPE }))
         }
         DiscordAction::Ignore(message) => {
             record_webhook_verified(&state.gateway, kind, StatusCode::OK, false).await;
             json_response(
                 StatusCode::OK,
                 json!({
-                    "type": 4,
+                    "type": DISCORD_MESSAGE_TYPE,
                     "data": {
                         "content": message,
-                        "flags": 64
+                        "flags": DISCORD_MESSAGE_FLAGS
                     }
                 }),
             )
@@ -174,10 +179,10 @@ pub(super) async fn handle(
             json_response(
                 StatusCode::OK,
                 json!({
-                    "type": 4,
+                    "type": DISCORD_MESSAGE_TYPE,
                     "data": {
                         "content": "KelvinClaw accepted your request and will reply in-channel.",
-                        "flags": 64
+                        "flags": DISCORD_MESSAGE_FLAGS
                     }
                 }),
             )
@@ -191,7 +196,7 @@ pub(super) async fn handle(
                 &message,
             )
             .await;
-            json_error(StatusCode::BAD_REQUEST, "invalid_payload", &message)
+            json_error(StatusCode::BAD_REQUEST, API_CODE_INVALID_PAYLOAD, &message)
         }
     }
 }

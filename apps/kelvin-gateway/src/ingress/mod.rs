@@ -17,7 +17,13 @@ use tokio::net::TcpListener;
 use crate::channels::{ChannelDirectIngressStatusConfig, ChannelIngressExposure, ChannelKind};
 use crate::consts::{
     DEFAULT_INGRESS_BASE_PATH, DEFAULT_INGRESS_MAX_BODY_SIZE_BYTES,
-    DEFAULT_SLACK_REPLAY_WINDOW_SECS, OPERATOR_UI_PATH,
+    DEFAULT_SLACK_REPLAY_WINDOW_SECS, ENV_DISCORD_INTERACTIONS_PUBLIC_KEY,
+    ENV_GATEWAY_INGRESS_BASE_PATH, ENV_GATEWAY_INGRESS_BIND, ENV_GATEWAY_INGRESS_MAX_BODY_BYTES,
+    ENV_SLACK_SIGNING_SECRET, ENV_SLACK_WEBHOOK_REPLAY_WINDOW_SECS,
+    ENV_TELEGRAM_WEBHOOK_SECRET_TOKEN, ENV_WHATSAPP_APP_SECRET, ENV_WHATSAPP_WEBHOOK_VERIFY_TOKEN,
+    MAX_INGRESS_MAX_BODY_SIZE_BYTES, MIN_INGRESS_MAX_BODY_SIZE_BYTES, OPERATOR_UI_PATH,
+    SECONDS_PER_DAY, VERIFICATION_METHOD_DISCORD, VERIFICATION_METHOD_SLACK,
+    VERIFICATION_METHOD_TELEGRAM, VERIFICATION_METHOD_WHATSAPP,
 };
 use crate::GatewayState;
 
@@ -96,44 +102,46 @@ impl GatewayIngressConfig {
         max_body_size_bytes: Option<usize>,
         allow_insecure_public_bind: bool,
     ) -> Result<Self, String> {
-        let env_base_path = read_optional_trimmed_env("KELVIN_GATEWAY_INGRESS_BASE_PATH");
+        let env_base_path = read_optional_trimmed_env(ENV_GATEWAY_INGRESS_BASE_PATH);
         let bind_addr = match bind_addr {
             Some(value) => Some(value),
-            None => read_optional_socket_addr("KELVIN_GATEWAY_INGRESS_BIND")?,
+            None => read_optional_socket_addr(ENV_GATEWAY_INGRESS_BIND)?,
         };
         let base_path = normalize_base_path(base_path.as_deref().or(env_base_path.as_deref()))?;
         let max_body_size_bytes = match max_body_size_bytes {
             Some(value) => value,
             None => read_env_usize(
-                "KELVIN_GATEWAY_INGRESS_MAX_BODY_BYTES",
+                ENV_GATEWAY_INGRESS_MAX_BODY_BYTES,
                 DEFAULT_INGRESS_MAX_BODY_SIZE_BYTES,
-                1024,
-                2 * 1024 * 1024,
+                MIN_INGRESS_MAX_BODY_SIZE_BYTES,
+                MAX_INGRESS_MAX_BODY_SIZE_BYTES,
             )?,
         };
-        if !(1024..=2 * 1024 * 1024).contains(&max_body_size_bytes) {
+        if !(MIN_INGRESS_MAX_BODY_SIZE_BYTES..=MAX_INGRESS_MAX_BODY_SIZE_BYTES)
+            .contains(&max_body_size_bytes)
+        {
             return Err(
                 "HTTP ingress max body size must be between 1024 and 2097152 bytes".to_string(),
             );
         }
         let telegram = TelegramWebhookConfig {
-            secret_token: read_optional_trimmed_env("KELVIN_TELEGRAM_WEBHOOK_SECRET_TOKEN"),
+            secret_token: read_optional_trimmed_env(ENV_TELEGRAM_WEBHOOK_SECRET_TOKEN),
         };
         let slack = SlackWebhookConfig {
-            signing_secret: read_optional_trimmed_env("KELVIN_SLACK_SIGNING_SECRET"),
+            signing_secret: read_optional_trimmed_env(ENV_SLACK_SIGNING_SECRET),
             replay_window_secs: read_env_u64(
-                "KELVIN_SLACK_WEBHOOK_REPLAY_WINDOW_SECS",
+                ENV_SLACK_WEBHOOK_REPLAY_WINDOW_SECS,
                 DEFAULT_SLACK_REPLAY_WINDOW_SECS,
                 1,
-                86_400,
+                SECONDS_PER_DAY,
             )?,
         };
         let discord = DiscordWebhookConfig {
-            public_key: read_optional_hex_32("KELVIN_DISCORD_INTERACTIONS_PUBLIC_KEY")?,
+            public_key: read_optional_hex_32(ENV_DISCORD_INTERACTIONS_PUBLIC_KEY)?,
         };
         let whatsapp = WhatsappWebhookConfig {
-            verify_token: read_optional_trimmed_env("KELVIN_WHATSAPP_WEBHOOK_VERIFY_TOKEN"),
-            app_secret: read_optional_trimmed_env("KELVIN_WHATSAPP_APP_SECRET"),
+            verify_token: read_optional_trimmed_env(ENV_WHATSAPP_WEBHOOK_VERIFY_TOKEN),
+            app_secret: read_optional_trimmed_env(ENV_WHATSAPP_APP_SECRET),
         };
         Ok(Self {
             bind_addr,
@@ -184,25 +192,25 @@ impl GatewayIngressConfig {
             telegram: ChannelDirectIngressStatusConfig {
                 listener_enabled: runtime.is_some(),
                 webhook_path: base_path.map(|base| format!("{base}/telegram")),
-                verification_method: Some("telegram_secret_token".to_string()),
+                verification_method: Some(VERIFICATION_METHOD_TELEGRAM.to_string()),
                 verification_configured: self.telegram.secret_token.is_some(),
             },
             slack: ChannelDirectIngressStatusConfig {
                 listener_enabled: runtime.is_some(),
                 webhook_path: base_path.map(|base| format!("{base}/slack")),
-                verification_method: Some("slack_signing_secret".to_string()),
+                verification_method: Some(VERIFICATION_METHOD_SLACK.to_string()),
                 verification_configured: self.slack.signing_secret.is_some(),
             },
             discord: ChannelDirectIngressStatusConfig {
                 listener_enabled: runtime.is_some(),
                 webhook_path: base_path.map(|base| format!("{base}/discord")),
-                verification_method: Some("discord_ed25519".to_string()),
+                verification_method: Some(VERIFICATION_METHOD_DISCORD.to_string()),
                 verification_configured: self.discord.public_key.is_some(),
             },
             whatsapp: ChannelDirectIngressStatusConfig {
                 listener_enabled: runtime.is_some(),
                 webhook_path: base_path.map(|base| format!("{base}/whatsapp")),
-                verification_method: Some("whatsapp_hmac_sha256".to_string()),
+                verification_method: Some(VERIFICATION_METHOD_WHATSAPP.to_string()),
                 verification_configured: self.whatsapp.app_secret.is_some(),
             },
         }
