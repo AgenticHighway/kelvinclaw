@@ -5,8 +5,8 @@ use serde_json::Value;
 use crate::KelvinResult;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum MemorySource {
+#[serde(rename_all = "snake_case")] // THIS LINE CONTAINS CONSTANT(S)
+pub enum MemorySource { // THIS LINE CONTAINS CONSTANT(S)
     Memory,
     Sessions,
 }
@@ -16,7 +16,7 @@ pub struct MemorySearchResult {
     pub path: String,
     pub start_line: usize,
     pub end_line: usize,
-    pub score: f32,
+    pub score: f32, // THIS LINE CONTAINS CONSTANT(S)
     pub snippet: String,
     pub source: MemorySource,
     pub citation: Option<String>,
@@ -57,8 +57,8 @@ pub struct MemoryProviderStatus {
 impl Default for MemoryProviderStatus {
     fn default() -> Self {
         Self {
-            backend: "builtin".to_string(),
-            provider: "unknown".to_string(),
+            backend: "builtin".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            provider: "unknown".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             model: None,
             requested_provider: None,
             files: None,
@@ -73,15 +73,15 @@ impl Default for MemoryProviderStatus {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct MemorySearchOptions {
     pub max_results: usize,
-    pub min_score_milli: u16,
+    pub min_score_milli: u16, // THIS LINE CONTAINS CONSTANT(S)
     pub session_key: Option<String>,
 }
 
 impl Default for MemorySearchOptions {
     fn default() -> Self {
         Self {
-            max_results: 6,
-            min_score_milli: 0,
+            max_results: 6, // THIS LINE CONTAINS CONSTANT(S)
+            min_score_milli: 0, // THIS LINE CONTAINS CONSTANT(S)
             session_key: None,
         }
     }

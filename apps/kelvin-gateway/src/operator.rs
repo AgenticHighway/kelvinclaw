@@ -9,13 +9,13 @@ use kelvin_sdk::KelvinSdkRuntime;
 use serde::Deserialize;
 use serde_json::{json, Value};
 
-const DEFAULT_PLUGIN_INDEX_URL: &str = "";
-const RUN_LIST_LIMIT_DEFAULT: usize = 25;
-const RUN_LIST_LIMIT_MAX: usize = 200;
-const SESSION_LIST_LIMIT_DEFAULT: usize = 25;
-const SESSION_LIST_LIMIT_MAX: usize = 200;
-const SESSION_MESSAGE_LIMIT_DEFAULT: usize = 20;
-const SESSION_MESSAGE_LIMIT_MAX: usize = 200;
+const DEFAULT_PLUGIN_INDEX_URL: &str = ""; // THIS LINE CONTAINS CONSTANT(S)
+const RUN_LIST_LIMIT_DEFAULT: usize = 25; // THIS LINE CONTAINS CONSTANT(S)
+const RUN_LIST_LIMIT_MAX: usize = 200; // THIS LINE CONTAINS CONSTANT(S)
+const SESSION_LIST_LIMIT_DEFAULT: usize = 25; // THIS LINE CONTAINS CONSTANT(S)
+const SESSION_LIST_LIMIT_MAX: usize = 200; // THIS LINE CONTAINS CONSTANT(S)
+const SESSION_MESSAGE_LIMIT_DEFAULT: usize = 20; // THIS LINE CONTAINS CONSTANT(S)
+const SESSION_MESSAGE_LIMIT_MAX: usize = 200; // THIS LINE CONTAINS CONSTANT(S)
 
 #[derive(Debug, Default, Deserialize)]
 pub(crate) struct OperatorRunsListParams {
@@ -43,17 +43,17 @@ pub(crate) fn runs_list_payload(
     let state_dir = runtime.state_dir().map(Path::to_path_buf);
     let Some(state_dir) = state_dir else {
         return Ok(json!({
-            "enabled": false,
-            "state_dir": null,
-            "run_count": 0,
-            "runs": [],
+            "enabled": false, // THIS LINE CONTAINS CONSTANT(S)
+            "state_dir": null, // THIS LINE CONTAINS CONSTANT(S)
+            "run_count": 0, // THIS LINE CONTAINS CONSTANT(S)
+            "runs": [], // THIS LINE CONTAINS CONSTANT(S)
         }));
     };
-    let runs_dir = state_dir.join("runs");
+    let runs_dir = state_dir.join("runs"); // THIS LINE CONTAINS CONSTANT(S)
     let limit = params
         .limit
         .unwrap_or(RUN_LIST_LIMIT_DEFAULT)
-        .clamp(1, RUN_LIST_LIMIT_MAX);
+        .clamp(1, RUN_LIST_LIMIT_MAX); // THIS LINE CONTAINS CONSTANT(S)
     let mut runs = Vec::new();
     if runs_dir.is_dir() {
         for entry in fs::read_dir(&runs_dir).map_err(|err| {
@@ -79,18 +79,18 @@ pub(crate) fn runs_list_payload(
     }
     runs.sort_by_key(|item| {
         std::cmp::Reverse(
-            item.get("updated_at_ms")
-                .and_then(Value::as_u64)
-                .or_else(|| item.get("accepted_at_ms").and_then(Value::as_u64))
+            item.get("updated_at_ms") // THIS LINE CONTAINS CONSTANT(S)
+                .and_then(Value::as_u64) // THIS LINE CONTAINS CONSTANT(S)
+                .or_else(|| item.get("accepted_at_ms").and_then(Value::as_u64)) // THIS LINE CONTAINS CONSTANT(S)
                 .unwrap_or_default(),
         )
     });
     runs.truncate(limit);
     Ok(json!({
-        "enabled": true,
-        "state_dir": state_dir,
-        "run_count": runs.len(),
-        "runs": runs,
+        "enabled": true, // THIS LINE CONTAINS CONSTANT(S)
+        "state_dir": state_dir, // THIS LINE CONTAINS CONSTANT(S)
+        "run_count": runs.len(), // THIS LINE CONTAINS CONSTANT(S)
+        "runs": runs, // THIS LINE CONTAINS CONSTANT(S)
     }))
 }
 
@@ -101,17 +101,17 @@ pub(crate) fn sessions_list_payload(
     let state_dir = runtime.state_dir().map(Path::to_path_buf);
     let Some(state_dir) = state_dir else {
         return Ok(json!({
-            "enabled": false,
-            "state_dir": null,
-            "session_count": 0,
-            "sessions": [],
+            "enabled": false, // THIS LINE CONTAINS CONSTANT(S)
+            "state_dir": null, // THIS LINE CONTAINS CONSTANT(S)
+            "session_count": 0, // THIS LINE CONTAINS CONSTANT(S)
+            "sessions": [], // THIS LINE CONTAINS CONSTANT(S)
         }));
     };
-    let sessions_dir = state_dir.join("sessions");
+    let sessions_dir = state_dir.join("sessions"); // THIS LINE CONTAINS CONSTANT(S)
     let limit = params
         .limit
         .unwrap_or(SESSION_LIST_LIMIT_DEFAULT)
-        .clamp(1, SESSION_LIST_LIMIT_MAX);
+        .clamp(1, SESSION_LIST_LIMIT_MAX); // THIS LINE CONTAINS CONSTANT(S)
     let mut sessions = Vec::new();
     if sessions_dir.is_dir() {
         for entry in fs::read_dir(&sessions_dir).map_err(|err| {
@@ -133,29 +133,29 @@ pub(crate) fn sessions_list_payload(
             let messages = read_session_messages(&session_dir)?;
             let last_message = messages.last().cloned();
             sessions.push(json!({
-                "session_id": descriptor.session_id,
-                "session_key": descriptor.session_key,
-                "workspace_dir": descriptor.workspace_dir,
-                "message_count": messages.len(),
-                "last_message": last_message,
+                "session_id": descriptor.session_id, // THIS LINE CONTAINS CONSTANT(S)
+                "session_key": descriptor.session_key, // THIS LINE CONTAINS CONSTANT(S)
+                "workspace_dir": descriptor.workspace_dir, // THIS LINE CONTAINS CONSTANT(S)
+                "message_count": messages.len(), // THIS LINE CONTAINS CONSTANT(S)
+                "last_message": last_message, // THIS LINE CONTAINS CONSTANT(S)
             }));
         }
     }
     sessions.sort_by_key(|item| {
         std::cmp::Reverse(
-            item.get("last_message")
-                .and_then(|value| value.get("metadata"))
-                .and_then(|value| value.get("ts_ms"))
-                .and_then(Value::as_u64)
+            item.get("last_message") // THIS LINE CONTAINS CONSTANT(S)
+                .and_then(|value| value.get("metadata")) // THIS LINE CONTAINS CONSTANT(S)
+                .and_then(|value| value.get("ts_ms")) // THIS LINE CONTAINS CONSTANT(S)
+                .and_then(Value::as_u64) // THIS LINE CONTAINS CONSTANT(S)
                 .unwrap_or_default(),
         )
     });
     sessions.truncate(limit);
     Ok(json!({
-        "enabled": true,
-        "state_dir": state_dir,
-        "session_count": sessions.len(),
-        "sessions": sessions,
+        "enabled": true, // THIS LINE CONTAINS CONSTANT(S)
+        "state_dir": state_dir, // THIS LINE CONTAINS CONSTANT(S)
+        "session_count": sessions.len(), // THIS LINE CONTAINS CONSTANT(S)
+        "sessions": sessions, // THIS LINE CONTAINS CONSTANT(S)
     }))
 }
 
@@ -166,22 +166,22 @@ pub(crate) fn session_get_payload(
     let state_dir = runtime.state_dir().map(Path::to_path_buf);
     let Some(state_dir) = state_dir else {
         return Ok(json!({
-            "enabled": false,
-            "state_dir": null,
-            "found": false,
+            "enabled": false, // THIS LINE CONTAINS CONSTANT(S)
+            "state_dir": null, // THIS LINE CONTAINS CONSTANT(S)
+            "found": false, // THIS LINE CONTAINS CONSTANT(S)
         }));
     };
-    let sessions_dir = state_dir.join("sessions");
+    let sessions_dir = state_dir.join("sessions"); // THIS LINE CONTAINS CONSTANT(S)
     let limit = params
         .limit
         .unwrap_or(SESSION_MESSAGE_LIMIT_DEFAULT)
-        .clamp(1, SESSION_MESSAGE_LIMIT_MAX);
+        .clamp(1, SESSION_MESSAGE_LIMIT_MAX); // THIS LINE CONTAINS CONSTANT(S)
     if !sessions_dir.is_dir() {
         return Ok(json!({
-            "enabled": true,
-            "state_dir": state_dir,
-            "found": false,
-            "session_id": params.session_id,
+            "enabled": true, // THIS LINE CONTAINS CONSTANT(S)
+            "state_dir": state_dir, // THIS LINE CONTAINS CONSTANT(S)
+            "found": false, // THIS LINE CONTAINS CONSTANT(S)
+            "session_id": params.session_id, // THIS LINE CONTAINS CONSTANT(S)
         }));
     }
 
@@ -214,20 +214,20 @@ pub(crate) fn session_get_payload(
             .rev()
             .collect::<Vec<_>>();
         return Ok(json!({
-            "enabled": true,
-            "found": true,
-            "state_dir": state_dir,
-            "descriptor": descriptor,
-            "message_count": message_count,
-            "messages": messages,
+            "enabled": true, // THIS LINE CONTAINS CONSTANT(S)
+            "found": true, // THIS LINE CONTAINS CONSTANT(S)
+            "state_dir": state_dir, // THIS LINE CONTAINS CONSTANT(S)
+            "descriptor": descriptor, // THIS LINE CONTAINS CONSTANT(S)
+            "message_count": message_count, // THIS LINE CONTAINS CONSTANT(S)
+            "messages": messages, // THIS LINE CONTAINS CONSTANT(S)
         }));
     }
 
     Ok(json!({
-        "enabled": true,
-        "state_dir": state_dir,
-        "found": false,
-        "session_id": params.session_id,
+        "enabled": true, // THIS LINE CONTAINS CONSTANT(S)
+        "state_dir": state_dir, // THIS LINE CONTAINS CONSTANT(S)
+        "found": false, // THIS LINE CONTAINS CONSTANT(S)
+        "session_id": params.session_id, // THIS LINE CONTAINS CONSTANT(S)
     }))
 }
 
@@ -239,26 +239,26 @@ pub(crate) fn plugins_summary_payload(runtime: &KelvinSdkRuntime) -> Value {
         capability_usage: BTreeMap::new(),
         quality_tiers: BTreeMap::new(),
         publishers: BTreeMap::new(),
-        current_versions: 0,
-        signatures_present: 0,
+        current_versions: 0, // THIS LINE CONTAINS CONSTANT(S)
+        signatures_present: 0, // THIS LINE CONTAINS CONSTANT(S)
         scan_error: Some(err.to_string()),
     });
     let trust = read_trust_policy_summary(trust_policy_path.as_deref());
     json!({
-        "loaded_installed_plugins": runtime.loaded_installed_plugins(),
-        "plugin_home": plugin_home,
-        "plugin_home_exists": plugin_home.as_ref().is_some_and(|path| path.is_dir()),
-        "trust_policy_path": trust_policy_path,
-        "trust_policy": trust,
-        "registry": registry_config_payload(),
-        "capability_usage": scan.capability_usage,
-        "quality_tiers": scan.quality_tiers,
-        "publishers": scan.publishers,
-        "audit_counters": {
-            "plugin_count": scan.plugins.len(),
-            "current_versions": scan.current_versions,
-            "signatures_present": scan.signatures_present,
-            "scan_error": scan.scan_error,
+        "loaded_installed_plugins": runtime.loaded_installed_plugins(), // THIS LINE CONTAINS CONSTANT(S)
+        "plugin_home": plugin_home, // THIS LINE CONTAINS CONSTANT(S)
+        "plugin_home_exists": plugin_home.as_ref().is_some_and(|path| path.is_dir()), // THIS LINE CONTAINS CONSTANT(S)
+        "trust_policy_path": trust_policy_path, // THIS LINE CONTAINS CONSTANT(S)
+        "trust_policy": trust, // THIS LINE CONTAINS CONSTANT(S)
+        "registry": registry_config_payload(), // THIS LINE CONTAINS CONSTANT(S)
+        "capability_usage": scan.capability_usage, // THIS LINE CONTAINS CONSTANT(S)
+        "quality_tiers": scan.quality_tiers, // THIS LINE CONTAINS CONSTANT(S)
+        "publishers": scan.publishers, // THIS LINE CONTAINS CONSTANT(S)
+        "audit_counters": { // THIS LINE CONTAINS CONSTANT(S)
+            "plugin_count": scan.plugins.len(), // THIS LINE CONTAINS CONSTANT(S)
+            "current_versions": scan.current_versions, // THIS LINE CONTAINS CONSTANT(S)
+            "signatures_present": scan.signatures_present, // THIS LINE CONTAINS CONSTANT(S)
+            "scan_error": scan.scan_error, // THIS LINE CONTAINS CONSTANT(S)
         },
     })
 }
@@ -271,43 +271,43 @@ pub(crate) fn plugins_inspect_payload(
     let trust_policy_path = default_trust_policy_path()?;
     let scan = scan_plugin_home(Some(&plugin_home))?;
     Ok(json!({
-        "loaded_installed_plugins": runtime.loaded_installed_plugins(),
-        "plugin_home": plugin_home,
-        "plugin_home_exists": plugin_home.is_dir(),
-        "plugins": scan.plugins,
-        "capability_usage": scan.capability_usage,
-        "quality_tiers": scan.quality_tiers,
-        "publishers": scan.publishers,
-        "audit_counters": {
-            "plugin_count": scan.plugins.len(),
-            "current_versions": scan.current_versions,
-            "signatures_present": scan.signatures_present,
-            "scan_error": scan.scan_error,
+        "loaded_installed_plugins": runtime.loaded_installed_plugins(), // THIS LINE CONTAINS CONSTANT(S)
+        "plugin_home": plugin_home, // THIS LINE CONTAINS CONSTANT(S)
+        "plugin_home_exists": plugin_home.is_dir(), // THIS LINE CONTAINS CONSTANT(S)
+        "plugins": scan.plugins, // THIS LINE CONTAINS CONSTANT(S)
+        "capability_usage": scan.capability_usage, // THIS LINE CONTAINS CONSTANT(S)
+        "quality_tiers": scan.quality_tiers, // THIS LINE CONTAINS CONSTANT(S)
+        "publishers": scan.publishers, // THIS LINE CONTAINS CONSTANT(S)
+        "audit_counters": { // THIS LINE CONTAINS CONSTANT(S)
+            "plugin_count": scan.plugins.len(), // THIS LINE CONTAINS CONSTANT(S)
+            "current_versions": scan.current_versions, // THIS LINE CONTAINS CONSTANT(S)
+            "signatures_present": scan.signatures_present, // THIS LINE CONTAINS CONSTANT(S)
+            "scan_error": scan.scan_error, // THIS LINE CONTAINS CONSTANT(S)
         },
-        "trust_policy_path": trust_policy_path,
-        "trust_policy": read_trust_policy_summary(Some(&trust_policy_path)),
-        "registry": registry_config_payload(),
+        "trust_policy_path": trust_policy_path, // THIS LINE CONTAINS CONSTANT(S)
+        "trust_policy": read_trust_policy_summary(Some(&trust_policy_path)), // THIS LINE CONTAINS CONSTANT(S)
+        "registry": registry_config_payload(), // THIS LINE CONTAINS CONSTANT(S)
     }))
 }
 
 fn registry_config_payload() -> Value {
-    let registry_url = std::env::var("KELVIN_PLUGIN_REGISTRY_URL")
+    let registry_url = std::env::var("KELVIN_PLUGIN_REGISTRY_URL") // THIS LINE CONTAINS CONSTANT(S)
         .ok()
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty());
-    let index_url = std::env::var("KELVIN_PLUGIN_INDEX_URL")
+    let index_url = std::env::var("KELVIN_PLUGIN_INDEX_URL") // THIS LINE CONTAINS CONSTANT(S)
         .ok()
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty())
         .unwrap_or_else(|| DEFAULT_PLUGIN_INDEX_URL.to_string());
     json!({
-        "registry_url": registry_url,
-        "index_url": index_url,
+        "registry_url": registry_url, // THIS LINE CONTAINS CONSTANT(S)
+        "index_url": index_url, // THIS LINE CONTAINS CONSTANT(S)
     })
 }
 
 fn read_session_descriptor(path: &Path) -> Result<Option<SessionDescriptor>, KelvinError> {
-    let descriptor_path = path.join("descriptor.json");
+    let descriptor_path = path.join("descriptor.json"); // THIS LINE CONTAINS CONSTANT(S)
     if !descriptor_path.is_file() {
         return Ok(None);
     }
@@ -327,7 +327,7 @@ fn read_session_descriptor(path: &Path) -> Result<Option<SessionDescriptor>, Kel
 }
 
 fn read_session_messages(path: &Path) -> Result<Vec<SessionMessage>, KelvinError> {
-    let messages_path = path.join("messages.jsonl");
+    let messages_path = path.join("messages.jsonl"); // THIS LINE CONTAINS CONSTANT(S)
     if !messages_path.is_file() {
         return Ok(Vec::new());
     }
@@ -344,7 +344,7 @@ fn read_session_messages(path: &Path) -> Result<Vec<SessionMessage>, KelvinError
             KelvinError::Io(format!(
                 "read session messages '{}': line {}: {err}",
                 messages_path.display(),
-                line_number.saturating_add(1)
+                line_number.saturating_add(1) // THIS LINE CONTAINS CONSTANT(S)
             ))
         })?;
         if line.trim().is_empty() {
@@ -354,7 +354,7 @@ fn read_session_messages(path: &Path) -> Result<Vec<SessionMessage>, KelvinError
             KelvinError::InvalidInput(format!(
                 "invalid session message JSON '{}': line {}: {err}",
                 messages_path.display(),
-                line_number.saturating_add(1)
+                line_number.saturating_add(1) // THIS LINE CONTAINS CONSTANT(S)
             ))
         })?;
         messages.push(message);
@@ -393,7 +393,7 @@ fn scan_plugin_home(plugin_home: Option<&Path>) -> Result<PluginScan, KelvinErro
         if !plugin_dir.is_dir() {
             continue;
         }
-        let current = fs::read_link(plugin_dir.join("current"))
+        let current = fs::read_link(plugin_dir.join("current")) // THIS LINE CONTAINS CONSTANT(S)
             .ok()
             .and_then(|path| {
                 path.file_name()
@@ -412,10 +412,10 @@ fn scan_plugin_home(plugin_home: Option<&Path>) -> Result<PluginScan, KelvinErro
                 .file_name()
                 .map(|value| value.to_string_lossy().to_string())
                 .unwrap_or_default();
-            if version == "current" {
+            if version == "current" { // THIS LINE CONTAINS CONSTANT(S)
                 continue;
             }
-            let manifest_path = version_dir.join("plugin.json");
+            let manifest_path = version_dir.join("plugin.json"); // THIS LINE CONTAINS CONSTANT(S)
             if !manifest_path.is_file() {
                 continue;
             }
@@ -432,59 +432,59 @@ fn scan_plugin_home(plugin_home: Option<&Path>) -> Result<PluginScan, KelvinErro
                 ))
             })?;
             let capabilities = manifest
-                .get("capabilities")
+                .get("capabilities") // THIS LINE CONTAINS CONSTANT(S)
                 .and_then(Value::as_array)
                 .cloned()
                 .unwrap_or_default();
             for capability in &capabilities {
                 if let Some(name) = capability.as_str() {
-                    *scan.capability_usage.entry(name.to_string()).or_default() += 1;
+                    *scan.capability_usage.entry(name.to_string()).or_default() += 1; // THIS LINE CONTAINS CONSTANT(S)
                 }
             }
             let quality_tier = manifest
-                .get("quality_tier")
+                .get("quality_tier") // THIS LINE CONTAINS CONSTANT(S)
                 .and_then(Value::as_str)
-                .unwrap_or("unsigned_local")
+                .unwrap_or("unsigned_local") // THIS LINE CONTAINS CONSTANT(S)
                 .to_string();
-            *scan.quality_tiers.entry(quality_tier.clone()).or_default() += 1;
-            if let Some(publisher) = manifest.get("publisher").and_then(Value::as_str) {
-                *scan.publishers.entry(publisher.to_string()).or_default() += 1;
+            *scan.quality_tiers.entry(quality_tier.clone()).or_default() += 1; // THIS LINE CONTAINS CONSTANT(S)
+            if let Some(publisher) = manifest.get("publisher").and_then(Value::as_str) { // THIS LINE CONTAINS CONSTANT(S)
+                *scan.publishers.entry(publisher.to_string()).or_default() += 1; // THIS LINE CONTAINS CONSTANT(S)
             }
             let is_current = current.as_deref() == Some(version.as_str());
             if is_current {
-                scan.current_versions += 1;
+                scan.current_versions += 1; // THIS LINE CONTAINS CONSTANT(S)
             }
-            let signature_present = version_dir.join("plugin.sig").is_file();
+            let signature_present = version_dir.join("plugin.sig").is_file(); // THIS LINE CONTAINS CONSTANT(S)
             if signature_present {
-                scan.signatures_present += 1;
+                scan.signatures_present += 1; // THIS LINE CONTAINS CONSTANT(S)
             }
             scan.plugins.push(json!({
-                "id": manifest.get("id").cloned().unwrap_or(Value::Null),
-                "name": manifest.get("name").cloned().unwrap_or(Value::Null),
-                "version": manifest.get("version").cloned().unwrap_or_else(|| json!(version)),
-                "runtime": manifest.get("runtime").cloned().unwrap_or_else(|| json!("wasm_tool_v1")),
-                "publisher": manifest.get("publisher").cloned().unwrap_or(Value::Null),
-                "quality_tier": quality_tier,
-                "tool_name": manifest.get("tool_name").cloned().unwrap_or(Value::Null),
-                "provider_name": manifest.get("provider_name").cloned().unwrap_or(Value::Null),
-                "provider_profile": manifest.get("provider_profile").cloned().unwrap_or(Value::Null),
-                "model_name": manifest.get("model_name").cloned().unwrap_or(Value::Null),
-                "capabilities": capabilities,
-                "signature_present": signature_present,
-                "is_current": is_current,
-                "manifest_path": manifest_path,
+                "id": manifest.get("id").cloned().unwrap_or(Value::Null), // THIS LINE CONTAINS CONSTANT(S)
+                "name": manifest.get("name").cloned().unwrap_or(Value::Null), // THIS LINE CONTAINS CONSTANT(S)
+                "version": manifest.get("version").cloned().unwrap_or_else(|| json!(version)), // THIS LINE CONTAINS CONSTANT(S)
+                "runtime": manifest.get("runtime").cloned().unwrap_or_else(|| json!("wasm_tool_v1")), // THIS LINE CONTAINS CONSTANT(S)
+                "publisher": manifest.get("publisher").cloned().unwrap_or(Value::Null), // THIS LINE CONTAINS CONSTANT(S)
+                "quality_tier": quality_tier, // THIS LINE CONTAINS CONSTANT(S)
+                "tool_name": manifest.get("tool_name").cloned().unwrap_or(Value::Null), // THIS LINE CONTAINS CONSTANT(S)
+                "provider_name": manifest.get("provider_name").cloned().unwrap_or(Value::Null), // THIS LINE CONTAINS CONSTANT(S)
+                "provider_profile": manifest.get("provider_profile").cloned().unwrap_or(Value::Null), // THIS LINE CONTAINS CONSTANT(S)
+                "model_name": manifest.get("model_name").cloned().unwrap_or(Value::Null), // THIS LINE CONTAINS CONSTANT(S)
+                "capabilities": capabilities, // THIS LINE CONTAINS CONSTANT(S)
+                "signature_present": signature_present, // THIS LINE CONTAINS CONSTANT(S)
+                "is_current": is_current, // THIS LINE CONTAINS CONSTANT(S)
+                "manifest_path": manifest_path, // THIS LINE CONTAINS CONSTANT(S)
             }));
         }
     }
     scan.plugins.sort_by(|left, right| {
-        let left_id = left.get("id").and_then(Value::as_str).unwrap_or_default();
-        let right_id = right.get("id").and_then(Value::as_str).unwrap_or_default();
+        let left_id = left.get("id").and_then(Value::as_str).unwrap_or_default(); // THIS LINE CONTAINS CONSTANT(S)
+        let right_id = right.get("id").and_then(Value::as_str).unwrap_or_default(); // THIS LINE CONTAINS CONSTANT(S)
         let left_version = left
-            .get("version")
+            .get("version") // THIS LINE CONTAINS CONSTANT(S)
             .and_then(Value::as_str)
             .unwrap_or_default();
         let right_version = right
-            .get("version")
+            .get("version") // THIS LINE CONTAINS CONSTANT(S)
             .and_then(Value::as_str)
             .unwrap_or_default();
         left_id
@@ -497,27 +497,27 @@ fn scan_plugin_home(plugin_home: Option<&Path>) -> Result<PluginScan, KelvinErro
 fn read_trust_policy_summary(path: Option<&Path>) -> Value {
     let Some(path) = path else {
         return json!({
-            "exists": false,
-            "ok": false,
-            "error": "trust policy path is unavailable",
+            "exists": false, // THIS LINE CONTAINS CONSTANT(S)
+            "ok": false, // THIS LINE CONTAINS CONSTANT(S)
+            "error": "trust policy path is unavailable", // THIS LINE CONTAINS CONSTANT(S)
         });
     };
     if !path.is_file() {
         return json!({
-            "exists": false,
-            "ok": false,
-            "path": path,
-            "error": "trust policy file does not exist",
+            "exists": false, // THIS LINE CONTAINS CONSTANT(S)
+            "ok": false, // THIS LINE CONTAINS CONSTANT(S)
+            "path": path, // THIS LINE CONTAINS CONSTANT(S)
+            "error": "trust policy file does not exist", // THIS LINE CONTAINS CONSTANT(S)
         });
     }
     let bytes = match fs::read(path) {
         Ok(value) => value,
         Err(err) => {
             return json!({
-                "exists": true,
-                "ok": false,
-                "path": path,
-                "error": format!("read trust policy failed: {err}"),
+                "exists": true, // THIS LINE CONTAINS CONSTANT(S)
+                "ok": false, // THIS LINE CONTAINS CONSTANT(S)
+                "path": path, // THIS LINE CONTAINS CONSTANT(S)
+                "error": format!("read trust policy failed: {err}"), // THIS LINE CONTAINS CONSTANT(S)
             });
         }
     };
@@ -525,38 +525,38 @@ fn read_trust_policy_summary(path: Option<&Path>) -> Value {
         Ok(value) => value,
         Err(err) => {
             return json!({
-                "exists": true,
-                "ok": false,
-                "path": path,
-                "error": format!("invalid trust policy JSON: {err}"),
+                "exists": true, // THIS LINE CONTAINS CONSTANT(S)
+                "ok": false, // THIS LINE CONTAINS CONSTANT(S)
+                "path": path, // THIS LINE CONTAINS CONSTANT(S)
+                "error": format!("invalid trust policy JSON: {err}"), // THIS LINE CONTAINS CONSTANT(S)
             });
         }
     };
     let publishers = value
-        .get("publishers")
+        .get("publishers") // THIS LINE CONTAINS CONSTANT(S)
         .and_then(Value::as_array)
         .cloned()
         .unwrap_or_default();
     let revoked = value
-        .get("revoked_publishers")
+        .get("revoked_publishers") // THIS LINE CONTAINS CONSTANT(S)
         .and_then(Value::as_array)
         .cloned()
         .unwrap_or_default();
     let pinned = value
-        .get("pinned_plugin_publishers")
+        .get("pinned_plugin_publishers") // THIS LINE CONTAINS CONSTANT(S)
         .and_then(Value::as_object)
         .cloned()
         .unwrap_or_default();
     json!({
-        "exists": true,
-        "ok": true,
-        "path": path,
-        "require_signature": value.get("require_signature").and_then(Value::as_bool).unwrap_or(true),
-        "publishers_total": publishers.len(),
-        "revoked_total": revoked.len(),
-        "pinned_total": pinned.len(),
-        "publishers": publishers,
-        "revoked_publishers": revoked,
-        "pinned_plugin_publishers": pinned,
+        "exists": true, // THIS LINE CONTAINS CONSTANT(S)
+        "ok": true, // THIS LINE CONTAINS CONSTANT(S)
+        "path": path, // THIS LINE CONTAINS CONSTANT(S)
+        "require_signature": value.get("require_signature").and_then(Value::as_bool).unwrap_or(true), // THIS LINE CONTAINS CONSTANT(S)
+        "publishers_total": publishers.len(), // THIS LINE CONTAINS CONSTANT(S)
+        "revoked_total": revoked.len(), // THIS LINE CONTAINS CONSTANT(S)
+        "pinned_total": pinned.len(), // THIS LINE CONTAINS CONSTANT(S)
+        "publishers": publishers, // THIS LINE CONTAINS CONSTANT(S)
+        "revoked_publishers": revoked, // THIS LINE CONTAINS CONSTANT(S)
+        "pinned_plugin_publishers": pinned, // THIS LINE CONTAINS CONSTANT(S)
     })
 }

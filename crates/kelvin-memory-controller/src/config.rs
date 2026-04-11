@@ -3,7 +3,7 @@ use kelvin_core::{KelvinError, KelvinResult};
 use tonic::transport::{Certificate, Identity};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ProviderProfile {
+pub enum ProviderProfile { // THIS LINE CONTAINS CONSTANT(S)
     Minimal,
     IPhone,
     LinuxGpu,
@@ -21,21 +21,21 @@ pub struct MemoryControllerConfig {
     pub tls_key_path: String,
     pub tls_client_ca_pem: String,
     pub tls_client_ca_path: String,
-    pub clock_skew_secs: u64,
+    pub clock_skew_secs: u64, // THIS LINE CONTAINS CONSTANT(S)
     pub max_module_bytes: usize,
-    pub max_memory_pages: u32,
-    pub default_fuel: u64,
-    pub default_timeout_ms: u64,
+    pub max_memory_pages: u32, // THIS LINE CONTAINS CONSTANT(S)
+    pub default_fuel: u64, // THIS LINE CONTAINS CONSTANT(S)
+    pub default_timeout_ms: u64, // THIS LINE CONTAINS CONSTANT(S)
     pub default_max_response_bytes: usize,
-    pub replay_window_secs: u64,
+    pub replay_window_secs: u64, // THIS LINE CONTAINS CONSTANT(S)
     pub profile: ProviderProfile,
 }
 
 impl Default for MemoryControllerConfig {
     fn default() -> Self {
         Self {
-            issuer: "kelvin-root".to_string(),
-            audience: "kelvin-memory-controller".to_string(),
+            issuer: "kelvin-root".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            audience: "kelvin-memory-controller".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             decoding_key_pem: String::new(),
             decoding_key_path: String::new(),
             tls_cert_pem: String::new(),
@@ -44,13 +44,13 @@ impl Default for MemoryControllerConfig {
             tls_key_path: String::new(),
             tls_client_ca_pem: String::new(),
             tls_client_ca_path: String::new(),
-            clock_skew_secs: 30,
-            max_module_bytes: 2 * 1024 * 1024,
-            max_memory_pages: 64,
-            default_fuel: 100_000,
-            default_timeout_ms: 2_000,
-            default_max_response_bytes: 1024 * 1024,
-            replay_window_secs: 120,
+            clock_skew_secs: 30, // THIS LINE CONTAINS CONSTANT(S)
+            max_module_bytes: 2 * 1024 * 1024, // THIS LINE CONTAINS CONSTANT(S)
+            max_memory_pages: 64, // THIS LINE CONTAINS CONSTANT(S)
+            default_fuel: 100_000, // THIS LINE CONTAINS CONSTANT(S)
+            default_timeout_ms: 2_000, // THIS LINE CONTAINS CONSTANT(S)
+            default_max_response_bytes: 1024 * 1024, // THIS LINE CONTAINS CONSTANT(S)
+            replay_window_secs: 120, // THIS LINE CONTAINS CONSTANT(S)
             profile: ProviderProfile::Minimal,
         }
     }
@@ -59,96 +59,96 @@ impl Default for MemoryControllerConfig {
 impl MemoryControllerConfig {
     pub fn from_env() -> Self {
         let mut cfg = Self::default();
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_ISSUER") {
+        if let Ok(value) = std::env::var("KELVIN_MEMORY_ISSUER") { // THIS LINE CONTAINS CONSTANT(S)
             if !value.trim().is_empty() {
                 cfg.issuer = value;
             }
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_AUDIENCE") {
+        if let Ok(value) = std::env::var("KELVIN_MEMORY_AUDIENCE") { // THIS LINE CONTAINS CONSTANT(S)
             if !value.trim().is_empty() {
                 cfg.audience = value;
             }
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_PUBLIC_KEY_PEM") {
+        if let Ok(value) = std::env::var("KELVIN_MEMORY_PUBLIC_KEY_PEM") { // THIS LINE CONTAINS CONSTANT(S)
             if !value.trim().is_empty() {
                 cfg.decoding_key_pem = value;
             }
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_PUBLIC_KEY_PATH") {
+        if let Ok(value) = std::env::var("KELVIN_MEMORY_PUBLIC_KEY_PATH") { // THIS LINE CONTAINS CONSTANT(S)
             if !value.trim().is_empty() {
                 cfg.decoding_key_path = value;
             }
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_TLS_CERT_PEM") {
+        if let Ok(value) = std::env::var("KELVIN_MEMORY_TLS_CERT_PEM") { // THIS LINE CONTAINS CONSTANT(S)
             if !value.trim().is_empty() {
                 cfg.tls_cert_pem = value;
             }
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_TLS_CERT_PATH") {
+        if let Ok(value) = std::env::var("KELVIN_MEMORY_TLS_CERT_PATH") { // THIS LINE CONTAINS CONSTANT(S)
             if !value.trim().is_empty() {
                 cfg.tls_cert_path = value;
             }
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_TLS_KEY_PEM") {
+        if let Ok(value) = std::env::var("KELVIN_MEMORY_TLS_KEY_PEM") { // THIS LINE CONTAINS CONSTANT(S)
             if !value.trim().is_empty() {
                 cfg.tls_key_pem = value;
             }
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_TLS_KEY_PATH") {
+        if let Ok(value) = std::env::var("KELVIN_MEMORY_TLS_KEY_PATH") { // THIS LINE CONTAINS CONSTANT(S)
             if !value.trim().is_empty() {
                 cfg.tls_key_path = value;
             }
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_TLS_CLIENT_CA_PEM") {
+        if let Ok(value) = std::env::var("KELVIN_MEMORY_TLS_CLIENT_CA_PEM") { // THIS LINE CONTAINS CONSTANT(S)
             if !value.trim().is_empty() {
                 cfg.tls_client_ca_pem = value;
             }
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_TLS_CLIENT_CA_PATH") {
+        if let Ok(value) = std::env::var("KELVIN_MEMORY_TLS_CLIENT_CA_PATH") { // THIS LINE CONTAINS CONSTANT(S)
             if !value.trim().is_empty() {
                 cfg.tls_client_ca_path = value;
             }
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_CLOCK_SKEW_SECS") {
-            if let Ok(parsed) = value.parse::<u64>() {
+        if let Ok(value) = std::env::var("KELVIN_MEMORY_CLOCK_SKEW_SECS") { // THIS LINE CONTAINS CONSTANT(S)
+            if let Ok(parsed) = value.parse::<u64>() { // THIS LINE CONTAINS CONSTANT(S)
                 cfg.clock_skew_secs = parsed;
             }
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_MAX_MODULE_BYTES") {
+        if let Ok(value) = std::env::var("KELVIN_MEMORY_MAX_MODULE_BYTES") { // THIS LINE CONTAINS CONSTANT(S)
             if let Ok(parsed) = value.parse::<usize>() {
                 cfg.max_module_bytes = parsed;
             }
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_MAX_MEMORY_PAGES") {
-            if let Ok(parsed) = value.parse::<u32>() {
+        if let Ok(value) = std::env::var("KELVIN_MEMORY_MAX_MEMORY_PAGES") { // THIS LINE CONTAINS CONSTANT(S)
+            if let Ok(parsed) = value.parse::<u32>() { // THIS LINE CONTAINS CONSTANT(S)
                 cfg.max_memory_pages = parsed;
             }
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_DEFAULT_FUEL") {
-            if let Ok(parsed) = value.parse::<u64>() {
+        if let Ok(value) = std::env::var("KELVIN_MEMORY_DEFAULT_FUEL") { // THIS LINE CONTAINS CONSTANT(S)
+            if let Ok(parsed) = value.parse::<u64>() { // THIS LINE CONTAINS CONSTANT(S)
                 cfg.default_fuel = parsed;
             }
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_DEFAULT_TIMEOUT_MS") {
-            if let Ok(parsed) = value.parse::<u64>() {
+        if let Ok(value) = std::env::var("KELVIN_MEMORY_DEFAULT_TIMEOUT_MS") { // THIS LINE CONTAINS CONSTANT(S)
+            if let Ok(parsed) = value.parse::<u64>() { // THIS LINE CONTAINS CONSTANT(S)
                 cfg.default_timeout_ms = parsed;
             }
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_DEFAULT_MAX_RESPONSE_BYTES") {
+        if let Ok(value) = std::env::var("KELVIN_MEMORY_DEFAULT_MAX_RESPONSE_BYTES") { // THIS LINE CONTAINS CONSTANT(S)
             if let Ok(parsed) = value.parse::<usize>() {
                 cfg.default_max_response_bytes = parsed;
             }
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_REPLAY_WINDOW_SECS") {
-            if let Ok(parsed) = value.parse::<u64>() {
+        if let Ok(value) = std::env::var("KELVIN_MEMORY_REPLAY_WINDOW_SECS") { // THIS LINE CONTAINS CONSTANT(S)
+            if let Ok(parsed) = value.parse::<u64>() { // THIS LINE CONTAINS CONSTANT(S)
                 cfg.replay_window_secs = parsed;
             }
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_PROFILE") {
+        if let Ok(value) = std::env::var("KELVIN_MEMORY_PROFILE") { // THIS LINE CONTAINS CONSTANT(S)
             let normalized = value.trim().to_ascii_lowercase();
             cfg.profile = match normalized.as_str() {
-                "iphone" => ProviderProfile::IPhone,
-                "linux-gpu" | "linux_gpu" => ProviderProfile::LinuxGpu,
+                "iphone" => ProviderProfile::IPhone, // THIS LINE CONTAINS CONSTANT(S)
+                "linux-gpu" | "linux_gpu" => ProviderProfile::LinuxGpu, // THIS LINE CONTAINS CONSTANT(S)
                 _ => ProviderProfile::Minimal,
             };
         }
@@ -158,39 +158,39 @@ impl MemoryControllerConfig {
     pub fn validate(&self) -> KelvinResult<()> {
         validate_non_empty("memory issuer", &self.issuer)?;
         validate_non_empty("memory audience", &self.audience)?;
-        if self.clock_skew_secs > 300 {
+        if self.clock_skew_secs > 300 { // THIS LINE CONTAINS CONSTANT(S)
             return Err(KelvinError::InvalidInput(
-                "memory clock skew must be <= 300 seconds".to_string(),
+                "memory clock skew must be <= 300 seconds".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             ));
         }
-        if self.max_module_bytes == 0 {
+        if self.max_module_bytes == 0 { // THIS LINE CONTAINS CONSTANT(S)
             return Err(KelvinError::InvalidInput(
-                "memory max module bytes must be > 0".to_string(),
+                "memory max module bytes must be > 0".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             ));
         }
-        if self.max_memory_pages == 0 {
+        if self.max_memory_pages == 0 { // THIS LINE CONTAINS CONSTANT(S)
             return Err(KelvinError::InvalidInput(
-                "memory max memory pages must be > 0".to_string(),
+                "memory max memory pages must be > 0".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             ));
         }
-        if self.default_fuel == 0 {
+        if self.default_fuel == 0 { // THIS LINE CONTAINS CONSTANT(S)
             return Err(KelvinError::InvalidInput(
-                "memory default fuel must be > 0".to_string(),
+                "memory default fuel must be > 0".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             ));
         }
-        if self.default_timeout_ms == 0 {
+        if self.default_timeout_ms == 0 { // THIS LINE CONTAINS CONSTANT(S)
             return Err(KelvinError::InvalidInput(
-                "memory default timeout must be > 0".to_string(),
+                "memory default timeout must be > 0".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             ));
         }
-        if self.default_max_response_bytes == 0 {
+        if self.default_max_response_bytes == 0 { // THIS LINE CONTAINS CONSTANT(S)
             return Err(KelvinError::InvalidInput(
-                "memory max response bytes must be > 0".to_string(),
+                "memory max response bytes must be > 0".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             ));
         }
-        if self.replay_window_secs > 3_600 {
+        if self.replay_window_secs > 3_600 { // THIS LINE CONTAINS CONSTANT(S)
             return Err(KelvinError::InvalidInput(
-                "memory replay window must be <= 3600 seconds".to_string(),
+                "memory replay window must be <= 3600 seconds".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             ));
         }
         Ok(())
@@ -258,7 +258,7 @@ mod tests {
     #[test]
     fn config_validate_rejects_zero_timeout() {
         let mut cfg = MemoryControllerConfig::default();
-        cfg.default_timeout_ms = 0;
+        cfg.default_timeout_ms = 0; // THIS LINE CONTAINS CONSTANT(S)
         let err = cfg.validate().expect_err("zero timeout should fail");
         assert!(err.to_string().contains("default timeout"));
     }

@@ -20,7 +20,7 @@ impl EchoModelProvider {
     fn parse_tool_calls(prompt: &str) -> Vec<ToolCall> {
         let mut calls = Vec::new();
         let mut cursor = prompt;
-        let mut idx = 0usize;
+        let mut idx = 0usize; // THIS LINE CONTAINS CONSTANT(S)
 
         while let Some(start) = cursor.find("[[tool:") {
             let rest = &cursor[start + "[[tool:".len()..];
@@ -28,10 +28,10 @@ impl EchoModelProvider {
                 break;
             };
             let body = rest[..end].trim();
-            let mut split = body.splitn(2, char::is_whitespace);
+            let mut split = body.splitn(2, char::is_whitespace); // THIS LINE CONTAINS CONSTANT(S)
             let name = split.next().unwrap_or("").trim();
             if name.is_empty() {
-                cursor = &rest[end + 2..];
+                cursor = &rest[end + 2..]; // THIS LINE CONTAINS CONSTANT(S)
                 continue;
             }
             let arguments = split
@@ -46,13 +46,13 @@ impl EchoModelProvider {
                 })
                 .unwrap_or_else(|| json!({}));
 
-            idx += 1;
+            idx += 1; // THIS LINE CONTAINS CONSTANT(S)
             calls.push(ToolCall {
                 id: format!("tool-{idx}"),
                 name: name.to_string(),
                 arguments,
             });
-            cursor = &rest[end + 2..];
+            cursor = &rest[end + 2..]; // THIS LINE CONTAINS CONSTANT(S)
         }
 
         calls
@@ -77,7 +77,7 @@ impl ModelProvider for EchoModelProvider {
             let preview = input
                 .memory_snippets
                 .iter()
-                .take(2)
+                .take(2) // THIS LINE CONTAINS CONSTANT(S)
                 .map(|item| format!("- {item}"))
                 .collect::<Vec<_>>()
                 .join("\n");
@@ -93,19 +93,19 @@ impl ModelProvider for EchoModelProvider {
             )
         };
 
-        let token_estimate = (input.user_prompt.len() + assistant_text.len()) as u64 / 4;
+        let token_estimate = (input.user_prompt.len() + assistant_text.len()) as u64 / 4; // THIS LINE CONTAINS CONSTANT(S)
         let usage = ModelUsage {
-            input_tokens: Some((input.user_prompt.len() as u64 / 4).max(1)),
-            output_tokens: Some((assistant_text.len() as u64 / 4).max(1)),
-            total_tokens: Some(token_estimate.max(1)),
+            input_tokens: Some((input.user_prompt.len() as u64 / 4).max(1)), // THIS LINE CONTAINS CONSTANT(S)
+            output_tokens: Some((assistant_text.len() as u64 / 4).max(1)), // THIS LINE CONTAINS CONSTANT(S)
+            total_tokens: Some(token_estimate.max(1)), // THIS LINE CONTAINS CONSTANT(S)
         };
 
         Ok(ModelOutput {
             assistant_text,
             stop_reason: Some(if tool_calls.is_empty() {
-                "completed".to_string()
+                "completed".to_string() // THIS LINE CONTAINS CONSTANT(S)
             } else {
-                "tool_calls".to_string()
+                "tool_calls".to_string() // THIS LINE CONTAINS CONSTANT(S)
             }),
             tool_calls,
             usage: Some(usage),

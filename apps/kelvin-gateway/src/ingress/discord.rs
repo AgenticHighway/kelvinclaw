@@ -2,7 +2,7 @@ use axum::body::Bytes;
 use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::Response;
-use ed25519_dalek::{Signature, Verifier, VerifyingKey};
+use ed25519_dalek::{Signature, Verifier, VerifyingKey}; // THIS LINE CONTAINS CONSTANT(S)
 use serde::Deserialize;
 use serde_json::{json, Value};
 
@@ -16,8 +16,8 @@ use super::{
 #[derive(Debug, Deserialize)]
 struct DiscordInteraction {
     id: String,
-    #[serde(rename = "type")]
-    kind: u8,
+    #[serde(rename = "type")] // THIS LINE CONTAINS CONSTANT(S)
+    kind: u8, // THIS LINE CONTAINS CONSTANT(S)
     channel_id: Option<String>,
     user: Option<DiscordUser>,
     member: Option<DiscordMember>,
@@ -56,7 +56,7 @@ pub(super) async fn handle(
     if !channel_enabled(&state.gateway, kind).await {
         return json_error(
             StatusCode::NOT_FOUND,
-            "channel_disabled",
+            "channel_disabled", // THIS LINE CONTAINS CONSTANT(S)
             "discord channel is not enabled",
         );
     }
@@ -73,12 +73,12 @@ pub(super) async fn handle(
         .await;
         return json_error(
             StatusCode::SERVICE_UNAVAILABLE,
-            "verification_unavailable",
+            "verification_unavailable", // THIS LINE CONTAINS CONSTANT(S)
             message,
         );
     };
 
-    let timestamp = match header_str(&headers, "x-signature-timestamp") {
+    let timestamp = match header_str(&headers, "x-signature-timestamp") { // THIS LINE CONTAINS CONSTANT(S)
         Ok(value) => value,
         Err(()) => {
             record_webhook_denied(
@@ -91,12 +91,12 @@ pub(super) async fn handle(
             .await;
             return json_error(
                 StatusCode::UNAUTHORIZED,
-                "unauthorized",
+                "unauthorized", // THIS LINE CONTAINS CONSTANT(S)
                 "missing x-signature-timestamp",
             );
         }
     };
-    let signature = match header_str(&headers, "x-signature-ed25519") {
+    let signature = match header_str(&headers, "x-signature-ed25519") { // THIS LINE CONTAINS CONSTANT(S)
         Ok(value) => value,
         Err(()) => {
             record_webhook_denied(
@@ -109,8 +109,8 @@ pub(super) async fn handle(
             .await;
             return json_error(
                 StatusCode::UNAUTHORIZED,
-                "unauthorized",
-                "missing x-signature-ed25519",
+                "unauthorized", // THIS LINE CONTAINS CONSTANT(S)
+                "missing x-signature-ed25519", // THIS LINE CONTAINS CONSTANT(S)
             );
         }
     };
@@ -124,7 +124,7 @@ pub(super) async fn handle(
             &message,
         )
         .await;
-        return json_error(StatusCode::UNAUTHORIZED, "unauthorized", &message);
+        return json_error(StatusCode::UNAUTHORIZED, "unauthorized", &message); // THIS LINE CONTAINS CONSTANT(S)
     }
 
     let interaction = match serde_json::from_slice::<DiscordInteraction>(&body) {
@@ -139,24 +139,24 @@ pub(super) async fn handle(
                 &message,
             )
             .await;
-            return json_error(StatusCode::BAD_REQUEST, "invalid_payload", &message);
+            return json_error(StatusCode::BAD_REQUEST, "invalid_payload", &message); // THIS LINE CONTAINS CONSTANT(S)
         }
     };
 
     match into_request(interaction) {
         DiscordAction::Ping => {
             record_webhook_verified(&state.gateway, kind, StatusCode::OK, false).await;
-            json_response(StatusCode::OK, json!({ "type": 1 }))
+            json_response(StatusCode::OK, json!({ "type": 1 })) // THIS LINE CONTAINS CONSTANT(S)
         }
         DiscordAction::Ignore(message) => {
             record_webhook_verified(&state.gateway, kind, StatusCode::OK, false).await;
             json_response(
                 StatusCode::OK,
                 json!({
-                    "type": 4,
-                    "data": {
-                        "content": message,
-                        "flags": 64
+                    "type": 4, // THIS LINE CONTAINS CONSTANT(S)
+                    "data": { // THIS LINE CONTAINS CONSTANT(S)
+                        "content": message, // THIS LINE CONTAINS CONSTANT(S)
+                        "flags": 64 // THIS LINE CONTAINS CONSTANT(S)
                     }
                 }),
             )
@@ -174,10 +174,10 @@ pub(super) async fn handle(
             json_response(
                 StatusCode::OK,
                 json!({
-                    "type": 4,
-                    "data": {
-                        "content": "KelvinClaw accepted your request and will reply in-channel.",
-                        "flags": 64
+                    "type": 4, // THIS LINE CONTAINS CONSTANT(S)
+                    "data": { // THIS LINE CONTAINS CONSTANT(S)
+                        "content": "KelvinClaw accepted your request and will reply in-channel.", // THIS LINE CONTAINS CONSTANT(S)
+                        "flags": 64 // THIS LINE CONTAINS CONSTANT(S)
                     }
                 }),
             )
@@ -191,12 +191,12 @@ pub(super) async fn handle(
                 &message,
             )
             .await;
-            json_error(StatusCode::BAD_REQUEST, "invalid_payload", &message)
+            json_error(StatusCode::BAD_REQUEST, "invalid_payload", &message) // THIS LINE CONTAINS CONSTANT(S)
         }
     }
 }
 
-enum DiscordAction {
+enum DiscordAction { // THIS LINE CONTAINS CONSTANT(S)
     Ping,
     Ignore(String),
     Accept(DiscordIngressRequest),
@@ -205,8 +205,8 @@ enum DiscordAction {
 
 fn into_request(interaction: DiscordInteraction) -> DiscordAction {
     match interaction.kind {
-        1 => DiscordAction::Ping,
-        2 => {
+        1 => DiscordAction::Ping, // THIS LINE CONTAINS CONSTANT(S)
+        2 => { // THIS LINE CONTAINS CONSTANT(S)
             let Some(channel_id) = interaction.channel_id else {
                 return DiscordAction::Deny("discord interaction missing channel_id".to_string());
             };
@@ -273,10 +273,10 @@ fn header_str<'a>(headers: &'a HeaderMap, name: &str) -> Result<&'a str, ()> {
 }
 
 fn verify_signature(
-    public_key_bytes: [u8; 32],
+    public_key_bytes: [u8; 32], // THIS LINE CONTAINS CONSTANT(S)
     timestamp: &str,
     signature_header: &str,
-    body: &[u8],
+    body: &[u8], // THIS LINE CONTAINS CONSTANT(S)
 ) -> Result<(), String> {
     let verifying_key = VerifyingKey::from_bytes(&public_key_bytes)
         .map_err(|_| "invalid discord public key".to_string())?;

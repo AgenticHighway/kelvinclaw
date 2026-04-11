@@ -11,7 +11,7 @@ pub struct AgentRunRequest {
     pub workspace_dir: String,
     pub prompt: String,
     pub extra_system_prompt: Option<String>,
-    pub timeout_ms: Option<u64>,
+    pub timeout_ms: Option<u64>, // THIS LINE CONTAINS CONSTANT(S)
     pub memory_query: Option<String>,
     pub max_tool_iterations: Option<usize>,
 }
@@ -24,7 +24,7 @@ pub struct AgentPayload {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AgentRunMeta {
-    pub duration_ms: u128,
+    pub duration_ms: u128, // THIS LINE CONTAINS CONSTANT(S)
     pub provider: String,
     pub model: String,
     pub stop_reason: Option<String>,
@@ -39,8 +39,8 @@ pub struct AgentRunResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum WaitStatus {
+#[serde(rename_all = "snake_case")] // THIS LINE CONTAINS CONSTANT(S)
+pub enum WaitStatus { // THIS LINE CONTAINS CONSTANT(S)
     Ok,
     Error,
     Timeout,
@@ -49,8 +49,8 @@ pub enum WaitStatus {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AgentWaitResult {
     pub status: WaitStatus,
-    pub started_at_ms: u128,
-    pub ended_at_ms: Option<u128>,
+    pub started_at_ms: u128, // THIS LINE CONTAINS CONSTANT(S)
+    pub ended_at_ms: Option<u128>, // THIS LINE CONTAINS CONSTANT(S)
     pub error: Option<String>,
 }
 

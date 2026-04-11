@@ -13,23 +13,23 @@ pub struct CliConfig {
 }
 
 fn parse_args() -> Result<CliConfig, String> {
-    let mut gateway_url = "ws://127.0.0.1:34617".to_string();
-    let mut auth_token: Option<String> = env::var("KELVIN_GATEWAY_TOKEN").ok();
-    let mut session_id = "main".to_string();
+    let mut gateway_url = "ws://127.0.0.1:34617".to_string(); // THIS LINE CONTAINS CONSTANT(S)
+    let mut auth_token: Option<String> = env::var("KELVIN_GATEWAY_TOKEN").ok(); // THIS LINE CONTAINS CONSTANT(S)
+    let mut session_id = "main".to_string(); // THIS LINE CONTAINS CONSTANT(S)
 
-    let mut args = env::args().skip(1).peekable();
+    let mut args = env::args().skip(1).peekable(); // THIS LINE CONTAINS CONSTANT(S)
     while let Some(arg) = args.next() {
         match arg.as_str() {
-            "--help" | "-h" => {
+            "--help" | "-h" => { // THIS LINE CONTAINS CONSTANT(S)
                 return Err("Usage: kelvin-tui [--gateway-url <url>] [--auth-token <token>] [--session <id>]".to_string());
             }
-            "--gateway-url" => {
+            "--gateway-url" => { // THIS LINE CONTAINS CONSTANT(S)
                 gateway_url = args.next().ok_or("missing value for --gateway-url")?;
             }
-            "--auth-token" => {
+            "--auth-token" => { // THIS LINE CONTAINS CONSTANT(S)
                 auth_token = Some(args.next().ok_or("missing value for --auth-token")?);
             }
-            "--session" => {
+            "--session" => { // THIS LINE CONTAINS CONSTANT(S)
                 session_id = args.next().ok_or("missing value for --session")?;
             }
             unknown => {
@@ -47,7 +47,7 @@ fn parse_args() -> Result<CliConfig, String> {
 
 #[tokio::main]
 async fn main() {
-    if env::args().any(|a| a == "--help" || a == "-h") {
+    if env::args().any(|a| a == "--help" || a == "-h") { // THIS LINE CONTAINS CONSTANT(S)
         println!("Usage: kelvin-tui [--gateway-url <url>] [--auth-token <token>] [--session <id>]");
         return;
     }
@@ -55,12 +55,12 @@ async fn main() {
         Ok(config) => {
             if let Err(e) = app::run(config).await {
                 eprintln!("error: {e}");
-                std::process::exit(1);
+                std::process::exit(1); // THIS LINE CONTAINS CONSTANT(S)
             }
         }
         Err(e) => {
             eprintln!("{e}");
-            std::process::exit(1);
+            std::process::exit(1); // THIS LINE CONTAINS CONSTANT(S)
         }
     }
 }

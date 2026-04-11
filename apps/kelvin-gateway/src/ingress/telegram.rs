@@ -14,7 +14,7 @@ use super::{
 
 #[derive(Debug, Deserialize)]
 struct TelegramUpdate {
-    update_id: i64,
+    update_id: i64, // THIS LINE CONTAINS CONSTANT(S)
     message: Option<TelegramMessage>,
     edited_message: Option<TelegramMessage>,
     channel_post: Option<TelegramMessage>,
@@ -28,7 +28,7 @@ struct TelegramMessage {
 
 #[derive(Debug, Deserialize)]
 struct TelegramChat {
-    id: i64,
+    id: i64, // THIS LINE CONTAINS CONSTANT(S)
 }
 
 pub(super) async fn handle(
@@ -40,7 +40,7 @@ pub(super) async fn handle(
     if !channel_enabled(&state.gateway, kind).await {
         return json_error(
             StatusCode::NOT_FOUND,
-            "channel_disabled",
+            "channel_disabled", // THIS LINE CONTAINS CONSTANT(S)
             "telegram channel is not enabled",
         );
     }
@@ -57,13 +57,13 @@ pub(super) async fn handle(
         .await;
         return json_error(
             StatusCode::SERVICE_UNAVAILABLE,
-            "verification_unavailable",
+            "verification_unavailable", // THIS LINE CONTAINS CONSTANT(S)
             message,
         );
     };
 
     let provided_secret = headers
-        .get("x-telegram-bot-api-secret-token")
+        .get("x-telegram-bot-api-secret-token") // THIS LINE CONTAINS CONSTANT(S)
         .and_then(|value| value.to_str().ok())
         .map(str::trim)
         .filter(|value| !value.is_empty());
@@ -77,7 +77,7 @@ pub(super) async fn handle(
             message,
         )
         .await;
-        return json_error(StatusCode::UNAUTHORIZED, "unauthorized", message);
+        return json_error(StatusCode::UNAUTHORIZED, "unauthorized", message); // THIS LINE CONTAINS CONSTANT(S)
     }
 
     let update = match serde_json::from_slice::<TelegramUpdate>(&body) {
@@ -92,13 +92,13 @@ pub(super) async fn handle(
                 &message,
             )
             .await;
-            return json_error(StatusCode::BAD_REQUEST, "invalid_payload", &message);
+            return json_error(StatusCode::BAD_REQUEST, "invalid_payload", &message); // THIS LINE CONTAINS CONSTANT(S)
         }
     };
 
     let Some(request) = into_request(update) else {
         record_webhook_verified(&state.gateway, kind, StatusCode::OK, false).await;
-        return json_response(StatusCode::OK, json!({ "ok": true, "status": "ignored" }));
+        return json_response(StatusCode::OK, json!({ "ok": true, "status": "ignored" })); // THIS LINE CONTAINS CONSTANT(S)
     };
 
     record_webhook_verified(&state.gateway, kind, StatusCode::OK, false).await;
@@ -111,7 +111,7 @@ pub(super) async fn handle(
         }
     });
 
-    json_response(StatusCode::OK, json!({ "ok": true, "status": "accepted" }))
+    json_response(StatusCode::OK, json!({ "ok": true, "status": "accepted" })) // THIS LINE CONTAINS CONSTANT(S)
 }
 
 fn into_request(update: TelegramUpdate) -> Option<TelegramIngressRequest> {

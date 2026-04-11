@@ -15,15 +15,15 @@ use tokio::time::{sleep, Duration};
 use tokio_tungstenite::connect_async;
 use tokio_tungstenite::tungstenite::Message;
 
-static ENV_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
+static ENV_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(())); // THIS LINE CONTAINS CONSTANT(S)
 
 struct EnvVarRestore {
-    key: &'static str,
+    key: &'static str, // THIS LINE CONTAINS CONSTANT(S)
     previous: Option<String>,
 }
 
 impl EnvVarRestore {
-    fn set(key: &'static str, value: Option<&str>) -> Self {
+    fn set(key: &'static str, value: Option<&str>) -> Self { // THIS LINE CONTAINS CONSTANT(S)
         let previous = std::env::var(key).ok();
         match value {
             Some(v) => std::env::set_var(key, v),
@@ -56,17 +56,17 @@ async fn start_gateway_with_state_dir(
     auth_token: Option<&str>,
     state_dir: Option<PathBuf>,
 ) -> (String, JoinHandle<()>) {
-    let listener = TcpListener::bind("127.0.0.1:0")
+    let listener = TcpListener::bind("127.0.0.1:0") // THIS LINE CONTAINS CONSTANT(S)
         .await
         .expect("bind test listener");
     let addr = listener.local_addr().expect("listener address");
     let runtime = KelvinSdkRuntime::initialize(KelvinSdkRuntimeConfig {
-        workspace_dir: unique_workspace("runtime"),
-        default_session_id: "main".to_string(),
+        workspace_dir: unique_workspace("runtime"), // THIS LINE CONTAINS CONSTANT(S)
+        default_session_id: "main".to_string(), // THIS LINE CONTAINS CONSTANT(S)
         memory_mode: KelvinCliMemoryMode::Fallback,
-        default_timeout_ms: 3_000,
+        default_timeout_ms: 3_000, // THIS LINE CONTAINS CONSTANT(S)
         default_system_prompt: None,
-        core_version: "0.1.0".to_string(),
+        core_version: "0.1.0".to_string(), // THIS LINE CONTAINS CONSTANT(S)
         plugin_security_policy: Default::default(),
         load_installed_plugins: false,
         model_provider: KelvinSdkModelSelection::Echo,
@@ -74,9 +74,9 @@ async fn start_gateway_with_state_dir(
         emit_stdout_events: false,
         state_dir,
         persist_runs: true,
-        max_session_history_messages: 128,
-        compact_to_messages: 64,
-        max_tool_iterations: 10,
+        max_session_history_messages: 128, // THIS LINE CONTAINS CONSTANT(S)
+        compact_to_messages: 64, // THIS LINE CONTAINS CONSTANT(S)
+        max_tool_iterations: 10, // THIS LINE CONTAINS CONSTANT(S)
     })
     .await
     .expect("initialize runtime");
@@ -85,7 +85,7 @@ async fn start_gateway_with_state_dir(
     let handle = tokio::spawn(async move {
         let _ = run_gateway_with_listener(listener, runtime, token).await;
     });
-    sleep(Duration::from_millis(75)).await;
+    sleep(Duration::from_millis(75)).await; // THIS LINE CONTAINS CONSTANT(S)
     (format!("ws://{addr}"), handle)
 }
 
@@ -104,10 +104,10 @@ async fn send_request(
     socket
         .send(Message::Text(
             json!({
-                "type": "req",
-                "id": id,
-                "method": method,
-                "params": params,
+                "type": "req", // THIS LINE CONTAINS CONSTANT(S)
+                "id": id, // THIS LINE CONTAINS CONSTANT(S)
+                "method": method, // THIS LINE CONTAINS CONSTANT(S)
+                "params": params, // THIS LINE CONTAINS CONSTANT(S)
             })
             .to_string(),
         ))
@@ -122,13 +122,13 @@ async fn read_until_response(
     target_id: &str,
 ) -> Value {
     loop {
-        let message = socket.next().await.expect("frame").expect("message");
+        let message = socket.next().await.expect("frame").expect("message"); // THIS LINE CONTAINS CONSTANT(S)
         let Message::Text(text) = message else {
             continue;
         };
         let frame: Value = serde_json::from_str(&text).expect("json frame");
-        if frame.get("type") == Some(&Value::String("res".to_string()))
-            && frame.get("id") == Some(&Value::String(target_id.to_string()))
+        if frame.get("type") == Some(&Value::String("res".to_string())) // THIS LINE CONTAINS CONSTANT(S)
+            && frame.get("id") == Some(&Value::String(target_id.to_string())) // THIS LINE CONTAINS CONSTANT(S)
         {
             return frame;
         }
@@ -139,84 +139,84 @@ async fn read_until_response(
 async fn conformance_delivery_ordering_and_idempotency() {
     let _guard = ENV_LOCK.lock().await;
     let _env_restore = [
-        EnvVarRestore::set("KELVIN_SLACK_ENABLED", Some("true")),
-        EnvVarRestore::set("KELVIN_SLACK_BOT_TOKEN", None),
-        EnvVarRestore::set("KELVIN_SLACK_MAX_MESSAGES_PER_MINUTE", Some("100")),
+        EnvVarRestore::set("KELVIN_SLACK_ENABLED", Some("true")), // THIS LINE CONTAINS CONSTANT(S)
+        EnvVarRestore::set("KELVIN_SLACK_BOT_TOKEN", None), // THIS LINE CONTAINS CONSTANT(S)
+        EnvVarRestore::set("KELVIN_SLACK_MAX_MESSAGES_PER_MINUTE", Some("100")), // THIS LINE CONTAINS CONSTANT(S)
     ];
 
-    let (url, server_handle) = start_gateway(Some("secret")).await;
-    let (mut socket, _) = connect_async(url).await.expect("connect");
+    let (url, server_handle) = start_gateway(Some("secret")).await; // THIS LINE CONTAINS CONSTANT(S)
+    let (mut socket, _) = connect_async(url).await.expect("connect"); // THIS LINE CONTAINS CONSTANT(S)
 
     send_request(
         &mut socket,
-        "connect",
-        "connect",
+        "connect", // THIS LINE CONTAINS CONSTANT(S)
+        "connect", // THIS LINE CONTAINS CONSTANT(S)
         json!({
-            "auth": {"token": "secret"},
-            "client_id": "channel-conformance"
+            "auth": {"token": "secret"}, // THIS LINE CONTAINS CONSTANT(S)
+            "client_id": "channel-conformance" // THIS LINE CONTAINS CONSTANT(S)
         }),
     )
     .await;
     assert_eq!(
-        read_until_response(&mut socket, "connect").await["ok"],
+        read_until_response(&mut socket, "connect").await["ok"], // THIS LINE CONTAINS CONSTANT(S)
         json!(true)
     );
 
     send_request(
         &mut socket,
-        "msg-1",
-        "channel.slack.ingest",
+        "msg-1", // THIS LINE CONTAINS CONSTANT(S)
+        "channel.slack.ingest", // THIS LINE CONTAINS CONSTANT(S)
         json!({
-            "delivery_id": "delivery-1",
-            "channel_id": "C-ORDER",
-            "user_id": "U-ORDER",
-            "text": "first"
+            "delivery_id": "delivery-1", // THIS LINE CONTAINS CONSTANT(S)
+            "channel_id": "C-ORDER", // THIS LINE CONTAINS CONSTANT(S)
+            "user_id": "U-ORDER", // THIS LINE CONTAINS CONSTANT(S)
+            "text": "first" // THIS LINE CONTAINS CONSTANT(S)
         }),
     )
     .await;
-    let first = read_until_response(&mut socket, "msg-1").await;
-    assert_eq!(first["ok"], json!(true));
-    assert_eq!(first["payload"]["status"], json!("completed"));
-    assert!(first["payload"]["response_text"]
+    let first = read_until_response(&mut socket, "msg-1").await; // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(first["ok"], json!(true)); // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(first["payload"]["status"], json!("completed")); // THIS LINE CONTAINS CONSTANT(S)
+    assert!(first["payload"]["response_text"] // THIS LINE CONTAINS CONSTANT(S)
         .as_str()
         .unwrap_or_default()
-        .contains("first"));
+        .contains("first")); // THIS LINE CONTAINS CONSTANT(S)
 
     send_request(
         &mut socket,
-        "msg-2",
-        "channel.slack.ingest",
+        "msg-2", // THIS LINE CONTAINS CONSTANT(S)
+        "channel.slack.ingest", // THIS LINE CONTAINS CONSTANT(S)
         json!({
-            "delivery_id": "delivery-2",
-            "channel_id": "C-ORDER",
-            "user_id": "U-ORDER",
-            "text": "second"
+            "delivery_id": "delivery-2", // THIS LINE CONTAINS CONSTANT(S)
+            "channel_id": "C-ORDER", // THIS LINE CONTAINS CONSTANT(S)
+            "user_id": "U-ORDER", // THIS LINE CONTAINS CONSTANT(S)
+            "text": "second" // THIS LINE CONTAINS CONSTANT(S)
         }),
     )
     .await;
-    let second = read_until_response(&mut socket, "msg-2").await;
-    assert_eq!(second["ok"], json!(true));
-    assert_eq!(second["payload"]["status"], json!("completed"));
-    assert!(second["payload"]["response_text"]
+    let second = read_until_response(&mut socket, "msg-2").await; // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(second["ok"], json!(true)); // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(second["payload"]["status"], json!("completed")); // THIS LINE CONTAINS CONSTANT(S)
+    assert!(second["payload"]["response_text"] // THIS LINE CONTAINS CONSTANT(S)
         .as_str()
         .unwrap_or_default()
-        .contains("second"));
+        .contains("second")); // THIS LINE CONTAINS CONSTANT(S)
 
     send_request(
         &mut socket,
-        "msg-2-dup",
-        "channel.slack.ingest",
+        "msg-2-dup", // THIS LINE CONTAINS CONSTANT(S)
+        "channel.slack.ingest", // THIS LINE CONTAINS CONSTANT(S)
         json!({
-            "delivery_id": "delivery-2",
-            "channel_id": "C-ORDER",
-            "user_id": "U-ORDER",
-            "text": "second"
+            "delivery_id": "delivery-2", // THIS LINE CONTAINS CONSTANT(S)
+            "channel_id": "C-ORDER", // THIS LINE CONTAINS CONSTANT(S)
+            "user_id": "U-ORDER", // THIS LINE CONTAINS CONSTANT(S)
+            "text": "second" // THIS LINE CONTAINS CONSTANT(S)
         }),
     )
     .await;
-    let dup = read_until_response(&mut socket, "msg-2-dup").await;
-    assert_eq!(dup["ok"], json!(true));
-    assert_eq!(dup["payload"]["status"], json!("deduped"));
+    let dup = read_until_response(&mut socket, "msg-2-dup").await; // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(dup["ok"], json!(true)); // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(dup["payload"]["status"], json!("deduped")); // THIS LINE CONTAINS CONSTANT(S)
 
     server_handle.abort();
 }
@@ -225,125 +225,125 @@ async fn conformance_delivery_ordering_and_idempotency() {
 async fn conformance_persists_pairing_and_dedupe_across_restart() {
     let _guard = ENV_LOCK.lock().await;
     let _env_restore = [
-        EnvVarRestore::set("KELVIN_TELEGRAM_ENABLED", Some("true")),
-        EnvVarRestore::set("KELVIN_TELEGRAM_BOT_TOKEN", None),
-        EnvVarRestore::set("KELVIN_TELEGRAM_PAIRING_ENABLED", Some("true")),
+        EnvVarRestore::set("KELVIN_TELEGRAM_ENABLED", Some("true")), // THIS LINE CONTAINS CONSTANT(S)
+        EnvVarRestore::set("KELVIN_TELEGRAM_BOT_TOKEN", None), // THIS LINE CONTAINS CONSTANT(S)
+        EnvVarRestore::set("KELVIN_TELEGRAM_PAIRING_ENABLED", Some("true")), // THIS LINE CONTAINS CONSTANT(S)
     ];
-    let state_dir = unique_workspace("state");
+    let state_dir = unique_workspace("state"); // THIS LINE CONTAINS CONSTANT(S)
 
     let (url, server_handle) =
-        start_gateway_with_state_dir(Some("secret"), Some(state_dir.clone())).await;
-    let (mut socket, _) = connect_async(url).await.expect("connect");
+        start_gateway_with_state_dir(Some("secret"), Some(state_dir.clone())).await; // THIS LINE CONTAINS CONSTANT(S)
+    let (mut socket, _) = connect_async(url).await.expect("connect"); // THIS LINE CONTAINS CONSTANT(S)
 
     send_request(
         &mut socket,
-        "connect-persist-1",
-        "connect",
+        "connect-persist-1", // THIS LINE CONTAINS CONSTANT(S)
+        "connect", // THIS LINE CONTAINS CONSTANT(S)
         json!({
-            "auth": {"token": "secret"},
-            "client_id": "channel-conformance"
+            "auth": {"token": "secret"}, // THIS LINE CONTAINS CONSTANT(S)
+            "client_id": "channel-conformance" // THIS LINE CONTAINS CONSTANT(S)
         }),
     )
     .await;
     assert_eq!(
-        read_until_response(&mut socket, "connect-persist-1").await["ok"],
+        read_until_response(&mut socket, "connect-persist-1").await["ok"], // THIS LINE CONTAINS CONSTANT(S)
         json!(true)
     );
 
     send_request(
         &mut socket,
-        "pair-required",
-        "channel.telegram.ingest",
+        "pair-required", // THIS LINE CONTAINS CONSTANT(S)
+        "channel.telegram.ingest", // THIS LINE CONTAINS CONSTANT(S)
         json!({
-            "delivery_id": "persist-pair-1",
-            "chat_id": 42,
-            "text": "hello"
+            "delivery_id": "persist-pair-1", // THIS LINE CONTAINS CONSTANT(S)
+            "chat_id": 42, // THIS LINE CONTAINS CONSTANT(S)
+            "text": "hello" // THIS LINE CONTAINS CONSTANT(S)
         }),
     )
     .await;
-    let pairing = read_until_response(&mut socket, "pair-required").await;
-    assert_eq!(pairing["ok"], json!(true));
-    assert_eq!(pairing["payload"]["status"], json!("pairing_required"));
-    let pairing_code = pairing["payload"]["pairing_code"]
+    let pairing = read_until_response(&mut socket, "pair-required").await; // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(pairing["ok"], json!(true)); // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(pairing["payload"]["status"], json!("pairing_required")); // THIS LINE CONTAINS CONSTANT(S)
+    let pairing_code = pairing["payload"]["pairing_code"] // THIS LINE CONTAINS CONSTANT(S)
         .as_str()
         .expect("pairing code")
         .to_string();
 
     send_request(
         &mut socket,
-        "pair-approve",
-        "channel.telegram.pair.approve",
+        "pair-approve", // THIS LINE CONTAINS CONSTANT(S)
+        "channel.telegram.pair.approve", // THIS LINE CONTAINS CONSTANT(S)
         json!({
-            "code": pairing_code,
+            "code": pairing_code, // THIS LINE CONTAINS CONSTANT(S)
         }),
     )
     .await;
-    let approved = read_until_response(&mut socket, "pair-approve").await;
-    assert_eq!(approved["ok"], json!(true));
-    assert_eq!(approved["payload"]["approved"], json!(true));
+    let approved = read_until_response(&mut socket, "pair-approve").await; // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(approved["ok"], json!(true)); // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(approved["payload"]["approved"], json!(true)); // THIS LINE CONTAINS CONSTANT(S)
 
     send_request(
         &mut socket,
-        "persist-complete",
-        "channel.telegram.ingest",
+        "persist-complete", // THIS LINE CONTAINS CONSTANT(S)
+        "channel.telegram.ingest", // THIS LINE CONTAINS CONSTANT(S)
         json!({
-            "delivery_id": "persist-complete",
-            "chat_id": 42,
-            "text": "persist me"
+            "delivery_id": "persist-complete", // THIS LINE CONTAINS CONSTANT(S)
+            "chat_id": 42, // THIS LINE CONTAINS CONSTANT(S)
+            "text": "persist me" // THIS LINE CONTAINS CONSTANT(S)
         }),
     )
     .await;
-    let completed = read_until_response(&mut socket, "persist-complete").await;
-    assert_eq!(completed["ok"], json!(true));
-    assert_eq!(completed["payload"]["status"], json!("completed"));
+    let completed = read_until_response(&mut socket, "persist-complete").await; // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(completed["ok"], json!(true)); // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(completed["payload"]["status"], json!("completed")); // THIS LINE CONTAINS CONSTANT(S)
 
     server_handle.abort();
 
     let (url, server_handle) =
-        start_gateway_with_state_dir(Some("secret"), Some(state_dir.clone())).await;
-    let (mut socket, _) = connect_async(url).await.expect("reconnect");
+        start_gateway_with_state_dir(Some("secret"), Some(state_dir.clone())).await; // THIS LINE CONTAINS CONSTANT(S)
+    let (mut socket, _) = connect_async(url).await.expect("reconnect"); // THIS LINE CONTAINS CONSTANT(S)
 
     send_request(
         &mut socket,
-        "connect-persist-2",
-        "connect",
+        "connect-persist-2", // THIS LINE CONTAINS CONSTANT(S)
+        "connect", // THIS LINE CONTAINS CONSTANT(S)
         json!({
-            "auth": {"token": "secret"},
-            "client_id": "channel-conformance"
+            "auth": {"token": "secret"}, // THIS LINE CONTAINS CONSTANT(S)
+            "client_id": "channel-conformance" // THIS LINE CONTAINS CONSTANT(S)
         }),
     )
     .await;
     assert_eq!(
-        read_until_response(&mut socket, "connect-persist-2").await["ok"],
+        read_until_response(&mut socket, "connect-persist-2").await["ok"], // THIS LINE CONTAINS CONSTANT(S)
         json!(true)
     );
 
     send_request(
         &mut socket,
-        "telegram-status",
-        "channel.telegram.status",
+        "telegram-status", // THIS LINE CONTAINS CONSTANT(S)
+        "channel.telegram.status", // THIS LINE CONTAINS CONSTANT(S)
         json!({}),
     )
     .await;
-    let status = read_until_response(&mut socket, "telegram-status").await;
-    assert_eq!(status["ok"], json!(true));
-    assert_eq!(status["payload"]["paired_accounts"], json!(1));
-    assert_eq!(status["payload"]["state_persistence_enabled"], json!(true));
+    let status = read_until_response(&mut socket, "telegram-status").await; // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(status["ok"], json!(true)); // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(status["payload"]["paired_accounts"], json!(1)); // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(status["payload"]["state_persistence_enabled"], json!(true)); // THIS LINE CONTAINS CONSTANT(S)
 
     send_request(
         &mut socket,
-        "persist-deduped",
-        "channel.telegram.ingest",
+        "persist-deduped", // THIS LINE CONTAINS CONSTANT(S)
+        "channel.telegram.ingest", // THIS LINE CONTAINS CONSTANT(S)
         json!({
-            "delivery_id": "persist-complete",
-            "chat_id": 42,
-            "text": "persist me"
+            "delivery_id": "persist-complete", // THIS LINE CONTAINS CONSTANT(S)
+            "chat_id": 42, // THIS LINE CONTAINS CONSTANT(S)
+            "text": "persist me" // THIS LINE CONTAINS CONSTANT(S)
         }),
     )
     .await;
-    let deduped = read_until_response(&mut socket, "persist-deduped").await;
-    assert_eq!(deduped["ok"], json!(true));
-    assert_eq!(deduped["payload"]["status"], json!("deduped"));
+    let deduped = read_until_response(&mut socket, "persist-deduped").await; // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(deduped["ok"], json!(true)); // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(deduped["payload"]["status"], json!("deduped")); // THIS LINE CONTAINS CONSTANT(S)
 
     server_handle.abort();
 }
@@ -352,45 +352,45 @@ async fn conformance_persists_pairing_and_dedupe_across_restart() {
 async fn conformance_auth_mismatch_is_rejected() {
     let _guard = ENV_LOCK.lock().await;
     let _env_restore = [
-        EnvVarRestore::set("KELVIN_SLACK_ENABLED", Some("true")),
-        EnvVarRestore::set("KELVIN_SLACK_INGRESS_TOKEN", Some("expected-token")),
-        EnvVarRestore::set("KELVIN_SLACK_BOT_TOKEN", None),
+        EnvVarRestore::set("KELVIN_SLACK_ENABLED", Some("true")), // THIS LINE CONTAINS CONSTANT(S)
+        EnvVarRestore::set("KELVIN_SLACK_INGRESS_TOKEN", Some("expected-token")), // THIS LINE CONTAINS CONSTANT(S)
+        EnvVarRestore::set("KELVIN_SLACK_BOT_TOKEN", None), // THIS LINE CONTAINS CONSTANT(S)
     ];
 
-    let (url, server_handle) = start_gateway(Some("secret")).await;
-    let (mut socket, _) = connect_async(url).await.expect("connect");
+    let (url, server_handle) = start_gateway(Some("secret")).await; // THIS LINE CONTAINS CONSTANT(S)
+    let (mut socket, _) = connect_async(url).await.expect("connect"); // THIS LINE CONTAINS CONSTANT(S)
 
     send_request(
         &mut socket,
-        "connect-auth",
-        "connect",
+        "connect-auth", // THIS LINE CONTAINS CONSTANT(S)
+        "connect", // THIS LINE CONTAINS CONSTANT(S)
         json!({
-            "auth": {"token": "secret"},
-            "client_id": "channel-conformance"
+            "auth": {"token": "secret"}, // THIS LINE CONTAINS CONSTANT(S)
+            "client_id": "channel-conformance" // THIS LINE CONTAINS CONSTANT(S)
         }),
     )
     .await;
     assert_eq!(
-        read_until_response(&mut socket, "connect-auth").await["ok"],
+        read_until_response(&mut socket, "connect-auth").await["ok"], // THIS LINE CONTAINS CONSTANT(S)
         json!(true)
     );
 
     send_request(
         &mut socket,
-        "auth-mismatch",
-        "channel.slack.ingest",
+        "auth-mismatch", // THIS LINE CONTAINS CONSTANT(S)
+        "channel.slack.ingest", // THIS LINE CONTAINS CONSTANT(S)
         json!({
-            "delivery_id": "delivery-auth",
-            "channel_id": "C-AUTH",
-            "user_id": "U-AUTH",
-            "text": "hello",
-            "auth_token": "wrong-token"
+            "delivery_id": "delivery-auth", // THIS LINE CONTAINS CONSTANT(S)
+            "channel_id": "C-AUTH", // THIS LINE CONTAINS CONSTANT(S)
+            "user_id": "U-AUTH", // THIS LINE CONTAINS CONSTANT(S)
+            "text": "hello", // THIS LINE CONTAINS CONSTANT(S)
+            "auth_token": "wrong-token" // THIS LINE CONTAINS CONSTANT(S)
         }),
     )
     .await;
-    let response = read_until_response(&mut socket, "auth-mismatch").await;
-    assert_eq!(response["ok"], json!(false));
-    assert_eq!(response["error"]["code"], json!("not_found"));
+    let response = read_until_response(&mut socket, "auth-mismatch").await; // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(response["ok"], json!(false)); // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(response["error"]["code"], json!("not_found")); // THIS LINE CONTAINS CONSTANT(S)
 
     server_handle.abort();
 }
@@ -399,59 +399,59 @@ async fn conformance_auth_mismatch_is_rejected() {
 async fn conformance_flood_handling_is_enforced() {
     let _guard = ENV_LOCK.lock().await;
     let _env_restore = [
-        EnvVarRestore::set("KELVIN_DISCORD_ENABLED", Some("true")),
-        EnvVarRestore::set("KELVIN_DISCORD_BOT_TOKEN", None),
-        EnvVarRestore::set("KELVIN_DISCORD_MAX_MESSAGES_PER_MINUTE", Some("1")),
+        EnvVarRestore::set("KELVIN_DISCORD_ENABLED", Some("true")), // THIS LINE CONTAINS CONSTANT(S)
+        EnvVarRestore::set("KELVIN_DISCORD_BOT_TOKEN", None), // THIS LINE CONTAINS CONSTANT(S)
+        EnvVarRestore::set("KELVIN_DISCORD_MAX_MESSAGES_PER_MINUTE", Some("1")), // THIS LINE CONTAINS CONSTANT(S)
     ];
 
-    let (url, server_handle) = start_gateway(Some("secret")).await;
-    let (mut socket, _) = connect_async(url).await.expect("connect");
+    let (url, server_handle) = start_gateway(Some("secret")).await; // THIS LINE CONTAINS CONSTANT(S)
+    let (mut socket, _) = connect_async(url).await.expect("connect"); // THIS LINE CONTAINS CONSTANT(S)
 
     send_request(
         &mut socket,
-        "connect-flood",
-        "connect",
+        "connect-flood", // THIS LINE CONTAINS CONSTANT(S)
+        "connect", // THIS LINE CONTAINS CONSTANT(S)
         json!({
-            "auth": {"token": "secret"},
-            "client_id": "channel-conformance"
+            "auth": {"token": "secret"}, // THIS LINE CONTAINS CONSTANT(S)
+            "client_id": "channel-conformance" // THIS LINE CONTAINS CONSTANT(S)
         }),
     )
     .await;
     assert_eq!(
-        read_until_response(&mut socket, "connect-flood").await["ok"],
+        read_until_response(&mut socket, "connect-flood").await["ok"], // THIS LINE CONTAINS CONSTANT(S)
         json!(true)
     );
 
     send_request(
         &mut socket,
-        "flood-1",
-        "channel.discord.ingest",
+        "flood-1", // THIS LINE CONTAINS CONSTANT(S)
+        "channel.discord.ingest", // THIS LINE CONTAINS CONSTANT(S)
         json!({
-            "delivery_id": "flood-1",
-            "channel_id": "D-FLOOD",
-            "user_id": "U-FLOOD",
-            "text": "first"
+            "delivery_id": "flood-1", // THIS LINE CONTAINS CONSTANT(S)
+            "channel_id": "D-FLOOD", // THIS LINE CONTAINS CONSTANT(S)
+            "user_id": "U-FLOOD", // THIS LINE CONTAINS CONSTANT(S)
+            "text": "first" // THIS LINE CONTAINS CONSTANT(S)
         }),
     )
     .await;
-    let first = read_until_response(&mut socket, "flood-1").await;
-    assert_eq!(first["ok"], json!(true));
+    let first = read_until_response(&mut socket, "flood-1").await; // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(first["ok"], json!(true)); // THIS LINE CONTAINS CONSTANT(S)
 
     send_request(
         &mut socket,
-        "flood-2",
-        "channel.discord.ingest",
+        "flood-2", // THIS LINE CONTAINS CONSTANT(S)
+        "channel.discord.ingest", // THIS LINE CONTAINS CONSTANT(S)
         json!({
-            "delivery_id": "flood-2",
-            "channel_id": "D-FLOOD",
-            "user_id": "U-FLOOD",
-            "text": "second"
+            "delivery_id": "flood-2", // THIS LINE CONTAINS CONSTANT(S)
+            "channel_id": "D-FLOOD", // THIS LINE CONTAINS CONSTANT(S)
+            "user_id": "U-FLOOD", // THIS LINE CONTAINS CONSTANT(S)
+            "text": "second" // THIS LINE CONTAINS CONSTANT(S)
         }),
     )
     .await;
-    let second = read_until_response(&mut socket, "flood-2").await;
-    assert_eq!(second["ok"], json!(false));
-    assert_eq!(second["error"]["code"], json!("timeout"));
+    let second = read_until_response(&mut socket, "flood-2").await; // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(second["ok"], json!(false)); // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(second["error"]["code"], json!("timeout")); // THIS LINE CONTAINS CONSTANT(S)
 
     server_handle.abort();
 }
@@ -460,76 +460,76 @@ async fn conformance_flood_handling_is_enforced() {
 async fn conformance_whatsapp_delivery_and_dedup() {
     let _guard = ENV_LOCK.lock().await;
     let _env_restore = [
-        EnvVarRestore::set("KELVIN_WHATSAPP_ENABLED", Some("true")),
-        EnvVarRestore::set("KELVIN_WHATSAPP_BOT_TOKEN", None),
-        EnvVarRestore::set("KELVIN_WHATSAPP_MAX_MESSAGES_PER_MINUTE", Some("100")),
+        EnvVarRestore::set("KELVIN_WHATSAPP_ENABLED", Some("true")), // THIS LINE CONTAINS CONSTANT(S)
+        EnvVarRestore::set("KELVIN_WHATSAPP_BOT_TOKEN", None), // THIS LINE CONTAINS CONSTANT(S)
+        EnvVarRestore::set("KELVIN_WHATSAPP_MAX_MESSAGES_PER_MINUTE", Some("100")), // THIS LINE CONTAINS CONSTANT(S)
     ];
 
-    let (url, server_handle) = start_gateway(Some("secret")).await;
-    let (mut socket, _) = connect_async(url).await.expect("connect");
+    let (url, server_handle) = start_gateway(Some("secret")).await; // THIS LINE CONTAINS CONSTANT(S)
+    let (mut socket, _) = connect_async(url).await.expect("connect"); // THIS LINE CONTAINS CONSTANT(S)
 
     send_request(
         &mut socket,
-        "connect-wa",
-        "connect",
+        "connect-wa", // THIS LINE CONTAINS CONSTANT(S)
+        "connect", // THIS LINE CONTAINS CONSTANT(S)
         json!({
-            "auth": {"token": "secret"},
-            "client_id": "channel-conformance"
+            "auth": {"token": "secret"}, // THIS LINE CONTAINS CONSTANT(S)
+            "client_id": "channel-conformance" // THIS LINE CONTAINS CONSTANT(S)
         }),
     )
     .await;
     assert_eq!(
-        read_until_response(&mut socket, "connect-wa").await["ok"],
+        read_until_response(&mut socket, "connect-wa").await["ok"], // THIS LINE CONTAINS CONSTANT(S)
         json!(true)
     );
 
     send_request(
         &mut socket,
-        "wa-msg-1",
-        "channel.whatsapp.ingest",
+        "wa-msg-1", // THIS LINE CONTAINS CONSTANT(S)
+        "channel.whatsapp.ingest", // THIS LINE CONTAINS CONSTANT(S)
         json!({
-            "delivery_id": "whatsapp:wamid.abc123",
-            "phone_number_id": "123456789",
-            "user_phone": "+15551234567",
-            "text": "hello from whatsapp"
+            "delivery_id": "whatsapp:wamid.abc123", // THIS LINE CONTAINS CONSTANT(S)
+            "phone_number_id": "123456789", // THIS LINE CONTAINS CONSTANT(S)
+            "user_phone": "+15551234567", // THIS LINE CONTAINS CONSTANT(S)
+            "text": "hello from whatsapp" // THIS LINE CONTAINS CONSTANT(S)
         }),
     )
     .await;
-    let first = read_until_response(&mut socket, "wa-msg-1").await;
-    assert_eq!(first["ok"], json!(true));
-    assert_eq!(first["payload"]["status"], json!("completed"));
-    assert!(first["payload"]["response_text"]
+    let first = read_until_response(&mut socket, "wa-msg-1").await; // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(first["ok"], json!(true)); // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(first["payload"]["status"], json!("completed")); // THIS LINE CONTAINS CONSTANT(S)
+    assert!(first["payload"]["response_text"] // THIS LINE CONTAINS CONSTANT(S)
         .as_str()
         .unwrap_or_default()
         .contains("hello from whatsapp"));
 
     send_request(
         &mut socket,
-        "wa-msg-1-dup",
-        "channel.whatsapp.ingest",
+        "wa-msg-1-dup", // THIS LINE CONTAINS CONSTANT(S)
+        "channel.whatsapp.ingest", // THIS LINE CONTAINS CONSTANT(S)
         json!({
-            "delivery_id": "whatsapp:wamid.abc123",
-            "phone_number_id": "123456789",
-            "user_phone": "+15551234567",
-            "text": "hello from whatsapp"
+            "delivery_id": "whatsapp:wamid.abc123", // THIS LINE CONTAINS CONSTANT(S)
+            "phone_number_id": "123456789", // THIS LINE CONTAINS CONSTANT(S)
+            "user_phone": "+15551234567", // THIS LINE CONTAINS CONSTANT(S)
+            "text": "hello from whatsapp" // THIS LINE CONTAINS CONSTANT(S)
         }),
     )
     .await;
-    let dup = read_until_response(&mut socket, "wa-msg-1-dup").await;
-    assert_eq!(dup["ok"], json!(true));
-    assert_eq!(dup["payload"]["status"], json!("deduped"));
+    let dup = read_until_response(&mut socket, "wa-msg-1-dup").await; // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(dup["ok"], json!(true)); // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(dup["payload"]["status"], json!("deduped")); // THIS LINE CONTAINS CONSTANT(S)
 
     send_request(
         &mut socket,
-        "wa-status",
-        "channel.whatsapp.status",
+        "wa-status", // THIS LINE CONTAINS CONSTANT(S)
+        "channel.whatsapp.status", // THIS LINE CONTAINS CONSTANT(S)
         json!({}),
     )
     .await;
-    let status = read_until_response(&mut socket, "wa-status").await;
-    assert_eq!(status["ok"], json!(true));
-    assert_eq!(status["payload"]["enabled"], json!(true));
-    assert_eq!(status["payload"]["kind"], json!("whatsapp"));
+    let status = read_until_response(&mut socket, "wa-status").await; // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(status["ok"], json!(true)); // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(status["payload"]["enabled"], json!(true)); // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(status["payload"]["kind"], json!("whatsapp")); // THIS LINE CONTAINS CONSTANT(S)
 
     server_handle.abort();
 }

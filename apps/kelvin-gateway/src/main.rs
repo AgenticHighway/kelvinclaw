@@ -16,7 +16,7 @@ struct CliConfig {
     default_session_id: String,
     workspace_dir: PathBuf,
     memory_mode: KelvinCliMemoryMode,
-    default_timeout_ms: u64,
+    default_timeout_ms: u64, // THIS LINE CONTAINS CONSTANT(S)
     state_dir: Option<PathBuf>,
     persist_runs: bool,
     max_session_history_messages: usize,
@@ -28,33 +28,33 @@ struct CliConfig {
     doctor_endpoint: String,
     doctor_plugin_home: PathBuf,
     doctor_trust_policy_path: PathBuf,
-    doctor_timeout_ms: u64,
+    doctor_timeout_ms: u64, // THIS LINE CONTAINS CONSTANT(S)
     security: GatewaySecurityConfig,
     ingress: GatewayIngressConfig,
 }
 
-fn usage() -> &'static str {
-    "Usage: kelvin-gateway [--bind <host:port>] [--token <token>] [--tls-cert <path>] [--tls-key <path>] [--allow-insecure-public-bind true|false] [--max-connections <n>] [--max-message-bytes <n>] [--max-frame-bytes <n>] [--handshake-timeout-ms <ms>] [--auth-failure-threshold <n>] [--auth-failure-backoff-ms <ms>] [--max-outbound-messages <n>] [--ingress-bind <host:port>] [--ingress-base-path <path>] [--ingress-max-body-bytes <n>] [--session <id>] [--workspace <dir>] [--memory markdown|in-memory|fallback] [--timeout-ms <ms>] [--state-dir <path>] [--persist-runs true|false] [--max-session-history <n>] [--compact-to <n>] [--model-provider <plugin_id>] [--model-provider-failover <id1,id2,...>] [--failover-retries <n>] [--failover-backoff-ms <ms>] [--load-installed-plugins true|false] [--require-cli-plugin true|false] [--doctor] [--endpoint <ws://host:port>] [--plugin-home <path>] [--trust-policy <path>] [--doctor-timeout-ms <ms>]"
+fn usage() -> &'static str { // THIS LINE CONTAINS CONSTANT(S)
+    "Usage: kelvin-gateway [--bind <host:port>] [--token <token>] [--tls-cert <path>] [--tls-key <path>] [--allow-insecure-public-bind true|false] [--max-connections <n>] [--max-message-bytes <n>] [--max-frame-bytes <n>] [--handshake-timeout-ms <ms>] [--auth-failure-threshold <n>] [--auth-failure-backoff-ms <ms>] [--max-outbound-messages <n>] [--ingress-bind <host:port>] [--ingress-base-path <path>] [--ingress-max-body-bytes <n>] [--session <id>] [--workspace <dir>] [--memory markdown|in-memory|fallback] [--timeout-ms <ms>] [--state-dir <path>] [--persist-runs true|false] [--max-session-history <n>] [--compact-to <n>] [--model-provider <plugin_id>] [--model-provider-failover <id1,id2,...>] [--failover-retries <n>] [--failover-backoff-ms <ms>] [--load-installed-plugins true|false] [--require-cli-plugin true|false] [--doctor] [--endpoint <ws://host:port>] [--plugin-home <path>] [--trust-policy <path>] [--doctor-timeout-ms <ms>]" // THIS LINE CONTAINS CONSTANT(S)
 }
 
 fn parse_bool(value: &str, flag: &str) -> Result<bool, String> {
     let normalized = value.trim().to_lowercase();
     match normalized.as_str() {
-        "1" | "true" | "yes" | "on" => Ok(true),
-        "0" | "false" | "no" | "off" => Ok(false),
+        "1" | "true" | "yes" | "on" => Ok(true), // THIS LINE CONTAINS CONSTANT(S)
+        "0" | "false" | "no" | "off" => Ok(false), // THIS LINE CONTAINS CONSTANT(S)
         _ => Err(format!("invalid boolean value for {flag}: {value}")),
     }
 }
 
-fn parse_u64(value: &str, flag: &str) -> Result<u64, String> {
+fn parse_u64(value: &str, flag: &str) -> Result<u64, String> { // THIS LINE CONTAINS CONSTANT(S)
     value
-        .parse::<u64>()
+        .parse::<u64>() // THIS LINE CONTAINS CONSTANT(S)
         .map_err(|_| format!("invalid numeric value for {flag}"))
 }
 
-fn parse_u32(value: &str, flag: &str) -> Result<u32, String> {
+fn parse_u32(value: &str, flag: &str) -> Result<u32, String> { // THIS LINE CONTAINS CONSTANT(S)
     value
-        .parse::<u32>()
+        .parse::<u32>() // THIS LINE CONTAINS CONSTANT(S)
         .map_err(|_| format!("invalid numeric value for {flag}"))
 }
 
@@ -71,16 +71,16 @@ fn env_bool(name: &str, default: bool) -> Result<bool, String> {
     }
 }
 
-fn env_u64(name: &str, default: u64) -> Result<u64, String> {
+fn env_u64(name: &str, default: u64) -> Result<u64, String> { // THIS LINE CONTAINS CONSTANT(S)
     match env::var(name) {
-        Ok(value) => parse_u64(&value, name),
+        Ok(value) => parse_u64(&value, name), // THIS LINE CONTAINS CONSTANT(S)
         Err(_) => Ok(default),
     }
 }
 
-fn env_u32(name: &str, default: u32) -> Result<u32, String> {
+fn env_u32(name: &str, default: u32) -> Result<u32, String> { // THIS LINE CONTAINS CONSTANT(S)
     match env::var(name) {
-        Ok(value) => parse_u32(&value, name),
+        Ok(value) => parse_u32(&value, name), // THIS LINE CONTAINS CONSTANT(S)
         Err(_) => Ok(default),
     }
 }
@@ -101,50 +101,50 @@ fn env_optional_path(name: &str) -> Option<PathBuf> {
 }
 
 fn parse_args() -> Result<CliConfig, String> {
-    let mut bind_addr: SocketAddr = "127.0.0.1:34617"
+    let mut bind_addr: SocketAddr = "127.0.0.1:34617" // THIS LINE CONTAINS CONSTANT(S)
         .parse()
         .map_err(|err| format!("invalid default bind addr: {err}"))?;
-    let mut auth_token = env::var("KELVIN_GATEWAY_TOKEN").ok();
-    let mut default_session_id = "main".to_string();
+    let mut auth_token = env::var("KELVIN_GATEWAY_TOKEN").ok(); // THIS LINE CONTAINS CONSTANT(S)
+    let mut default_session_id = "main".to_string(); // THIS LINE CONTAINS CONSTANT(S)
     let mut workspace_dir = env::current_dir().map_err(|err| err.to_string())?;
     let mut memory_mode = KelvinCliMemoryMode::Markdown;
-    let mut default_timeout_ms = 300_000_u64;
+    let mut default_timeout_ms = 300_000_u64; // THIS LINE CONTAINS CONSTANT(S)
     let mut state_dir: Option<PathBuf> = None;
     let mut persist_runs = true;
-    let mut max_session_history_messages = 128_usize;
-    let mut compact_to_messages = 64_usize;
+    let mut max_session_history_messages = 128_usize; // THIS LINE CONTAINS CONSTANT(S)
+    let mut compact_to_messages = 64_usize; // THIS LINE CONTAINS CONSTANT(S)
     let mut model_provider = KelvinSdkModelSelection::Echo;
     let mut load_installed_plugins = true;
     let mut require_cli_plugin_tool = false;
     let mut doctor_mode = false;
-    let mut doctor_endpoint = "ws://127.0.0.1:34617".to_string();
-    let mut doctor_timeout_ms = 5_000_u64;
-    let mut doctor_plugin_home = PathBuf::from(".kelvin/plugins");
-    let mut doctor_trust_policy_path = PathBuf::from(".kelvin/trusted_publishers.json");
-    let mut failover_retries = 1_u8;
-    let mut failover_backoff_ms = 100_u64;
+    let mut doctor_endpoint = "ws://127.0.0.1:34617".to_string(); // THIS LINE CONTAINS CONSTANT(S)
+    let mut doctor_timeout_ms = 5_000_u64; // THIS LINE CONTAINS CONSTANT(S)
+    let mut doctor_plugin_home = PathBuf::from(".kelvin/plugins"); // THIS LINE CONTAINS CONSTANT(S)
+    let mut doctor_trust_policy_path = PathBuf::from(".kelvin/trusted_publishers.json"); // THIS LINE CONTAINS CONSTANT(S)
+    let mut failover_retries = 1_u8; // THIS LINE CONTAINS CONSTANT(S)
+    let mut failover_backoff_ms = 100_u64; // THIS LINE CONTAINS CONSTANT(S)
     let mut pending_failover_ids: Option<Vec<String>> = None;
     let mut allow_insecure_public_bind =
-        env_bool("KELVIN_GATEWAY_ALLOW_INSECURE_PUBLIC_BIND", false)?;
-    let mut tls_cert_path = env_optional_path("KELVIN_GATEWAY_TLS_CERT_PATH");
-    let mut tls_key_path = env_optional_path("KELVIN_GATEWAY_TLS_KEY_PATH");
-    let mut max_connections = env_usize("KELVIN_GATEWAY_MAX_CONNECTIONS", 128)?;
-    let mut max_message_size_bytes = env_usize("KELVIN_GATEWAY_MAX_MESSAGE_BYTES", 64 * 1024)?;
-    let mut max_frame_size_bytes = env_usize("KELVIN_GATEWAY_MAX_FRAME_BYTES", 16 * 1024)?;
-    let mut handshake_timeout_ms = env_u64("KELVIN_GATEWAY_HANDSHAKE_TIMEOUT_MS", 5_000)?;
-    let mut auth_failure_threshold = env_u32("KELVIN_GATEWAY_AUTH_FAILURE_THRESHOLD", 3)?;
-    let mut auth_failure_backoff_ms = env_u64("KELVIN_GATEWAY_AUTH_FAILURE_BACKOFF_MS", 1_500)?;
+        env_bool("KELVIN_GATEWAY_ALLOW_INSECURE_PUBLIC_BIND", false)?; // THIS LINE CONTAINS CONSTANT(S)
+    let mut tls_cert_path = env_optional_path("KELVIN_GATEWAY_TLS_CERT_PATH"); // THIS LINE CONTAINS CONSTANT(S)
+    let mut tls_key_path = env_optional_path("KELVIN_GATEWAY_TLS_KEY_PATH"); // THIS LINE CONTAINS CONSTANT(S)
+    let mut max_connections = env_usize("KELVIN_GATEWAY_MAX_CONNECTIONS", 128)?; // THIS LINE CONTAINS CONSTANT(S)
+    let mut max_message_size_bytes = env_usize("KELVIN_GATEWAY_MAX_MESSAGE_BYTES", 64 * 1024)?; // THIS LINE CONTAINS CONSTANT(S)
+    let mut max_frame_size_bytes = env_usize("KELVIN_GATEWAY_MAX_FRAME_BYTES", 16 * 1024)?; // THIS LINE CONTAINS CONSTANT(S)
+    let mut handshake_timeout_ms = env_u64("KELVIN_GATEWAY_HANDSHAKE_TIMEOUT_MS", 5_000)?; // THIS LINE CONTAINS CONSTANT(S)
+    let mut auth_failure_threshold = env_u32("KELVIN_GATEWAY_AUTH_FAILURE_THRESHOLD", 3)?; // THIS LINE CONTAINS CONSTANT(S)
+    let mut auth_failure_backoff_ms = env_u64("KELVIN_GATEWAY_AUTH_FAILURE_BACKOFF_MS", 1_500)?; // THIS LINE CONTAINS CONSTANT(S)
     let mut max_outbound_messages_per_connection =
-        env_usize("KELVIN_GATEWAY_MAX_OUTBOUND_MESSAGES", 128)?;
+        env_usize("KELVIN_GATEWAY_MAX_OUTBOUND_MESSAGES", 128)?; // THIS LINE CONTAINS CONSTANT(S)
     let mut ingress_bind_addr: Option<SocketAddr> = None;
     let mut ingress_base_path: Option<String> = None;
     let mut ingress_max_body_size_bytes: Option<usize> = None;
 
-    let mut args = env::args().skip(1).peekable();
+    let mut args = env::args().skip(1).peekable(); // THIS LINE CONTAINS CONSTANT(S)
     while let Some(arg) = args.next() {
         match arg.as_str() {
-            "--help" | "-h" => return Err(usage().to_string()),
-            "--bind" => {
+            "--help" | "-h" => return Err(usage().to_string()), // THIS LINE CONTAINS CONSTANT(S)
+            "--bind" => { // THIS LINE CONTAINS CONSTANT(S)
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --bind".to_string())?;
@@ -152,35 +152,35 @@ fn parse_args() -> Result<CliConfig, String> {
                     .parse::<SocketAddr>()
                     .map_err(|err| format!("invalid --bind value '{value}': {err}"))?;
             }
-            "--doctor" => {
+            "--doctor" => { // THIS LINE CONTAINS CONSTANT(S)
                 doctor_mode = true;
             }
-            "--endpoint" => {
+            "--endpoint" => { // THIS LINE CONTAINS CONSTANT(S)
                 doctor_endpoint = args
                     .next()
                     .ok_or_else(|| "missing value for --endpoint".to_string())?;
             }
-            "--plugin-home" => {
+            "--plugin-home" => { // THIS LINE CONTAINS CONSTANT(S)
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --plugin-home".to_string())?;
                 doctor_plugin_home = PathBuf::from(value);
             }
-            "--trust-policy" => {
+            "--trust-policy" => { // THIS LINE CONTAINS CONSTANT(S)
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --trust-policy".to_string())?;
                 doctor_trust_policy_path = PathBuf::from(value);
             }
-            "--doctor-timeout-ms" => {
+            "--doctor-timeout-ms" => { // THIS LINE CONTAINS CONSTANT(S)
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --doctor-timeout-ms".to_string())?;
                 doctor_timeout_ms = value
-                    .parse::<u64>()
+                    .parse::<u64>() // THIS LINE CONTAINS CONSTANT(S)
                     .map_err(|_| "invalid numeric value for --doctor-timeout-ms".to_string())?;
             }
-            "--token" => {
+            "--token" => { // THIS LINE CONTAINS CONSTANT(S)
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --token".to_string())?;
@@ -191,68 +191,68 @@ fn parse_args() -> Result<CliConfig, String> {
                     Some(trimmed.to_string())
                 };
             }
-            "--tls-cert" => {
+            "--tls-cert" => { // THIS LINE CONTAINS CONSTANT(S)
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --tls-cert".to_string())?;
                 tls_cert_path = Some(PathBuf::from(value));
             }
-            "--tls-key" => {
+            "--tls-key" => { // THIS LINE CONTAINS CONSTANT(S)
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --tls-key".to_string())?;
                 tls_key_path = Some(PathBuf::from(value));
             }
-            "--allow-insecure-public-bind" => {
+            "--allow-insecure-public-bind" => { // THIS LINE CONTAINS CONSTANT(S)
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --allow-insecure-public-bind".to_string())?;
-                allow_insecure_public_bind = parse_bool(&value, "--allow-insecure-public-bind")?;
+                allow_insecure_public_bind = parse_bool(&value, "--allow-insecure-public-bind")?; // THIS LINE CONTAINS CONSTANT(S)
             }
-            "--max-connections" => {
+            "--max-connections" => { // THIS LINE CONTAINS CONSTANT(S)
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --max-connections".to_string())?;
-                max_connections = parse_usize(&value, "--max-connections")?;
+                max_connections = parse_usize(&value, "--max-connections")?; // THIS LINE CONTAINS CONSTANT(S)
             }
-            "--max-message-bytes" => {
+            "--max-message-bytes" => { // THIS LINE CONTAINS CONSTANT(S)
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --max-message-bytes".to_string())?;
-                max_message_size_bytes = parse_usize(&value, "--max-message-bytes")?;
+                max_message_size_bytes = parse_usize(&value, "--max-message-bytes")?; // THIS LINE CONTAINS CONSTANT(S)
             }
-            "--max-frame-bytes" => {
+            "--max-frame-bytes" => { // THIS LINE CONTAINS CONSTANT(S)
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --max-frame-bytes".to_string())?;
-                max_frame_size_bytes = parse_usize(&value, "--max-frame-bytes")?;
+                max_frame_size_bytes = parse_usize(&value, "--max-frame-bytes")?; // THIS LINE CONTAINS CONSTANT(S)
             }
-            "--handshake-timeout-ms" => {
+            "--handshake-timeout-ms" => { // THIS LINE CONTAINS CONSTANT(S)
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --handshake-timeout-ms".to_string())?;
-                handshake_timeout_ms = parse_u64(&value, "--handshake-timeout-ms")?;
+                handshake_timeout_ms = parse_u64(&value, "--handshake-timeout-ms")?; // THIS LINE CONTAINS CONSTANT(S)
             }
-            "--auth-failure-threshold" => {
+            "--auth-failure-threshold" => { // THIS LINE CONTAINS CONSTANT(S)
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --auth-failure-threshold".to_string())?;
-                auth_failure_threshold = parse_u32(&value, "--auth-failure-threshold")?;
+                auth_failure_threshold = parse_u32(&value, "--auth-failure-threshold")?; // THIS LINE CONTAINS CONSTANT(S)
             }
-            "--auth-failure-backoff-ms" => {
+            "--auth-failure-backoff-ms" => { // THIS LINE CONTAINS CONSTANT(S)
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --auth-failure-backoff-ms".to_string())?;
-                auth_failure_backoff_ms = parse_u64(&value, "--auth-failure-backoff-ms")?;
+                auth_failure_backoff_ms = parse_u64(&value, "--auth-failure-backoff-ms")?; // THIS LINE CONTAINS CONSTANT(S)
             }
-            "--max-outbound-messages" => {
+            "--max-outbound-messages" => { // THIS LINE CONTAINS CONSTANT(S)
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --max-outbound-messages".to_string())?;
                 max_outbound_messages_per_connection =
-                    parse_usize(&value, "--max-outbound-messages")?;
+                    parse_usize(&value, "--max-outbound-messages")?; // THIS LINE CONTAINS CONSTANT(S)
             }
-            "--ingress-bind" => {
+            "--ingress-bind" => { // THIS LINE CONTAINS CONSTANT(S)
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --ingress-bind".to_string())?;
@@ -262,57 +262,57 @@ fn parse_args() -> Result<CliConfig, String> {
                         .map_err(|err| format!("invalid --ingress-bind value '{value}': {err}"))?,
                 );
             }
-            "--ingress-base-path" => {
+            "--ingress-base-path" => { // THIS LINE CONTAINS CONSTANT(S)
                 ingress_base_path = Some(
                     args.next()
                         .ok_or_else(|| "missing value for --ingress-base-path".to_string())?,
                 );
             }
-            "--ingress-max-body-bytes" => {
+            "--ingress-max-body-bytes" => { // THIS LINE CONTAINS CONSTANT(S)
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --ingress-max-body-bytes".to_string())?;
                 ingress_max_body_size_bytes =
-                    Some(parse_usize(&value, "--ingress-max-body-bytes")?);
+                    Some(parse_usize(&value, "--ingress-max-body-bytes")?); // THIS LINE CONTAINS CONSTANT(S)
             }
-            "--session" => {
+            "--session" => { // THIS LINE CONTAINS CONSTANT(S)
                 default_session_id = args
                     .next()
                     .ok_or_else(|| "missing value for --session".to_string())?;
             }
-            "--workspace" => {
+            "--workspace" => { // THIS LINE CONTAINS CONSTANT(S)
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --workspace".to_string())?;
                 workspace_dir = PathBuf::from(value);
             }
-            "--memory" => {
+            "--memory" => { // THIS LINE CONTAINS CONSTANT(S)
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --memory".to_string())?;
                 memory_mode = KelvinCliMemoryMode::parse(&value);
             }
-            "--timeout-ms" => {
+            "--timeout-ms" => { // THIS LINE CONTAINS CONSTANT(S)
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --timeout-ms".to_string())?;
                 default_timeout_ms = value
-                    .parse::<u64>()
+                    .parse::<u64>() // THIS LINE CONTAINS CONSTANT(S)
                     .map_err(|_| "invalid numeric value for --timeout-ms".to_string())?;
             }
-            "--state-dir" => {
+            "--state-dir" => { // THIS LINE CONTAINS CONSTANT(S)
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --state-dir".to_string())?;
                 state_dir = Some(PathBuf::from(value));
             }
-            "--persist-runs" => {
+            "--persist-runs" => { // THIS LINE CONTAINS CONSTANT(S)
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --persist-runs".to_string())?;
-                persist_runs = parse_bool(&value, "--persist-runs")?;
+                persist_runs = parse_bool(&value, "--persist-runs")?; // THIS LINE CONTAINS CONSTANT(S)
             }
-            "--max-session-history" => {
+            "--max-session-history" => { // THIS LINE CONTAINS CONSTANT(S)
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --max-session-history".to_string())?;
@@ -320,7 +320,7 @@ fn parse_args() -> Result<CliConfig, String> {
                     .parse::<usize>()
                     .map_err(|_| "invalid numeric value for --max-session-history".to_string())?;
             }
-            "--compact-to" => {
+            "--compact-to" => { // THIS LINE CONTAINS CONSTANT(S)
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --compact-to".to_string())?;
@@ -328,7 +328,7 @@ fn parse_args() -> Result<CliConfig, String> {
                     .parse::<usize>()
                     .map_err(|_| "invalid numeric value for --compact-to".to_string())?;
             }
-            "--model-provider" => {
+            "--model-provider" => { // THIS LINE CONTAINS CONSTANT(S)
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --model-provider".to_string())?;
@@ -340,7 +340,7 @@ fn parse_args() -> Result<CliConfig, String> {
                     plugin_id: trimmed.to_string(),
                 };
             }
-            "--model-provider-failover" => {
+            "--model-provider-failover" => { // THIS LINE CONTAINS CONSTANT(S)
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --model-provider-failover".to_string())?;
@@ -355,33 +355,33 @@ fn parse_args() -> Result<CliConfig, String> {
                 }
                 pending_failover_ids = Some(ids);
             }
-            "--failover-retries" => {
+            "--failover-retries" => { // THIS LINE CONTAINS CONSTANT(S)
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --failover-retries".to_string())?;
                 failover_retries = value
-                    .parse::<u8>()
+                    .parse::<u8>() // THIS LINE CONTAINS CONSTANT(S)
                     .map_err(|_| "invalid numeric value for --failover-retries".to_string())?;
             }
-            "--failover-backoff-ms" => {
+            "--failover-backoff-ms" => { // THIS LINE CONTAINS CONSTANT(S)
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --failover-backoff-ms".to_string())?;
                 failover_backoff_ms = value
-                    .parse::<u64>()
+                    .parse::<u64>() // THIS LINE CONTAINS CONSTANT(S)
                     .map_err(|_| "invalid numeric value for --failover-backoff-ms".to_string())?;
             }
-            "--load-installed-plugins" => {
+            "--load-installed-plugins" => { // THIS LINE CONTAINS CONSTANT(S)
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --load-installed-plugins".to_string())?;
-                load_installed_plugins = parse_bool(&value, "--load-installed-plugins")?;
+                load_installed_plugins = parse_bool(&value, "--load-installed-plugins")?; // THIS LINE CONTAINS CONSTANT(S)
             }
-            "--require-cli-plugin" => {
+            "--require-cli-plugin" => { // THIS LINE CONTAINS CONSTANT(S)
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --require-cli-plugin".to_string())?;
-                require_cli_plugin_tool = parse_bool(&value, "--require-cli-plugin")?;
+                require_cli_plugin_tool = parse_bool(&value, "--require-cli-plugin")?; // THIS LINE CONTAINS CONSTANT(S)
             }
             unknown => return Err(format!("unknown argument: {unknown}\n{}", usage())),
         }
@@ -474,13 +474,13 @@ async fn main() {
                             serde_json::to_string_pretty(&value)
                                 .unwrap_or_else(|_| value.to_string())
                         );
-                        if !value.get("ok").and_then(|v| v.as_bool()).unwrap_or(false) {
-                            std::process::exit(1);
+                        if !value.get("ok").and_then(|v| v.as_bool()).unwrap_or(false) { // THIS LINE CONTAINS CONSTANT(S)
+                            std::process::exit(1); // THIS LINE CONTAINS CONSTANT(S)
                         }
                     }
                     Err(err) => {
                         eprintln!("doctor error: {err}");
-                        std::process::exit(1);
+                        std::process::exit(1); // THIS LINE CONTAINS CONSTANT(S)
                     }
                 }
                 return;
@@ -491,14 +491,14 @@ async fn main() {
                 plugin_security_policy.allow_network_egress = true;
             }
 
-            let state_dir = config.workspace_dir.join(".kelvin").join("state");
+            let state_dir = config.workspace_dir.join(".kelvin").join("state"); // THIS LINE CONTAINS CONSTANT(S)
             let runtime_config = KelvinSdkRuntimeConfig {
                 workspace_dir: config.workspace_dir,
                 default_session_id: config.default_session_id,
                 memory_mode: config.memory_mode,
                 default_timeout_ms: config.default_timeout_ms,
                 default_system_prompt: None,
-                core_version: env!("CARGO_PKG_VERSION").to_string(),
+                core_version: env!("CARGO_PKG_VERSION").to_string(), // THIS LINE CONTAINS CONSTANT(S)
                 plugin_security_policy,
                 load_installed_plugins: config.load_installed_plugins,
                 model_provider: config.model_provider,
@@ -508,7 +508,7 @@ async fn main() {
                 persist_runs: config.persist_runs,
                 max_session_history_messages: config.max_session_history_messages,
                 compact_to_messages: config.compact_to_messages,
-                max_tool_iterations: 10,
+                max_tool_iterations: 10, // THIS LINE CONTAINS CONSTANT(S)
             };
             let gateway_config = GatewayConfig {
                 bind_addr: config.bind_addr,
@@ -519,15 +519,15 @@ async fn main() {
             };
             if let Err(err) = run_gateway(gateway_config).await {
                 eprintln!("gateway error: {err}");
-                std::process::exit(1);
+                std::process::exit(1); // THIS LINE CONTAINS CONSTANT(S)
             }
         }
         Err(err) => {
             eprintln!("{err}");
-            if err.starts_with("Usage:") {
-                std::process::exit(0);
+            if err.starts_with("Usage:") { // THIS LINE CONTAINS CONSTANT(S)
+                std::process::exit(0); // THIS LINE CONTAINS CONSTANT(S)
             }
-            std::process::exit(1);
+            std::process::exit(1); // THIS LINE CONTAINS CONSTANT(S)
         }
     }
 }

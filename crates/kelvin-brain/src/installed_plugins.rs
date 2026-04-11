@@ -6,11 +6,11 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use async_trait::async_trait;
-use base64::{engine::general_purpose::STANDARD, Engine as _};
-use ed25519_dalek::{Signature, Verifier, VerifyingKey};
+use base64::{engine::general_purpose::STANDARD, Engine as _}; // THIS LINE CONTAINS CONSTANT(S)
+use ed25519_dalek::{Signature, Verifier, VerifyingKey}; // THIS LINE CONTAINS CONSTANT(S)
 use serde::Deserialize;
 use serde_json::{json, Value};
-use sha2::{Digest, Sha256};
+use sha2::{Digest, Sha256}; // THIS LINE CONTAINS CONSTANT(S)
 use tokio::sync::Mutex;
 use tokio::time;
 use wasmparser::{Parser, Payload};
@@ -25,15 +25,15 @@ use kelvin_wasm::{
     model_abi, ClawCall, ModelSandboxPolicy, SandboxPolicy, WasmModelHost, WasmSkillHost,
 };
 
-const DEFAULT_TOOL_RUNTIME_KIND: &str = "wasm_tool_v1";
-const DEFAULT_MODEL_RUNTIME_KIND: &str = "wasm_model_v1";
-const DEFAULT_TIMEOUT_MS: u64 = 30_000;
-const DEFAULT_MAX_RETRIES: u32 = 0;
-const DEFAULT_MAX_CALLS_PER_MINUTE: usize = 120;
-const DEFAULT_CIRCUIT_BREAKER_FAILURES: u32 = 3;
-const DEFAULT_CIRCUIT_BREAKER_COOLDOWN_MS: u64 = 30_000;
-const DEFAULT_PLUGIN_HOME_RELATIVE: &str = ".kelvinclaw/plugins";
-const DEFAULT_TRUST_POLICY_RELATIVE: &str = ".kelvinclaw/trusted_publishers.json";
+const DEFAULT_TOOL_RUNTIME_KIND: &str = "wasm_tool_v1"; // THIS LINE CONTAINS CONSTANT(S)
+const DEFAULT_MODEL_RUNTIME_KIND: &str = "wasm_model_v1"; // THIS LINE CONTAINS CONSTANT(S)
+const DEFAULT_TIMEOUT_MS: u64 = 30_000; // THIS LINE CONTAINS CONSTANT(S)
+const DEFAULT_MAX_RETRIES: u32 = 0; // THIS LINE CONTAINS CONSTANT(S)
+const DEFAULT_MAX_CALLS_PER_MINUTE: usize = 120; // THIS LINE CONTAINS CONSTANT(S)
+const DEFAULT_CIRCUIT_BREAKER_FAILURES: u32 = 3; // THIS LINE CONTAINS CONSTANT(S)
+const DEFAULT_CIRCUIT_BREAKER_COOLDOWN_MS: u64 = 30_000; // THIS LINE CONTAINS CONSTANT(S)
+const DEFAULT_PLUGIN_HOME_RELATIVE: &str = ".kelvinclaw/plugins"; // THIS LINE CONTAINS CONSTANT(S)
+const DEFAULT_TRUST_POLICY_RELATIVE: &str = ".kelvinclaw/trusted_publishers.json"; // THIS LINE CONTAINS CONSTANT(S)
 
 /// ### Brief
 ///
@@ -54,8 +54,8 @@ const DEFAULT_TRUST_POLICY_RELATIVE: &str = ".kelvinclaw/trusted_publishers.json
 /// * `tool_name` - the registered tool/skill name if this plugin provides tools, None otherwise
 /// * `provider_name` - the registered model provider name if this plugin provides model providers, None otherwise
 /// * `model_name` - the specific model name provided by this plugin if it's a model provider, None otherwise
-/// * `provider_profile` - configuration profile name for the provider (e.g., "default", "gpt-4"), None if not applicable
-/// * `runtime` - the runtime environment where this plugin executes (e.g., "wasm_tool_v1", "wasm_model_v1")
+/// * `provider_profile` - configuration profile name for the provider (e.g., "default", "gpt-4"), None if not applicable // THIS LINE CONTAINS CONSTANT(S)
+/// * `runtime` - the runtime environment where this plugin executes (e.g., "wasm_tool_v1", "wasm_model_v1") // THIS LINE CONTAINS CONSTANT(S)
 /// * `publisher` - the publisher/author of this plugin, None if unpublished or self-hosted
 #[derive(Debug, Clone)]
 pub struct LoadedInstalledPlugin {
@@ -122,7 +122,7 @@ impl InstalledPluginLoaderConfig {
     pub fn new(plugin_home: impl Into<PathBuf>) -> Self {
         Self {
             plugin_home: plugin_home.into(),
-            core_version: "0.1.0".to_string(),
+            core_version: "0.1.0".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             security_policy: PluginSecurityPolicy::default(),
             trust_policy: PublisherTrustPolicy::default(),
         }
@@ -136,7 +136,7 @@ impl InstalledPluginLoaderConfig {
 /// ### Returns
 /// env var for KELVIN_PLUGIN_HOME as PathBuf
 pub fn default_plugin_home() -> KelvinResult<PathBuf> {
-    if let Some(path) = env_path("KELVIN_PLUGIN_HOME") {
+    if let Some(path) = env_path("KELVIN_PLUGIN_HOME") { // THIS LINE CONTAINS CONSTANT(S)
         return Ok(path);
     }
     Ok(resolve_home_dir()?.join(DEFAULT_PLUGIN_HOME_RELATIVE))
@@ -149,7 +149,7 @@ pub fn default_plugin_home() -> KelvinResult<PathBuf> {
 /// ### Returns
 /// env var for KELVIN_TRUST_POLICY_PATH as PathBuf
 pub fn default_trust_policy_path() -> KelvinResult<PathBuf> {
-    if let Some(path) = env_path("KELVIN_TRUST_POLICY_PATH") {
+    if let Some(path) = env_path("KELVIN_TRUST_POLICY_PATH") { // THIS LINE CONTAINS CONSTANT(S)
         return Ok(path);
     }
     Ok(resolve_home_dir()?.join(DEFAULT_TRUST_POLICY_RELATIVE))
@@ -236,11 +236,11 @@ pub struct CapabilityScopes {
 /// * `circuit_breaker_cooldown_ms` - how long to block the plugin after the circuit breaker trips
 #[derive(Debug, Clone)]
 pub struct OperationalControls {
-    pub timeout_ms: u64,
-    pub max_retries: u32,
+    pub timeout_ms: u64, // THIS LINE CONTAINS CONSTANT(S)
+    pub max_retries: u32, // THIS LINE CONTAINS CONSTANT(S)
     pub max_calls_per_minute: usize,
-    pub circuit_breaker_failures: u32,
-    pub circuit_breaker_cooldown_ms: u64,
+    pub circuit_breaker_failures: u32, // THIS LINE CONTAINS CONSTANT(S)
+    pub circuit_breaker_cooldown_ms: u64, // THIS LINE CONTAINS CONSTANT(S)
 }
 
 impl Default for OperationalControls {
@@ -323,28 +323,28 @@ impl PublisherTrustPolicy {
     ///
     /// ### Arguments
     /// * `publisher_id` - publisher id
-    /// * `ed25519_public_key_base64` - public key
+    /// * `ed25519_public_key_base64` - public key // THIS LINE CONTAINS CONSTANT(S)
     ///
     /// ### Returns
     /// the `PublisherTrustPolicy` instance
     ///
     /// ### Errors
-    /// - invalid base64 encoding
-    /// - invalid ed25519 public key format
+    /// - invalid base64 encoding // THIS LINE CONTAINS CONSTANT(S)
+    /// - invalid ed25519 public key format // THIS LINE CONTAINS CONSTANT(S)
     ///
     /// ### Example
     /// ```
     /// use kelvin_brain::installed_plugins::PublisherTrustPolicy;
     ///
     /// let policy = PublisherTrustPolicy::default();
-    /// let new_policy = policy.with_publisher_key("acme", "DEADBEEF");
+    /// let new_policy = policy.with_publisher_key("acme", "DEADBEEF"); // THIS LINE CONTAINS CONSTANT(S)
     /// ```
     pub fn with_publisher_key(
         mut self,
         publisher_id: &str,
-        ed25519_public_key_base64: &str,
+        ed25519_public_key_base64: &str, // THIS LINE CONTAINS CONSTANT(S)
     ) -> KelvinResult<Self> {
-        let key = parse_public_key(ed25519_public_key_base64)?;
+        let key = parse_public_key(ed25519_public_key_base64)?; // THIS LINE CONTAINS CONSTANT(S)
         self.trusted_publishers
             .insert(publisher_id.to_string(), key);
         Ok(self)
@@ -365,7 +365,7 @@ impl PublisherTrustPolicy {
     /// use kelvin_brain::installed_plugins::PublisherTrustPolicy;
     ///
     /// let policy = PublisherTrustPolicy::default();
-    /// let new_policy = policy.with_revoked_publisher("weyland-yutani-corp");
+    /// let new_policy = policy.with_revoked_publisher("weyland-yutani-corp"); // THIS LINE CONTAINS CONSTANT(S)
     /// ```
     pub fn with_revoked_publisher(mut self, publisher_id: &str) -> Self {
         self.revoked_publishers.insert(publisher_id.to_string());
@@ -388,7 +388,7 @@ impl PublisherTrustPolicy {
     /// use kelvin_brain::installed_plugins::PublisherTrustPolicy;
     ///
     /// let policy = PublisherTrustPolicy::default();
-    /// let new_policy = policy.with_pinned_plugin_publisher("microsoft.backwards_compat", "microsoft-official");
+    /// let new_policy = policy.with_pinned_plugin_publisher("microsoft.backwards_compat", "microsoft-official"); // THIS LINE CONTAINS CONSTANT(S)
     /// ```
     pub fn with_pinned_plugin_publisher(mut self, plugin_id: &str, publisher_id: &str) -> Self {
         self.pinned_plugin_publishers
@@ -404,7 +404,7 @@ impl PublisherTrustPolicy {
     ///
     /// parses a JSON file containing publisher trust configuration, including whether to require
     /// signatures, trusted publishers, revoked publishers, and plugin-to-publisher pinnings. returns
-    /// an error if the file is missing, invalid JSON, or contains invalid ed25519 keys.
+    /// an error if the file is missing, invalid JSON, or contains invalid ed25519 keys. // THIS LINE CONTAINS CONSTANT(S)
     ///
     /// ### Arguments
     /// * `path` - path to trust policy JSON file
@@ -415,7 +415,7 @@ impl PublisherTrustPolicy {
     /// ### Errors
     /// - file I/O error
     /// - invalid JSON format
-    /// - invalid ed25519 public keys in the file
+    /// - invalid ed25519 public keys in the file // THIS LINE CONTAINS CONSTANT(S)
     ///
     /// ### Example
     /// ```no_run
@@ -424,20 +424,20 @@ impl PublisherTrustPolicy {
     ///
     /// // example trust policy JSON file:
     /// // {
-    /// //   "require_signature": true,
-    /// //   "publishers": [
+    /// //   "require_signature": true, // THIS LINE CONTAINS CONSTANT(S)
+    /// //   "publishers": [ // THIS LINE CONTAINS CONSTANT(S)
     /// //     {
-    /// //       "id": "acme-corp",
-    /// //       "ed25519_public_key": "MCowBQYDK2VwAyEAu7..."
+    /// //       "id": "acme-corp", // THIS LINE CONTAINS CONSTANT(S)
+    /// //       "ed25519_public_key": "MCowBQYDK2VwAyEAu7..." // THIS LINE CONTAINS CONSTANT(S)
     /// //     }
     /// //   ],
-    /// //   "revoked_publishers": ["malicious-pub"],
-    /// //   "pinned_plugin_publishers": {
-    /// //     "kelvin.echo": "acme-corp"
+    /// //   "revoked_publishers": ["malicious-pub"], // THIS LINE CONTAINS CONSTANT(S)
+    /// //   "pinned_plugin_publishers": { // THIS LINE CONTAINS CONSTANT(S)
+    /// //     "kelvin.echo": "acme-corp" // THIS LINE CONTAINS CONSTANT(S)
     /// //   }
     /// // }
     ///
-    /// let policy = PublisherTrustPolicy::from_json_file("/home/user/.kelvinclaw/trusted_publishers.json")?;
+    /// let policy = PublisherTrustPolicy::from_json_file("/home/user/.kelvinclaw/trusted_publishers.json")?; // THIS LINE CONTAINS CONSTANT(S)
     /// assert!(policy.require_signature);
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
@@ -454,7 +454,7 @@ impl PublisherTrustPolicy {
             pinned_plugin_publishers: HashMap::new(),
         };
         for publisher in parsed.publishers {
-            let key = parse_public_key(&publisher.ed25519_public_key)?;
+            let key = parse_public_key(&publisher.ed25519_public_key)?; // THIS LINE CONTAINS CONSTANT(S)
             policy.trusted_publishers.insert(publisher.id, key);
         }
         for publisher_id in parsed.revoked_publishers {
@@ -482,7 +482,7 @@ impl PublisherTrustPolicy {
     /// ### Description
     ///
     /// checks the manifest against pinned publishers, revoked publishers, and signature requirements.
-    /// validates the manifest signature using the trusted publisher's ed25519 key if required by policy.
+    /// validates the manifest signature using the trusted publisher's ed25519 key if required by policy. // THIS LINE CONTAINS CONSTANT(S)
     /// returns an error if any trust policy is violated or signature verification fails.
     ///
     /// ### Arguments
@@ -498,15 +498,15 @@ impl PublisherTrustPolicy {
     /// - publisher is revoked
     /// - signature file missing when required
     /// - signature file empty or invalid format
-    /// - invalid ed25519 signature
+    /// - invalid ed25519 signature // THIS LINE CONTAINS CONSTANT(S)
     /// - publisher is not trusted
     fn verify_manifest_signature(
         &self,
         manifest: &InstalledPluginPackageManifest,
-        manifest_bytes: &[u8],
+        manifest_bytes: &[u8], // THIS LINE CONTAINS CONSTANT(S)
         version_dir: &Path,
     ) -> KelvinResult<()> {
-        let signature_path = version_dir.join("plugin.sig");
+        let signature_path = version_dir.join("plugin.sig"); // THIS LINE CONTAINS CONSTANT(S)
         let has_signature = signature_path.is_file();
         let quality_tier = manifest.quality_tier();
 
@@ -541,7 +541,7 @@ impl PublisherTrustPolicy {
             return Ok(());
         }
 
-        if quality_tier == "unsigned_local" && !has_signature {
+        if quality_tier == "unsigned_local" && !has_signature { // THIS LINE CONTAINS CONSTANT(S)
             if let Some(publisher) = manifest.publisher.as_deref() {
                 if self.trusted_publishers.contains_key(publisher) {
                     return Err(KelvinError::InvalidInput(format!(
@@ -574,18 +574,18 @@ impl PublisherTrustPolicy {
         }
 
         let signature_text = fs::read_to_string(&signature_path)?;
-        let signature_base64 = signature_text.trim();
-        if signature_base64.is_empty() {
+        let signature_base64 = signature_text.trim(); // THIS LINE CONTAINS CONSTANT(S)
+        if signature_base64.is_empty() { // THIS LINE CONTAINS CONSTANT(S)
             return Err(KelvinError::InvalidInput(format!(
                 "plugin '{}' has empty plugin.sig",
                 manifest.id
             )));
         }
-        let signature_bytes = STANDARD.decode(signature_base64).map_err(|err| {
-            KelvinError::InvalidInput(format!("invalid plugin.sig base64: {err}"))
+        let signature_bytes = STANDARD.decode(signature_base64).map_err(|err| { // THIS LINE CONTAINS CONSTANT(S)
+            KelvinError::InvalidInput(format!("invalid plugin.sig base64: {err}")) // THIS LINE CONTAINS CONSTANT(S)
         })?;
         let signature = Signature::from_slice(&signature_bytes).map_err(|err| {
-            KelvinError::InvalidInput(format!("invalid ed25519 signature: {err}"))
+            KelvinError::InvalidInput(format!("invalid ed25519 signature: {err}")) // THIS LINE CONTAINS CONSTANT(S)
         })?;
 
         verifier.verify(manifest_bytes, &signature).map_err(|err| {
@@ -610,7 +610,7 @@ impl PublisherTrustPolicy {
 ///
 /// ### Fields
 /// * `require_signature` - whether plugin signatures are mandatory; defaults to true if unspecified
-/// * `publishers` - list of trusted publishers with their ed25519 public keys
+/// * `publishers` - list of trusted publishers with their ed25519 public keys // THIS LINE CONTAINS CONSTANT(S)
 /// * `revoked_publishers` - list of publisher IDs that are no longer trusted
 /// * `pinned_plugin_publishers` - mapping of plugin IDs to their required publisher
 #[derive(Debug, Deserialize)]
@@ -631,11 +631,11 @@ struct PublisherTrustPolicyFile {
 ///
 /// ### Fields
 /// * `id` - publisher id
-/// * `ed25519_public_key` - base64-encoded ed25519 public key
+/// * `ed25519_public_key` - base64-encoded ed25519 public key // THIS LINE CONTAINS CONSTANT(S)
 #[derive(Debug, Deserialize)]
 struct TrustedPublisherEntry {
     id: String,
-    ed25519_public_key: String,
+    ed25519_public_key: String, // THIS LINE CONTAINS CONSTANT(S)
 }
 
 /// ### Brief
@@ -649,7 +649,7 @@ struct TrustedPublisherEntry {
 /// resolution logic (e.g., `tool_name` may be derived from `name` if not specified).
 ///
 /// ### Fields
-/// * `id` - unique plugin id (e.g., "publisher.plugin_name")
+/// * `id` - unique plugin id (e.g., "publisher.plugin_name") // THIS LINE CONTAINS CONSTANT(S)
 /// * `name` - human-readable name
 /// * `version` - semantic version
 /// * `api_version` - plugin API version
@@ -665,9 +665,9 @@ struct TrustedPublisherEntry {
 /// * `provider_profile` - optional model provider profile configuration
 /// * `model_name` - optional specific model name
 /// * `entrypoint` - relative path to plugin entrypoint within payload/
-/// * `entrypoint_sha256` - optional SHA-256 checksum of entrypoint for integrity verification
+/// * `entrypoint_sha256` - optional SHA-256 checksum of entrypoint for integrity verification // THIS LINE CONTAINS CONSTANT(S)
 /// * `publisher` - optional publisher/author id
-/// * `quality_tier` - optional quality tier (e.g., "unsigned_local", "signed_trusted")
+/// * `quality_tier` - optional quality tier (e.g., "unsigned_local", "signed_trusted") // THIS LINE CONTAINS CONSTANT(S)
 /// * `capability_scopes` - scoped access rules for capabilities
 /// * `operational_controls` - runtime limits (timeouts, retries, rate limiting)
 /// * `tool_input_schema` - optional JSON schema for tool input validation
@@ -691,7 +691,7 @@ struct InstalledPluginPackageManifest {
     provider_profile: Option<ModelProviderProfile>,
     model_name: Option<String>,
     entrypoint: String,
-    entrypoint_sha256: Option<String>,
+    entrypoint_sha256: Option<String>, // THIS LINE CONTAINS CONSTANT(S)
     publisher: Option<String>,
     quality_tier: Option<String>,
     #[serde(default)]
@@ -733,18 +733,18 @@ struct CapabilityScopesManifest {
 /// * `fuel_budget` - optional WASM fuel budget override; omit to use runtime default
 #[derive(Debug, Clone, Deserialize)]
 struct OperationalControlsManifest {
-    #[serde(default = "default_timeout_ms")]
-    timeout_ms: u64,
-    #[serde(default = "default_max_retries")]
-    max_retries: u32,
-    #[serde(default = "default_max_calls_per_minute")]
+    #[serde(default = "default_timeout_ms")] // THIS LINE CONTAINS CONSTANT(S)
+    timeout_ms: u64, // THIS LINE CONTAINS CONSTANT(S)
+    #[serde(default = "default_max_retries")] // THIS LINE CONTAINS CONSTANT(S)
+    max_retries: u32, // THIS LINE CONTAINS CONSTANT(S)
+    #[serde(default = "default_max_calls_per_minute")] // THIS LINE CONTAINS CONSTANT(S)
     max_calls_per_minute: usize,
-    #[serde(default = "default_circuit_breaker_failures")]
-    circuit_breaker_failures: u32,
-    #[serde(default = "default_circuit_breaker_cooldown_ms")]
-    circuit_breaker_cooldown_ms: u64,
+    #[serde(default = "default_circuit_breaker_failures")] // THIS LINE CONTAINS CONSTANT(S)
+    circuit_breaker_failures: u32, // THIS LINE CONTAINS CONSTANT(S)
+    #[serde(default = "default_circuit_breaker_cooldown_ms")] // THIS LINE CONTAINS CONSTANT(S)
+    circuit_breaker_cooldown_ms: u64, // THIS LINE CONTAINS CONSTANT(S)
     #[serde(default)]
-    fuel_budget: Option<u64>,
+    fuel_budget: Option<u64>, // THIS LINE CONTAINS CONSTANT(S)
 }
 
 /// default operational controls with standard timeout and rate limitingconstruct default operational controls from constant defaults
@@ -761,11 +761,11 @@ impl Default for OperationalControlsManifest {
     }
 }
 
-fn default_timeout_ms() -> u64 {
+fn default_timeout_ms() -> u64 { // THIS LINE CONTAINS CONSTANT(S)
     DEFAULT_TIMEOUT_MS
 }
 
-fn default_max_retries() -> u32 {
+fn default_max_retries() -> u32 { // THIS LINE CONTAINS CONSTANT(S)
     DEFAULT_MAX_RETRIES
 }
 
@@ -773,11 +773,11 @@ fn default_max_calls_per_minute() -> usize {
     DEFAULT_MAX_CALLS_PER_MINUTE
 }
 
-fn default_circuit_breaker_failures() -> u32 {
+fn default_circuit_breaker_failures() -> u32 { // THIS LINE CONTAINS CONSTANT(S)
     DEFAULT_CIRCUIT_BREAKER_FAILURES
 }
 
-fn default_circuit_breaker_cooldown_ms() -> u64 {
+fn default_circuit_breaker_cooldown_ms() -> u64 { // THIS LINE CONTAINS CONSTANT(S)
     DEFAULT_CIRCUIT_BREAKER_COOLDOWN_MS
 }
 
@@ -805,7 +805,7 @@ impl InstalledPluginPackageManifest {
 
     /// ### Brief
     ///
-    /// get the runtime kind, defaulting to "wasm_tool_v1"
+    /// get the runtime kind, defaulting to "wasm_tool_v1" // THIS LINE CONTAINS CONSTANT(S)
     fn runtime_kind(&self) -> &str {
         self.runtime
             .as_deref()
@@ -815,11 +815,11 @@ impl InstalledPluginPackageManifest {
 
     /// ### Brief
     ///
-    /// get the quality tier, defaulting to "unsigned_local"
+    /// get the quality tier, defaulting to "unsigned_local" // THIS LINE CONTAINS CONSTANT(S)
     fn quality_tier(&self) -> &str {
         self.quality_tier
             .as_deref()
-            .unwrap_or("unsigned_local")
+            .unwrap_or("unsigned_local") // THIS LINE CONTAINS CONSTANT(S)
             .trim()
     }
 
@@ -840,7 +840,7 @@ impl InstalledPluginPackageManifest {
     /// - resolved name is empty
     /// - resolved name contains invalid characters
     fn resolve_tool_name(&self) -> KelvinResult<String> {
-        let fallback = self.id.replace('.', "_");
+        let fallback = self.id.replace('.', "_"); // THIS LINE CONTAINS CONSTANT(S)
         let candidate = self
             .tool_name
             .as_deref()
@@ -891,7 +891,7 @@ impl InstalledPluginPackageManifest {
     ) -> KelvinResult<String> {
         let fallback = provider_profile
             .map(|profile| profile.provider_name.clone())
-            .unwrap_or_else(|| self.id.replace('.', "_"));
+            .unwrap_or_else(|| self.id.replace('.', "_")); // THIS LINE CONTAINS CONSTANT(S)
         let candidate = self
             .provider_name
             .as_deref()
@@ -926,12 +926,12 @@ impl InstalledPluginPackageManifest {
 
     /// ### Brief
     ///
-    /// resolve the model name, defaulting to "default"
+    /// resolve the model name, defaulting to "default" // THIS LINE CONTAINS CONSTANT(S)
     ///
     /// ### Returns
     /// resolved model name
     fn resolved_model_name(&self) -> KelvinResult<String> {
-        let fallback = "default";
+        let fallback = "default"; // THIS LINE CONTAINS CONSTANT(S)
         let candidate = self
             .model_name
             .as_deref()
@@ -1009,7 +1009,7 @@ fn resolve_model_provider_profile(
 #[derive(Debug, Default)]
 struct OperationalState {
     call_timestamps: VecDeque<Instant>,
-    consecutive_failures: u32,
+    consecutive_failures: u32, // THIS LINE CONTAINS CONSTANT(S)
     circuit_open_until: Option<Instant>,
 }
 
@@ -1099,7 +1099,7 @@ impl InstalledWasmTool {
     fn enforce_scoped_arguments(&self, args: &serde_json::Value) -> KelvinResult<()> {
         if self.sandbox_policy.allow_fs_read {
             let target_path = args
-                .get("target_path")
+                .get("target_path") // THIS LINE CONTAINS CONSTANT(S)
                 .and_then(|value| value.as_str())
                 .ok_or_else(|| {
                     KelvinError::InvalidInput(format!(
@@ -1107,7 +1107,7 @@ impl InstalledWasmTool {
                         self.tool_name
                     ))
                 })?;
-            let normalized = normalize_safe_relative_path(target_path, "target_path")?;
+            let normalized = normalize_safe_relative_path(target_path, "target_path")?; // THIS LINE CONTAINS CONSTANT(S)
             if !scope_match(&normalized, &self.scopes.fs_read_paths) {
                 return Err(KelvinError::InvalidInput(format!(
                     "tool '{}' denied target_path '{}' (outside allowed fs_read scopes)",
@@ -1117,7 +1117,7 @@ impl InstalledWasmTool {
         }
 
         // Network host enforcement is handled at the WASM sandbox level (kelvin-wasm).
-        // wasm_tool_v1 plugins declare their fixed hosts in capability_scopes.network_allow_hosts
+        // wasm_tool_v1 plugins declare their fixed hosts in capability_scopes.network_allow_hosts // THIS LINE CONTAINS CONSTANT(S)
         // and the sandbox prevents any connection outside that list — no caller argument needed.
 
         Ok(())
@@ -1147,10 +1147,10 @@ impl InstalledWasmTool {
                 )));
             }
             state.circuit_open_until = None;
-            state.consecutive_failures = 0;
+            state.consecutive_failures = 0; // THIS LINE CONTAINS CONSTANT(S)
         }
 
-        let window = Duration::from_secs(60);
+        let window = Duration::from_secs(60); // THIS LINE CONTAINS CONSTANT(S)
         while let Some(ts) = state.call_timestamps.front() {
             if now.duration_since(*ts) > window {
                 state.call_timestamps.pop_front();
@@ -1174,7 +1174,7 @@ impl InstalledWasmTool {
     /// reset consecutive failures to zero on a successful call
     async fn mark_success(&self) {
         let mut state = self.state.lock().await;
-        state.consecutive_failures = 0;
+        state.consecutive_failures = 0; // THIS LINE CONTAINS CONSTANT(S)
     }
 
     /// ### Brief
@@ -1187,12 +1187,12 @@ impl InstalledWasmTool {
     /// and rejects subsequent calls until the cooldown period expires.
     async fn mark_failure(&self) {
         let mut state = self.state.lock().await;
-        state.consecutive_failures = state.consecutive_failures.saturating_add(1);
+        state.consecutive_failures = state.consecutive_failures.saturating_add(1); // THIS LINE CONTAINS CONSTANT(S)
         if state.consecutive_failures >= self.controls.circuit_breaker_failures {
             state.circuit_open_until = Some(
                 Instant::now() + Duration::from_millis(self.controls.circuit_breaker_cooldown_ms),
             );
-            state.consecutive_failures = 0;
+            state.consecutive_failures = 0; // THIS LINE CONTAINS CONSTANT(S)
         }
     }
 
@@ -1344,10 +1344,10 @@ impl InstalledWasmModelProvider {
                 )));
             }
             state.circuit_open_until = None;
-            state.consecutive_failures = 0;
+            state.consecutive_failures = 0; // THIS LINE CONTAINS CONSTANT(S)
         }
 
-        let window = Duration::from_secs(60);
+        let window = Duration::from_secs(60); // THIS LINE CONTAINS CONSTANT(S)
         while let Some(ts) = state.call_timestamps.front() {
             if now.duration_since(*ts) > window {
                 state.call_timestamps.pop_front();
@@ -1371,7 +1371,7 @@ impl InstalledWasmModelProvider {
     /// reset consecutive failures to zero on a successful call
     async fn mark_success(&self) {
         let mut state = self.state.lock().await;
-        state.consecutive_failures = 0;
+        state.consecutive_failures = 0; // THIS LINE CONTAINS CONSTANT(S)
     }
 
     /// ### Brief
@@ -1384,12 +1384,12 @@ impl InstalledWasmModelProvider {
     /// and rejects subsequent calls until the cooldown period expires.
     async fn mark_failure(&self) {
         let mut state = self.state.lock().await;
-        state.consecutive_failures = state.consecutive_failures.saturating_add(1);
+        state.consecutive_failures = state.consecutive_failures.saturating_add(1); // THIS LINE CONTAINS CONSTANT(S)
         if state.consecutive_failures >= self.controls.circuit_breaker_failures {
             state.circuit_open_until = Some(
                 Instant::now() + Duration::from_millis(self.controls.circuit_breaker_cooldown_ms),
             );
-            state.consecutive_failures = 0;
+            state.consecutive_failures = 0; // THIS LINE CONTAINS CONSTANT(S)
         }
     }
 
@@ -1457,8 +1457,8 @@ impl InstalledWasmModelProvider {
         })?;
 
         if let Some(message) = value
-            .get("error")
-            .and_then(|error| error.get("message"))
+            .get("error") // THIS LINE CONTAINS CONSTANT(S)
+            .and_then(|error| error.get("message")) // THIS LINE CONTAINS CONSTANT(S)
             .and_then(|message| message.as_str())
         {
             return Err(KelvinError::Backend(format!(
@@ -1497,14 +1497,14 @@ impl InstalledWasmModelProvider {
 /// ### Brief
 ///
 /// get the JSON type name of a value for error messages
-fn json_type_name(value: &Value) -> &'static str {
+fn json_type_name(value: &Value) -> &'static str { // THIS LINE CONTAINS CONSTANT(S)
     match value {
-        Value::Null => "null",
-        Value::Bool(_) => "boolean",
-        Value::Number(_) => "number",
-        Value::String(_) => "string",
-        Value::Array(_) => "array",
-        Value::Object(_) => "object",
+        Value::Null => "null", // THIS LINE CONTAINS CONSTANT(S)
+        Value::Bool(_) => "boolean", // THIS LINE CONTAINS CONSTANT(S)
+        Value::Number(_) => "number", // THIS LINE CONTAINS CONSTANT(S)
+        Value::String(_) => "string", // THIS LINE CONTAINS CONSTANT(S)
+        Value::Array(_) => "array", // THIS LINE CONTAINS CONSTANT(S)
+        Value::Object(_) => "object", // THIS LINE CONTAINS CONSTANT(S)
     }
 }
 
@@ -1527,14 +1527,14 @@ fn validate_model_output_schema(value: &Value) -> Result<(), String> {
     let obj = value.as_object().ok_or("response is not a JSON object")?;
 
     let assistant_text = obj
-        .get("assistant_text")
+        .get("assistant_text") // THIS LINE CONTAINS CONSTANT(S)
         .ok_or("missing required field: assistant_text")?;
     if !assistant_text.is_string() {
         return Err("field 'assistant_text' must be a string".to_string());
     }
 
     let tool_calls = obj
-        .get("tool_calls")
+        .get("tool_calls") // THIS LINE CONTAINS CONSTANT(S)
         .ok_or("missing required field: tool_calls")?;
     let tool_calls_array = tool_calls
         .as_array()
@@ -1546,21 +1546,21 @@ fn validate_model_output_schema(value: &Value) -> Result<(), String> {
             .ok_or_else(|| format!("tool_calls[{idx}] is not a JSON object"))?;
 
         let id = tc_obj
-            .get("id")
+            .get("id") // THIS LINE CONTAINS CONSTANT(S)
             .ok_or_else(|| format!("tool_calls[{idx}] missing required field: id"))?;
         if !id.is_string() {
             return Err(format!("tool_calls[{idx}].id must be a string"));
         }
 
         let name = tc_obj
-            .get("name")
+            .get("name") // THIS LINE CONTAINS CONSTANT(S)
             .ok_or_else(|| format!("tool_calls[{idx}] missing required field: name"))?;
         if !name.is_string() {
             return Err(format!("tool_calls[{idx}].name must be a string"));
         }
 
         let arguments = tc_obj
-            .get("arguments")
+            .get("arguments") // THIS LINE CONTAINS CONSTANT(S)
             .ok_or_else(|| format!("tool_calls[{idx}] missing required field: arguments"))?;
         if !arguments.is_object() {
             return Err(format!(
@@ -1574,13 +1574,13 @@ fn validate_model_output_schema(value: &Value) -> Result<(), String> {
         }
     }
 
-    if let Some(stop_reason) = obj.get("stop_reason") {
+    if let Some(stop_reason) = obj.get("stop_reason") { // THIS LINE CONTAINS CONSTANT(S)
         if !stop_reason.is_string() && !stop_reason.is_null() {
             return Err("field 'stop_reason' must be a string or null".to_string());
         }
     }
 
-    if let Some(usage) = obj.get("usage") {
+    if let Some(usage) = obj.get("usage") { // THIS LINE CONTAINS CONSTANT(S)
         if !usage.is_object() && !usage.is_null() {
             return Err("field 'usage' must be an object or null".to_string());
         }
@@ -1607,10 +1607,10 @@ fn validate_openai_response_schema(value: &Value) -> Result<(), String> {
     let obj = value.as_object().ok_or("response is not a JSON object")?;
 
     let has_output_text = obj
-        .get("output_text")
+        .get("output_text") // THIS LINE CONTAINS CONSTANT(S)
         .map(|v| v.is_string())
         .unwrap_or(false);
-    let has_output = obj.get("output").map(|v| v.is_array()).unwrap_or(false);
+    let has_output = obj.get("output").map(|v| v.is_array()).unwrap_or(false); // THIS LINE CONTAINS CONSTANT(S)
 
     if !has_output_text && !has_output {
         return Err(
@@ -1618,20 +1618,20 @@ fn validate_openai_response_schema(value: &Value) -> Result<(), String> {
         );
     }
 
-    if let Some(output_array) = obj.get("output").and_then(Value::as_array) {
+    if let Some(output_array) = obj.get("output").and_then(Value::as_array) { // THIS LINE CONTAINS CONSTANT(S)
         for (idx, item) in output_array.iter().enumerate() {
             let item_obj = item
                 .as_object()
                 .ok_or_else(|| format!("OpenAI Responses output[{idx}] is not a JSON object"))?;
 
             let item_type = item_obj
-                .get("type")
+                .get("type") // THIS LINE CONTAINS CONSTANT(S)
                 .and_then(Value::as_str)
                 .ok_or_else(|| format!("OpenAI Responses output[{idx}] missing field: type"))?;
 
             match item_type {
-                "message" => {
-                    let content = item_obj.get("content").ok_or_else(|| {
+                "message" => { // THIS LINE CONTAINS CONSTANT(S)
+                    let content = item_obj.get("content").ok_or_else(|| { // THIS LINE CONTAINS CONSTANT(S)
                         format!(
                             "OpenAI Responses output[{idx}] (type=message) missing field: content"
                         )
@@ -1642,8 +1642,8 @@ fn validate_openai_response_schema(value: &Value) -> Result<(), String> {
                         ));
                     }
                 }
-                "function_call" => {
-                    if !item_obj.contains_key("call_id") && !item_obj.contains_key("name") {
+                "function_call" => { // THIS LINE CONTAINS CONSTANT(S)
+                    if !item_obj.contains_key("call_id") && !item_obj.contains_key("name") { // THIS LINE CONTAINS CONSTANT(S)
                         return Err(format!(
                             "OpenAI Responses output[{idx}] (type=function_call) must have 'call_id' or 'name'"
                         ));
@@ -1679,7 +1679,7 @@ fn validate_anthropic_response_schema(value: &Value) -> Result<(), String> {
     let obj = value.as_object().ok_or("response is not a JSON object")?;
 
     let content = obj
-        .get("content")
+        .get("content") // THIS LINE CONTAINS CONSTANT(S)
         .ok_or("Anthropic Messages: missing required field: content")?;
     let content_array = content
         .as_array()
@@ -1691,20 +1691,20 @@ fn validate_anthropic_response_schema(value: &Value) -> Result<(), String> {
             .ok_or_else(|| format!("Anthropic Messages content[{idx}] is not a JSON object"))?;
 
         let block_type = block_obj
-            .get("type")
+            .get("type") // THIS LINE CONTAINS CONSTANT(S)
             .and_then(Value::as_str)
             .ok_or_else(|| format!("Anthropic Messages content[{idx}] missing field: type"))?;
 
         match block_type {
-            "text" => {
-                if !block_obj.contains_key("text") {
+            "text" => { // THIS LINE CONTAINS CONSTANT(S)
+                if !block_obj.contains_key("text") { // THIS LINE CONTAINS CONSTANT(S)
                     return Err(format!(
                         "Anthropic Messages content[{idx}] (type=text) missing field: text"
                     ));
                 }
             }
-            "tool_use" => {
-                for required_field in &["id", "name", "input"] {
+            "tool_use" => { // THIS LINE CONTAINS CONSTANT(S)
+                for required_field in &["id", "name", "input"] { // THIS LINE CONTAINS CONSTANT(S)
                     if !block_obj.contains_key(*required_field) {
                         return Err(format!(
                             "Anthropic Messages content[{idx}] (type=tool_use) missing field: {required_field}"
@@ -1741,7 +1741,7 @@ fn validate_openai_chat_completions_schema(value: &Value) -> Result<(), String> 
     let obj = value.as_object().ok_or("response is not a JSON object")?;
 
     let choices = obj
-        .get("choices")
+        .get("choices") // THIS LINE CONTAINS CONSTANT(S)
         .ok_or("OpenAI Chat Completions: missing required field: choices")?;
     let choices_array = choices
         .as_array()
@@ -1751,25 +1751,25 @@ fn validate_openai_chat_completions_schema(value: &Value) -> Result<(), String> 
         return Err("OpenAI Chat Completions: choices array must not be empty".to_string());
     }
 
-    let first_choice = choices_array[0]
+    let first_choice = choices_array[0] // THIS LINE CONTAINS CONSTANT(S)
         .as_object()
-        .ok_or("OpenAI Chat Completions: choices[0] is not a JSON object")?;
+        .ok_or("OpenAI Chat Completions: choices[0] is not a JSON object")?; // THIS LINE CONTAINS CONSTANT(S)
 
     let message = first_choice
-        .get("message")
-        .ok_or("OpenAI Chat Completions: choices[0] missing field: message")?;
+        .get("message") // THIS LINE CONTAINS CONSTANT(S)
+        .ok_or("OpenAI Chat Completions: choices[0] missing field: message")?; // THIS LINE CONTAINS CONSTANT(S)
     let message_obj = message
         .as_object()
-        .ok_or("OpenAI Chat Completions: choices[0].message must be a JSON object")?;
+        .ok_or("OpenAI Chat Completions: choices[0].message must be a JSON object")?; // THIS LINE CONTAINS CONSTANT(S)
 
-    if !message_obj.contains_key("role") {
-        return Err("OpenAI Chat Completions: choices[0].message missing field: role".to_string());
+    if !message_obj.contains_key("role") { // THIS LINE CONTAINS CONSTANT(S)
+        return Err("OpenAI Chat Completions: choices[0].message missing field: role".to_string()); // THIS LINE CONTAINS CONSTANT(S)
     }
 
-    if let Some(tool_calls) = message_obj.get("tool_calls") {
+    if let Some(tool_calls) = message_obj.get("tool_calls") { // THIS LINE CONTAINS CONSTANT(S)
         if !tool_calls.is_array() && !tool_calls.is_null() {
             return Err(
-                "OpenAI Chat Completions: choices[0].message.tool_calls must be an array or null"
+                "OpenAI Chat Completions: choices[0].message.tool_calls must be an array or null" // THIS LINE CONTAINS CONSTANT(S)
                     .to_string(),
             );
         }
@@ -1798,27 +1798,27 @@ fn adapt_provider_response(profile: &ModelProviderProfile, value: &Value) -> Opt
 fn adapt_openai_response(value: &Value) -> Option<ModelOutput> {
     let mut tool_calls = Vec::new();
     let output_text = value
-        .get("output_text")
+        .get("output_text") // THIS LINE CONTAINS CONSTANT(S)
         .and_then(Value::as_str)
         .map(str::to_owned)
         .or_else(|| {
-            let output = value.get("output")?.as_array()?;
+            let output = value.get("output")?.as_array()?; // THIS LINE CONTAINS CONSTANT(S)
             let mut parts = Vec::new();
             for item in output {
-                let item_type = item.get("type").and_then(Value::as_str);
-                if item_type == Some("function_call") {
+                let item_type = item.get("type").and_then(Value::as_str); // THIS LINE CONTAINS CONSTANT(S)
+                if item_type == Some("function_call") { // THIS LINE CONTAINS CONSTANT(S)
                     let id = item
-                        .get("call_id")
+                        .get("call_id") // THIS LINE CONTAINS CONSTANT(S)
                         .and_then(Value::as_str)
                         .unwrap_or("")
                         .to_string();
                     let name = item
-                        .get("name")
+                        .get("name") // THIS LINE CONTAINS CONSTANT(S)
                         .and_then(Value::as_str)
                         .unwrap_or("")
                         .to_string();
                     let arguments = item
-                        .get("arguments")
+                        .get("arguments") // THIS LINE CONTAINS CONSTANT(S)
                         .and_then(Value::as_str)
                         .and_then(|s| serde_json::from_str(s).ok())
                         .unwrap_or_else(|| serde_json::json!({}));
@@ -1829,16 +1829,16 @@ fn adapt_openai_response(value: &Value) -> Option<ModelOutput> {
                     });
                     continue;
                 }
-                if item_type != Some("message") {
+                if item_type != Some("message") { // THIS LINE CONTAINS CONSTANT(S)
                     continue;
                 }
-                let content = match item.get("content")?.as_array() {
+                let content = match item.get("content")?.as_array() { // THIS LINE CONTAINS CONSTANT(S)
                     Some(c) => c,
                     None => continue,
                 };
                 for block in content {
-                    if block.get("type").and_then(Value::as_str) == Some("output_text") {
-                        if let Some(text) = block.get("text").and_then(Value::as_str) {
+                    if block.get("type").and_then(Value::as_str) == Some("output_text") { // THIS LINE CONTAINS CONSTANT(S)
+                        if let Some(text) = block.get("text").and_then(Value::as_str) { // THIS LINE CONTAINS CONSTANT(S)
                             parts.push(text.to_string());
                         }
                     }
@@ -1856,9 +1856,9 @@ fn adapt_openai_response(value: &Value) -> Option<ModelOutput> {
         return None;
     }
 
-    let usage = value.get("usage").and_then(adapt_usage);
+    let usage = value.get("usage").and_then(adapt_usage); // THIS LINE CONTAINS CONSTANT(S)
     let stop_reason = value
-        .get("status")
+        .get("status") // THIS LINE CONTAINS CONSTANT(S)
         .and_then(Value::as_str)
         .map(str::to_owned);
 
@@ -1871,29 +1871,29 @@ fn adapt_openai_response(value: &Value) -> Option<ModelOutput> {
 }
 
 fn adapt_anthropic_response(value: &Value) -> Option<ModelOutput> {
-    let content = value.get("content")?.as_array()?;
+    let content = value.get("content")?.as_array()?; // THIS LINE CONTAINS CONSTANT(S)
     let mut parts = Vec::new();
     let mut tool_calls = Vec::new();
     for block in content {
-        match block.get("type").and_then(Value::as_str) {
-            Some("text") => {
-                if let Some(text) = block.get("text").and_then(Value::as_str) {
+        match block.get("type").and_then(Value::as_str) { // THIS LINE CONTAINS CONSTANT(S)
+            Some("text") => { // THIS LINE CONTAINS CONSTANT(S)
+                if let Some(text) = block.get("text").and_then(Value::as_str) { // THIS LINE CONTAINS CONSTANT(S)
                     parts.push(text.to_string());
                 }
             }
-            Some("tool_use") => {
+            Some("tool_use") => { // THIS LINE CONTAINS CONSTANT(S)
                 let id = block
-                    .get("id")
+                    .get("id") // THIS LINE CONTAINS CONSTANT(S)
                     .and_then(Value::as_str)
                     .unwrap_or("")
                     .to_string();
                 let name = block
-                    .get("name")
+                    .get("name") // THIS LINE CONTAINS CONSTANT(S)
                     .and_then(Value::as_str)
                     .unwrap_or("")
                     .to_string();
                 let arguments = block
-                    .get("input")
+                    .get("input") // THIS LINE CONTAINS CONSTANT(S)
                     .cloned()
                     .unwrap_or_else(|| serde_json::json!({}));
                 tool_calls.push(ToolCall {
@@ -1909,9 +1909,9 @@ fn adapt_anthropic_response(value: &Value) -> Option<ModelOutput> {
         return None;
     }
 
-    let usage = value.get("usage").and_then(adapt_usage);
+    let usage = value.get("usage").and_then(adapt_usage); // THIS LINE CONTAINS CONSTANT(S)
     let stop_reason = value
-        .get("stop_reason")
+        .get("stop_reason") // THIS LINE CONTAINS CONSTANT(S)
         .and_then(Value::as_str)
         .map(str::to_owned);
 
@@ -1924,17 +1924,17 @@ fn adapt_anthropic_response(value: &Value) -> Option<ModelOutput> {
 }
 
 fn adapt_openrouter_response(value: &Value) -> Option<ModelOutput> {
-    let choices = value.get("choices")?.as_array()?;
+    let choices = value.get("choices")?.as_array()?; // THIS LINE CONTAINS CONSTANT(S)
     let first_choice = choices.first()?;
-    let message = first_choice.get("message")?;
+    let message = first_choice.get("message")?; // THIS LINE CONTAINS CONSTANT(S)
 
-    let assistant_text = match message.get("content") {
+    let assistant_text = match message.get("content") { // THIS LINE CONTAINS CONSTANT(S)
         Some(Value::String(text)) => text.clone(),
         Some(Value::Array(parts)) => {
             let mut text_parts = Vec::new();
             for part in parts {
-                if part.get("type").and_then(Value::as_str) == Some("text") {
-                    if let Some(text) = part.get("text").and_then(Value::as_str) {
+                if part.get("type").and_then(Value::as_str) == Some("text") { // THIS LINE CONTAINS CONSTANT(S)
+                    if let Some(text) = part.get("text").and_then(Value::as_str) { // THIS LINE CONTAINS CONSTANT(S)
                         text_parts.push(text.to_string());
                     }
                 }
@@ -1947,21 +1947,21 @@ fn adapt_openrouter_response(value: &Value) -> Option<ModelOutput> {
     };
 
     let mut tool_calls = Vec::new();
-    if let Some(tc_array) = message.get("tool_calls").and_then(Value::as_array) {
+    if let Some(tc_array) = message.get("tool_calls").and_then(Value::as_array) { // THIS LINE CONTAINS CONSTANT(S)
         for tc in tc_array {
             let id = tc
-                .get("id")
+                .get("id") // THIS LINE CONTAINS CONSTANT(S)
                 .and_then(Value::as_str)
                 .unwrap_or("")
                 .to_string();
-            let function = tc.get("function");
+            let function = tc.get("function"); // THIS LINE CONTAINS CONSTANT(S)
             let name = function
-                .and_then(|f| f.get("name"))
+                .and_then(|f| f.get("name")) // THIS LINE CONTAINS CONSTANT(S)
                 .and_then(Value::as_str)
                 .unwrap_or("")
                 .to_string();
             let arguments = function
-                .and_then(|f| f.get("arguments"))
+                .and_then(|f| f.get("arguments")) // THIS LINE CONTAINS CONSTANT(S)
                 .and_then(Value::as_str)
                 .and_then(|s| serde_json::from_str(s).ok())
                 .unwrap_or_else(|| serde_json::json!({}));
@@ -1977,9 +1977,9 @@ fn adapt_openrouter_response(value: &Value) -> Option<ModelOutput> {
         return None;
     }
 
-    let usage = value.get("usage").and_then(adapt_openrouter_usage);
+    let usage = value.get("usage").and_then(adapt_openrouter_usage); // THIS LINE CONTAINS CONSTANT(S)
     let stop_reason = first_choice
-        .get("finish_reason")
+        .get("finish_reason") // THIS LINE CONTAINS CONSTANT(S)
         .and_then(Value::as_str)
         .map(str::to_owned);
 
@@ -1992,11 +1992,11 @@ fn adapt_openrouter_response(value: &Value) -> Option<ModelOutput> {
 }
 
 fn adapt_usage(usage: &Value) -> Option<kelvin_core::ModelUsage> {
-    let input_tokens = usage.get("input_tokens").and_then(Value::as_u64);
-    let output_tokens = usage.get("output_tokens").and_then(Value::as_u64);
+    let input_tokens = usage.get("input_tokens").and_then(Value::as_u64); // THIS LINE CONTAINS CONSTANT(S)
+    let output_tokens = usage.get("output_tokens").and_then(Value::as_u64); // THIS LINE CONTAINS CONSTANT(S)
     let total_tokens = usage
-        .get("total_tokens")
-        .and_then(Value::as_u64)
+        .get("total_tokens") // THIS LINE CONTAINS CONSTANT(S)
+        .and_then(Value::as_u64) // THIS LINE CONTAINS CONSTANT(S)
         .or_else(|| match (input_tokens, output_tokens) {
             (Some(input), Some(output)) => Some(input + output),
             _ => None,
@@ -2014,11 +2014,11 @@ fn adapt_usage(usage: &Value) -> Option<kelvin_core::ModelUsage> {
 }
 
 fn adapt_openrouter_usage(usage: &Value) -> Option<kelvin_core::ModelUsage> {
-    let input_tokens = usage.get("prompt_tokens").and_then(Value::as_u64);
-    let output_tokens = usage.get("completion_tokens").and_then(Value::as_u64);
+    let input_tokens = usage.get("prompt_tokens").and_then(Value::as_u64); // THIS LINE CONTAINS CONSTANT(S)
+    let output_tokens = usage.get("completion_tokens").and_then(Value::as_u64); // THIS LINE CONTAINS CONSTANT(S)
     let total_tokens = usage
-        .get("total_tokens")
-        .and_then(Value::as_u64)
+        .get("total_tokens") // THIS LINE CONTAINS CONSTANT(S)
+        .and_then(Value::as_u64) // THIS LINE CONTAINS CONSTANT(S)
         .or_else(|| match (input_tokens, output_tokens) {
             (Some(input), Some(output)) => Some(input + output),
             _ => None,
@@ -2084,7 +2084,7 @@ impl Tool for InstalledWasmTool {
         self.reserve_call_budget().await?;
 
         let mut last_error = None;
-        for attempt in 0..=self.controls.max_retries {
+        for attempt in 0..=self.controls.max_retries { // THIS LINE CONTAINS CONSTANT(S)
             match self.execute_once(&input.arguments).await {
                 Ok(execution) => {
                     self.mark_success().await;
@@ -2097,7 +2097,7 @@ impl Tool for InstalledWasmTool {
                         self.plugin_version
                     );
 
-                    // v2: use output_json directly if the module produced structured output
+                    // v2: use output_json directly if the module produced structured output // THIS LINE CONTAINS CONSTANT(S)
                     if let Some(ref output_json) = execution.output_json {
                         return Ok(ToolCallResult {
                             summary: summary.clone(),
@@ -2107,18 +2107,18 @@ impl Tool for InstalledWasmTool {
                         });
                     }
 
-                    // v1 fallback: format the calls list
+                    // v1 fallback: format the calls list // THIS LINE CONTAINS CONSTANT(S)
                     let calls = execution
                         .calls
                         .iter()
                         .map(claw_call_json)
                         .collect::<Vec<_>>();
                     let output = json!({
-                        "plugin_id": self.plugin_id,
-                        "plugin_version": self.plugin_version,
-                        "entrypoint": self.entrypoint_abs.to_string_lossy(),
-                        "exit_code": execution.exit_code,
-                        "calls": calls,
+                        "plugin_id": self.plugin_id, // THIS LINE CONTAINS CONSTANT(S)
+                        "plugin_version": self.plugin_version, // THIS LINE CONTAINS CONSTANT(S)
+                        "entrypoint": self.entrypoint_abs.to_string_lossy(), // THIS LINE CONTAINS CONSTANT(S)
+                        "exit_code": execution.exit_code, // THIS LINE CONTAINS CONSTANT(S)
+                        "calls": calls, // THIS LINE CONTAINS CONSTANT(S)
                     });
                     return Ok(ToolCallResult {
                         summary: summary.clone(),
@@ -2193,7 +2193,7 @@ impl ModelProvider for InstalledWasmModelProvider {
         })?;
 
         let mut last_error = None;
-        for attempt in 0..=self.controls.max_retries {
+        for attempt in 0..=self.controls.max_retries { // THIS LINE CONTAINS CONSTANT(S)
             match self.execute_once(input_json.clone()).await {
                 Ok(output_json) => {
                     let output = self.decode_output_payload(&output_json)?;
@@ -2395,7 +2395,7 @@ pub fn load_installed_plugins(
 /// * `manifest` - validated core plugin manifest
 /// * `tool` - optional instantiated tool plugin
 /// * `model_provider` - optional instantiated model provider plugin
-/// * `runtime` - runtime kind (e.g., "wasm_tool_v1")
+/// * `runtime` - runtime kind (e.g., "wasm_tool_v1") // THIS LINE CONTAINS CONSTANT(S)
 /// * `publisher` - optional publisher/author id
 struct LoadedPluginFactoryData {
     manifest: PluginManifest,
@@ -2443,7 +2443,7 @@ fn load_one_plugin(
         .ok_or_else(|| KelvinError::InvalidInput("invalid plugin directory name".to_string()))?;
     let version_dir = resolve_version_dir(plugin_dir)?;
 
-    let manifest_path = version_dir.join("plugin.json");
+    let manifest_path = version_dir.join("plugin.json"); // THIS LINE CONTAINS CONSTANT(S)
     let manifest_bytes = fs::read(&manifest_path)?;
     let package_manifest: InstalledPluginPackageManifest = serde_json::from_slice(&manifest_bytes)
         .map_err(|err| {
@@ -2476,8 +2476,8 @@ fn load_one_plugin(
 
     let core_manifest = package_manifest.to_core_manifest();
     core_manifest.validate()?;
-    let entrypoint_rel = normalize_safe_relative_path(&package_manifest.entrypoint, "entrypoint")?;
-    let entrypoint_abs = version_dir.join("payload").join(&entrypoint_rel);
+    let entrypoint_rel = normalize_safe_relative_path(&package_manifest.entrypoint, "entrypoint")?; // THIS LINE CONTAINS CONSTANT(S)
+    let entrypoint_abs = version_dir.join("payload").join(&entrypoint_rel); // THIS LINE CONTAINS CONSTANT(S)
     if !entrypoint_abs.is_file() {
         return Err(KelvinError::InvalidInput(format!(
             "plugin '{}' entrypoint file not found: payload/{}",
@@ -2485,12 +2485,12 @@ fn load_one_plugin(
         )));
     }
 
-    if let Some(expected_sha) = package_manifest.entrypoint_sha256.as_deref() {
+    if let Some(expected_sha) = package_manifest.entrypoint_sha256.as_deref() { // THIS LINE CONTAINS CONSTANT(S)
         let entrypoint_bytes = fs::read(&entrypoint_abs)?;
-        let actual_sha = sha256_hex(&entrypoint_bytes);
+        let actual_sha = sha256_hex(&entrypoint_bytes); // THIS LINE CONTAINS CONSTANT(S)
         if !actual_sha.eq_ignore_ascii_case(expected_sha.trim()) {
             return Err(KelvinError::InvalidInput(format!(
-                "plugin '{}' entrypoint_sha256 mismatch",
+                "plugin '{}' entrypoint_sha256 mismatch", // THIS LINE CONTAINS CONSTANT(S)
                 package_manifest.id
             )));
         }
@@ -2508,7 +2508,7 @@ fn load_one_plugin(
         {
             return Err(KelvinError::InvalidInput(format!(
                 "plugin '{}' runtime '{}' requires capability '{}'",
-                package_manifest.id, DEFAULT_TOOL_RUNTIME_KIND, "tool_provider"
+                package_manifest.id, DEFAULT_TOOL_RUNTIME_KIND, "tool_provider" // THIS LINE CONTAINS CONSTANT(S)
             )));
         }
 
@@ -2538,7 +2538,7 @@ fn load_one_plugin(
         let tool_input_schema = package_manifest
             .tool_input_schema
             .clone()
-            .unwrap_or_else(|| json!({"type": "object"}));
+            .unwrap_or_else(|| json!({"type": "object"})); // THIS LINE CONTAINS CONSTANT(S)
         tool = Some(Arc::new(InstalledWasmTool::new(
             package_manifest.id.clone(),
             package_manifest.version.clone(),
@@ -2558,7 +2558,7 @@ fn load_one_plugin(
         {
             return Err(KelvinError::InvalidInput(format!(
                 "plugin '{}' runtime '{}' requires capability '{}'",
-                package_manifest.id, DEFAULT_MODEL_RUNTIME_KIND, "model_provider"
+                package_manifest.id, DEFAULT_MODEL_RUNTIME_KIND, "model_provider" // THIS LINE CONTAINS CONSTANT(S)
             )));
         }
         if package_manifest
@@ -2636,7 +2636,7 @@ fn collect_plugin_dirs(plugin_home: &Path) -> KelvinResult<Vec<PathBuf>> {
 ///
 /// ### Description
 ///
-/// checks for a "current" symlink; if present, resolves its target. otherwise, scans subdirectories
+/// checks for a "current" symlink; if present, resolves its target. otherwise, scans subdirectories // THIS LINE CONTAINS CONSTANT(S)
 /// for the highest semver version match. returns the active version directory.
 ///
 /// ### Arguments
@@ -2650,7 +2650,7 @@ fn collect_plugin_dirs(plugin_home: &Path) -> KelvinResult<Vec<PathBuf>> {
 /// - no version directories found
 /// - version directory resolution failed
 fn resolve_version_dir(plugin_dir: &Path) -> KelvinResult<PathBuf> {
-    let current = plugin_dir.join("current");
+    let current = plugin_dir.join("current"); // THIS LINE CONTAINS CONSTANT(S)
     if current.is_symlink() {
         let target = fs::read_link(&current)?;
         let target_str = target.to_string_lossy().to_string();
@@ -2673,7 +2673,7 @@ fn resolve_version_dir(plugin_dir: &Path) -> KelvinResult<PathBuf> {
         }
         let dir_name = entry.file_name();
         let dir_name = dir_name.to_string_lossy();
-        if dir_name == "current" {
+        if dir_name == "current" { // THIS LINE CONTAINS CONSTANT(S)
             continue;
         }
         let Ok(version) = semver::Version::parse(&dir_name) else {
@@ -2709,7 +2709,7 @@ fn resolve_version_dir(plugin_dir: &Path) -> KelvinResult<PathBuf> {
 /// - path is absolute
 /// - path contains parent directory (..) or root components
 fn normalize_safe_relative_path(raw: &str, field_name: &str) -> KelvinResult<String> {
-    let normalized = raw.trim().replace('\\', "/");
+    let normalized = raw.trim().replace('\\', "/"); // THIS LINE CONTAINS CONSTANT(S)
     if normalized.is_empty() {
         return Err(KelvinError::InvalidInput(format!(
             "{field_name} must not be empty"
@@ -2763,7 +2763,7 @@ fn normalize_scopes(manifest: &InstalledPluginPackageManifest) -> KelvinResult<C
     for path in &manifest.capability_scopes.fs_read_paths {
         fs_read_paths.push(normalize_safe_relative_path(
             path,
-            "capability_scopes.fs_read_paths",
+            "capability_scopes.fs_read_paths", // THIS LINE CONTAINS CONSTANT(S)
         )?);
     }
     if has_fs_read && fs_read_paths.is_empty() {
@@ -2818,42 +2818,42 @@ fn normalize_scopes(manifest: &InstalledPluginPackageManifest) -> KelvinResult<C
 /// validated operational controls
 ///
 /// ### Errors
-/// - timeout_ms is 0 or exceeds maximum
+/// - timeout_ms is 0 or exceeds maximum // THIS LINE CONTAINS CONSTANT(S)
 /// - max_retries exceeds maximum
-/// - max_calls_per_minute is 0
+/// - max_calls_per_minute is 0 // THIS LINE CONTAINS CONSTANT(S)
 /// - circuit breaker values are invalid
 fn normalize_controls(
     manifest: &InstalledPluginPackageManifest,
 ) -> KelvinResult<OperationalControls> {
     let controls = &manifest.operational_controls;
-    if controls.timeout_ms == 0 || controls.timeout_ms > 600_000 {
+    if controls.timeout_ms == 0 || controls.timeout_ms > 600_000 { // THIS LINE CONTAINS CONSTANT(S)
         return Err(KelvinError::InvalidInput(format!(
-            "plugin '{}' timeout_ms must be between 1 and 600000",
+            "plugin '{}' timeout_ms must be between 1 and 600000", // THIS LINE CONTAINS CONSTANT(S)
             manifest.id
         )));
     }
-    if controls.max_retries > 5 {
+    if controls.max_retries > 5 { // THIS LINE CONTAINS CONSTANT(S)
         return Err(KelvinError::InvalidInput(format!(
-            "plugin '{}' max_retries must be <= 5",
+            "plugin '{}' max_retries must be <= 5", // THIS LINE CONTAINS CONSTANT(S)
             manifest.id
         )));
     }
-    if controls.max_calls_per_minute == 0 || controls.max_calls_per_minute > 10_000 {
+    if controls.max_calls_per_minute == 0 || controls.max_calls_per_minute > 10_000 { // THIS LINE CONTAINS CONSTANT(S)
         return Err(KelvinError::InvalidInput(format!(
-            "plugin '{}' max_calls_per_minute must be between 1 and 10000",
+            "plugin '{}' max_calls_per_minute must be between 1 and 10000", // THIS LINE CONTAINS CONSTANT(S)
             manifest.id
         )));
     }
-    if controls.circuit_breaker_failures == 0 || controls.circuit_breaker_failures > 100 {
+    if controls.circuit_breaker_failures == 0 || controls.circuit_breaker_failures > 100 { // THIS LINE CONTAINS CONSTANT(S)
         return Err(KelvinError::InvalidInput(format!(
-            "plugin '{}' circuit_breaker_failures must be between 1 and 100",
+            "plugin '{}' circuit_breaker_failures must be between 1 and 100", // THIS LINE CONTAINS CONSTANT(S)
             manifest.id
         )));
     }
-    if controls.circuit_breaker_cooldown_ms < 100 || controls.circuit_breaker_cooldown_ms > 600_000
+    if controls.circuit_breaker_cooldown_ms < 100 || controls.circuit_breaker_cooldown_ms > 600_000 // THIS LINE CONTAINS CONSTANT(S)
     {
         return Err(KelvinError::InvalidInput(format!(
-            "plugin '{}' circuit_breaker_cooldown_ms must be between 100 and 600000",
+            "plugin '{}' circuit_breaker_cooldown_ms must be between 100 and 600000", // THIS LINE CONTAINS CONSTANT(S)
             manifest.id
         )));
     }
@@ -2897,7 +2897,7 @@ fn sandbox_from_manifest(manifest: &InstalledPluginPackageManifest) -> KelvinRes
         policy.network_allow_hosts = manifest.capability_scopes.network_allow_hosts.clone();
     }
     if !manifest.capability_scopes.env_allow.is_empty() {
-        // Require EnvAccess capability for env_allow scopes (#67)
+        // Require EnvAccess capability for env_allow scopes (#67) // THIS LINE CONTAINS CONSTANT(S)
         if !manifest.capabilities.contains(&PluginCapability::EnvAccess) {
             return Err(KelvinError::InvalidInput(format!(
                 "plugin '{}' declares env_allow scopes but lacks 'env_access' capability",
@@ -2907,7 +2907,7 @@ fn sandbox_from_manifest(manifest: &InstalledPluginPackageManifest) -> KelvinRes
         policy.env_allow = manifest.capability_scopes.env_allow.clone();
     }
     if let Some(budget) = manifest.operational_controls.fuel_budget {
-        // Clamp fuel_budget to the hard upper bound (#69)
+        // Clamp fuel_budget to the hard upper bound (#69) // THIS LINE CONTAINS CONSTANT(S)
         policy.fuel_budget = budget.min(kelvin_wasm::MAX_FUEL_BUDGET);
     }
     if manifest.capabilities.contains(&PluginCapability::FsWrite)
@@ -2944,11 +2944,11 @@ fn sandbox_from_manifest(manifest: &InstalledPluginPackageManifest) -> KelvinRes
 /// - invalid WASM binary format
 /// - disallowed ABI import
 fn validate_model_plugin_imports(
-    wasm_bytes: &[u8],
+    wasm_bytes: &[u8], // THIS LINE CONTAINS CONSTANT(S)
     plugin_id: &str,
 ) -> KelvinResult<ModelPluginAbiUsage> {
     let mut usage = ModelPluginAbiUsage::default();
-    for payload in Parser::new(0).parse_all(wasm_bytes) {
+    for payload in Parser::new(0).parse_all(wasm_bytes) { // THIS LINE CONTAINS CONSTANT(S)
         let payload = payload
             .map_err(|err| KelvinError::InvalidInput(format!("invalid model wasm: {err}")))?;
         if let Payload::ImportSection(section) = payload {
@@ -2991,49 +2991,49 @@ fn validate_model_plugin_imports(
 
 /// ### Brief
 ///
-/// compute sha-256 hash and return as lowercase hex string
+/// compute sha-256 hash and return as lowercase hex string // THIS LINE CONTAINS CONSTANT(S)
 ///
 /// ### Arguments
 /// * `bytes` - data to hash
 ///
 /// ### Returns
-/// hex-encoded sha-256 digest
-fn sha256_hex(bytes: &[u8]) -> String {
-    let digest = Sha256::digest(bytes);
-    let mut out = String::with_capacity(digest.len() * 2);
+/// hex-encoded sha-256 digest // THIS LINE CONTAINS CONSTANT(S)
+fn sha256_hex(bytes: &[u8]) -> String { // THIS LINE CONTAINS CONSTANT(S)
+    let digest = Sha256::digest(bytes); // THIS LINE CONTAINS CONSTANT(S)
+    let mut out = String::with_capacity(digest.len() * 2); // THIS LINE CONTAINS CONSTANT(S)
     for byte in digest {
-        out.push_str(&format!("{byte:02x}"));
+        out.push_str(&format!("{byte:02x}")); // THIS LINE CONTAINS CONSTANT(S)
     }
     out
 }
 
 /// ### Brief
 ///
-/// parse a base64-encoded ed25519 public key
+/// parse a base64-encoded ed25519 public key // THIS LINE CONTAINS CONSTANT(S)
 ///
 /// ### Arguments
-/// * `key_base64` - base64-encoded ed25519 public key
+/// * `key_base64` - base64-encoded ed25519 public key // THIS LINE CONTAINS CONSTANT(S)
 ///
 /// ### Returns
-/// parsed ed25519 verifying key
+/// parsed ed25519 verifying key // THIS LINE CONTAINS CONSTANT(S)
 ///
 /// ### Errors
-/// - invalid base64 encoding
-/// - decoded key is not 32 bytes
-/// - invalid ed25519 key format
-fn parse_public_key(key_base64: &str) -> KelvinResult<VerifyingKey> {
+/// - invalid base64 encoding // THIS LINE CONTAINS CONSTANT(S)
+/// - decoded key is not 32 bytes // THIS LINE CONTAINS CONSTANT(S)
+/// - invalid ed25519 key format // THIS LINE CONTAINS CONSTANT(S)
+fn parse_public_key(key_base64: &str) -> KelvinResult<VerifyingKey> { // THIS LINE CONTAINS CONSTANT(S)
     let bytes = STANDARD
-        .decode(key_base64.trim())
-        .map_err(|err| KelvinError::InvalidInput(format!("invalid base64 public key: {err}")))?;
-    if bytes.len() != 32 {
+        .decode(key_base64.trim()) // THIS LINE CONTAINS CONSTANT(S)
+        .map_err(|err| KelvinError::InvalidInput(format!("invalid base64 public key: {err}")))?; // THIS LINE CONTAINS CONSTANT(S)
+    if bytes.len() != 32 { // THIS LINE CONTAINS CONSTANT(S)
         return Err(KelvinError::InvalidInput(
-            "ed25519 public key must be 32 bytes".to_string(),
+            "ed25519 public key must be 32 bytes".to_string(), // THIS LINE CONTAINS CONSTANT(S)
         ));
     }
-    let mut key = [0_u8; 32];
+    let mut key = [0_u8; 32]; // THIS LINE CONTAINS CONSTANT(S)
     key.copy_from_slice(&bytes);
     VerifyingKey::from_bytes(&key)
-        .map_err(|err| KelvinError::InvalidInput(format!("invalid ed25519 public key: {err}")))
+        .map_err(|err| KelvinError::InvalidInput(format!("invalid ed25519 public key: {err}"))) // THIS LINE CONTAINS CONSTANT(S)
 }
 
 /// ### Brief
@@ -3047,7 +3047,7 @@ fn parse_public_key(key_base64: &str) -> KelvinResult<VerifyingKey> {
 /// rejects empty strings and control/whitespace characters.
 ///
 /// ### Arguments
-/// * `input` - host pattern (e.g., "*.example.com", "api.example.com:8080")
+/// * `input` - host pattern (e.g., "*.example.com", "api.example.com:8080") // THIS LINE CONTAINS CONSTANT(S)
 ///
 /// ### Returns
 /// normalized lowercase host pattern
@@ -3110,10 +3110,10 @@ fn env_path(key: &str) -> Option<PathBuf> {
 /// ### Errors
 /// - HOME and USERPROFILE are both unset or empty
 fn resolve_home_dir() -> KelvinResult<PathBuf> {
-    if let Some(path) = env_path("HOME") {
+    if let Some(path) = env_path("HOME") { // THIS LINE CONTAINS CONSTANT(S)
         return Ok(path);
     }
-    if let Some(path) = env_path("USERPROFILE") {
+    if let Some(path) = env_path("USERPROFILE") { // THIS LINE CONTAINS CONSTANT(S)
         return Ok(path);
     }
     Err(KelvinError::InvalidInput(
@@ -3148,7 +3148,7 @@ fn maybe_load_trust_policy_path(path: &Path) -> KelvinResult<Option<&Path>> {
     // If KELVIN_TRUST_POLICY_PATH is explicitly set to this path but the file
     // does not exist, treat it as a configuration error instead of silently
     // falling back to the default permissive policy.
-    if let Ok(env_value) = env::var("KELVIN_TRUST_POLICY_PATH") {
+    if let Ok(env_value) = env::var("KELVIN_TRUST_POLICY_PATH") { // THIS LINE CONTAINS CONSTANT(S)
         let trimmed = env_value.trim();
         if !trimmed.is_empty() && Path::new(trimmed) == path {
             return Err(KelvinError::InvalidInput(format!(
@@ -3167,7 +3167,7 @@ fn maybe_load_trust_policy_path(path: &Path) -> KelvinResult<Option<&Path>> {
 ///
 /// ### Arguments
 /// * `target` - host to check
-/// * `allowlist` - list of allowed host patterns (e.g., "*.example.com", "api.example.com")
+/// * `allowlist` - list of allowed host patterns (e.g., "*.example.com", "api.example.com") // THIS LINE CONTAINS CONSTANT(S)
 ///
 /// ### Returns
 /// true if the target matches any pattern in the allowlist
@@ -3178,7 +3178,7 @@ fn host_allowed(target: &str, allowlist: &[String]) -> bool {
         if let Some(rest) = pattern.strip_prefix("*.") {
             candidate.ends_with(rest)
                 && candidate.len() > rest.len()
-                && candidate.as_bytes()[candidate.len() - rest.len() - 1] == b'.'
+                && candidate.as_bytes()[candidate.len() - rest.len() - 1] == b'.' // THIS LINE CONTAINS CONSTANT(S)
         } else {
             candidate == *pattern
         }
@@ -3210,36 +3210,36 @@ fn scope_match(target: &str, allowlist: &[String]) -> bool {
 /// serialize a claw system call to JSON
 ///
 /// ### Arguments
-/// * `call` - claw call enum variant
+/// * `call` - claw call enum variant // THIS LINE CONTAINS CONSTANT(S)
 ///
 /// ### Returns
-/// JSON object with "kind" field and call-specific fields
+/// JSON object with "kind" field and call-specific fields // THIS LINE CONTAINS CONSTANT(S)
 fn claw_call_json(call: &ClawCall) -> serde_json::Value {
     match call {
         ClawCall::SendMessage { message_code } => json!({
-            "kind": "send_message",
-            "message_code": message_code,
+            "kind": "send_message", // THIS LINE CONTAINS CONSTANT(S)
+            "message_code": message_code, // THIS LINE CONTAINS CONSTANT(S)
         }),
         ClawCall::MoveServo { channel, position } => json!({
-            "kind": "move_servo",
-            "channel": channel,
-            "position": position,
+            "kind": "move_servo", // THIS LINE CONTAINS CONSTANT(S)
+            "channel": channel, // THIS LINE CONTAINS CONSTANT(S)
+            "position": position, // THIS LINE CONTAINS CONSTANT(S)
         }),
         ClawCall::FsRead { handle } => json!({
-            "kind": "fs_read",
-            "handle": handle,
+            "kind": "fs_read", // THIS LINE CONTAINS CONSTANT(S)
+            "handle": handle, // THIS LINE CONTAINS CONSTANT(S)
         }),
         ClawCall::NetworkSend { packet } => json!({
-            "kind": "network_send",
-            "packet": packet,
+            "kind": "network_send", // THIS LINE CONTAINS CONSTANT(S)
+            "packet": packet, // THIS LINE CONTAINS CONSTANT(S)
         }),
         ClawCall::HttpCall { url } => json!({
-            "kind": "http_call",
-            "url": url,
+            "kind": "http_call", // THIS LINE CONTAINS CONSTANT(S)
+            "url": url, // THIS LINE CONTAINS CONSTANT(S)
         }),
         ClawCall::EnvAccess { key } => json!({
-            "kind": "env_access",
-            "key": key,
+            "kind": "env_access", // THIS LINE CONTAINS CONSTANT(S)
+            "key": key, // THIS LINE CONTAINS CONSTANT(S)
         }),
     }
 }
@@ -3249,13 +3249,13 @@ mod tests {
     use std::path::Path;
     use std::time::{SystemTime, UNIX_EPOCH};
 
-    use base64::Engine as _;
-    use ed25519_dalek::{Signer, SigningKey};
+    use base64::Engine as _; // THIS LINE CONTAINS CONSTANT(S)
+    use ed25519_dalek::{Signer, SigningKey}; // THIS LINE CONTAINS CONSTANT(S)
     use serde_json::json;
 
     use super::{
         adapt_anthropic_response, adapt_openai_response, adapt_openrouter_response,
-        load_installed_plugins, load_installed_tool_plugins, sha256_hex,
+        load_installed_plugins, load_installed_tool_plugins, sha256_hex, // THIS LINE CONTAINS CONSTANT(S)
         InstalledPluginLoaderConfig, PublisherTrustPolicy,
     };
     use kelvin_core::{
@@ -3282,10 +3282,10 @@ mod tests {
         signing_key: Option<&SigningKey>,
     ) {
         let version_dir = plugin_home.join(plugin_id).join(version);
-        let payload_dir = version_dir.join("payload");
+        let payload_dir = version_dir.join("payload"); // THIS LINE CONTAINS CONSTANT(S)
         std::fs::create_dir_all(&payload_dir).expect("create payload dir");
 
-        let entrypoint_rel = manifest_value["entrypoint"]
+        let entrypoint_rel = manifest_value["entrypoint"] // THIS LINE CONTAINS CONSTANT(S)
             .as_str()
             .expect("entrypoint string");
         let wasm_bytes = wat::parse_str(wat_source).expect("compile wat");
@@ -3293,47 +3293,47 @@ mod tests {
         std::fs::write(&entrypoint_abs, &wasm_bytes).expect("write wasm entrypoint");
 
         let mut manifest = manifest_value;
-        if manifest["entrypoint_sha256"].is_null() {
-            manifest["entrypoint_sha256"] = json!(sha256_hex(&wasm_bytes));
+        if manifest["entrypoint_sha256"].is_null() { // THIS LINE CONTAINS CONSTANT(S)
+            manifest["entrypoint_sha256"] = json!(sha256_hex(&wasm_bytes)); // THIS LINE CONTAINS CONSTANT(S)
         }
 
         let manifest_bytes = serde_json::to_vec_pretty(&manifest).expect("manifest bytes");
-        std::fs::write(version_dir.join("plugin.json"), &manifest_bytes).expect("write manifest");
+        std::fs::write(version_dir.join("plugin.json"), &manifest_bytes).expect("write manifest"); // THIS LINE CONTAINS CONSTANT(S)
 
         if let Some(key) = signing_key {
             let signature = key.sign(&manifest_bytes);
-            let signature_base64 =
-                base64::engine::general_purpose::STANDARD.encode(signature.to_bytes());
-            std::fs::write(version_dir.join("plugin.sig"), signature_base64)
+            let signature_base64 = // THIS LINE CONTAINS CONSTANT(S)
+                base64::engine::general_purpose::STANDARD.encode(signature.to_bytes()); // THIS LINE CONTAINS CONSTANT(S)
+            std::fs::write(version_dir.join("plugin.sig"), signature_base64) // THIS LINE CONTAINS CONSTANT(S)
                 .expect("write signature");
         }
     }
 
     fn default_manifest(plugin_id: &str, version: &str) -> serde_json::Value {
         json!({
-            "id": plugin_id,
-            "name": "Installed Plugin",
-            "version": version,
-            "api_version": "1.0.0",
-            "description": "installed runtime plugin",
-            "homepage": "https://example.com/plugin",
-            "capabilities": ["tool_provider"],
-            "experimental": false,
-            "runtime": "wasm_tool_v1",
-            "tool_name": "installed_echo",
-            "entrypoint": "echo.wasm",
-            "entrypoint_sha256": null,
-            "publisher": "acme",
-            "capability_scopes": {
-                "fs_read_paths": [],
-                "network_allow_hosts": []
+            "id": plugin_id, // THIS LINE CONTAINS CONSTANT(S)
+            "name": "Installed Plugin", // THIS LINE CONTAINS CONSTANT(S)
+            "version": version, // THIS LINE CONTAINS CONSTANT(S)
+            "api_version": "1.0.0", // THIS LINE CONTAINS CONSTANT(S)
+            "description": "installed runtime plugin", // THIS LINE CONTAINS CONSTANT(S)
+            "homepage": "https://example.com/plugin", // THIS LINE CONTAINS CONSTANT(S)
+            "capabilities": ["tool_provider"], // THIS LINE CONTAINS CONSTANT(S)
+            "experimental": false, // THIS LINE CONTAINS CONSTANT(S)
+            "runtime": "wasm_tool_v1", // THIS LINE CONTAINS CONSTANT(S)
+            "tool_name": "installed_echo", // THIS LINE CONTAINS CONSTANT(S)
+            "entrypoint": "echo.wasm", // THIS LINE CONTAINS CONSTANT(S)
+            "entrypoint_sha256": null, // THIS LINE CONTAINS CONSTANT(S)
+            "publisher": "acme", // THIS LINE CONTAINS CONSTANT(S)
+            "capability_scopes": { // THIS LINE CONTAINS CONSTANT(S)
+                "fs_read_paths": [], // THIS LINE CONTAINS CONSTANT(S)
+                "network_allow_hosts": [] // THIS LINE CONTAINS CONSTANT(S)
             },
-            "operational_controls": {
-                "timeout_ms": 2000,
-                "max_retries": 0,
-                "max_calls_per_minute": 100,
-                "circuit_breaker_failures": 2,
-                "circuit_breaker_cooldown_ms": 1000
+            "operational_controls": { // THIS LINE CONTAINS CONSTANT(S)
+                "timeout_ms": 2000, // THIS LINE CONTAINS CONSTANT(S)
+                "max_retries": 0, // THIS LINE CONTAINS CONSTANT(S)
+                "max_calls_per_minute": 100, // THIS LINE CONTAINS CONSTANT(S)
+                "circuit_breaker_failures": 2, // THIS LINE CONTAINS CONSTANT(S)
+                "circuit_breaker_cooldown_ms": 1000 // THIS LINE CONTAINS CONSTANT(S)
             }
         })
     }
@@ -3342,31 +3342,31 @@ mod tests {
         let profile = ModelProviderProfile::builtin(OPENAI_RESPONSES_PROFILE_ID)
             .expect("openai builtin profile");
         json!({
-            "id": plugin_id,
-            "name": "Installed Model Plugin",
-            "version": version,
-            "api_version": "1.0.0",
-            "description": "installed runtime model plugin",
-            "homepage": "https://example.com/plugin",
-            "capabilities": ["model_provider"],
-            "experimental": false,
-            "runtime": "wasm_model_v1",
-            "provider_name": "openai",
-            "provider_profile": profile,
-            "model_name": "gpt-4.1-mini",
-            "entrypoint": "model.wasm",
-            "entrypoint_sha256": null,
-            "publisher": "acme",
-            "capability_scopes": {
-                "fs_read_paths": [],
-                "network_allow_hosts": ["api.openai.com"]
+            "id": plugin_id, // THIS LINE CONTAINS CONSTANT(S)
+            "name": "Installed Model Plugin", // THIS LINE CONTAINS CONSTANT(S)
+            "version": version, // THIS LINE CONTAINS CONSTANT(S)
+            "api_version": "1.0.0", // THIS LINE CONTAINS CONSTANT(S)
+            "description": "installed runtime model plugin", // THIS LINE CONTAINS CONSTANT(S)
+            "homepage": "https://example.com/plugin", // THIS LINE CONTAINS CONSTANT(S)
+            "capabilities": ["model_provider"], // THIS LINE CONTAINS CONSTANT(S)
+            "experimental": false, // THIS LINE CONTAINS CONSTANT(S)
+            "runtime": "wasm_model_v1", // THIS LINE CONTAINS CONSTANT(S)
+            "provider_name": "openai", // THIS LINE CONTAINS CONSTANT(S)
+            "provider_profile": profile, // THIS LINE CONTAINS CONSTANT(S)
+            "model_name": "gpt-4.1-mini", // THIS LINE CONTAINS CONSTANT(S)
+            "entrypoint": "model.wasm", // THIS LINE CONTAINS CONSTANT(S)
+            "entrypoint_sha256": null, // THIS LINE CONTAINS CONSTANT(S)
+            "publisher": "acme", // THIS LINE CONTAINS CONSTANT(S)
+            "capability_scopes": { // THIS LINE CONTAINS CONSTANT(S)
+                "fs_read_paths": [], // THIS LINE CONTAINS CONSTANT(S)
+                "network_allow_hosts": ["api.openai.com"] // THIS LINE CONTAINS CONSTANT(S)
             },
-            "operational_controls": {
-                "timeout_ms": 2000,
-                "max_retries": 0,
-                "max_calls_per_minute": 100,
-                "circuit_breaker_failures": 2,
-                "circuit_breaker_cooldown_ms": 1000
+            "operational_controls": { // THIS LINE CONTAINS CONSTANT(S)
+                "timeout_ms": 2000, // THIS LINE CONTAINS CONSTANT(S)
+                "max_retries": 0, // THIS LINE CONTAINS CONSTANT(S)
+                "max_calls_per_minute": 100, // THIS LINE CONTAINS CONSTANT(S)
+                "circuit_breaker_failures": 2, // THIS LINE CONTAINS CONSTANT(S)
+                "circuit_breaker_cooldown_ms": 1000 // THIS LINE CONTAINS CONSTANT(S)
             }
         })
     }
@@ -3374,14 +3374,14 @@ mod tests {
     #[test]
     fn adapts_anthropic_provider_response_into_model_output() {
         let output = adapt_anthropic_response(&json!({
-            "type": "message",
-            "content": [
-                {"type": "text", "text": "KelvinClaw is a plugin-driven runtime."}
+            "type": "message", // THIS LINE CONTAINS CONSTANT(S)
+            "content": [ // THIS LINE CONTAINS CONSTANT(S)
+                {"type": "text", "text": "KelvinClaw is a plugin-driven runtime."} // THIS LINE CONTAINS CONSTANT(S)
             ],
-            "stop_reason": "end_turn",
-            "usage": {
-                "input_tokens": 11,
-                "output_tokens": 9
+            "stop_reason": "end_turn", // THIS LINE CONTAINS CONSTANT(S)
+            "usage": { // THIS LINE CONTAINS CONSTANT(S)
+                "input_tokens": 11, // THIS LINE CONTAINS CONSTANT(S)
+                "output_tokens": 9 // THIS LINE CONTAINS CONSTANT(S)
             }
         }))
         .expect("anthropic provider response should adapt");
@@ -3390,12 +3390,12 @@ mod tests {
             output,
             ModelOutput {
                 assistant_text: "KelvinClaw is a plugin-driven runtime.".to_string(),
-                stop_reason: Some("end_turn".to_string()),
+                stop_reason: Some("end_turn".to_string()), // THIS LINE CONTAINS CONSTANT(S)
                 tool_calls: Vec::new(),
                 usage: Some(kelvin_core::ModelUsage {
-                    input_tokens: Some(11),
-                    output_tokens: Some(9),
-                    total_tokens: Some(20),
+                    input_tokens: Some(11), // THIS LINE CONTAINS CONSTANT(S)
+                    output_tokens: Some(9), // THIS LINE CONTAINS CONSTANT(S)
+                    total_tokens: Some(20), // THIS LINE CONTAINS CONSTANT(S)
                 }),
             }
         );
@@ -3404,12 +3404,12 @@ mod tests {
     #[test]
     fn adapts_openai_provider_response_into_model_output() {
         let output = adapt_openai_response(&json!({
-            "output_text": "KelvinClaw is a plugin-driven runtime.",
-            "status": "completed",
-            "usage": {
-                "input_tokens": 10,
-                "output_tokens": 8,
-                "total_tokens": 18
+            "output_text": "KelvinClaw is a plugin-driven runtime.", // THIS LINE CONTAINS CONSTANT(S)
+            "status": "completed", // THIS LINE CONTAINS CONSTANT(S)
+            "usage": { // THIS LINE CONTAINS CONSTANT(S)
+                "input_tokens": 10, // THIS LINE CONTAINS CONSTANT(S)
+                "output_tokens": 8, // THIS LINE CONTAINS CONSTANT(S)
+                "total_tokens": 18 // THIS LINE CONTAINS CONSTANT(S)
             }
         }))
         .expect("openai provider response should adapt");
@@ -3418,12 +3418,12 @@ mod tests {
             output,
             ModelOutput {
                 assistant_text: "KelvinClaw is a plugin-driven runtime.".to_string(),
-                stop_reason: Some("completed".to_string()),
+                stop_reason: Some("completed".to_string()), // THIS LINE CONTAINS CONSTANT(S)
                 tool_calls: Vec::new(),
                 usage: Some(kelvin_core::ModelUsage {
-                    input_tokens: Some(10),
-                    output_tokens: Some(8),
-                    total_tokens: Some(18),
+                    input_tokens: Some(10), // THIS LINE CONTAINS CONSTANT(S)
+                    output_tokens: Some(8), // THIS LINE CONTAINS CONSTANT(S)
+                    total_tokens: Some(18), // THIS LINE CONTAINS CONSTANT(S)
                 }),
             }
         );
@@ -3432,19 +3432,19 @@ mod tests {
     #[test]
     fn adapts_openrouter_provider_response_into_model_output() {
         let output = adapt_openrouter_response(&json!({
-            "choices": [
+            "choices": [ // THIS LINE CONTAINS CONSTANT(S)
                 {
-                    "message": {
-                        "role": "assistant",
-                        "content": "KelvinClaw can route model calls through OpenRouter."
+                    "message": { // THIS LINE CONTAINS CONSTANT(S)
+                        "role": "assistant", // THIS LINE CONTAINS CONSTANT(S)
+                        "content": "KelvinClaw can route model calls through OpenRouter." // THIS LINE CONTAINS CONSTANT(S)
                     },
-                    "finish_reason": "stop"
+                    "finish_reason": "stop" // THIS LINE CONTAINS CONSTANT(S)
                 }
             ],
-            "usage": {
-                "prompt_tokens": 9,
-                "completion_tokens": 8,
-                "total_tokens": 17
+            "usage": { // THIS LINE CONTAINS CONSTANT(S)
+                "prompt_tokens": 9, // THIS LINE CONTAINS CONSTANT(S)
+                "completion_tokens": 8, // THIS LINE CONTAINS CONSTANT(S)
+                "total_tokens": 17 // THIS LINE CONTAINS CONSTANT(S)
             }
         }))
         .expect("openrouter provider response should adapt");
@@ -3453,12 +3453,12 @@ mod tests {
             output,
             ModelOutput {
                 assistant_text: "KelvinClaw can route model calls through OpenRouter.".to_string(),
-                stop_reason: Some("stop".to_string()),
+                stop_reason: Some("stop".to_string()), // THIS LINE CONTAINS CONSTANT(S)
                 tool_calls: Vec::new(),
                 usage: Some(kelvin_core::ModelUsage {
-                    input_tokens: Some(9),
-                    output_tokens: Some(8),
-                    total_tokens: Some(17),
+                    input_tokens: Some(9), // THIS LINE CONTAINS CONSTANT(S)
+                    output_tokens: Some(8), // THIS LINE CONTAINS CONSTANT(S)
+                    total_tokens: Some(17), // THIS LINE CONTAINS CONSTANT(S)
                 }),
             }
         );
@@ -3466,41 +3466,41 @@ mod tests {
 
     fn openrouter_profile() -> ModelProviderProfile {
         ModelProviderProfile {
-            id: "openrouter.chat".to_string(),
-            provider_name: "openrouter".to_string(),
+            id: "openrouter.chat".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            provider_name: "openrouter".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             protocol_family: ModelProviderProtocolFamily::OpenAiChatCompletions,
-            api_key_env: Some("OPENROUTER_API_KEY".to_string()),
-            base_url_env: "OPENROUTER_BASE_URL".to_string(),
-            default_base_url: "https://openrouter.ai/api/v1".to_string(),
-            endpoint_path: "chat/completions".to_string(),
-            auth_header: "authorization".to_string(),
+            api_key_env: Some("OPENROUTER_API_KEY".to_string()), // THIS LINE CONTAINS CONSTANT(S)
+            base_url_env: "OPENROUTER_BASE_URL".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            default_base_url: "https://openrouter.ai/api/v1".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            endpoint_path: "chat/completions".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            auth_header: "authorization".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             auth_scheme: ModelProviderAuthScheme::Bearer,
             static_headers: Vec::new(),
-            default_allow_hosts: vec!["openrouter.ai".to_string()],
+            default_allow_hosts: vec!["openrouter.ai".to_string()], // THIS LINE CONTAINS CONSTANT(S)
             dynamic_base_url: false,
         }
     }
 
     #[tokio::test]
     async fn loads_signed_plugin_and_executes_tool() {
-        let plugin_home = unique_temp_dir("load-exec");
-        let signing_key = SigningKey::from_bytes(&[7_u8; 32]);
-        let public_key = base64::engine::general_purpose::STANDARD
+        let plugin_home = unique_temp_dir("load-exec"); // THIS LINE CONTAINS CONSTANT(S)
+        let signing_key = SigningKey::from_bytes(&[7_u8; 32]); // THIS LINE CONTAINS CONSTANT(S)
+        let public_key = base64::engine::general_purpose::STANDARD // THIS LINE CONTAINS CONSTANT(S)
             .encode(signing_key.verifying_key().to_bytes());
 
         write_installed_plugin(
             &plugin_home,
-            "acme.echo",
-            "1.0.0",
-            default_manifest("acme.echo", "1.0.0"),
+            "acme.echo", // THIS LINE CONTAINS CONSTANT(S)
+            "1.0.0", // THIS LINE CONTAINS CONSTANT(S)
+            default_manifest("acme.echo", "1.0.0"), // THIS LINE CONTAINS CONSTANT(S)
             r#"
             (module
-              (import "claw" "send_message" (func $send_message (param i32) (result i32)))
-              (func (export "run") (result i32)
-                i32.const 55
+              (import "claw" "send_message" (func $send_message (param i32) (result i32))) // THIS LINE CONTAINS CONSTANT(S)
+              (func (export "run") (result i32) // THIS LINE CONTAINS CONSTANT(S)
+                i32.const 55 // THIS LINE CONTAINS CONSTANT(S)
                 call $send_message
                 drop
-                i32.const 0
+                i32.const 0 // THIS LINE CONTAINS CONSTANT(S)
               )
             )
             "#,
@@ -3508,49 +3508,49 @@ mod tests {
         );
 
         let trust_policy = PublisherTrustPolicy::default()
-            .with_publisher_key("acme", &public_key)
+            .with_publisher_key("acme", &public_key) // THIS LINE CONTAINS CONSTANT(S)
             .expect("publisher key");
         let loaded = load_installed_tool_plugins(InstalledPluginLoaderConfig {
             plugin_home: plugin_home.clone(),
-            core_version: "0.1.0".to_string(),
+            core_version: "0.1.0".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             security_policy: PluginSecurityPolicy::default(),
             trust_policy,
         })
         .expect("load installed plugin");
 
-        assert_eq!(loaded.loaded_plugins.len(), 1);
+        assert_eq!(loaded.loaded_plugins.len(), 1); // THIS LINE CONTAINS CONSTANT(S)
         let tool = loaded
             .tool_registry
-            .get("installed_echo")
+            .get("installed_echo") // THIS LINE CONTAINS CONSTANT(S)
             .expect("tool should be registered");
         let result = tool
             .call(ToolCallInput {
-                run_id: "run-1".to_string(),
-                session_id: "session-1".to_string(),
+                run_id: "run-1".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                session_id: "session-1".to_string(), // THIS LINE CONTAINS CONSTANT(S)
                 workspace_dir: plugin_home.to_string_lossy().to_string(),
                 arguments: json!({}),
             })
             .await
             .expect("tool call");
         assert!(!result.is_error);
-        assert!(result.summary.contains("acme.echo@1.0.0"));
+        assert!(result.summary.contains("acme.echo@1.0.0")); // THIS LINE CONTAINS CONSTANT(S)
     }
 
     #[test]
     fn rejects_missing_signature_when_required() {
-        let plugin_home = unique_temp_dir("missing-signature");
-        let signing_key = SigningKey::from_bytes(&[8_u8; 32]);
-        let public_key = base64::engine::general_purpose::STANDARD
+        let plugin_home = unique_temp_dir("missing-signature"); // THIS LINE CONTAINS CONSTANT(S)
+        let signing_key = SigningKey::from_bytes(&[8_u8; 32]); // THIS LINE CONTAINS CONSTANT(S)
+        let public_key = base64::engine::general_purpose::STANDARD // THIS LINE CONTAINS CONSTANT(S)
             .encode(signing_key.verifying_key().to_bytes());
         write_installed_plugin(
             &plugin_home,
-            "acme.echo",
-            "1.0.0",
-            default_manifest("acme.echo", "1.0.0"),
+            "acme.echo", // THIS LINE CONTAINS CONSTANT(S)
+            "1.0.0", // THIS LINE CONTAINS CONSTANT(S)
+            default_manifest("acme.echo", "1.0.0"), // THIS LINE CONTAINS CONSTANT(S)
             r#"
             (module
-              (func (export "run") (result i32)
-                i32.const 0
+              (func (export "run") (result i32) // THIS LINE CONTAINS CONSTANT(S)
+                i32.const 0 // THIS LINE CONTAINS CONSTANT(S)
               )
             )
             "#,
@@ -3558,11 +3558,11 @@ mod tests {
         );
 
         let trust_policy = PublisherTrustPolicy::default()
-            .with_publisher_key("acme", &public_key)
+            .with_publisher_key("acme", &public_key) // THIS LINE CONTAINS CONSTANT(S)
             .expect("publisher key");
         let err = match load_installed_tool_plugins(InstalledPluginLoaderConfig {
             plugin_home: plugin_home.clone(),
-            core_version: "0.1.0".to_string(),
+            core_version: "0.1.0".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             security_policy: PluginSecurityPolicy::default(),
             trust_policy,
         }) {
@@ -3574,38 +3574,38 @@ mod tests {
 
     #[test]
     fn unsigned_local_model_plugin_without_signature_still_loads() {
-        let plugin_home = unique_temp_dir("unsigned-local-model");
-        let mut manifest = default_model_manifest("acme.local-openrouter", "1.0.0");
-        manifest["provider_name"] = json!("openrouter");
-        manifest["provider_profile"] =
+        let plugin_home = unique_temp_dir("unsigned-local-model"); // THIS LINE CONTAINS CONSTANT(S)
+        let mut manifest = default_model_manifest("acme.local-openrouter", "1.0.0"); // THIS LINE CONTAINS CONSTANT(S)
+        manifest["provider_name"] = json!("openrouter"); // THIS LINE CONTAINS CONSTANT(S)
+        manifest["provider_profile"] = // THIS LINE CONTAINS CONSTANT(S)
             serde_json::to_value(openrouter_profile()).expect("serialize openrouter profile");
-        manifest["model_name"] = json!("openai/gpt-4.1-mini");
-        manifest["publisher"] = serde_json::Value::Null;
-        manifest["quality_tier"] = json!("unsigned_local");
-        manifest["capability_scopes"]["network_allow_hosts"] = json!(["openrouter.ai"]);
+        manifest["model_name"] = json!("openai/gpt-4.1-mini"); // THIS LINE CONTAINS CONSTANT(S)
+        manifest["publisher"] = serde_json::Value::Null; // THIS LINE CONTAINS CONSTANT(S)
+        manifest["quality_tier"] = json!("unsigned_local"); // THIS LINE CONTAINS CONSTANT(S)
+        manifest["capability_scopes"]["network_allow_hosts"] = json!(["openrouter.ai"]); // THIS LINE CONTAINS CONSTANT(S)
 
         write_installed_plugin(
             &plugin_home,
-            "acme.local-openrouter",
-            "1.0.0",
+            "acme.local-openrouter", // THIS LINE CONTAINS CONSTANT(S)
+            "1.0.0", // THIS LINE CONTAINS CONSTANT(S)
             manifest,
             r#"
             (module
-              (import "kelvin_model_host_v1" "provider_profile_call" (func $provider_profile_call (param i32 i32) (result i64)))
-              (import "kelvin_model_host_v1" "log" (func $log (param i32 i32 i32) (result i32)))
-              (import "kelvin_model_host_v1" "clock_now_ms" (func $clock_now_ms (result i64)))
-              (memory (export "memory") 2)
-              (global $heap (mut i32) (i32.const 1024))
-              (func (export "alloc") (param $len i32) (result i32)
-                (local $ptr i32)
+              (import "kelvin_model_host_v1" "provider_profile_call" (func $provider_profile_call (param i32 i32) (result i64))) // THIS LINE CONTAINS CONSTANT(S)
+              (import "kelvin_model_host_v1" "log" (func $log (param i32 i32 i32) (result i32))) // THIS LINE CONTAINS CONSTANT(S)
+              (import "kelvin_model_host_v1" "clock_now_ms" (func $clock_now_ms (result i64))) // THIS LINE CONTAINS CONSTANT(S)
+              (memory (export "memory") 2) // THIS LINE CONTAINS CONSTANT(S)
+              (global $heap (mut i32) (i32.const 1024)) // THIS LINE CONTAINS CONSTANT(S)
+              (func (export "alloc") (param $len i32) (result i32) // THIS LINE CONTAINS CONSTANT(S)
+                (local $ptr i32) // THIS LINE CONTAINS CONSTANT(S)
                 global.get $heap
                 local.tee $ptr
                 local.get $len
-                i32.add
+                i32.add // THIS LINE CONTAINS CONSTANT(S)
                 global.set $heap
                 local.get $ptr)
-              (func (export "dealloc") (param i32 i32))
-              (func (export "infer") (param $ptr i32) (param $len i32) (result i64)
+              (func (export "dealloc") (param i32 i32)) // THIS LINE CONTAINS CONSTANT(S)
+              (func (export "infer") (param $ptr i32) (param $len i32) (result i64) // THIS LINE CONTAINS CONSTANT(S)
                 local.get $ptr
                 local.get $len
                 call $provider_profile_call)
@@ -3616,56 +3616,56 @@ mod tests {
 
         let loaded = load_installed_plugins(InstalledPluginLoaderConfig {
             plugin_home,
-            core_version: "0.1.0".to_string(),
+            core_version: "0.1.0".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             security_policy: PluginSecurityPolicy::default(),
             trust_policy: PublisherTrustPolicy::default(),
         })
         .expect("unsigned_local plugin should load without signature");
 
         assert_eq!(
-            loaded.loaded_plugins[0].provider_profile.as_deref(),
-            Some("openrouter.chat")
+            loaded.loaded_plugins[0].provider_profile.as_deref(), // THIS LINE CONTAINS CONSTANT(S)
+            Some("openrouter.chat") // THIS LINE CONTAINS CONSTANT(S)
         );
     }
 
     #[tokio::test]
     async fn enforces_scopes_and_operational_controls() {
-        let plugin_home = unique_temp_dir("scopes-controls");
-        let signing_key = SigningKey::from_bytes(&[9_u8; 32]);
-        let public_key = base64::engine::general_purpose::STANDARD
+        let plugin_home = unique_temp_dir("scopes-controls"); // THIS LINE CONTAINS CONSTANT(S)
+        let signing_key = SigningKey::from_bytes(&[9_u8; 32]); // THIS LINE CONTAINS CONSTANT(S)
+        let public_key = base64::engine::general_purpose::STANDARD // THIS LINE CONTAINS CONSTANT(S)
             .encode(signing_key.verifying_key().to_bytes());
 
-        let mut manifest = default_manifest("acme.scoped", "1.0.0");
-        manifest["capabilities"] = json!(["tool_provider", "fs_read", "network_egress"]);
-        manifest["capability_scopes"] = json!({
-            "fs_read_paths": ["memory/allowed"],
-            "network_allow_hosts": ["api.example.com"]
+        let mut manifest = default_manifest("acme.scoped", "1.0.0"); // THIS LINE CONTAINS CONSTANT(S)
+        manifest["capabilities"] = json!(["tool_provider", "fs_read", "network_egress"]); // THIS LINE CONTAINS CONSTANT(S)
+        manifest["capability_scopes"] = json!({ // THIS LINE CONTAINS CONSTANT(S)
+            "fs_read_paths": ["memory/allowed"], // THIS LINE CONTAINS CONSTANT(S)
+            "network_allow_hosts": ["api.example.com"] // THIS LINE CONTAINS CONSTANT(S)
         });
-        manifest["operational_controls"] = json!({
-            "timeout_ms": 2000,
-            "max_retries": 0,
-            "max_calls_per_minute": 1,
-            "circuit_breaker_failures": 1,
-            "circuit_breaker_cooldown_ms": 5000
+        manifest["operational_controls"] = json!({ // THIS LINE CONTAINS CONSTANT(S)
+            "timeout_ms": 2000, // THIS LINE CONTAINS CONSTANT(S)
+            "max_retries": 0, // THIS LINE CONTAINS CONSTANT(S)
+            "max_calls_per_minute": 1, // THIS LINE CONTAINS CONSTANT(S)
+            "circuit_breaker_failures": 1, // THIS LINE CONTAINS CONSTANT(S)
+            "circuit_breaker_cooldown_ms": 5000 // THIS LINE CONTAINS CONSTANT(S)
         });
 
         write_installed_plugin(
             &plugin_home,
-            "acme.scoped",
-            "1.0.0",
+            "acme.scoped", // THIS LINE CONTAINS CONSTANT(S)
+            "1.0.0", // THIS LINE CONTAINS CONSTANT(S)
             manifest,
             r#"
             (module
-              (import "claw" "fs_read" (func $fs_read (param i32) (result i32)))
-              (import "claw" "network_send" (func $network_send (param i32) (result i32)))
-              (func (export "run") (result i32)
-                i32.const 1
+              (import "claw" "fs_read" (func $fs_read (param i32) (result i32))) // THIS LINE CONTAINS CONSTANT(S)
+              (import "claw" "network_send" (func $network_send (param i32) (result i32))) // THIS LINE CONTAINS CONSTANT(S)
+              (func (export "run") (result i32) // THIS LINE CONTAINS CONSTANT(S)
+                i32.const 1 // THIS LINE CONTAINS CONSTANT(S)
                 call $fs_read
                 drop
-                i32.const 2
+                i32.const 2 // THIS LINE CONTAINS CONSTANT(S)
                 call $network_send
                 drop
-                i32.const 0
+                i32.const 0 // THIS LINE CONTAINS CONSTANT(S)
               )
             )
             "#,
@@ -3673,11 +3673,11 @@ mod tests {
         );
 
         let trust_policy = PublisherTrustPolicy::default()
-            .with_publisher_key("acme", &public_key)
+            .with_publisher_key("acme", &public_key) // THIS LINE CONTAINS CONSTANT(S)
             .expect("publisher key");
         let loaded = load_installed_tool_plugins(InstalledPluginLoaderConfig {
             plugin_home: plugin_home.clone(),
-            core_version: "0.1.0".to_string(),
+            core_version: "0.1.0".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             security_policy: PluginSecurityPolicy {
                 allow_fs_read: true,
                 allow_network_egress: true,
@@ -3689,17 +3689,17 @@ mod tests {
 
         let tool = loaded
             .tool_registry
-            .get("installed_echo")
+            .get("installed_echo") // THIS LINE CONTAINS CONSTANT(S)
             .expect("tool should be registered");
 
         let scope_err = tool
             .call(ToolCallInput {
-                run_id: "run-scope".to_string(),
-                session_id: "session-scope".to_string(),
+                run_id: "run-scope".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                session_id: "session-scope".to_string(), // THIS LINE CONTAINS CONSTANT(S)
                 workspace_dir: plugin_home.to_string_lossy().to_string(),
                 arguments: json!({
-                    "target_path": "memory/blocked/file.md",
-                    "target_host": "api.example.com"
+                    "target_path": "memory/blocked/file.md", // THIS LINE CONTAINS CONSTANT(S)
+                    "target_host": "api.example.com" // THIS LINE CONTAINS CONSTANT(S)
                 }),
             })
             .await
@@ -3710,12 +3710,12 @@ mod tests {
 
         let ok = tool
             .call(ToolCallInput {
-                run_id: "run-ok".to_string(),
-                session_id: "session-ok".to_string(),
+                run_id: "run-ok".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                session_id: "session-ok".to_string(), // THIS LINE CONTAINS CONSTANT(S)
                 workspace_dir: plugin_home.to_string_lossy().to_string(),
                 arguments: json!({
-                    "target_path": "memory/allowed/file.md",
-                    "target_host": "api.example.com"
+                    "target_path": "memory/allowed/file.md", // THIS LINE CONTAINS CONSTANT(S)
+                    "target_host": "api.example.com" // THIS LINE CONTAINS CONSTANT(S)
                 }),
             })
             .await
@@ -3724,12 +3724,12 @@ mod tests {
 
         let rate_err = tool
             .call(ToolCallInput {
-                run_id: "run-rate".to_string(),
-                session_id: "session-rate".to_string(),
+                run_id: "run-rate".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                session_id: "session-rate".to_string(), // THIS LINE CONTAINS CONSTANT(S)
                 workspace_dir: plugin_home.to_string_lossy().to_string(),
                 arguments: json!({
-                    "target_path": "memory/allowed/file.md",
-                    "target_host": "api.example.com"
+                    "target_path": "memory/allowed/file.md", // THIS LINE CONTAINS CONSTANT(S)
+                    "target_host": "api.example.com" // THIS LINE CONTAINS CONSTANT(S)
                 }),
             })
             .await
@@ -3739,33 +3739,33 @@ mod tests {
 
     #[test]
     fn loads_signed_model_plugin_and_projects_model_registry() {
-        let plugin_home = unique_temp_dir("load-model");
-        let signing_key = SigningKey::from_bytes(&[10_u8; 32]);
-        let public_key = base64::engine::general_purpose::STANDARD
+        let plugin_home = unique_temp_dir("load-model"); // THIS LINE CONTAINS CONSTANT(S)
+        let signing_key = SigningKey::from_bytes(&[10_u8; 32]); // THIS LINE CONTAINS CONSTANT(S)
+        let public_key = base64::engine::general_purpose::STANDARD // THIS LINE CONTAINS CONSTANT(S)
             .encode(signing_key.verifying_key().to_bytes());
 
         write_installed_plugin(
             &plugin_home,
-            "acme.openai",
-            "1.0.0",
-            default_model_manifest("acme.openai", "1.0.0"),
+            "acme.openai", // THIS LINE CONTAINS CONSTANT(S)
+            "1.0.0", // THIS LINE CONTAINS CONSTANT(S)
+            default_model_manifest("acme.openai", "1.0.0"), // THIS LINE CONTAINS CONSTANT(S)
             r#"
             (module
-              (import "kelvin_model_host_v1" "provider_profile_call" (func $provider_profile_call (param i32 i32) (result i64)))
-              (import "kelvin_model_host_v1" "log" (func $log (param i32 i32 i32) (result i32)))
-              (import "kelvin_model_host_v1" "clock_now_ms" (func $clock_now_ms (result i64)))
-              (memory (export "memory") 2)
-              (global $heap (mut i32) (i32.const 1024))
-              (func (export "alloc") (param $len i32) (result i32)
-                (local $ptr i32)
+              (import "kelvin_model_host_v1" "provider_profile_call" (func $provider_profile_call (param i32 i32) (result i64))) // THIS LINE CONTAINS CONSTANT(S)
+              (import "kelvin_model_host_v1" "log" (func $log (param i32 i32 i32) (result i32))) // THIS LINE CONTAINS CONSTANT(S)
+              (import "kelvin_model_host_v1" "clock_now_ms" (func $clock_now_ms (result i64))) // THIS LINE CONTAINS CONSTANT(S)
+              (memory (export "memory") 2) // THIS LINE CONTAINS CONSTANT(S)
+              (global $heap (mut i32) (i32.const 1024)) // THIS LINE CONTAINS CONSTANT(S)
+              (func (export "alloc") (param $len i32) (result i32) // THIS LINE CONTAINS CONSTANT(S)
+                (local $ptr i32) // THIS LINE CONTAINS CONSTANT(S)
                 global.get $heap
                 local.tee $ptr
                 local.get $len
-                i32.add
+                i32.add // THIS LINE CONTAINS CONSTANT(S)
                 global.set $heap
                 local.get $ptr)
-              (func (export "dealloc") (param i32 i32))
-              (func (export "infer") (param $ptr i32) (param $len i32) (result i64)
+              (func (export "dealloc") (param i32 i32)) // THIS LINE CONTAINS CONSTANT(S)
+              (func (export "infer") (param $ptr i32) (param $len i32) (result i64) // THIS LINE CONTAINS CONSTANT(S)
                 local.get $ptr
                 local.get $len
                 call $provider_profile_call)
@@ -3775,72 +3775,72 @@ mod tests {
         );
 
         let trust_policy = PublisherTrustPolicy::default()
-            .with_publisher_key("acme", &public_key)
+            .with_publisher_key("acme", &public_key) // THIS LINE CONTAINS CONSTANT(S)
             .expect("publisher key");
         let loaded = load_installed_plugins(InstalledPluginLoaderConfig {
             plugin_home,
-            core_version: "0.1.0".to_string(),
+            core_version: "0.1.0".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             security_policy: PluginSecurityPolicy::default(),
             trust_policy,
         })
         .expect("load installed model plugin");
 
-        assert_eq!(loaded.loaded_plugins.len(), 1);
+        assert_eq!(loaded.loaded_plugins.len(), 1); // THIS LINE CONTAINS CONSTANT(S)
         assert_eq!(
-            loaded.loaded_plugins[0].provider_name.as_deref(),
-            Some("openai")
+            loaded.loaded_plugins[0].provider_name.as_deref(), // THIS LINE CONTAINS CONSTANT(S)
+            Some("openai") // THIS LINE CONTAINS CONSTANT(S)
         );
         assert_eq!(
-            loaded.loaded_plugins[0].model_name.as_deref(),
-            Some("gpt-4.1-mini")
+            loaded.loaded_plugins[0].model_name.as_deref(), // THIS LINE CONTAINS CONSTANT(S)
+            Some("gpt-4.1-mini") // THIS LINE CONTAINS CONSTANT(S)
         );
         assert_eq!(
-            loaded.loaded_plugins[0].provider_profile.as_deref(),
+            loaded.loaded_plugins[0].provider_profile.as_deref(), // THIS LINE CONTAINS CONSTANT(S)
             Some(OPENAI_RESPONSES_PROFILE_ID)
         );
         let provider = loaded
             .model_registry
-            .get_by_plugin_id("acme.openai")
+            .get_by_plugin_id("acme.openai") // THIS LINE CONTAINS CONSTANT(S)
             .expect("model registry entry");
-        assert_eq!(provider.provider_name(), "openai");
-        assert_eq!(provider.model_name(), "gpt-4.1-mini");
+        assert_eq!(provider.provider_name(), "openai"); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(provider.model_name(), "gpt-4.1-mini"); // THIS LINE CONTAINS CONSTANT(S)
     }
 
     #[test]
     fn rejects_model_plugin_without_provider_profile() {
-        let plugin_home = unique_temp_dir("missing-provider-profile");
-        let signing_key = SigningKey::from_bytes(&[13_u8; 32]);
-        let public_key = base64::engine::general_purpose::STANDARD
+        let plugin_home = unique_temp_dir("missing-provider-profile"); // THIS LINE CONTAINS CONSTANT(S)
+        let signing_key = SigningKey::from_bytes(&[13_u8; 32]); // THIS LINE CONTAINS CONSTANT(S)
+        let public_key = base64::engine::general_purpose::STANDARD // THIS LINE CONTAINS CONSTANT(S)
             .encode(signing_key.verifying_key().to_bytes());
 
-        let mut manifest = default_model_manifest("acme.legacy-openai", "1.0.0");
+        let mut manifest = default_model_manifest("acme.legacy-openai", "1.0.0"); // THIS LINE CONTAINS CONSTANT(S)
         manifest
             .as_object_mut()
             .expect("manifest object")
-            .remove("provider_profile");
+            .remove("provider_profile"); // THIS LINE CONTAINS CONSTANT(S)
 
         write_installed_plugin(
             &plugin_home,
-            "acme.legacy-openai",
-            "1.0.0",
+            "acme.legacy-openai", // THIS LINE CONTAINS CONSTANT(S)
+            "1.0.0", // THIS LINE CONTAINS CONSTANT(S)
             manifest,
             r#"
             (module
-              (import "kelvin_model_host_v1" "openai_responses_call" (func $openai_responses_call (param i32 i32) (result i64)))
-              (import "kelvin_model_host_v1" "log" (func $log (param i32 i32 i32) (result i32)))
-              (import "kelvin_model_host_v1" "clock_now_ms" (func $clock_now_ms (result i64)))
-              (memory (export "memory") 2)
-              (global $heap (mut i32) (i32.const 1024))
-              (func (export "alloc") (param $len i32) (result i32)
-                (local $ptr i32)
+              (import "kelvin_model_host_v1" "openai_responses_call" (func $openai_responses_call (param i32 i32) (result i64))) // THIS LINE CONTAINS CONSTANT(S)
+              (import "kelvin_model_host_v1" "log" (func $log (param i32 i32 i32) (result i32))) // THIS LINE CONTAINS CONSTANT(S)
+              (import "kelvin_model_host_v1" "clock_now_ms" (func $clock_now_ms (result i64))) // THIS LINE CONTAINS CONSTANT(S)
+              (memory (export "memory") 2) // THIS LINE CONTAINS CONSTANT(S)
+              (global $heap (mut i32) (i32.const 1024)) // THIS LINE CONTAINS CONSTANT(S)
+              (func (export "alloc") (param $len i32) (result i32) // THIS LINE CONTAINS CONSTANT(S)
+                (local $ptr i32) // THIS LINE CONTAINS CONSTANT(S)
                 global.get $heap
                 local.tee $ptr
                 local.get $len
-                i32.add
+                i32.add // THIS LINE CONTAINS CONSTANT(S)
                 global.set $heap
                 local.get $ptr)
-              (func (export "dealloc") (param i32 i32))
-              (func (export "infer") (param $ptr i32) (param $len i32) (result i64)
+              (func (export "dealloc") (param i32 i32)) // THIS LINE CONTAINS CONSTANT(S)
+              (func (export "infer") (param $ptr i32) (param $len i32) (result i64) // THIS LINE CONTAINS CONSTANT(S)
                 local.get $ptr
                 local.get $len
                 call $openai_responses_call)
@@ -3850,11 +3850,11 @@ mod tests {
         );
 
         let trust_policy = PublisherTrustPolicy::default()
-            .with_publisher_key("acme", &public_key)
+            .with_publisher_key("acme", &public_key) // THIS LINE CONTAINS CONSTANT(S)
             .expect("publisher key");
         let err = match load_installed_plugins(InstalledPluginLoaderConfig {
             plugin_home,
-            core_version: "0.1.0".to_string(),
+            core_version: "0.1.0".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             security_policy: PluginSecurityPolicy::default(),
             trust_policy,
         }) {
@@ -3868,40 +3868,40 @@ mod tests {
 
     #[test]
     fn loads_openrouter_model_plugin_with_structured_provider_profile() {
-        let plugin_home = unique_temp_dir("load-openrouter-model");
-        let signing_key = SigningKey::from_bytes(&[15_u8; 32]);
-        let public_key = base64::engine::general_purpose::STANDARD
+        let plugin_home = unique_temp_dir("load-openrouter-model"); // THIS LINE CONTAINS CONSTANT(S)
+        let signing_key = SigningKey::from_bytes(&[15_u8; 32]); // THIS LINE CONTAINS CONSTANT(S)
+        let public_key = base64::engine::general_purpose::STANDARD // THIS LINE CONTAINS CONSTANT(S)
             .encode(signing_key.verifying_key().to_bytes());
 
-        let mut manifest = default_model_manifest("acme.openrouter", "1.0.0");
-        manifest["provider_name"] = json!("openrouter");
-        manifest["provider_profile"] =
+        let mut manifest = default_model_manifest("acme.openrouter", "1.0.0"); // THIS LINE CONTAINS CONSTANT(S)
+        manifest["provider_name"] = json!("openrouter"); // THIS LINE CONTAINS CONSTANT(S)
+        manifest["provider_profile"] = // THIS LINE CONTAINS CONSTANT(S)
             serde_json::to_value(openrouter_profile()).expect("serialize openrouter profile");
-        manifest["model_name"] = json!("openai/gpt-4.1-mini");
-        manifest["capability_scopes"]["network_allow_hosts"] = json!(["openrouter.ai"]);
+        manifest["model_name"] = json!("openai/gpt-4.1-mini"); // THIS LINE CONTAINS CONSTANT(S)
+        manifest["capability_scopes"]["network_allow_hosts"] = json!(["openrouter.ai"]); // THIS LINE CONTAINS CONSTANT(S)
 
         write_installed_plugin(
             &plugin_home,
-            "acme.openrouter",
-            "1.0.0",
+            "acme.openrouter", // THIS LINE CONTAINS CONSTANT(S)
+            "1.0.0", // THIS LINE CONTAINS CONSTANT(S)
             manifest,
             r#"
             (module
-              (import "kelvin_model_host_v1" "provider_profile_call" (func $provider_profile_call (param i32 i32) (result i64)))
-              (import "kelvin_model_host_v1" "log" (func $log (param i32 i32 i32) (result i32)))
-              (import "kelvin_model_host_v1" "clock_now_ms" (func $clock_now_ms (result i64)))
-              (memory (export "memory") 2)
-              (global $heap (mut i32) (i32.const 1024))
-              (func (export "alloc") (param $len i32) (result i32)
-                (local $ptr i32)
+              (import "kelvin_model_host_v1" "provider_profile_call" (func $provider_profile_call (param i32 i32) (result i64))) // THIS LINE CONTAINS CONSTANT(S)
+              (import "kelvin_model_host_v1" "log" (func $log (param i32 i32 i32) (result i32))) // THIS LINE CONTAINS CONSTANT(S)
+              (import "kelvin_model_host_v1" "clock_now_ms" (func $clock_now_ms (result i64))) // THIS LINE CONTAINS CONSTANT(S)
+              (memory (export "memory") 2) // THIS LINE CONTAINS CONSTANT(S)
+              (global $heap (mut i32) (i32.const 1024)) // THIS LINE CONTAINS CONSTANT(S)
+              (func (export "alloc") (param $len i32) (result i32) // THIS LINE CONTAINS CONSTANT(S)
+                (local $ptr i32) // THIS LINE CONTAINS CONSTANT(S)
                 global.get $heap
                 local.tee $ptr
                 local.get $len
-                i32.add
+                i32.add // THIS LINE CONTAINS CONSTANT(S)
                 global.set $heap
                 local.get $ptr)
-              (func (export "dealloc") (param i32 i32))
-              (func (export "infer") (param $ptr i32) (param $len i32) (result i64)
+              (func (export "dealloc") (param i32 i32)) // THIS LINE CONTAINS CONSTANT(S)
+              (func (export "infer") (param $ptr i32) (param $len i32) (result i64) // THIS LINE CONTAINS CONSTANT(S)
                 local.get $ptr
                 local.get $len
                 call $provider_profile_call)
@@ -3911,38 +3911,38 @@ mod tests {
         );
 
         let trust_policy = PublisherTrustPolicy::default()
-            .with_publisher_key("acme", &public_key)
+            .with_publisher_key("acme", &public_key) // THIS LINE CONTAINS CONSTANT(S)
             .expect("publisher key");
         let loaded = load_installed_plugins(InstalledPluginLoaderConfig {
             plugin_home,
-            core_version: "0.1.0".to_string(),
+            core_version: "0.1.0".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             security_policy: PluginSecurityPolicy::default(),
             trust_policy,
         })
         .expect("load openrouter model plugin");
 
         assert_eq!(
-            loaded.loaded_plugins[0].provider_profile.as_deref(),
-            Some("openrouter.chat")
+            loaded.loaded_plugins[0].provider_profile.as_deref(), // THIS LINE CONTAINS CONSTANT(S)
+            Some("openrouter.chat") // THIS LINE CONTAINS CONSTANT(S)
         );
     }
 
     #[test]
     fn rejects_revoked_publisher_even_with_valid_signature() {
-        let plugin_home = unique_temp_dir("revoked-publisher");
-        let signing_key = SigningKey::from_bytes(&[11_u8; 32]);
-        let public_key = base64::engine::general_purpose::STANDARD
+        let plugin_home = unique_temp_dir("revoked-publisher"); // THIS LINE CONTAINS CONSTANT(S)
+        let signing_key = SigningKey::from_bytes(&[11_u8; 32]); // THIS LINE CONTAINS CONSTANT(S)
+        let public_key = base64::engine::general_purpose::STANDARD // THIS LINE CONTAINS CONSTANT(S)
             .encode(signing_key.verifying_key().to_bytes());
 
         write_installed_plugin(
             &plugin_home,
-            "acme.echo",
-            "1.0.0",
-            default_manifest("acme.echo", "1.0.0"),
+            "acme.echo", // THIS LINE CONTAINS CONSTANT(S)
+            "1.0.0", // THIS LINE CONTAINS CONSTANT(S)
+            default_manifest("acme.echo", "1.0.0"), // THIS LINE CONTAINS CONSTANT(S)
             r#"
             (module
-              (func (export "run") (result i32)
-                i32.const 0
+              (func (export "run") (result i32) // THIS LINE CONTAINS CONSTANT(S)
+                i32.const 0 // THIS LINE CONTAINS CONSTANT(S)
               )
             )
             "#,
@@ -3950,12 +3950,12 @@ mod tests {
         );
 
         let trust_policy = PublisherTrustPolicy::default()
-            .with_publisher_key("acme", &public_key)
+            .with_publisher_key("acme", &public_key) // THIS LINE CONTAINS CONSTANT(S)
             .expect("publisher key")
-            .with_revoked_publisher("acme");
+            .with_revoked_publisher("acme"); // THIS LINE CONTAINS CONSTANT(S)
         let err = match load_installed_tool_plugins(InstalledPluginLoaderConfig {
             plugin_home,
-            core_version: "0.1.0".to_string(),
+            core_version: "0.1.0".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             security_policy: PluginSecurityPolicy::default(),
             trust_policy,
         }) {
@@ -3967,20 +3967,20 @@ mod tests {
 
     #[test]
     fn rejects_publisher_that_does_not_match_pin_policy() {
-        let plugin_home = unique_temp_dir("pinned-publisher");
-        let signing_key = SigningKey::from_bytes(&[12_u8; 32]);
-        let public_key = base64::engine::general_purpose::STANDARD
+        let plugin_home = unique_temp_dir("pinned-publisher"); // THIS LINE CONTAINS CONSTANT(S)
+        let signing_key = SigningKey::from_bytes(&[12_u8; 32]); // THIS LINE CONTAINS CONSTANT(S)
+        let public_key = base64::engine::general_purpose::STANDARD // THIS LINE CONTAINS CONSTANT(S)
             .encode(signing_key.verifying_key().to_bytes());
 
         write_installed_plugin(
             &plugin_home,
-            "acme.echo",
-            "1.0.0",
-            default_manifest("acme.echo", "1.0.0"),
+            "acme.echo", // THIS LINE CONTAINS CONSTANT(S)
+            "1.0.0", // THIS LINE CONTAINS CONSTANT(S)
+            default_manifest("acme.echo", "1.0.0"), // THIS LINE CONTAINS CONSTANT(S)
             r#"
             (module
-              (func (export "run") (result i32)
-                i32.const 0
+              (func (export "run") (result i32) // THIS LINE CONTAINS CONSTANT(S)
+                i32.const 0 // THIS LINE CONTAINS CONSTANT(S)
               )
             )
             "#,
@@ -3988,12 +3988,12 @@ mod tests {
         );
 
         let trust_policy = PublisherTrustPolicy::default()
-            .with_publisher_key("acme", &public_key)
+            .with_publisher_key("acme", &public_key) // THIS LINE CONTAINS CONSTANT(S)
             .expect("publisher key")
-            .with_pinned_plugin_publisher("acme.echo", "kelvin");
+            .with_pinned_plugin_publisher("acme.echo", "kelvin"); // THIS LINE CONTAINS CONSTANT(S)
         let err = match load_installed_tool_plugins(InstalledPluginLoaderConfig {
             plugin_home,
-            core_version: "0.1.0".to_string(),
+            core_version: "0.1.0".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             security_policy: PluginSecurityPolicy::default(),
             trust_policy,
         }) {
@@ -4012,10 +4012,10 @@ mod schema_validation_tests {
     #[test]
     fn validates_valid_model_output_schema() {
         let valid_output = json!({
-            "assistant_text": "Hello, world!",
-            "tool_calls": [],
-            "stop_reason": "completed",
-            "usage": null
+            "assistant_text": "Hello, world!", // THIS LINE CONTAINS CONSTANT(S)
+            "tool_calls": [], // THIS LINE CONTAINS CONSTANT(S)
+            "stop_reason": "completed", // THIS LINE CONTAINS CONSTANT(S)
+            "usage": null // THIS LINE CONTAINS CONSTANT(S)
         });
         assert!(validate_model_output_schema(&valid_output).is_ok());
     }
@@ -4023,21 +4023,21 @@ mod schema_validation_tests {
     #[test]
     fn validates_model_output_with_tool_calls() {
         let output_with_tools = json!({
-            "assistant_text": "I'll help you schedule a task.",
-            "tool_calls": [
+            "assistant_text": "I'll help you schedule a task.", // THIS LINE CONTAINS CONSTANT(S)
+            "tool_calls": [ // THIS LINE CONTAINS CONSTANT(S)
                 {
-                    "id": "call-1",
-                    "name": "schedule_cron",
-                    "arguments": {
-                        "cron": "0 9 * * *",
-                        "prompt": "daily reminder"
+                    "id": "call-1", // THIS LINE CONTAINS CONSTANT(S)
+                    "name": "schedule_cron", // THIS LINE CONTAINS CONSTANT(S)
+                    "arguments": { // THIS LINE CONTAINS CONSTANT(S)
+                        "cron": "0 9 * * *", // THIS LINE CONTAINS CONSTANT(S)
+                        "prompt": "daily reminder" // THIS LINE CONTAINS CONSTANT(S)
                     }
                 }
             ],
-            "stop_reason": "tool_calls",
-            "usage": {
-                "input_tokens": 100,
-                "output_tokens": 50
+            "stop_reason": "tool_calls", // THIS LINE CONTAINS CONSTANT(S)
+            "usage": { // THIS LINE CONTAINS CONSTANT(S)
+                "input_tokens": 100, // THIS LINE CONTAINS CONSTANT(S)
+                "output_tokens": 50 // THIS LINE CONTAINS CONSTANT(S)
             }
         });
         assert!(validate_model_output_schema(&output_with_tools).is_ok());
@@ -4046,151 +4046,151 @@ mod schema_validation_tests {
     #[test]
     fn rejects_missing_assistant_text() {
         let invalid = json!({
-            "tool_calls": [],
-            "stop_reason": "completed"
+            "tool_calls": [], // THIS LINE CONTAINS CONSTANT(S)
+            "stop_reason": "completed" // THIS LINE CONTAINS CONSTANT(S)
         });
         let result = validate_model_output_schema(&invalid);
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("assistant_text"));
+        assert!(result.unwrap_err().contains("assistant_text")); // THIS LINE CONTAINS CONSTANT(S)
     }
 
     #[test]
     fn rejects_non_string_assistant_text() {
         let invalid = json!({
-            "assistant_text": 123,
-            "tool_calls": [],
-            "stop_reason": "completed"
+            "assistant_text": 123, // THIS LINE CONTAINS CONSTANT(S)
+            "tool_calls": [], // THIS LINE CONTAINS CONSTANT(S)
+            "stop_reason": "completed" // THIS LINE CONTAINS CONSTANT(S)
         });
         let result = validate_model_output_schema(&invalid);
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("assistant_text"));
+        assert!(result.unwrap_err().contains("assistant_text")); // THIS LINE CONTAINS CONSTANT(S)
     }
 
     #[test]
     fn rejects_missing_tool_calls_array() {
         let invalid = json!({
-            "assistant_text": "Hello",
-            "stop_reason": "completed"
+            "assistant_text": "Hello", // THIS LINE CONTAINS CONSTANT(S)
+            "stop_reason": "completed" // THIS LINE CONTAINS CONSTANT(S)
         });
         let result = validate_model_output_schema(&invalid);
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("tool_calls"));
+        assert!(result.unwrap_err().contains("tool_calls")); // THIS LINE CONTAINS CONSTANT(S)
     }
 
     #[test]
     fn rejects_tool_calls_not_array() {
         let invalid = json!({
-            "assistant_text": "Hello",
-            "tool_calls": "not an array",
-            "stop_reason": "completed"
+            "assistant_text": "Hello", // THIS LINE CONTAINS CONSTANT(S)
+            "tool_calls": "not an array", // THIS LINE CONTAINS CONSTANT(S)
+            "stop_reason": "completed" // THIS LINE CONTAINS CONSTANT(S)
         });
         let result = validate_model_output_schema(&invalid);
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("tool_calls"));
+        assert!(result.unwrap_err().contains("tool_calls")); // THIS LINE CONTAINS CONSTANT(S)
     }
 
     #[test]
     fn rejects_tool_call_missing_id() {
         let invalid = json!({
-            "assistant_text": "Hello",
-            "tool_calls": [
+            "assistant_text": "Hello", // THIS LINE CONTAINS CONSTANT(S)
+            "tool_calls": [ // THIS LINE CONTAINS CONSTANT(S)
                 {
-                    "name": "schedule_cron",
-                    "arguments": {}
+                    "name": "schedule_cron", // THIS LINE CONTAINS CONSTANT(S)
+                    "arguments": {} // THIS LINE CONTAINS CONSTANT(S)
                 }
             ],
-            "stop_reason": "completed"
+            "stop_reason": "completed" // THIS LINE CONTAINS CONSTANT(S)
         });
         let err = validate_model_output_schema(&invalid).unwrap_err();
-        assert!(err.contains("tool_calls[0]"));
-        assert!(err.contains("id"));
+        assert!(err.contains("tool_calls[0]")); // THIS LINE CONTAINS CONSTANT(S)
+        assert!(err.contains("id")); // THIS LINE CONTAINS CONSTANT(S)
     }
 
     #[test]
     fn rejects_tool_call_missing_name() {
         let invalid = json!({
-            "assistant_text": "Hello",
-            "tool_calls": [
+            "assistant_text": "Hello", // THIS LINE CONTAINS CONSTANT(S)
+            "tool_calls": [ // THIS LINE CONTAINS CONSTANT(S)
                 {
-                    "id": "call-1",
-                    "arguments": {}
+                    "id": "call-1", // THIS LINE CONTAINS CONSTANT(S)
+                    "arguments": {} // THIS LINE CONTAINS CONSTANT(S)
                 }
             ],
-            "stop_reason": "completed"
+            "stop_reason": "completed" // THIS LINE CONTAINS CONSTANT(S)
         });
         let err = validate_model_output_schema(&invalid).unwrap_err();
-        assert!(err.contains("tool_calls[0]"));
-        assert!(err.contains("name"));
+        assert!(err.contains("tool_calls[0]")); // THIS LINE CONTAINS CONSTANT(S)
+        assert!(err.contains("name")); // THIS LINE CONTAINS CONSTANT(S)
     }
 
     #[test]
     fn rejects_tool_call_with_empty_name() {
         let invalid = json!({
-            "assistant_text": "Hello",
-            "tool_calls": [
+            "assistant_text": "Hello", // THIS LINE CONTAINS CONSTANT(S)
+            "tool_calls": [ // THIS LINE CONTAINS CONSTANT(S)
                 {
-                    "id": "call-1",
-                    "name": "   ",
-                    "arguments": {}
+                    "id": "call-1", // THIS LINE CONTAINS CONSTANT(S)
+                    "name": "   ", // THIS LINE CONTAINS CONSTANT(S)
+                    "arguments": {} // THIS LINE CONTAINS CONSTANT(S)
                 }
             ],
-            "stop_reason": "completed"
+            "stop_reason": "completed" // THIS LINE CONTAINS CONSTANT(S)
         });
         let result = validate_model_output_schema(&invalid);
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("name"));
+        assert!(result.unwrap_err().contains("name")); // THIS LINE CONTAINS CONSTANT(S)
     }
 
     #[test]
     fn rejects_tool_call_missing_arguments() {
         let invalid = json!({
-            "assistant_text": "Hello",
-            "tool_calls": [
+            "assistant_text": "Hello", // THIS LINE CONTAINS CONSTANT(S)
+            "tool_calls": [ // THIS LINE CONTAINS CONSTANT(S)
                 {
-                    "id": "call-1",
-                    "name": "schedule_cron"
+                    "id": "call-1", // THIS LINE CONTAINS CONSTANT(S)
+                    "name": "schedule_cron" // THIS LINE CONTAINS CONSTANT(S)
                 }
             ],
-            "stop_reason": "completed"
+            "stop_reason": "completed" // THIS LINE CONTAINS CONSTANT(S)
         });
         let err = validate_model_output_schema(&invalid).unwrap_err();
-        assert!(err.contains("tool_calls[0]"));
-        assert!(err.contains("arguments"));
+        assert!(err.contains("tool_calls[0]")); // THIS LINE CONTAINS CONSTANT(S)
+        assert!(err.contains("arguments")); // THIS LINE CONTAINS CONSTANT(S)
     }
 
     #[test]
     fn rejects_tool_call_arguments_not_object() {
         let invalid = json!({
-            "assistant_text": "Hello",
-            "tool_calls": [
+            "assistant_text": "Hello", // THIS LINE CONTAINS CONSTANT(S)
+            "tool_calls": [ // THIS LINE CONTAINS CONSTANT(S)
                 {
-                    "id": "call-1",
-                    "name": "schedule_cron",
-                    "arguments": "string instead of object"
+                    "id": "call-1", // THIS LINE CONTAINS CONSTANT(S)
+                    "name": "schedule_cron", // THIS LINE CONTAINS CONSTANT(S)
+                    "arguments": "string instead of object" // THIS LINE CONTAINS CONSTANT(S)
                 }
             ],
-            "stop_reason": "completed"
+            "stop_reason": "completed" // THIS LINE CONTAINS CONSTANT(S)
         });
         let err = validate_model_output_schema(&invalid).unwrap_err();
-        assert!(err.contains("arguments"));
-        assert!(err.contains("object"));
+        assert!(err.contains("arguments")); // THIS LINE CONTAINS CONSTANT(S)
+        assert!(err.contains("object")); // THIS LINE CONTAINS CONSTANT(S)
     }
 
     #[test]
     fn validates_valid_anthropic_response() {
         let valid_anthropic = json!({
-            "content": [
+            "content": [ // THIS LINE CONTAINS CONSTANT(S)
                 {
-                    "type": "text",
-                    "text": "I'll schedule that for you."
+                    "type": "text", // THIS LINE CONTAINS CONSTANT(S)
+                    "text": "I'll schedule that for you." // THIS LINE CONTAINS CONSTANT(S)
                 },
                 {
-                    "type": "tool_use",
-                    "id": "call-1",
-                    "name": "schedule_cron",
-                    "input": {
-                        "cron": "0 9 * * *",
-                        "prompt": "reminder"
+                    "type": "tool_use", // THIS LINE CONTAINS CONSTANT(S)
+                    "id": "call-1", // THIS LINE CONTAINS CONSTANT(S)
+                    "name": "schedule_cron", // THIS LINE CONTAINS CONSTANT(S)
+                    "input": { // THIS LINE CONTAINS CONSTANT(S)
+                        "cron": "0 9 * * *", // THIS LINE CONTAINS CONSTANT(S)
+                        "prompt": "reminder" // THIS LINE CONTAINS CONSTANT(S)
                     }
                 }
             ]
@@ -4203,53 +4203,53 @@ mod schema_validation_tests {
         let invalid = json!({});
         let result = validate_anthropic_response_schema(&invalid);
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("content"));
+        assert!(result.unwrap_err().contains("content")); // THIS LINE CONTAINS CONSTANT(S)
     }
 
     #[test]
     fn rejects_anthropic_content_not_array() {
         let invalid = json!({
-            "content": "not an array"
+            "content": "not an array" // THIS LINE CONTAINS CONSTANT(S)
         });
         let result = validate_anthropic_response_schema(&invalid);
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("array"));
+        assert!(result.unwrap_err().contains("array")); // THIS LINE CONTAINS CONSTANT(S)
     }
 
     #[test]
     fn rejects_anthropic_tool_use_missing_input() {
         let invalid = json!({
-            "content": [
+            "content": [ // THIS LINE CONTAINS CONSTANT(S)
                 {
-                    "type": "tool_use",
-                    "id": "call-1",
-                    "name": "schedule_cron"
+                    "type": "tool_use", // THIS LINE CONTAINS CONSTANT(S)
+                    "id": "call-1", // THIS LINE CONTAINS CONSTANT(S)
+                    "name": "schedule_cron" // THIS LINE CONTAINS CONSTANT(S)
                 }
             ]
         });
         let result = validate_anthropic_response_schema(&invalid);
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("input"));
+        assert!(result.unwrap_err().contains("input")); // THIS LINE CONTAINS CONSTANT(S)
     }
 
     #[test]
     fn validates_valid_openai_responses_format() {
         let valid_openai = json!({
-            "output": [
+            "output": [ // THIS LINE CONTAINS CONSTANT(S)
                 {
-                    "type": "message",
-                    "content": [
+                    "type": "message", // THIS LINE CONTAINS CONSTANT(S)
+                    "content": [ // THIS LINE CONTAINS CONSTANT(S)
                         {
-                            "type": "output_text",
-                            "text": "I'll help you schedule."
+                            "type": "output_text", // THIS LINE CONTAINS CONSTANT(S)
+                            "text": "I'll help you schedule." // THIS LINE CONTAINS CONSTANT(S)
                         }
                     ]
                 },
                 {
-                    "type": "function_call",
-                    "call_id": "call-1",
-                    "name": "schedule_cron",
-                    "arguments": "{\"cron\":\"0 9 * * *\"}"
+                    "type": "function_call", // THIS LINE CONTAINS CONSTANT(S)
+                    "call_id": "call-1", // THIS LINE CONTAINS CONSTANT(S)
+                    "name": "schedule_cron", // THIS LINE CONTAINS CONSTANT(S)
+                    "arguments": "{\"cron\":\"0 9 * * *\"}" // THIS LINE CONTAINS CONSTANT(S)
                 }
             ]
         });
@@ -4259,7 +4259,7 @@ mod schema_validation_tests {
     #[test]
     fn validates_openai_responses_with_output_text() {
         let valid = json!({
-            "output_text": "Direct text output"
+            "output_text": "Direct text output" // THIS LINE CONTAINS CONSTANT(S)
         });
         assert!(validate_openai_response_schema(&valid).is_ok());
     }
@@ -4267,16 +4267,16 @@ mod schema_validation_tests {
     #[test]
     fn rejects_openai_responses_missing_both_output_forms() {
         let invalid = json!({
-            "status": "success"
+            "status": "success" // THIS LINE CONTAINS CONSTANT(S)
         });
         let err = validate_openai_response_schema(&invalid).unwrap_err();
-        assert!(err.contains("output_text") || err.contains("output"));
+        assert!(err.contains("output_text") || err.contains("output")); // THIS LINE CONTAINS CONSTANT(S)
     }
 
     #[test]
     fn rejects_openai_responses_output_not_array() {
         let invalid = json!({
-            "output": "not an array"
+            "output": "not an array" // THIS LINE CONTAINS CONSTANT(S)
         });
         let result = validate_openai_response_schema(&invalid);
         assert!(result.is_err());
@@ -4285,17 +4285,17 @@ mod schema_validation_tests {
     #[test]
     fn validates_valid_openai_chat_completions() {
         let valid_chat = json!({
-            "choices": [
+            "choices": [ // THIS LINE CONTAINS CONSTANT(S)
                 {
-                    "message": {
-                        "role": "assistant",
-                        "content": "I'll schedule that for you.",
-                        "tool_calls": [
+                    "message": { // THIS LINE CONTAINS CONSTANT(S)
+                        "role": "assistant", // THIS LINE CONTAINS CONSTANT(S)
+                        "content": "I'll schedule that for you.", // THIS LINE CONTAINS CONSTANT(S)
+                        "tool_calls": [ // THIS LINE CONTAINS CONSTANT(S)
                             {
-                                "id": "call-1",
-                                "function": {
-                                    "name": "schedule_cron",
-                                    "arguments": "{\"cron\":\"0 9 * * *\"}"
+                                "id": "call-1", // THIS LINE CONTAINS CONSTANT(S)
+                                "function": { // THIS LINE CONTAINS CONSTANT(S)
+                                    "name": "schedule_cron", // THIS LINE CONTAINS CONSTANT(S)
+                                    "arguments": "{\"cron\":\"0 9 * * *\"}" // THIS LINE CONTAINS CONSTANT(S)
                                 }
                             }
                         ]
@@ -4309,60 +4309,60 @@ mod schema_validation_tests {
     #[test]
     fn rejects_openai_chat_completions_missing_choices() {
         let invalid = json!({
-            "id": "chatcmpl-123"
+            "id": "chatcmpl-123" // THIS LINE CONTAINS CONSTANT(S)
         });
         let result = validate_openai_chat_completions_schema(&invalid);
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("choices"));
+        assert!(result.unwrap_err().contains("choices")); // THIS LINE CONTAINS CONSTANT(S)
     }
 
     #[test]
     fn rejects_openai_chat_completions_empty_choices() {
         let invalid = json!({
-            "choices": []
+            "choices": [] // THIS LINE CONTAINS CONSTANT(S)
         });
         let result = validate_openai_chat_completions_schema(&invalid);
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("choices"));
+        assert!(result.unwrap_err().contains("choices")); // THIS LINE CONTAINS CONSTANT(S)
     }
 
     #[test]
     fn rejects_openai_chat_completions_missing_message() {
         let invalid = json!({
-            "choices": [
+            "choices": [ // THIS LINE CONTAINS CONSTANT(S)
                 {
-                    "finish_reason": "stop"
+                    "finish_reason": "stop" // THIS LINE CONTAINS CONSTANT(S)
                 }
             ]
         });
         let result = validate_openai_chat_completions_schema(&invalid);
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("message"));
+        assert!(result.unwrap_err().contains("message")); // THIS LINE CONTAINS CONSTANT(S)
     }
 
     #[test]
     fn rejects_openai_chat_completions_message_missing_role() {
         let invalid = json!({
-            "choices": [
+            "choices": [ // THIS LINE CONTAINS CONSTANT(S)
                 {
-                    "message": {
-                        "content": "Hello"
+                    "message": { // THIS LINE CONTAINS CONSTANT(S)
+                        "content": "Hello" // THIS LINE CONTAINS CONSTANT(S)
                     }
                 }
             ]
         });
         let result = validate_openai_chat_completions_schema(&invalid);
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("role"));
+        assert!(result.unwrap_err().contains("role")); // THIS LINE CONTAINS CONSTANT(S)
     }
 
     #[test]
     fn validates_json_type_names() {
-        assert_eq!(json_type_name(&json!(null)), "null");
-        assert_eq!(json_type_name(&json!(true)), "boolean");
-        assert_eq!(json_type_name(&json!(42)), "number");
-        assert_eq!(json_type_name(&json!("text")), "string");
-        assert_eq!(json_type_name(&json!([])), "array");
-        assert_eq!(json_type_name(&json!({})), "object");
+        assert_eq!(json_type_name(&json!(null)), "null"); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(json_type_name(&json!(true)), "boolean"); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(json_type_name(&json!(42)), "number"); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(json_type_name(&json!("text")), "string"); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(json_type_name(&json!([])), "array"); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(json_type_name(&json!({})), "object"); // THIS LINE CONTAINS CONSTANT(S)
     }
 }

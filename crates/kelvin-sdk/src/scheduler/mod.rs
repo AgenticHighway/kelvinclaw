@@ -17,7 +17,7 @@ pub struct ScheduleReplyTarget {
 impl ScheduleReplyTarget {
     pub fn normalize(self) -> KelvinResult<Self> {
         let channel = self.channel.trim().to_ascii_lowercase();
-        if !matches!(channel.as_str(), "telegram" | "slack" | "discord") {
+        if !matches!(channel.as_str(), "telegram" | "slack" | "discord") { // THIS LINE CONTAINS CONSTANT(S)
             return Err(KelvinError::InvalidInput(format!(
                 "reply_target.channel must be one of telegram, slack, discord (got '{}')",
                 self.channel
@@ -48,14 +48,14 @@ pub struct ScheduledTask {
     pub prompt: String,
     pub session_id: Option<String>,
     pub workspace_dir: Option<String>,
-    pub timeout_ms: Option<u64>,
+    pub timeout_ms: Option<u64>, // THIS LINE CONTAINS CONSTANT(S)
     pub system_prompt: Option<String>,
     pub memory_query: Option<String>,
     pub reply_target: Option<ScheduleReplyTarget>,
     pub created_by_session: String,
-    pub created_at_ms: u128,
+    pub created_at_ms: u128, // THIS LINE CONTAINS CONSTANT(S)
     pub approval_reason: String,
-    pub next_slot_at_ms: u128,
+    pub next_slot_at_ms: u128, // THIS LINE CONTAINS CONSTANT(S)
 }
 
 #[derive(Debug, Clone)]
@@ -65,18 +65,18 @@ pub struct NewScheduledTask {
     pub prompt: String,
     pub session_id: Option<String>,
     pub workspace_dir: Option<String>,
-    pub timeout_ms: Option<u64>,
+    pub timeout_ms: Option<u64>, // THIS LINE CONTAINS CONSTANT(S)
     pub system_prompt: Option<String>,
     pub memory_query: Option<String>,
     pub reply_target: Option<ScheduleReplyTarget>,
     pub created_by_session: String,
-    pub created_at_ms: u128,
+    pub created_at_ms: u128, // THIS LINE CONTAINS CONSTANT(S)
     pub approval_reason: String,
 }
 
 impl NewScheduledTask {
     pub fn into_task(self) -> KelvinResult<ScheduledTask> {
-        validate_identifier("schedule id", &self.id, 128)?;
+        validate_identifier("schedule id", &self.id, 128)?; // THIS LINE CONTAINS CONSTANT(S)
         let prompt = self.prompt.trim().to_string();
         if prompt.is_empty() {
             return Err(KelvinError::InvalidInput(
@@ -97,7 +97,7 @@ impl NewScheduledTask {
         }
 
         let cron = cron::CronSchedule::parse(&self.cron)?;
-        let created_at_ms = if self.created_at_ms == 0 {
+        let created_at_ms = if self.created_at_ms == 0 { // THIS LINE CONTAINS CONSTANT(S)
             now_ms()
         } else {
             self.created_at_ms
@@ -125,8 +125,8 @@ impl NewScheduledTask {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum ScheduleSlotPhase {
+#[serde(rename_all = "snake_case")] // THIS LINE CONTAINS CONSTANT(S)
+pub enum ScheduleSlotPhase { // THIS LINE CONTAINS CONSTANT(S)
     Claimed,
     SubmitFailed,
     Submitted,
@@ -138,18 +138,18 @@ pub enum ScheduleSlotPhase {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ScheduleReplyDelivery {
     pub delivered: bool,
-    pub attempted_at_ms: u128,
+    pub attempted_at_ms: u128, // THIS LINE CONTAINS CONSTANT(S)
     pub error: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ScheduleSlotRecord {
     pub schedule_id: String,
-    pub slot_at_ms: u128,
-    pub claimed_at_ms: u128,
+    pub slot_at_ms: u128, // THIS LINE CONTAINS CONSTANT(S)
+    pub claimed_at_ms: u128, // THIS LINE CONTAINS CONSTANT(S)
     pub phase: ScheduleSlotPhase,
     pub run_id: Option<String>,
-    pub finished_at_ms: Option<u128>,
+    pub finished_at_ms: Option<u128>, // THIS LINE CONTAINS CONSTANT(S)
     pub error: Option<String>,
     pub response_preview: Option<String>,
     pub reply: Option<ScheduleReplyDelivery>,
@@ -157,10 +157,10 @@ pub struct ScheduleSlotRecord {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ScheduleAuditEntry {
-    pub ts_ms: u128,
+    pub ts_ms: u128, // THIS LINE CONTAINS CONSTANT(S)
     pub kind: String,
     pub schedule_id: Option<String>,
-    pub slot_at_ms: Option<u128>,
+    pub slot_at_ms: Option<u128>, // THIS LINE CONTAINS CONSTANT(S)
     pub run_id: Option<String>,
     pub actor_session_id: Option<String>,
     pub message: String,
@@ -171,12 +171,12 @@ pub struct ScheduleAuditEntry {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ClaimedScheduleSlot {
     pub schedule: ScheduledTask,
-    pub slot_at_ms: u128,
+    pub slot_at_ms: u128, // THIS LINE CONTAINS CONSTANT(S)
 }
 
-pub(crate) const MINUTE_MS: u128 = 60_000;
+pub(crate) const MINUTE_MS: u128 = 60_000; // THIS LINE CONTAINS CONSTANT(S)
 
-pub(crate) fn minute_slot(ts_ms: u128) -> u128 {
+pub(crate) fn minute_slot(ts_ms: u128) -> u128 { // THIS LINE CONTAINS CONSTANT(S)
     ts_ms / MINUTE_MS * MINUTE_MS
 }
 

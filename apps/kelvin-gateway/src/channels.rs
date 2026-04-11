@@ -86,7 +86,7 @@ impl ChannelEngine {
         self.telegram
             .as_ref()
             .map(TextChannelAdapter::status)
-            .unwrap_or_else(|| json!({ "enabled": false }))
+            .unwrap_or_else(|| json!({ "enabled": false })) // THIS LINE CONTAINS CONSTANT(S)
     }
 
     pub async fn slack_ingest(
@@ -121,7 +121,7 @@ impl ChannelEngine {
         self.slack
             .as_ref()
             .map(TextChannelAdapter::status)
-            .unwrap_or_else(|| json!({ "enabled": false }))
+            .unwrap_or_else(|| json!({ "enabled": false })) // THIS LINE CONTAINS CONSTANT(S)
     }
 
     pub async fn discord_ingest(
@@ -156,7 +156,7 @@ impl ChannelEngine {
         self.discord
             .as_ref()
             .map(TextChannelAdapter::status)
-            .unwrap_or_else(|| json!({ "enabled": false }))
+            .unwrap_or_else(|| json!({ "enabled": false })) // THIS LINE CONTAINS CONSTANT(S)
     }
 
     pub async fn whatsapp_ingest(
@@ -191,7 +191,7 @@ impl ChannelEngine {
         self.whatsapp
             .as_ref()
             .map(TextChannelAdapter::status)
-            .unwrap_or_else(|| json!({ "enabled": false }))
+            .unwrap_or_else(|| json!({ "enabled": false })) // THIS LINE CONTAINS CONSTANT(S)
     }
 
     pub fn route_inspect(&self, request: ChannelRouteInspectRequest) -> KelvinErrorOr<Value> {
@@ -212,8 +212,8 @@ impl ChannelEngine {
             sender_tier: trust_tier,
         });
         Ok(json!({
-            "route": decision,
-            "rules_loaded": self.routing.rule_count(),
+            "route": decision, // THIS LINE CONTAINS CONSTANT(S)
+            "rules_loaded": self.routing.rule_count(), // THIS LINE CONTAINS CONSTANT(S)
         }))
     }
 
@@ -223,7 +223,7 @@ impl ChannelEngine {
         text: &str,
     ) -> KelvinErrorOr<()> {
         match target.channel.as_str() {
-            "telegram" => {
+            "telegram" => { // THIS LINE CONTAINS CONSTANT(S)
                 let adapter = self.telegram.as_mut().ok_or_else(|| {
                     KelvinError::NotFound("telegram channel is not enabled".to_string())
                 })?;
@@ -231,7 +231,7 @@ impl ChannelEngine {
                     .deliver_outbound_message(&target.account_id, text)
                     .await
             }
-            "slack" => {
+            "slack" => { // THIS LINE CONTAINS CONSTANT(S)
                 let adapter = self.slack.as_mut().ok_or_else(|| {
                     KelvinError::NotFound("slack channel is not enabled".to_string())
                 })?;
@@ -239,7 +239,7 @@ impl ChannelEngine {
                     .deliver_outbound_message(&target.account_id, text)
                     .await
             }
-            "discord" => {
+            "discord" => { // THIS LINE CONTAINS CONSTANT(S)
                 let adapter = self.discord.as_mut().ok_or_else(|| {
                     KelvinError::NotFound("discord channel is not enabled".to_string())
                 })?;
@@ -247,7 +247,7 @@ impl ChannelEngine {
                     .deliver_outbound_message(&target.account_id, text)
                     .await
             }
-            "whatsapp" => {
+            "whatsapp" => { // THIS LINE CONTAINS CONSTANT(S)
                 let adapter = self.whatsapp.as_mut().ok_or_else(|| {
                     KelvinError::NotFound("whatsapp channel is not enabled".to_string())
                 })?;
@@ -278,7 +278,7 @@ impl ChannelEngine {
     pub fn record_webhook_verified(
         &mut self,
         kind: ChannelKind,
-        status_code: u16,
+        status_code: u16, // THIS LINE CONTAINS CONSTANT(S)
         retry_hint: bool,
     ) -> KelvinErrorOr<()> {
         self.adapter_mut(kind)?
@@ -288,7 +288,7 @@ impl ChannelEngine {
     pub fn record_webhook_denied(
         &mut self,
         kind: ChannelKind,
-        status_code: u16,
+        status_code: u16, // THIS LINE CONTAINS CONSTANT(S)
         retry_hint: bool,
         reason: &str,
     ) -> KelvinErrorOr<()> {
@@ -326,8 +326,8 @@ pub struct ChannelDirectIngressStatusConfig {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub(crate) enum ChannelKind {
+#[serde(rename_all = "snake_case")] // THIS LINE CONTAINS CONSTANT(S)
+pub(crate) enum ChannelKind { // THIS LINE CONTAINS CONSTANT(S)
     Telegram,
     Slack,
     Discord,
@@ -335,21 +335,21 @@ pub(crate) enum ChannelKind {
 }
 
 impl ChannelKind {
-    pub(crate) fn as_str(self) -> &'static str {
+    pub(crate) fn as_str(self) -> &'static str { // THIS LINE CONTAINS CONSTANT(S)
         match self {
-            Self::Telegram => "telegram",
-            Self::Slack => "slack",
-            Self::Discord => "discord",
-            Self::WhatsApp => "whatsapp",
+            Self::Telegram => "telegram", // THIS LINE CONTAINS CONSTANT(S)
+            Self::Slack => "slack", // THIS LINE CONTAINS CONSTANT(S)
+            Self::Discord => "discord", // THIS LINE CONTAINS CONSTANT(S)
+            Self::WhatsApp => "whatsapp", // THIS LINE CONTAINS CONSTANT(S)
         }
     }
 
-    fn env_prefix(self) -> &'static str {
+    fn env_prefix(self) -> &'static str { // THIS LINE CONTAINS CONSTANT(S)
         match self {
-            Self::Telegram => "KELVIN_TELEGRAM",
-            Self::Slack => "KELVIN_SLACK",
-            Self::Discord => "KELVIN_DISCORD",
-            Self::WhatsApp => "KELVIN_WHATSAPP",
+            Self::Telegram => "KELVIN_TELEGRAM", // THIS LINE CONTAINS CONSTANT(S)
+            Self::Slack => "KELVIN_SLACK", // THIS LINE CONTAINS CONSTANT(S)
+            Self::Discord => "KELVIN_DISCORD", // THIS LINE CONTAINS CONSTANT(S)
+            Self::WhatsApp => "KELVIN_WHATSAPP", // THIS LINE CONTAINS CONSTANT(S)
         }
     }
 }
@@ -367,7 +367,7 @@ struct ChannelPolicy {
     quota_standard_per_minute: usize,
     quota_trusted_per_minute: usize,
     quota_probation_per_minute: usize,
-    cooldown_probation_ms: u64,
+    cooldown_probation_ms: u64, // THIS LINE CONTAINS CONSTANT(S)
     max_seen_delivery_ids: usize,
     max_queue_depth: usize,
     max_text_bytes: usize,
@@ -377,8 +377,8 @@ struct ChannelPolicy {
 struct ChannelTransportConfig {
     api_base_url: String,
     bot_token: Option<String>,
-    outbound_max_retries: u8,
-    outbound_retry_backoff_ms: u64,
+    outbound_max_retries: u8, // THIS LINE CONTAINS CONSTANT(S)
+    outbound_retry_backoff_ms: u64, // THIS LINE CONTAINS CONSTANT(S)
 }
 
 #[derive(Debug, Clone)]
@@ -401,10 +401,10 @@ impl TextChannelConfig {
         let enabled = read_env_bool(&format!("{prefix}_ENABLED"), false)?;
 
         let default_base_url = match kind {
-            ChannelKind::Telegram => "https://api.telegram.org",
-            ChannelKind::Slack => "https://slack.com/api",
-            ChannelKind::Discord => "https://discord.com/api/v10",
-            ChannelKind::WhatsApp => "https://graph.facebook.com/v21.0",
+            ChannelKind::Telegram => "https://api.telegram.org", // THIS LINE CONTAINS CONSTANT(S)
+            ChannelKind::Slack => "https://slack.com/api", // THIS LINE CONTAINS CONSTANT(S)
+            ChannelKind::Discord => "https://discord.com/api/v10", // THIS LINE CONTAINS CONSTANT(S)
+            ChannelKind::WhatsApp => "https://graph.facebook.com/v21.0", // THIS LINE CONTAINS CONSTANT(S)
         };
 
         let api_base_url = std::env::var(format!("{prefix}_API_BASE_URL"))
@@ -422,14 +422,14 @@ impl TextChannelConfig {
             .filter(|value| !value.is_empty());
 
         let pairing_enabled = if kind == ChannelKind::Telegram {
-            read_env_bool("KELVIN_TELEGRAM_PAIRING_ENABLED", true)?
+            read_env_bool("KELVIN_TELEGRAM_PAIRING_ENABLED", true)? // THIS LINE CONTAINS CONSTANT(S)
         } else {
             false
         };
 
         let mut allow_accounts = read_env_csv_set(&format!("{prefix}_ALLOW_ACCOUNT_IDS"));
         if kind == ChannelKind::Telegram {
-            allow_accounts.extend(read_env_csv_set("KELVIN_TELEGRAM_ALLOW_CHAT_IDS"));
+            allow_accounts.extend(read_env_csv_set("KELVIN_TELEGRAM_ALLOW_CHAT_IDS")); // THIS LINE CONTAINS CONSTANT(S)
         }
 
         let mut allow_senders = read_env_csv_set(&format!("{prefix}_ALLOW_SENDER_IDS"));
@@ -439,10 +439,10 @@ impl TextChannelConfig {
         let mut blocked_senders = read_env_csv_set(&format!("{prefix}_BLOCKED_SENDER_IDS"));
 
         if kind == ChannelKind::Telegram {
-            let owner_chat_ids = read_env_csv_set("KELVIN_TELEGRAM_OWNER_CHAT_IDS");
-            let trusted_chat_ids = read_env_csv_set("KELVIN_TELEGRAM_TRUSTED_CHAT_IDS");
-            let probation_chat_ids = read_env_csv_set("KELVIN_TELEGRAM_PROBATION_CHAT_IDS");
-            let blocked_chat_ids = read_env_csv_set("KELVIN_TELEGRAM_BLOCKED_CHAT_IDS");
+            let owner_chat_ids = read_env_csv_set("KELVIN_TELEGRAM_OWNER_CHAT_IDS"); // THIS LINE CONTAINS CONSTANT(S)
+            let trusted_chat_ids = read_env_csv_set("KELVIN_TELEGRAM_TRUSTED_CHAT_IDS"); // THIS LINE CONTAINS CONSTANT(S)
+            let probation_chat_ids = read_env_csv_set("KELVIN_TELEGRAM_PROBATION_CHAT_IDS"); // THIS LINE CONTAINS CONSTANT(S)
+            let blocked_chat_ids = read_env_csv_set("KELVIN_TELEGRAM_BLOCKED_CHAT_IDS"); // THIS LINE CONTAINS CONSTANT(S)
             owner_senders.extend(owner_chat_ids.iter().cloned());
             trusted_senders.extend(trusted_chat_ids.iter().cloned());
             probation_senders.extend(probation_chat_ids.iter().cloned());
@@ -451,50 +451,50 @@ impl TextChannelConfig {
         }
 
         let quota_standard_per_minute =
-            read_env_usize(&format!("{prefix}_MAX_MESSAGES_PER_MINUTE"), 20, 1, 20_000)?;
+            read_env_usize(&format!("{prefix}_MAX_MESSAGES_PER_MINUTE"), 20, 1, 20_000)?; // THIS LINE CONTAINS CONSTANT(S)
         let quota_owner_per_minute = read_env_usize(
             &format!("{prefix}_MAX_MESSAGES_PER_MINUTE_OWNER"),
-            quota_standard_per_minute.saturating_mul(4).max(1),
-            1,
-            80_000,
+            quota_standard_per_minute.saturating_mul(4).max(1), // THIS LINE CONTAINS CONSTANT(S)
+            1, // THIS LINE CONTAINS CONSTANT(S)
+            80_000, // THIS LINE CONTAINS CONSTANT(S)
         )?;
         let quota_trusted_per_minute = read_env_usize(
             &format!("{prefix}_MAX_MESSAGES_PER_MINUTE_TRUSTED"),
-            quota_standard_per_minute.saturating_mul(2).max(1),
-            1,
-            40_000,
+            quota_standard_per_minute.saturating_mul(2).max(1), // THIS LINE CONTAINS CONSTANT(S)
+            1, // THIS LINE CONTAINS CONSTANT(S)
+            40_000, // THIS LINE CONTAINS CONSTANT(S)
         )?;
         let quota_probation_per_minute = read_env_usize(
             &format!("{prefix}_MAX_MESSAGES_PER_MINUTE_PROBATION"),
-            (quota_standard_per_minute / 2).max(1),
-            1,
-            20_000,
+            (quota_standard_per_minute / 2).max(1), // THIS LINE CONTAINS CONSTANT(S)
+            1, // THIS LINE CONTAINS CONSTANT(S)
+            20_000, // THIS LINE CONTAINS CONSTANT(S)
         )?;
-        let cooldown_probation_ms = read_env_u64(
+        let cooldown_probation_ms = read_env_u64( // THIS LINE CONTAINS CONSTANT(S)
             &format!("{prefix}_COOLDOWN_MS_PROBATION"),
-            1_000,
-            0,
-            600_000,
+            1_000, // THIS LINE CONTAINS CONSTANT(S)
+            0, // THIS LINE CONTAINS CONSTANT(S)
+            600_000, // THIS LINE CONTAINS CONSTANT(S)
         )?;
 
         let max_seen_delivery_ids = read_env_usize(
             &format!("{prefix}_MAX_SEEN_DELIVERY_IDS"),
-            4_096,
-            128,
-            200_000,
+            4_096, // THIS LINE CONTAINS CONSTANT(S)
+            128, // THIS LINE CONTAINS CONSTANT(S)
+            200_000, // THIS LINE CONTAINS CONSTANT(S)
         )?;
         let max_queue_depth =
-            read_env_usize(&format!("{prefix}_MAX_QUEUE_DEPTH"), 1_024, 1, 100_000)?;
+            read_env_usize(&format!("{prefix}_MAX_QUEUE_DEPTH"), 1_024, 1, 100_000)?; // THIS LINE CONTAINS CONSTANT(S)
         let max_text_bytes =
-            read_env_usize(&format!("{prefix}_MAX_TEXT_BYTES"), 4_096, 64, 64_000)?;
+            read_env_usize(&format!("{prefix}_MAX_TEXT_BYTES"), 4_096, 64, 64_000)?; // THIS LINE CONTAINS CONSTANT(S)
 
         let outbound_max_retries =
-            read_env_u8(&format!("{prefix}_OUTBOUND_MAX_RETRIES"), 2, 0, 10)?;
-        let outbound_retry_backoff_ms = read_env_u64(
+            read_env_u8(&format!("{prefix}_OUTBOUND_MAX_RETRIES"), 2, 0, 10)?; // THIS LINE CONTAINS CONSTANT(S)
+        let outbound_retry_backoff_ms = read_env_u64( // THIS LINE CONTAINS CONSTANT(S)
             &format!("{prefix}_OUTBOUND_RETRY_BACKOFF_MS"),
-            200,
-            1,
-            20_000,
+            200, // THIS LINE CONTAINS CONSTANT(S)
+            1, // THIS LINE CONTAINS CONSTANT(S)
+            20_000, // THIS LINE CONTAINS CONSTANT(S)
         )?;
 
         if enabled && bot_token.is_none() {
@@ -550,7 +550,7 @@ fn validate_base_url(kind: ChannelKind, raw: &str, allow_custom_base: bool) -> K
             raw
         ))
     })?;
-    if parsed.scheme() != "https" {
+    if parsed.scheme() != "https" { // THIS LINE CONTAINS CONSTANT(S)
         return Err(KelvinError::InvalidInput(format!(
             "{} api base url must use https",
             kind.as_str()
@@ -570,10 +570,10 @@ fn validate_base_url(kind: ChannelKind, raw: &str, allow_custom_base: bool) -> K
     }
     let host = parsed.host_str().unwrap_or_default().to_ascii_lowercase();
     let default_host = match kind {
-        ChannelKind::Telegram => "api.telegram.org",
-        ChannelKind::Slack => "slack.com",
-        ChannelKind::Discord => "discord.com",
-        ChannelKind::WhatsApp => "graph.facebook.com",
+        ChannelKind::Telegram => "api.telegram.org", // THIS LINE CONTAINS CONSTANT(S)
+        ChannelKind::Slack => "slack.com", // THIS LINE CONTAINS CONSTANT(S)
+        ChannelKind::Discord => "discord.com", // THIS LINE CONTAINS CONSTANT(S)
+        ChannelKind::WhatsApp => "graph.facebook.com", // THIS LINE CONTAINS CONSTANT(S)
     };
     if !allow_custom_base && host != default_host {
         return Err(KelvinError::InvalidInput(format!(
@@ -592,7 +592,7 @@ struct ChannelEnvelope {
     sender_id: String,
     account_id: String,
     text: String,
-    timeout_ms: Option<u64>,
+    timeout_ms: Option<u64>, // THIS LINE CONTAINS CONSTANT(S)
     auth_token: Option<String>,
     session_id: Option<String>,
     workspace_dir: Option<String>,
@@ -612,16 +612,16 @@ struct WasmPolicyDecision {
 #[derive(Clone)]
 struct WasmChannelPolicyPlugin {
     module_path: String,
-    wasm_bytes: Arc<Vec<u8>>,
+    wasm_bytes: Arc<Vec<u8>>, // THIS LINE CONTAINS CONSTANT(S)
     host: WasmChannelHost,
     policy: ChannelSandboxPolicy,
 }
 
 impl std::fmt::Debug for WasmChannelPolicyPlugin {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("WasmChannelPolicyPlugin")
-            .field("module_path", &self.module_path)
-            .field("policy", &self.policy)
+        f.debug_struct("WasmChannelPolicyPlugin") // THIS LINE CONTAINS CONSTANT(S)
+            .field("module_path", &self.module_path) // THIS LINE CONTAINS CONSTANT(S)
+            .field("policy", &self.policy) // THIS LINE CONTAINS CONSTANT(S)
             .finish()
     }
 }
@@ -649,26 +649,26 @@ impl WasmChannelPolicyPlugin {
         let max_module_bytes = read_env_usize(
             &format!("{prefix}_WASM_MAX_MODULE_BYTES"),
             ChannelSandboxPolicy::default().max_module_bytes,
-            1_024,
-            16 * 1024 * 1024,
+            1_024, // THIS LINE CONTAINS CONSTANT(S)
+            16 * 1024 * 1024, // THIS LINE CONTAINS CONSTANT(S)
         )?;
         let max_request_bytes = read_env_usize(
             &format!("{prefix}_WASM_MAX_REQUEST_BYTES"),
             ChannelSandboxPolicy::default().max_request_bytes,
-            256,
-            2 * 1024 * 1024,
+            256, // THIS LINE CONTAINS CONSTANT(S)
+            2 * 1024 * 1024, // THIS LINE CONTAINS CONSTANT(S)
         )?;
         let max_response_bytes = read_env_usize(
             &format!("{prefix}_WASM_MAX_RESPONSE_BYTES"),
             ChannelSandboxPolicy::default().max_response_bytes,
-            256,
-            2 * 1024 * 1024,
+            256, // THIS LINE CONTAINS CONSTANT(S)
+            2 * 1024 * 1024, // THIS LINE CONTAINS CONSTANT(S)
         )?;
-        let fuel_budget = read_env_u64(
+        let fuel_budget = read_env_u64( // THIS LINE CONTAINS CONSTANT(S)
             &format!("{prefix}_WASM_FUEL_BUDGET"),
             ChannelSandboxPolicy::default().fuel_budget,
-            1_000,
-            100_000_000,
+            1_000, // THIS LINE CONTAINS CONSTANT(S)
+            100_000_000, // THIS LINE CONTAINS CONSTANT(S)
         )?;
 
         let policy = ChannelSandboxPolicy {
@@ -694,16 +694,16 @@ impl WasmChannelPolicyPlugin {
         trust_tier: SenderTrustTier,
     ) -> KelvinErrorOr<WasmPolicyDecision> {
         let input = json!({
-            "channel": kind.as_str(),
-            "delivery_id": envelope.delivery_id,
-            "sender_id": envelope.sender_id,
-            "account_id": envelope.account_id,
-            "text": envelope.text,
-            "timeout_ms": envelope.timeout_ms,
-            "session_id": envelope.session_id,
-            "workspace_dir": envelope.workspace_dir,
-            "trust_tier": trust_tier.as_str(),
-            "now_ms": now_ms(),
+            "channel": kind.as_str(), // THIS LINE CONTAINS CONSTANT(S)
+            "delivery_id": envelope.delivery_id, // THIS LINE CONTAINS CONSTANT(S)
+            "sender_id": envelope.sender_id, // THIS LINE CONTAINS CONSTANT(S)
+            "account_id": envelope.account_id, // THIS LINE CONTAINS CONSTANT(S)
+            "text": envelope.text, // THIS LINE CONTAINS CONSTANT(S)
+            "timeout_ms": envelope.timeout_ms, // THIS LINE CONTAINS CONSTANT(S)
+            "session_id": envelope.session_id, // THIS LINE CONTAINS CONSTANT(S)
+            "workspace_dir": envelope.workspace_dir, // THIS LINE CONTAINS CONSTANT(S)
+            "trust_tier": trust_tier.as_str(), // THIS LINE CONTAINS CONSTANT(S)
+            "now_ms": now_ms(), // THIS LINE CONTAINS CONSTANT(S)
         })
         .to_string();
 
@@ -746,7 +746,7 @@ impl ChannelStatePersistence {
         let Some(root) = state_dir else {
             return Ok(None);
         };
-        let dir = root.join("gateway").join("channels");
+        let dir = root.join("gateway").join("channels"); // THIS LINE CONTAINS CONSTANT(S)
         fs::create_dir_all(&dir)
             .map_err(|err| KelvinError::Io(format!("create channel state dir: {err}")))?;
         Ok(Some(Self {
@@ -782,7 +782,7 @@ impl ChannelStatePersistence {
             fs::create_dir_all(parent)
                 .map_err(|err| KelvinError::Io(format!("create channel state parent: {err}")))?;
         }
-        let tmp_path = self.state_path.with_extension("json.tmp");
+        let tmp_path = self.state_path.with_extension("json.tmp"); // THIS LINE CONTAINS CONSTANT(S)
         let bytes = serde_json::to_vec_pretty(state).map_err(|err| {
             KelvinError::Backend(format!(
                 "serialize channel state '{}': {err}",
@@ -811,8 +811,8 @@ struct PersistedChannelState {
     paired_accounts: HashSet<String>,
     pending_pair_codes: HashMap<String, String>,
     seen_delivery_order: VecDeque<String>,
-    rate_windows: HashMap<String, VecDeque<u128>>,
-    cooldown_until_ms: HashMap<String, u128>,
+    rate_windows: HashMap<String, VecDeque<u128>>, // THIS LINE CONTAINS CONSTANT(S)
+    cooldown_until_ms: HashMap<String, u128>, // THIS LINE CONTAINS CONSTANT(S)
     inbox: VecDeque<QueuedEnvelope>,
     metrics: ChannelMetrics,
 }
@@ -824,8 +824,8 @@ struct TextChannelAdapter {
     pending_pair_codes: HashMap<String, String>,
     seen_delivery_ids: HashSet<String>,
     seen_delivery_order: VecDeque<String>,
-    rate_windows: HashMap<String, VecDeque<u128>>,
-    cooldown_until_ms: HashMap<String, u128>,
+    rate_windows: HashMap<String, VecDeque<u128>>, // THIS LINE CONTAINS CONSTANT(S)
+    cooldown_until_ms: HashMap<String, u128>, // THIS LINE CONTAINS CONSTANT(S)
     inbox: VecDeque<QueuedEnvelope>,
     client: reqwest::Client,
     state_persistence: Option<ChannelStatePersistence>,
@@ -835,33 +835,33 @@ struct TextChannelAdapter {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 struct ChannelMetrics {
-    ingest_total: u64,
-    webhook_total: u64,
-    webhook_accepted_total: u64,
-    webhook_denied_total: u64,
-    webhook_retry_total: u64,
-    verification_ok_total: u64,
-    verification_failed_total: u64,
-    deduped_total: u64,
-    queued_total: u64,
-    queue_rejected_total: u64,
-    pairing_required_total: u64,
-    pairing_approved_total: u64,
-    policy_denied_total: u64,
-    rate_limited_total: u64,
-    completed_total: u64,
-    failed_total: u64,
-    timeout_total: u64,
-    outbound_attempt_total: u64,
-    outbound_retry_total: u64,
-    outbound_failure_total: u64,
+    ingest_total: u64, // THIS LINE CONTAINS CONSTANT(S)
+    webhook_total: u64, // THIS LINE CONTAINS CONSTANT(S)
+    webhook_accepted_total: u64, // THIS LINE CONTAINS CONSTANT(S)
+    webhook_denied_total: u64, // THIS LINE CONTAINS CONSTANT(S)
+    webhook_retry_total: u64, // THIS LINE CONTAINS CONSTANT(S)
+    verification_ok_total: u64, // THIS LINE CONTAINS CONSTANT(S)
+    verification_failed_total: u64, // THIS LINE CONTAINS CONSTANT(S)
+    deduped_total: u64, // THIS LINE CONTAINS CONSTANT(S)
+    queued_total: u64, // THIS LINE CONTAINS CONSTANT(S)
+    queue_rejected_total: u64, // THIS LINE CONTAINS CONSTANT(S)
+    pairing_required_total: u64, // THIS LINE CONTAINS CONSTANT(S)
+    pairing_approved_total: u64, // THIS LINE CONTAINS CONSTANT(S)
+    policy_denied_total: u64, // THIS LINE CONTAINS CONSTANT(S)
+    rate_limited_total: u64, // THIS LINE CONTAINS CONSTANT(S)
+    completed_total: u64, // THIS LINE CONTAINS CONSTANT(S)
+    failed_total: u64, // THIS LINE CONTAINS CONSTANT(S)
+    timeout_total: u64, // THIS LINE CONTAINS CONSTANT(S)
+    outbound_attempt_total: u64, // THIS LINE CONTAINS CONSTANT(S)
+    outbound_retry_total: u64, // THIS LINE CONTAINS CONSTANT(S)
+    outbound_failure_total: u64, // THIS LINE CONTAINS CONSTANT(S)
     last_error: Option<String>,
-    last_delivery_at_ms: Option<u128>,
-    last_webhook_request_at_ms: Option<u128>,
-    last_webhook_accept_at_ms: Option<u128>,
-    last_webhook_status_code: Option<u16>,
-    last_verification_ok_at_ms: Option<u128>,
-    last_verification_failed_at_ms: Option<u128>,
+    last_delivery_at_ms: Option<u128>, // THIS LINE CONTAINS CONSTANT(S)
+    last_webhook_request_at_ms: Option<u128>, // THIS LINE CONTAINS CONSTANT(S)
+    last_webhook_accept_at_ms: Option<u128>, // THIS LINE CONTAINS CONSTANT(S)
+    last_webhook_status_code: Option<u16>, // THIS LINE CONTAINS CONSTANT(S)
+    last_verification_ok_at_ms: Option<u128>, // THIS LINE CONTAINS CONSTANT(S)
+    last_verification_failed_at_ms: Option<u128>, // THIS LINE CONTAINS CONSTANT(S)
     last_verification_error: Option<String>,
 }
 
@@ -953,7 +953,7 @@ impl TextChannelAdapter {
             .into_iter()
             .filter_map(|(sender_id, mut window)| {
                 while let Some(ts) = window.front().copied() {
-                    if now.saturating_sub(ts) > 60_000 {
+                    if now.saturating_sub(ts) > 60_000 { // THIS LINE CONTAINS CONSTANT(S)
                         let _ = window.pop_front();
                     } else {
                         break;
@@ -999,86 +999,86 @@ impl TextChannelAdapter {
 
     fn status(&self) -> Value {
         json!({
-            "enabled": true,
-            "kind": self.config.kind.as_str(),
-            "pairing_enabled": self.config.pairing_enabled,
-            "state_persistence_enabled": self.state_persistence.is_some(),
-            "state_path": self.state_persistence.as_ref().map(|state| state.path().to_string_lossy().to_string()),
-            "paired_accounts": self.paired_accounts.len(),
-            "pending_pairings": self.pending_pair_codes.len(),
-            "seen_delivery_ids": self.seen_delivery_ids.len(),
-            "rate_window_sender_count": self.rate_windows.len(),
-            "cooldown_account_count": self.cooldown_until_ms.len(),
-            "allow_account_size": self.config.policy.allow_accounts.len(),
-            "allow_sender_size": self.config.policy.allow_senders.len(),
-            "owner_sender_size": self.config.policy.owner_senders.len(),
-            "trusted_sender_size": self.config.policy.trusted_senders.len(),
-            "probation_sender_size": self.config.policy.probation_senders.len(),
-            "blocked_sender_size": self.config.policy.blocked_senders.len(),
-            "quota_per_minute": {
-                "owner": self.config.policy.quota_owner_per_minute,
-                "trusted": self.config.policy.quota_trusted_per_minute,
-                "standard": self.config.policy.quota_standard_per_minute,
-                "probation": self.config.policy.quota_probation_per_minute,
+            "enabled": true, // THIS LINE CONTAINS CONSTANT(S)
+            "kind": self.config.kind.as_str(), // THIS LINE CONTAINS CONSTANT(S)
+            "pairing_enabled": self.config.pairing_enabled, // THIS LINE CONTAINS CONSTANT(S)
+            "state_persistence_enabled": self.state_persistence.is_some(), // THIS LINE CONTAINS CONSTANT(S)
+            "state_path": self.state_persistence.as_ref().map(|state| state.path().to_string_lossy().to_string()), // THIS LINE CONTAINS CONSTANT(S)
+            "paired_accounts": self.paired_accounts.len(), // THIS LINE CONTAINS CONSTANT(S)
+            "pending_pairings": self.pending_pair_codes.len(), // THIS LINE CONTAINS CONSTANT(S)
+            "seen_delivery_ids": self.seen_delivery_ids.len(), // THIS LINE CONTAINS CONSTANT(S)
+            "rate_window_sender_count": self.rate_windows.len(), // THIS LINE CONTAINS CONSTANT(S)
+            "cooldown_account_count": self.cooldown_until_ms.len(), // THIS LINE CONTAINS CONSTANT(S)
+            "allow_account_size": self.config.policy.allow_accounts.len(), // THIS LINE CONTAINS CONSTANT(S)
+            "allow_sender_size": self.config.policy.allow_senders.len(), // THIS LINE CONTAINS CONSTANT(S)
+            "owner_sender_size": self.config.policy.owner_senders.len(), // THIS LINE CONTAINS CONSTANT(S)
+            "trusted_sender_size": self.config.policy.trusted_senders.len(), // THIS LINE CONTAINS CONSTANT(S)
+            "probation_sender_size": self.config.policy.probation_senders.len(), // THIS LINE CONTAINS CONSTANT(S)
+            "blocked_sender_size": self.config.policy.blocked_senders.len(), // THIS LINE CONTAINS CONSTANT(S)
+            "quota_per_minute": { // THIS LINE CONTAINS CONSTANT(S)
+                "owner": self.config.policy.quota_owner_per_minute, // THIS LINE CONTAINS CONSTANT(S)
+                "trusted": self.config.policy.quota_trusted_per_minute, // THIS LINE CONTAINS CONSTANT(S)
+                "standard": self.config.policy.quota_standard_per_minute, // THIS LINE CONTAINS CONSTANT(S)
+                "probation": self.config.policy.quota_probation_per_minute, // THIS LINE CONTAINS CONSTANT(S)
             },
-            "cooldown_probation_ms": self.config.policy.cooldown_probation_ms,
-            "queue_depth": self.inbox.len(),
-            "queue_max_depth": self.config.policy.max_queue_depth,
-            "ingress_auth_required": self.config.policy.ingress_token.is_some(),
-            "ingress_verification": {
-                "listener_enabled": self.config.direct_ingress.listener_enabled,
-                "webhook_path": self.config.direct_ingress.webhook_path.clone(),
-                "method": self.config.direct_ingress.verification_method.clone(),
-                "configured": self.config.direct_ingress.verification_configured,
-                "last_verified_at_ms": self.metrics.last_verification_ok_at_ms,
-                "last_failed_at_ms": self.metrics.last_verification_failed_at_ms,
-                "last_error": self.metrics.last_verification_error.clone(),
+            "cooldown_probation_ms": self.config.policy.cooldown_probation_ms, // THIS LINE CONTAINS CONSTANT(S)
+            "queue_depth": self.inbox.len(), // THIS LINE CONTAINS CONSTANT(S)
+            "queue_max_depth": self.config.policy.max_queue_depth, // THIS LINE CONTAINS CONSTANT(S)
+            "ingress_auth_required": self.config.policy.ingress_token.is_some(), // THIS LINE CONTAINS CONSTANT(S)
+            "ingress_verification": { // THIS LINE CONTAINS CONSTANT(S)
+                "listener_enabled": self.config.direct_ingress.listener_enabled, // THIS LINE CONTAINS CONSTANT(S)
+                "webhook_path": self.config.direct_ingress.webhook_path.clone(), // THIS LINE CONTAINS CONSTANT(S)
+                "method": self.config.direct_ingress.verification_method.clone(), // THIS LINE CONTAINS CONSTANT(S)
+                "configured": self.config.direct_ingress.verification_configured, // THIS LINE CONTAINS CONSTANT(S)
+                "last_verified_at_ms": self.metrics.last_verification_ok_at_ms, // THIS LINE CONTAINS CONSTANT(S)
+                "last_failed_at_ms": self.metrics.last_verification_failed_at_ms, // THIS LINE CONTAINS CONSTANT(S)
+                "last_error": self.metrics.last_verification_error.clone(), // THIS LINE CONTAINS CONSTANT(S)
             },
-            "ingress_connectivity": {
-                "last_request_at_ms": self.metrics.last_webhook_request_at_ms,
-                "last_accepted_at_ms": self.metrics.last_webhook_accept_at_ms,
-                "last_status_code": self.metrics.last_webhook_status_code,
+            "ingress_connectivity": { // THIS LINE CONTAINS CONSTANT(S)
+                "last_request_at_ms": self.metrics.last_webhook_request_at_ms, // THIS LINE CONTAINS CONSTANT(S)
+                "last_accepted_at_ms": self.metrics.last_webhook_accept_at_ms, // THIS LINE CONTAINS CONSTANT(S)
+                "last_status_code": self.metrics.last_webhook_status_code, // THIS LINE CONTAINS CONSTANT(S)
             },
-            "outbound_delivery_enabled": self.config.transport.bot_token.is_some(),
-            "outbound_retry_policy": {
-                "max_retries": self.config.transport.outbound_max_retries,
-                "backoff_ms": self.config.transport.outbound_retry_backoff_ms,
+            "outbound_delivery_enabled": self.config.transport.bot_token.is_some(), // THIS LINE CONTAINS CONSTANT(S)
+            "outbound_retry_policy": { // THIS LINE CONTAINS CONSTANT(S)
+                "max_retries": self.config.transport.outbound_max_retries, // THIS LINE CONTAINS CONSTANT(S)
+                "backoff_ms": self.config.transport.outbound_retry_backoff_ms, // THIS LINE CONTAINS CONSTANT(S)
             },
-            "wasm_policy_enabled": self.config.wasm_policy_plugin.is_some(),
-            "metrics": {
-                "ingest_total": self.metrics.ingest_total,
-                "webhook_total": self.metrics.webhook_total,
-                "webhook_accepted_total": self.metrics.webhook_accepted_total,
-                "webhook_denied_total": self.metrics.webhook_denied_total,
-                "webhook_retry_total": self.metrics.webhook_retry_total,
-                "verification_ok_total": self.metrics.verification_ok_total,
-                "verification_failed_total": self.metrics.verification_failed_total,
-                "deduped_total": self.metrics.deduped_total,
-                "queued_total": self.metrics.queued_total,
-                "queue_rejected_total": self.metrics.queue_rejected_total,
-                "pairing_required_total": self.metrics.pairing_required_total,
-                "pairing_approved_total": self.metrics.pairing_approved_total,
-                "policy_denied_total": self.metrics.policy_denied_total,
-                "rate_limited_total": self.metrics.rate_limited_total,
-                "completed_total": self.metrics.completed_total,
-                "failed_total": self.metrics.failed_total,
-                "timeout_total": self.metrics.timeout_total,
-                "outbound_attempt_total": self.metrics.outbound_attempt_total,
-                "outbound_retry_total": self.metrics.outbound_retry_total,
-                "outbound_failure_total": self.metrics.outbound_failure_total,
-                "last_error": self.metrics.last_error.clone(),
-                "last_delivery_at_ms": self.metrics.last_delivery_at_ms,
+            "wasm_policy_enabled": self.config.wasm_policy_plugin.is_some(), // THIS LINE CONTAINS CONSTANT(S)
+            "metrics": { // THIS LINE CONTAINS CONSTANT(S)
+                "ingest_total": self.metrics.ingest_total, // THIS LINE CONTAINS CONSTANT(S)
+                "webhook_total": self.metrics.webhook_total, // THIS LINE CONTAINS CONSTANT(S)
+                "webhook_accepted_total": self.metrics.webhook_accepted_total, // THIS LINE CONTAINS CONSTANT(S)
+                "webhook_denied_total": self.metrics.webhook_denied_total, // THIS LINE CONTAINS CONSTANT(S)
+                "webhook_retry_total": self.metrics.webhook_retry_total, // THIS LINE CONTAINS CONSTANT(S)
+                "verification_ok_total": self.metrics.verification_ok_total, // THIS LINE CONTAINS CONSTANT(S)
+                "verification_failed_total": self.metrics.verification_failed_total, // THIS LINE CONTAINS CONSTANT(S)
+                "deduped_total": self.metrics.deduped_total, // THIS LINE CONTAINS CONSTANT(S)
+                "queued_total": self.metrics.queued_total, // THIS LINE CONTAINS CONSTANT(S)
+                "queue_rejected_total": self.metrics.queue_rejected_total, // THIS LINE CONTAINS CONSTANT(S)
+                "pairing_required_total": self.metrics.pairing_required_total, // THIS LINE CONTAINS CONSTANT(S)
+                "pairing_approved_total": self.metrics.pairing_approved_total, // THIS LINE CONTAINS CONSTANT(S)
+                "policy_denied_total": self.metrics.policy_denied_total, // THIS LINE CONTAINS CONSTANT(S)
+                "rate_limited_total": self.metrics.rate_limited_total, // THIS LINE CONTAINS CONSTANT(S)
+                "completed_total": self.metrics.completed_total, // THIS LINE CONTAINS CONSTANT(S)
+                "failed_total": self.metrics.failed_total, // THIS LINE CONTAINS CONSTANT(S)
+                "timeout_total": self.metrics.timeout_total, // THIS LINE CONTAINS CONSTANT(S)
+                "outbound_attempt_total": self.metrics.outbound_attempt_total, // THIS LINE CONTAINS CONSTANT(S)
+                "outbound_retry_total": self.metrics.outbound_retry_total, // THIS LINE CONTAINS CONSTANT(S)
+                "outbound_failure_total": self.metrics.outbound_failure_total, // THIS LINE CONTAINS CONSTANT(S)
+                "last_error": self.metrics.last_error.clone(), // THIS LINE CONTAINS CONSTANT(S)
+                "last_delivery_at_ms": self.metrics.last_delivery_at_ms, // THIS LINE CONTAINS CONSTANT(S)
             }
         })
     }
 
-    fn record_webhook_verified(&mut self, status_code: u16, retry_hint: bool) -> KelvinErrorOr<()> {
+    fn record_webhook_verified(&mut self, status_code: u16, retry_hint: bool) -> KelvinErrorOr<()> { // THIS LINE CONTAINS CONSTANT(S)
         let now = now_ms();
-        self.metrics.webhook_total = self.metrics.webhook_total.saturating_add(1);
-        self.metrics.webhook_accepted_total = self.metrics.webhook_accepted_total.saturating_add(1);
-        self.metrics.verification_ok_total = self.metrics.verification_ok_total.saturating_add(1);
+        self.metrics.webhook_total = self.metrics.webhook_total.saturating_add(1); // THIS LINE CONTAINS CONSTANT(S)
+        self.metrics.webhook_accepted_total = self.metrics.webhook_accepted_total.saturating_add(1); // THIS LINE CONTAINS CONSTANT(S)
+        self.metrics.verification_ok_total = self.metrics.verification_ok_total.saturating_add(1); // THIS LINE CONTAINS CONSTANT(S)
         if retry_hint {
-            self.metrics.webhook_retry_total = self.metrics.webhook_retry_total.saturating_add(1);
+            self.metrics.webhook_retry_total = self.metrics.webhook_retry_total.saturating_add(1); // THIS LINE CONTAINS CONSTANT(S)
         }
         self.metrics.last_webhook_request_at_ms = Some(now);
         self.metrics.last_webhook_accept_at_ms = Some(now);
@@ -1090,17 +1090,17 @@ impl TextChannelAdapter {
 
     fn record_webhook_denied(
         &mut self,
-        status_code: u16,
+        status_code: u16, // THIS LINE CONTAINS CONSTANT(S)
         retry_hint: bool,
         reason: &str,
     ) -> KelvinErrorOr<()> {
         let now = now_ms();
-        self.metrics.webhook_total = self.metrics.webhook_total.saturating_add(1);
-        self.metrics.webhook_denied_total = self.metrics.webhook_denied_total.saturating_add(1);
+        self.metrics.webhook_total = self.metrics.webhook_total.saturating_add(1); // THIS LINE CONTAINS CONSTANT(S)
+        self.metrics.webhook_denied_total = self.metrics.webhook_denied_total.saturating_add(1); // THIS LINE CONTAINS CONSTANT(S)
         self.metrics.verification_failed_total =
-            self.metrics.verification_failed_total.saturating_add(1);
+            self.metrics.verification_failed_total.saturating_add(1); // THIS LINE CONTAINS CONSTANT(S)
         if retry_hint {
-            self.metrics.webhook_retry_total = self.metrics.webhook_retry_total.saturating_add(1);
+            self.metrics.webhook_retry_total = self.metrics.webhook_retry_total.saturating_add(1); // THIS LINE CONTAINS CONSTANT(S)
         }
         self.metrics.last_webhook_request_at_ms = Some(now);
         self.metrics.last_webhook_status_code = Some(status_code);
@@ -1125,18 +1125,18 @@ impl TextChannelAdapter {
             return Err(KelvinError::NotFound("pairing code not found".to_string()));
         };
         self.paired_accounts.insert(account_id.clone());
-        self.metrics.pairing_approved_total = self.metrics.pairing_approved_total.saturating_add(1);
+        self.metrics.pairing_approved_total = self.metrics.pairing_approved_total.saturating_add(1); // THIS LINE CONTAINS CONSTANT(S)
         if let Err(err) = self.persist_state() {
             self.paired_accounts.remove(&account_id);
             self.pending_pair_codes
                 .insert(normalized.to_string(), account_id.clone());
             self.metrics.pairing_approved_total =
-                self.metrics.pairing_approved_total.saturating_sub(1);
+                self.metrics.pairing_approved_total.saturating_sub(1); // THIS LINE CONTAINS CONSTANT(S)
             return Err(err);
         }
         Ok(json!({
-            "approved": true,
-            "account_id": account_id,
+            "approved": true, // THIS LINE CONTAINS CONSTANT(S)
+            "account_id": account_id, // THIS LINE CONTAINS CONSTANT(S)
         }))
     }
 
@@ -1146,11 +1146,11 @@ impl TextChannelAdapter {
         routing: &ChannelRoutingTable,
         mut envelope: ChannelEnvelope,
     ) -> KelvinErrorOr<Value> {
-        self.metrics.ingest_total = self.metrics.ingest_total.saturating_add(1);
+        self.metrics.ingest_total = self.metrics.ingest_total.saturating_add(1); // THIS LINE CONTAINS CONSTANT(S)
 
-        envelope.delivery_id = normalize_identifier("delivery_id", &envelope.delivery_id, 256)?;
-        envelope.sender_id = normalize_identifier("sender_id", &envelope.sender_id, 256)?;
-        envelope.account_id = normalize_identifier("account_id", &envelope.account_id, 256)?;
+        envelope.delivery_id = normalize_identifier("delivery_id", &envelope.delivery_id, 256)?; // THIS LINE CONTAINS CONSTANT(S)
+        envelope.sender_id = normalize_identifier("sender_id", &envelope.sender_id, 256)?; // THIS LINE CONTAINS CONSTANT(S)
+        envelope.account_id = normalize_identifier("account_id", &envelope.account_id, 256)?; // THIS LINE CONTAINS CONSTANT(S)
         envelope.text = envelope.text.trim().to_string();
         if envelope.text.is_empty() {
             return Err(KelvinError::InvalidInput(
@@ -1168,16 +1168,16 @@ impl TextChannelAdapter {
         envelope.auth_token = None;
 
         if self.is_duplicate_delivery(&envelope.delivery_id) {
-            self.metrics.deduped_total = self.metrics.deduped_total.saturating_add(1);
+            self.metrics.deduped_total = self.metrics.deduped_total.saturating_add(1); // THIS LINE CONTAINS CONSTANT(S)
             return Ok(json!({
-                "status": "deduped",
-                "delivery_id": envelope.delivery_id,
+                "status": "deduped", // THIS LINE CONTAINS CONSTANT(S)
+                "delivery_id": envelope.delivery_id, // THIS LINE CONTAINS CONSTANT(S)
             }));
         }
 
         if let Some(code) = self.enforce_pairing_policy(&envelope.account_id)? {
             self.metrics.pairing_required_total =
-                self.metrics.pairing_required_total.saturating_add(1);
+                self.metrics.pairing_required_total.saturating_add(1); // THIS LINE CONTAINS CONSTANT(S)
             let pairing_message = format!(
                 "KelvinClaw pairing required. Approve code: {code} using channel.telegram.pair.approve."
             );
@@ -1185,9 +1185,9 @@ impl TextChannelAdapter {
                 .send_message_with_retry(&envelope.account_id, &pairing_message)
                 .await;
             return Ok(json!({
-                "status": "pairing_required",
-                "account_id": envelope.account_id,
-                "pairing_code": code,
+                "status": "pairing_required", // THIS LINE CONTAINS CONSTANT(S)
+                "account_id": envelope.account_id, // THIS LINE CONTAINS CONSTANT(S)
+                "pairing_code": code, // THIS LINE CONTAINS CONSTANT(S)
             }));
         }
 
@@ -1197,7 +1197,7 @@ impl TextChannelAdapter {
             let decision = plugin.evaluate(self.config.kind, &envelope, trust_tier)?;
             if !decision.allow {
                 self.metrics.policy_denied_total =
-                    self.metrics.policy_denied_total.saturating_add(1);
+                    self.metrics.policy_denied_total.saturating_add(1); // THIS LINE CONTAINS CONSTANT(S)
                 let reason = decision
                     .reason
                     .unwrap_or_else(|| "blocked by wasm policy".to_string());
@@ -1242,7 +1242,7 @@ impl TextChannelAdapter {
 
         self.track_delivery_id(envelope.delivery_id.clone());
         if self.inbox.len() >= self.config.policy.max_queue_depth {
-            self.metrics.queue_rejected_total = self.metrics.queue_rejected_total.saturating_add(1);
+            self.metrics.queue_rejected_total = self.metrics.queue_rejected_total.saturating_add(1); // THIS LINE CONTAINS CONSTANT(S)
             self.metrics.last_error = Some("channel queue is full".to_string());
             self.persist_state()?;
             return Err(KelvinError::Backend(format!(
@@ -1251,7 +1251,7 @@ impl TextChannelAdapter {
             )));
         }
 
-        self.metrics.queued_total = self.metrics.queued_total.saturating_add(1);
+        self.metrics.queued_total = self.metrics.queued_total.saturating_add(1); // THIS LINE CONTAINS CONSTANT(S)
         let current_delivery_id = envelope.delivery_id.clone();
         self.inbox.push_back(QueuedEnvelope { envelope, route });
         self.persist_state()?;
@@ -1297,7 +1297,7 @@ impl TextChannelAdapter {
         let sender_tier = SenderTrustTier::from_policy(&self.config.policy, &envelope.sender_id);
 
         if sender_tier == SenderTrustTier::Blocked {
-            self.metrics.policy_denied_total = self.metrics.policy_denied_total.saturating_add(1);
+            self.metrics.policy_denied_total = self.metrics.policy_denied_total.saturating_add(1); // THIS LINE CONTAINS CONSTANT(S)
             return Err(KelvinError::NotFound(format!(
                 "{} sender '{}' is blocked",
                 self.config.kind.as_str(),
@@ -1313,7 +1313,7 @@ impl TextChannelAdapter {
                 .contains(&envelope.account_id)
             && sender_tier != SenderTrustTier::Owner
         {
-            self.metrics.policy_denied_total = self.metrics.policy_denied_total.saturating_add(1);
+            self.metrics.policy_denied_total = self.metrics.policy_denied_total.saturating_add(1); // THIS LINE CONTAINS CONSTANT(S)
             return Err(KelvinError::NotFound(format!(
                 "{} account '{}' is not allowlisted",
                 self.config.kind.as_str(),
@@ -1329,7 +1329,7 @@ impl TextChannelAdapter {
                 .contains(&envelope.sender_id)
             && sender_tier == SenderTrustTier::Standard
         {
-            self.metrics.policy_denied_total = self.metrics.policy_denied_total.saturating_add(1);
+            self.metrics.policy_denied_total = self.metrics.policy_denied_total.saturating_add(1); // THIS LINE CONTAINS CONSTANT(S)
             return Err(KelvinError::NotFound(format!(
                 "{} sender '{}' is not allowlisted",
                 self.config.kind.as_str(),
@@ -1339,7 +1339,7 @@ impl TextChannelAdapter {
 
         self.enforce_rate_limit(&envelope.sender_id, sender_tier)?;
 
-        if sender_tier == SenderTrustTier::Probation && self.config.policy.cooldown_probation_ms > 0
+        if sender_tier == SenderTrustTier::Probation && self.config.policy.cooldown_probation_ms > 0 // THIS LINE CONTAINS CONSTANT(S)
         {
             let now = now_ms();
             if let Some(cooldown_until_ms) =
@@ -1355,7 +1355,7 @@ impl TextChannelAdapter {
             }
             self.cooldown_until_ms.insert(
                 envelope.sender_id.clone(),
-                now.saturating_add(u128::from(self.config.policy.cooldown_probation_ms)),
+                now.saturating_add(u128::from(self.config.policy.cooldown_probation_ms)), // THIS LINE CONTAINS CONSTANT(S)
             );
         }
 
@@ -1371,7 +1371,7 @@ impl TextChannelAdapter {
         let now = now_ms();
         let window = self.rate_windows.entry(sender_id.to_string()).or_default();
         while let Some(ts) = window.front().copied() {
-            if now.saturating_sub(ts) > 60_000 {
+            if now.saturating_sub(ts) > 60_000 { // THIS LINE CONTAINS CONSTANT(S)
                 let _ = window.pop_front();
             } else {
                 break;
@@ -1383,11 +1383,11 @@ impl TextChannelAdapter {
             SenderTrustTier::Trusted => self.config.policy.quota_trusted_per_minute,
             SenderTrustTier::Standard => self.config.policy.quota_standard_per_minute,
             SenderTrustTier::Probation => self.config.policy.quota_probation_per_minute,
-            SenderTrustTier::Blocked => 0,
+            SenderTrustTier::Blocked => 0, // THIS LINE CONTAINS CONSTANT(S)
         };
 
         if window.len() >= quota {
-            self.metrics.rate_limited_total = self.metrics.rate_limited_total.saturating_add(1);
+            self.metrics.rate_limited_total = self.metrics.rate_limited_total.saturating_add(1); // THIS LINE CONTAINS CONSTANT(S)
             return Err(KelvinError::Timeout(format!(
                 "{} sender '{}' exceeded per-minute quota",
                 self.config.kind.as_str(),
@@ -1425,8 +1425,8 @@ impl TextChannelAdapter {
         }
 
         let hash = now_ms() ^ simple_hash(account_id);
-        let numeric = hash % 900_000 + 100_000;
-        let code = format!("{numeric:06}");
+        let numeric = hash % 900_000 + 100_000; // THIS LINE CONTAINS CONSTANT(S)
+        let code = format!("{numeric:06}"); // THIS LINE CONTAINS CONSTANT(S)
         self.pending_pair_codes
             .insert(code.clone(), account_id.to_string());
         if let Err(err) = self.persist_state() {
@@ -1458,9 +1458,9 @@ impl TextChannelAdapter {
         }
 
         Ok(json!({
-            "status": "queued",
-            "delivery_id": target_delivery_id,
-            "queue_depth": self.inbox.len(),
+            "status": "queued", // THIS LINE CONTAINS CONSTANT(S)
+            "delivery_id": target_delivery_id, // THIS LINE CONTAINS CONSTANT(S)
+            "queue_depth": self.inbox.len(), // THIS LINE CONTAINS CONSTANT(S)
         }))
     }
 
@@ -1499,8 +1499,8 @@ impl TextChannelAdapter {
         let timeout_ms = entry
             .envelope
             .timeout_ms
-            .unwrap_or(30_000)
-            .saturating_add(3_000);
+            .unwrap_or(30_000) // THIS LINE CONTAINS CONSTANT(S)
+            .saturating_add(3_000); // THIS LINE CONTAINS CONSTANT(S)
 
         let outcome = runtime
             .wait_for_outcome(&accepted.run_id, timeout_ms)
@@ -1520,20 +1520,20 @@ impl TextChannelAdapter {
                 };
                 self.send_message_with_retry(&entry.envelope.account_id, &outbound_text)
                     .await?;
-                self.metrics.completed_total = self.metrics.completed_total.saturating_add(1);
+                self.metrics.completed_total = self.metrics.completed_total.saturating_add(1); // THIS LINE CONTAINS CONSTANT(S)
                 self.metrics.last_error = None;
                 self.persist_state()?;
 
                 Ok(json!({
-                    "status": "completed",
-                    "run_id": accepted.run_id,
-                    "delivery_id": entry.envelope.delivery_id,
-                    "response_text": outbound_text,
-                    "route": entry.route,
+                    "status": "completed", // THIS LINE CONTAINS CONSTANT(S)
+                    "run_id": accepted.run_id, // THIS LINE CONTAINS CONSTANT(S)
+                    "delivery_id": entry.envelope.delivery_id, // THIS LINE CONTAINS CONSTANT(S)
+                    "response_text": outbound_text, // THIS LINE CONTAINS CONSTANT(S)
+                    "route": entry.route, // THIS LINE CONTAINS CONSTANT(S)
                 }))
             }
             RunOutcome::Failed(error) => {
-                self.metrics.failed_total = self.metrics.failed_total.saturating_add(1);
+                self.metrics.failed_total = self.metrics.failed_total.saturating_add(1); // THIS LINE CONTAINS CONSTANT(S)
                 self.metrics.last_error = Some(error.clone());
                 let outbound_text = format!("Kelvin run failed: {error}");
                 let _ = self
@@ -1541,25 +1541,25 @@ impl TextChannelAdapter {
                     .await;
                 self.persist_state()?;
                 Ok(json!({
-                    "status": "failed",
-                    "run_id": accepted.run_id,
-                    "delivery_id": entry.envelope.delivery_id,
-                    "error": error,
-                    "route": entry.route,
+                    "status": "failed", // THIS LINE CONTAINS CONSTANT(S)
+                    "run_id": accepted.run_id, // THIS LINE CONTAINS CONSTANT(S)
+                    "delivery_id": entry.envelope.delivery_id, // THIS LINE CONTAINS CONSTANT(S)
+                    "error": error, // THIS LINE CONTAINS CONSTANT(S)
+                    "route": entry.route, // THIS LINE CONTAINS CONSTANT(S)
                 }))
             }
             RunOutcome::Timeout => {
-                self.metrics.timeout_total = self.metrics.timeout_total.saturating_add(1);
+                self.metrics.timeout_total = self.metrics.timeout_total.saturating_add(1); // THIS LINE CONTAINS CONSTANT(S)
                 self.metrics.last_error = Some("run timed out".to_string());
                 let _ = self
                     .send_message_with_retry(&entry.envelope.account_id, "Kelvin run timed out.")
                     .await;
                 self.persist_state()?;
                 Ok(json!({
-                    "status": "timeout",
-                    "run_id": accepted.run_id,
-                    "delivery_id": entry.envelope.delivery_id,
-                    "route": entry.route,
+                    "status": "timeout", // THIS LINE CONTAINS CONSTANT(S)
+                    "run_id": accepted.run_id, // THIS LINE CONTAINS CONSTANT(S)
+                    "delivery_id": entry.envelope.delivery_id, // THIS LINE CONTAINS CONSTANT(S)
+                    "route": entry.route, // THIS LINE CONTAINS CONSTANT(S)
                 }))
             }
         }
@@ -1571,9 +1571,9 @@ impl TextChannelAdapter {
         };
 
         let mut last_error = None;
-        for attempt in 0..=self.config.transport.outbound_max_retries {
+        for attempt in 0..=self.config.transport.outbound_max_retries { // THIS LINE CONTAINS CONSTANT(S)
             self.metrics.outbound_attempt_total =
-                self.metrics.outbound_attempt_total.saturating_add(1);
+                self.metrics.outbound_attempt_total.saturating_add(1); // THIS LINE CONTAINS CONSTANT(S)
             let call = self.send_outbound_once(bot_token, account_id, text).await;
             match call {
                 Ok(()) => return Ok(()),
@@ -1583,15 +1583,15 @@ impl TextChannelAdapter {
             }
             if attempt < self.config.transport.outbound_max_retries {
                 self.metrics.outbound_retry_total =
-                    self.metrics.outbound_retry_total.saturating_add(1);
+                    self.metrics.outbound_retry_total.saturating_add(1); // THIS LINE CONTAINS CONSTANT(S)
                 sleep(Duration::from_millis(
-                    self.config.transport.outbound_retry_backoff_ms.max(1),
+                    self.config.transport.outbound_retry_backoff_ms.max(1), // THIS LINE CONTAINS CONSTANT(S)
                 ))
                 .await;
             }
         }
 
-        self.metrics.outbound_failure_total = self.metrics.outbound_failure_total.saturating_add(1);
+        self.metrics.outbound_failure_total = self.metrics.outbound_failure_total.saturating_add(1); // THIS LINE CONTAINS CONSTANT(S)
         self.metrics.last_error = Some(
             last_error
                 .clone()
@@ -1626,8 +1626,8 @@ impl TextChannelAdapter {
             ChannelKind::Telegram => {
                 let endpoint = format!("{}/bot{}/sendMessage", base, bot_token);
                 let request = self.client.post(endpoint.clone()).json(&json!({
-                    "chat_id": account_id,
-                    "text": text,
+                    "chat_id": account_id, // THIS LINE CONTAINS CONSTANT(S)
+                    "text": text, // THIS LINE CONTAINS CONSTANT(S)
                 }));
                 (endpoint, request)
             }
@@ -1638,8 +1638,8 @@ impl TextChannelAdapter {
                     .post(endpoint.clone())
                     .bearer_auth(bot_token)
                     .json(&json!({
-                        "channel": account_id,
-                        "text": text,
+                        "channel": account_id, // THIS LINE CONTAINS CONSTANT(S)
+                        "text": text, // THIS LINE CONTAINS CONSTANT(S)
                     }));
                 (endpoint, request)
             }
@@ -1648,9 +1648,9 @@ impl TextChannelAdapter {
                 let request = self
                     .client
                     .post(endpoint.clone())
-                    .header("Authorization", format!("Bot {}", bot_token))
+                    .header("Authorization", format!("Bot {}", bot_token)) // THIS LINE CONTAINS CONSTANT(S)
                     .json(&json!({
-                        "content": text,
+                        "content": text, // THIS LINE CONTAINS CONSTANT(S)
                     }));
                 (endpoint, request)
             }
@@ -1659,17 +1659,17 @@ impl TextChannelAdapter {
                 // account_id is the recipient phone number (user_phone).
                 // We need the phone_number_id from env to construct the endpoint.
                 let phone_number_id =
-                    std::env::var("KELVIN_WHATSAPP_PHONE_NUMBER_ID").unwrap_or_default();
+                    std::env::var("KELVIN_WHATSAPP_PHONE_NUMBER_ID").unwrap_or_default(); // THIS LINE CONTAINS CONSTANT(S)
                 let endpoint = format!("{}/{}/messages", base, phone_number_id);
                 let request = self
                     .client
                     .post(endpoint.clone())
                     .bearer_auth(bot_token)
                     .json(&json!({
-                        "messaging_product": "whatsapp",
-                        "to": account_id,
-                        "type": "text",
-                        "text": { "body": text },
+                        "messaging_product": "whatsapp", // THIS LINE CONTAINS CONSTANT(S)
+                        "to": account_id, // THIS LINE CONTAINS CONSTANT(S)
+                        "type": "text", // THIS LINE CONTAINS CONSTANT(S)
+                        "text": { "body": text }, // THIS LINE CONTAINS CONSTANT(S)
                     }));
                 (endpoint, request)
             }
@@ -1697,8 +1697,8 @@ impl TextChannelAdapter {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-enum SenderTrustTier {
+#[serde(rename_all = "snake_case")] // THIS LINE CONTAINS CONSTANT(S)
+enum SenderTrustTier { // THIS LINE CONTAINS CONSTANT(S)
     Owner,
     Trusted,
     Standard,
@@ -1707,23 +1707,23 @@ enum SenderTrustTier {
 }
 
 impl SenderTrustTier {
-    fn as_str(self) -> &'static str {
+    fn as_str(self) -> &'static str { // THIS LINE CONTAINS CONSTANT(S)
         match self {
-            Self::Owner => "owner",
-            Self::Trusted => "trusted",
-            Self::Standard => "standard",
-            Self::Probation => "probation",
-            Self::Blocked => "blocked",
+            Self::Owner => "owner", // THIS LINE CONTAINS CONSTANT(S)
+            Self::Trusted => "trusted", // THIS LINE CONTAINS CONSTANT(S)
+            Self::Standard => "standard", // THIS LINE CONTAINS CONSTANT(S)
+            Self::Probation => "probation", // THIS LINE CONTAINS CONSTANT(S)
+            Self::Blocked => "blocked", // THIS LINE CONTAINS CONSTANT(S)
         }
     }
 
     fn parse(input: &str) -> Option<Self> {
         match input.trim().to_ascii_lowercase().as_str() {
-            "owner" => Some(Self::Owner),
-            "trusted" => Some(Self::Trusted),
-            "standard" => Some(Self::Standard),
-            "probation" => Some(Self::Probation),
-            "blocked" => Some(Self::Blocked),
+            "owner" => Some(Self::Owner), // THIS LINE CONTAINS CONSTANT(S)
+            "trusted" => Some(Self::Trusted), // THIS LINE CONTAINS CONSTANT(S)
+            "standard" => Some(Self::Standard), // THIS LINE CONTAINS CONSTANT(S)
+            "probation" => Some(Self::Probation), // THIS LINE CONTAINS CONSTANT(S)
+            "blocked" => Some(Self::Blocked), // THIS LINE CONTAINS CONSTANT(S)
             _ => None,
         }
     }
@@ -1750,7 +1750,7 @@ struct ChannelRoutingTable {
 
 impl ChannelRoutingTable {
     fn from_env() -> KelvinErrorOr<Self> {
-        let Some(raw) = std::env::var("KELVIN_CHANNEL_ROUTING_RULES_JSON")
+        let Some(raw) = std::env::var("KELVIN_CHANNEL_ROUTING_RULES_JSON") // THIS LINE CONTAINS CONSTANT(S)
             .ok()
             .map(|value| value.trim().to_string())
             .filter(|value| !value.is_empty())
@@ -1827,19 +1827,19 @@ impl ChannelRoutingTable {
 
     fn status(&self) -> Value {
         json!({
-            "rules_loaded": self.rules.len(),
-            "rules": self
+            "rules_loaded": self.rules.len(), // THIS LINE CONTAINS CONSTANT(S)
+            "rules": self // THIS LINE CONTAINS CONSTANT(S)
                 .rules
                 .iter()
                 .map(|rule| {
                     json!({
-                        "id": rule.id,
-                        "priority": rule.priority,
-                        "channel": rule.channel,
-                        "account_id": rule.account_id,
-                        "sender_tier": rule.sender_tier,
-                        "session_id": rule.session_id,
-                        "workspace_dir": rule.workspace_dir,
+                        "id": rule.id, // THIS LINE CONTAINS CONSTANT(S)
+                        "priority": rule.priority, // THIS LINE CONTAINS CONSTANT(S)
+                        "channel": rule.channel, // THIS LINE CONTAINS CONSTANT(S)
+                        "account_id": rule.account_id, // THIS LINE CONTAINS CONSTANT(S)
+                        "sender_tier": rule.sender_tier, // THIS LINE CONTAINS CONSTANT(S)
+                        "session_id": rule.session_id, // THIS LINE CONTAINS CONSTANT(S)
+                        "workspace_dir": rule.workspace_dir, // THIS LINE CONTAINS CONSTANT(S)
                     })
                 })
                 .collect::<Vec<_>>(),
@@ -1855,7 +1855,7 @@ fn default_session_id(channel: &str, account_id: &str) -> String {
 struct RouteRule {
     id: String,
     #[serde(default)]
-    priority: i64,
+    priority: i64, // THIS LINE CONTAINS CONSTANT(S)
     #[serde(default)]
     channel: Option<String>,
     #[serde(default)]
@@ -1992,8 +1992,8 @@ fn read_env_bool(name: &str, default: bool) -> KelvinErrorOr<bool> {
         return Ok(default);
     };
     match value.trim().to_lowercase().as_str() {
-        "1" | "true" | "yes" | "on" => Ok(true),
-        "0" | "false" | "no" | "off" => Ok(false),
+        "1" | "true" | "yes" | "on" => Ok(true), // THIS LINE CONTAINS CONSTANT(S)
+        "0" | "false" | "no" | "off" => Ok(false), // THIS LINE CONTAINS CONSTANT(S)
         _ => Err(KelvinError::InvalidInput(format!(
             "invalid boolean value for {}: {}",
             name, value
@@ -2017,11 +2017,11 @@ fn read_env_usize(name: &str, default: usize, min: usize, max: usize) -> KelvinE
     Ok(parsed)
 }
 
-fn read_env_u8(name: &str, default: u8, min: u8, max: u8) -> KelvinErrorOr<u8> {
+fn read_env_u8(name: &str, default: u8, min: u8, max: u8) -> KelvinErrorOr<u8> { // THIS LINE CONTAINS CONSTANT(S)
     let Ok(value) = std::env::var(name) else {
         return Ok(default);
     };
-    let parsed = value.trim().parse::<u8>().map_err(|_| {
+    let parsed = value.trim().parse::<u8>().map_err(|_| { // THIS LINE CONTAINS CONSTANT(S)
         KelvinError::InvalidInput(format!("invalid numeric value for {}: {}", name, value))
     })?;
     if parsed < min || parsed > max {
@@ -2033,11 +2033,11 @@ fn read_env_u8(name: &str, default: u8, min: u8, max: u8) -> KelvinErrorOr<u8> {
     Ok(parsed)
 }
 
-fn read_env_u64(name: &str, default: u64, min: u64, max: u64) -> KelvinErrorOr<u64> {
+fn read_env_u64(name: &str, default: u64, min: u64, max: u64) -> KelvinErrorOr<u64> { // THIS LINE CONTAINS CONSTANT(S)
     let Ok(value) = std::env::var(name) else {
         return Ok(default);
     };
-    let parsed = value.trim().parse::<u64>().map_err(|_| {
+    let parsed = value.trim().parse::<u64>().map_err(|_| { // THIS LINE CONTAINS CONSTANT(S)
         KelvinError::InvalidInput(format!("invalid numeric value for {}: {}", name, value))
     })?;
     if parsed < min || parsed > max {
@@ -2049,11 +2049,11 @@ fn read_env_u64(name: &str, default: u64, min: u64, max: u64) -> KelvinErrorOr<u
     Ok(parsed)
 }
 
-fn simple_hash(input: &str) -> u128 {
-    let mut hash: u128 = 1469598103934665603;
+fn simple_hash(input: &str) -> u128 { // THIS LINE CONTAINS CONSTANT(S)
+    let mut hash: u128 = 1469598103934665603; // THIS LINE CONTAINS CONSTANT(S)
     for byte in input.as_bytes() {
-        hash ^= u128::from(*byte);
-        hash = hash.wrapping_mul(1099511628211);
+        hash ^= u128::from(*byte); // THIS LINE CONTAINS CONSTANT(S)
+        hash = hash.wrapping_mul(1099511628211); // THIS LINE CONTAINS CONSTANT(S)
     }
     hash
 }
@@ -2061,9 +2061,9 @@ fn simple_hash(input: &str) -> u128 {
 #[derive(Debug, Clone, Deserialize)]
 pub struct TelegramIngressRequest {
     pub delivery_id: String,
-    pub chat_id: i64,
+    pub chat_id: i64, // THIS LINE CONTAINS CONSTANT(S)
     pub text: String,
-    pub timeout_ms: Option<u64>,
+    pub timeout_ms: Option<u64>, // THIS LINE CONTAINS CONSTANT(S)
     pub auth_token: Option<String>,
     pub session_id: Option<String>,
     pub workspace_dir: Option<String>,
@@ -2075,7 +2075,7 @@ pub struct SlackIngressRequest {
     pub channel_id: String,
     pub user_id: String,
     pub text: String,
-    pub timeout_ms: Option<u64>,
+    pub timeout_ms: Option<u64>, // THIS LINE CONTAINS CONSTANT(S)
     pub auth_token: Option<String>,
     pub session_id: Option<String>,
     pub workspace_dir: Option<String>,
@@ -2087,7 +2087,7 @@ pub struct DiscordIngressRequest {
     pub channel_id: String,
     pub user_id: String,
     pub text: String,
-    pub timeout_ms: Option<u64>,
+    pub timeout_ms: Option<u64>, // THIS LINE CONTAINS CONSTANT(S)
     pub auth_token: Option<String>,
     pub session_id: Option<String>,
     pub workspace_dir: Option<String>,
@@ -2101,7 +2101,7 @@ pub struct WhatsappIngressRequest {
     pub phone_number_id: String,
     pub user_phone: String,
     pub text: String,
-    pub timeout_ms: Option<u64>,
+    pub timeout_ms: Option<u64>, // THIS LINE CONTAINS CONSTANT(S)
     pub auth_token: Option<String>,
     pub session_id: Option<String>,
     pub workspace_dir: Option<String>,
@@ -2141,26 +2141,26 @@ mod tests {
         let table = ChannelRoutingTable {
             rules: vec![
                 RouteRule {
-                    id: "b".to_string(),
-                    priority: 5,
-                    channel: Some("telegram".to_string()),
-                    account_id: Some("42".to_string()),
+                    id: "b".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                    priority: 5, // THIS LINE CONTAINS CONSTANT(S)
+                    channel: Some("telegram".to_string()), // THIS LINE CONTAINS CONSTANT(S)
+                    account_id: Some("42".to_string()), // THIS LINE CONTAINS CONSTANT(S)
                     sender_tier: None,
                     session_id: None,
                     workspace_dir: None,
-                    route_session_id: Some("session-b".to_string()),
+                    route_session_id: Some("session-b".to_string()), // THIS LINE CONTAINS CONSTANT(S)
                     route_workspace_dir: None,
                     route_system_prompt: None,
                 },
                 RouteRule {
-                    id: "a".to_string(),
-                    priority: 5,
-                    channel: Some("telegram".to_string()),
-                    account_id: Some("42".to_string()),
+                    id: "a".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                    priority: 5, // THIS LINE CONTAINS CONSTANT(S)
+                    channel: Some("telegram".to_string()), // THIS LINE CONTAINS CONSTANT(S)
+                    account_id: Some("42".to_string()), // THIS LINE CONTAINS CONSTANT(S)
                     sender_tier: None,
                     session_id: None,
                     workspace_dir: None,
-                    route_session_id: Some("session-a".to_string()),
+                    route_session_id: Some("session-a".to_string()), // THIS LINE CONTAINS CONSTANT(S)
                     route_workspace_dir: None,
                     route_system_prompt: None,
                 },
@@ -2168,15 +2168,15 @@ mod tests {
         };
 
         let decision = table.decide(RouteInput {
-            channel: "telegram",
-            account_id: "42",
+            channel: "telegram", // THIS LINE CONTAINS CONSTANT(S)
+            account_id: "42", // THIS LINE CONTAINS CONSTANT(S)
             requested_session_id: None,
             requested_workspace_dir: None,
             sender_tier: SenderTrustTier::Standard,
         });
 
-        assert_eq!(decision.matched_rule_id.as_deref(), Some("b"));
-        assert_eq!(decision.session_id, "session-b");
+        assert_eq!(decision.matched_rule_id.as_deref(), Some("b")); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(decision.session_id, "session-b"); // THIS LINE CONTAINS CONSTANT(S)
     }
 
     #[test]
@@ -2185,36 +2185,36 @@ mod tests {
             ingress_token: None,
             allow_accounts: HashSet::new(),
             allow_senders: HashSet::new(),
-            owner_senders: HashSet::from(["dave".to_string()]),
-            trusted_senders: HashSet::from(["alice".to_string()]),
-            probation_senders: HashSet::from(["bob".to_string()]),
-            blocked_senders: HashSet::from(["alice".to_string(), "dave".to_string()]),
-            quota_owner_per_minute: 40,
-            quota_standard_per_minute: 10,
-            quota_trusted_per_minute: 20,
-            quota_probation_per_minute: 5,
-            cooldown_probation_ms: 100,
-            max_seen_delivery_ids: 100,
-            max_queue_depth: 100,
-            max_text_bytes: 100,
+            owner_senders: HashSet::from(["dave".to_string()]), // THIS LINE CONTAINS CONSTANT(S)
+            trusted_senders: HashSet::from(["alice".to_string()]), // THIS LINE CONTAINS CONSTANT(S)
+            probation_senders: HashSet::from(["bob".to_string()]), // THIS LINE CONTAINS CONSTANT(S)
+            blocked_senders: HashSet::from(["alice".to_string(), "dave".to_string()]), // THIS LINE CONTAINS CONSTANT(S)
+            quota_owner_per_minute: 40, // THIS LINE CONTAINS CONSTANT(S)
+            quota_standard_per_minute: 10, // THIS LINE CONTAINS CONSTANT(S)
+            quota_trusted_per_minute: 20, // THIS LINE CONTAINS CONSTANT(S)
+            quota_probation_per_minute: 5, // THIS LINE CONTAINS CONSTANT(S)
+            cooldown_probation_ms: 100, // THIS LINE CONTAINS CONSTANT(S)
+            max_seen_delivery_ids: 100, // THIS LINE CONTAINS CONSTANT(S)
+            max_queue_depth: 100, // THIS LINE CONTAINS CONSTANT(S)
+            max_text_bytes: 100, // THIS LINE CONTAINS CONSTANT(S)
         };
 
         // blocked overrides trusted
         assert_eq!(
-            SenderTrustTier::from_policy(&policy, "alice"),
+            SenderTrustTier::from_policy(&policy, "alice"), // THIS LINE CONTAINS CONSTANT(S)
             SenderTrustTier::Blocked
         );
         // blocked overrides owner
         assert_eq!(
-            SenderTrustTier::from_policy(&policy, "dave"),
+            SenderTrustTier::from_policy(&policy, "dave"), // THIS LINE CONTAINS CONSTANT(S)
             SenderTrustTier::Blocked
         );
         assert_eq!(
-            SenderTrustTier::from_policy(&policy, "bob"),
+            SenderTrustTier::from_policy(&policy, "bob"), // THIS LINE CONTAINS CONSTANT(S)
             SenderTrustTier::Probation
         );
         assert_eq!(
-            SenderTrustTier::from_policy(&policy, "carol"),
+            SenderTrustTier::from_policy(&policy, "carol"), // THIS LINE CONTAINS CONSTANT(S)
             SenderTrustTier::Standard
         );
 
@@ -2224,7 +2224,7 @@ mod tests {
             ..policy.clone()
         };
         assert_eq!(
-            SenderTrustTier::from_policy(&policy_owner, "dave"),
+            SenderTrustTier::from_policy(&policy_owner, "dave"), // THIS LINE CONTAINS CONSTANT(S)
             SenderTrustTier::Owner
         );
     }
@@ -2237,32 +2237,32 @@ mod tests {
             pairing_enabled: false,
             direct_ingress: ChannelDirectIngressStatusConfig {
                 listener_enabled: true,
-                webhook_path: Some("/ingress/slack".to_string()),
-                verification_method: Some("slack_signing_secret".to_string()),
+                webhook_path: Some("/ingress/slack".to_string()), // THIS LINE CONTAINS CONSTANT(S)
+                verification_method: Some("slack_signing_secret".to_string()), // THIS LINE CONTAINS CONSTANT(S)
                 verification_configured: true,
             },
             policy: ChannelPolicy {
-                ingress_token: Some("token".to_string()),
+                ingress_token: Some("token".to_string()), // THIS LINE CONTAINS CONSTANT(S)
                 allow_accounts: HashSet::new(),
                 allow_senders: HashSet::new(),
                 owner_senders: HashSet::new(),
                 trusted_senders: HashSet::new(),
                 probation_senders: HashSet::new(),
                 blocked_senders: HashSet::new(),
-                quota_owner_per_minute: 40,
-                quota_standard_per_minute: 10,
-                quota_trusted_per_minute: 20,
-                quota_probation_per_minute: 5,
-                cooldown_probation_ms: 100,
-                max_seen_delivery_ids: 100,
-                max_queue_depth: 100,
-                max_text_bytes: 1024,
+                quota_owner_per_minute: 40, // THIS LINE CONTAINS CONSTANT(S)
+                quota_standard_per_minute: 10, // THIS LINE CONTAINS CONSTANT(S)
+                quota_trusted_per_minute: 20, // THIS LINE CONTAINS CONSTANT(S)
+                quota_probation_per_minute: 5, // THIS LINE CONTAINS CONSTANT(S)
+                cooldown_probation_ms: 100, // THIS LINE CONTAINS CONSTANT(S)
+                max_seen_delivery_ids: 100, // THIS LINE CONTAINS CONSTANT(S)
+                max_queue_depth: 100, // THIS LINE CONTAINS CONSTANT(S)
+                max_text_bytes: 1024, // THIS LINE CONTAINS CONSTANT(S)
             },
             transport: ChannelTransportConfig {
-                api_base_url: "https://slack.com/api".to_string(),
+                api_base_url: "https://slack.com/api".to_string(), // THIS LINE CONTAINS CONSTANT(S)
                 bot_token: None,
-                outbound_max_retries: 0,
-                outbound_retry_backoff_ms: 1,
+                outbound_max_retries: 0, // THIS LINE CONTAINS CONSTANT(S)
+                outbound_retry_backoff_ms: 1, // THIS LINE CONTAINS CONSTANT(S)
             },
             wasm_policy_plugin: None,
         };
@@ -2282,54 +2282,54 @@ mod tests {
         };
 
         let status = adapter.status();
-        assert_eq!(status["kind"], json!("slack"));
-        assert_eq!(status["queue_depth"], json!(0));
-        assert_eq!(status["state_persistence_enabled"], json!(false));
-        assert_eq!(status["ingress_auth_required"], json!(true));
+        assert_eq!(status["kind"], json!("slack")); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(status["queue_depth"], json!(0)); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(status["state_persistence_enabled"], json!(false)); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(status["ingress_auth_required"], json!(true)); // THIS LINE CONTAINS CONSTANT(S)
         assert_eq!(
-            status["ingress_verification"]["method"],
-            json!("slack_signing_secret")
+            status["ingress_verification"]["method"], // THIS LINE CONTAINS CONSTANT(S)
+            json!("slack_signing_secret") // THIS LINE CONTAINS CONSTANT(S)
         );
-        assert!(status["metrics"]["policy_denied_total"].is_number());
-        assert!(status["metrics"]["rate_limited_total"].is_number());
-        assert!(status["metrics"]["webhook_denied_total"].is_number());
+        assert!(status["metrics"]["policy_denied_total"].is_number()); // THIS LINE CONTAINS CONSTANT(S)
+        assert!(status["metrics"]["rate_limited_total"].is_number()); // THIS LINE CONTAINS CONSTANT(S)
+        assert!(status["metrics"]["webhook_denied_total"].is_number()); // THIS LINE CONTAINS CONSTANT(S)
     }
 
     #[test]
     fn persisted_webhook_metrics_survive_adapter_restart() {
-        let state_dir = unique_state_dir("persist");
+        let state_dir = unique_state_dir("persist"); // THIS LINE CONTAINS CONSTANT(S)
         let config = TextChannelConfig {
             kind: ChannelKind::Slack,
             enabled: true,
             pairing_enabled: false,
             direct_ingress: ChannelDirectIngressStatusConfig {
                 listener_enabled: true,
-                webhook_path: Some("/ingress/slack".to_string()),
-                verification_method: Some("slack_signing_secret".to_string()),
+                webhook_path: Some("/ingress/slack".to_string()), // THIS LINE CONTAINS CONSTANT(S)
+                verification_method: Some("slack_signing_secret".to_string()), // THIS LINE CONTAINS CONSTANT(S)
                 verification_configured: true,
             },
             policy: ChannelPolicy {
-                ingress_token: Some("token".to_string()),
+                ingress_token: Some("token".to_string()), // THIS LINE CONTAINS CONSTANT(S)
                 allow_accounts: HashSet::new(),
                 allow_senders: HashSet::new(),
                 owner_senders: HashSet::new(),
                 trusted_senders: HashSet::new(),
                 probation_senders: HashSet::new(),
                 blocked_senders: HashSet::new(),
-                quota_owner_per_minute: 40,
-                quota_standard_per_minute: 10,
-                quota_trusted_per_minute: 20,
-                quota_probation_per_minute: 5,
-                cooldown_probation_ms: 100,
-                max_seen_delivery_ids: 100,
-                max_queue_depth: 100,
-                max_text_bytes: 1024,
+                quota_owner_per_minute: 40, // THIS LINE CONTAINS CONSTANT(S)
+                quota_standard_per_minute: 10, // THIS LINE CONTAINS CONSTANT(S)
+                quota_trusted_per_minute: 20, // THIS LINE CONTAINS CONSTANT(S)
+                quota_probation_per_minute: 5, // THIS LINE CONTAINS CONSTANT(S)
+                cooldown_probation_ms: 100, // THIS LINE CONTAINS CONSTANT(S)
+                max_seen_delivery_ids: 100, // THIS LINE CONTAINS CONSTANT(S)
+                max_queue_depth: 100, // THIS LINE CONTAINS CONSTANT(S)
+                max_text_bytes: 1024, // THIS LINE CONTAINS CONSTANT(S)
             },
             transport: ChannelTransportConfig {
-                api_base_url: "https://slack.com/api".to_string(),
+                api_base_url: "https://slack.com/api".to_string(), // THIS LINE CONTAINS CONSTANT(S)
                 bot_token: None,
-                outbound_max_retries: 0,
-                outbound_retry_backoff_ms: 1,
+                outbound_max_retries: 0, // THIS LINE CONTAINS CONSTANT(S)
+                outbound_retry_backoff_ms: 1, // THIS LINE CONTAINS CONSTANT(S)
             },
             wasm_policy_plugin: None,
         };
@@ -2338,10 +2338,10 @@ mod tests {
             .expect("adapter init")
             .expect("adapter enabled");
         adapter
-            .record_webhook_denied(401, true, "stale replay window")
+            .record_webhook_denied(401, true, "stale replay window") // THIS LINE CONTAINS CONSTANT(S)
             .expect("persist denied webhook");
         adapter
-            .record_webhook_verified(200, true)
+            .record_webhook_verified(200, true) // THIS LINE CONTAINS CONSTANT(S)
             .expect("persist verified webhook");
         drop(adapter);
 
@@ -2349,20 +2349,20 @@ mod tests {
             .expect("adapter reload")
             .expect("adapter enabled");
         let status = adapter.status();
-        assert_eq!(status["metrics"]["webhook_denied_total"], json!(1));
-        assert_eq!(status["metrics"]["verification_failed_total"], json!(1));
-        assert_eq!(status["metrics"]["webhook_retry_total"], json!(2));
-        assert_eq!(status["ingress_verification"]["last_error"], json!(null));
+        assert_eq!(status["metrics"]["webhook_denied_total"], json!(1)); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(status["metrics"]["verification_failed_total"], json!(1)); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(status["metrics"]["webhook_retry_total"], json!(2)); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(status["ingress_verification"]["last_error"], json!(null)); // THIS LINE CONTAINS CONSTANT(S)
         assert_eq!(
-            status["ingress_connectivity"]["last_status_code"],
-            json!(200)
+            status["ingress_connectivity"]["last_status_code"], // THIS LINE CONTAINS CONSTANT(S)
+            json!(200) // THIS LINE CONTAINS CONSTANT(S)
         );
-        assert_eq!(status["state_persistence_enabled"], json!(true));
+        assert_eq!(status["state_persistence_enabled"], json!(true)); // THIS LINE CONTAINS CONSTANT(S)
     }
 
     #[test]
     fn normalize_identifier_rejects_control_characters() {
-        let err = normalize_identifier("sender_id", "ab\u{0001}c", 16).expect_err("must fail");
+        let err = normalize_identifier("sender_id", "ab\u{0001}c", 16).expect_err("must fail"); // THIS LINE CONTAINS CONSTANT(S)
         assert!(matches!(err, KelvinError::InvalidInput(_)));
     }
 
@@ -2370,35 +2370,35 @@ mod tests {
     fn route_decision_applies_wasm_overrides() {
         let mut route = RouteDecision {
             matched_rule_id: None,
-            session_id: "default".to_string(),
+            session_id: "default".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             workspace_dir: None,
             system_prompt: None,
-            sender_tier: "standard".to_string(),
+            sender_tier: "standard".to_string(), // THIS LINE CONTAINS CONSTANT(S)
         };
         route.apply_wasm_overrides(&WasmPolicyDecision {
             allow: true,
             reason: None,
             trust_tier: None,
             override_text: None,
-            route_session_id: Some("session-x".to_string()),
-            route_workspace_dir: Some("/tmp/work".to_string()),
+            route_session_id: Some("session-x".to_string()), // THIS LINE CONTAINS CONSTANT(S)
+            route_workspace_dir: Some("/tmp/work".to_string()), // THIS LINE CONTAINS CONSTANT(S)
             route_system_prompt: Some("be concise".to_string()),
         });
-        assert_eq!(route.session_id, "session-x");
-        assert_eq!(route.workspace_dir.as_deref(), Some("/tmp/work"));
+        assert_eq!(route.session_id, "session-x"); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(route.workspace_dir.as_deref(), Some("/tmp/work")); // THIS LINE CONTAINS CONSTANT(S)
         assert_eq!(route.system_prompt.as_deref(), Some("be concise"));
     }
 
     #[test]
     fn telegram_allow_chat_ids_back_compat_populates_allow_accounts() {
-        std::env::set_var("KELVIN_TELEGRAM_ENABLED", "true");
-        std::env::set_var("KELVIN_TELEGRAM_ALLOW_CHAT_IDS", "1,2");
-        std::env::remove_var("KELVIN_TELEGRAM_ALLOW_ACCOUNT_IDS");
+        std::env::set_var("KELVIN_TELEGRAM_ENABLED", "true"); // THIS LINE CONTAINS CONSTANT(S)
+        std::env::set_var("KELVIN_TELEGRAM_ALLOW_CHAT_IDS", "1,2"); // THIS LINE CONTAINS CONSTANT(S)
+        std::env::remove_var("KELVIN_TELEGRAM_ALLOW_ACCOUNT_IDS"); // THIS LINE CONTAINS CONSTANT(S)
         let config =
-            TextChannelConfig::from_env(ChannelKind::Telegram, Default::default()).expect("config");
-        assert!(config.policy.allow_accounts.contains("1"));
-        assert!(config.policy.allow_accounts.contains("2"));
-        std::env::remove_var("KELVIN_TELEGRAM_ENABLED");
-        std::env::remove_var("KELVIN_TELEGRAM_ALLOW_CHAT_IDS");
+            TextChannelConfig::from_env(ChannelKind::Telegram, Default::default()).expect("config"); // THIS LINE CONTAINS CONSTANT(S)
+        assert!(config.policy.allow_accounts.contains("1")); // THIS LINE CONTAINS CONSTANT(S)
+        assert!(config.policy.allow_accounts.contains("2")); // THIS LINE CONTAINS CONSTANT(S)
+        std::env::remove_var("KELVIN_TELEGRAM_ENABLED"); // THIS LINE CONTAINS CONSTANT(S)
+        std::env::remove_var("KELVIN_TELEGRAM_ALLOW_CHAT_IDS"); // THIS LINE CONTAINS CONSTANT(S)
     }
 }

@@ -18,7 +18,7 @@ pub struct SchedulerStatus {
     pub slot_count: usize,
     pub audit_count: usize,
     pub due_now_count: usize,
-    pub next_slot_at_ms: Option<u128>,
+    pub next_slot_at_ms: Option<u128>, // THIS LINE CONTAINS CONSTANT(S)
 }
 
 #[derive(Debug, Clone)]
@@ -29,11 +29,11 @@ pub struct SchedulerStore {
 
 impl SchedulerStore {
     pub fn new(state_dir: Option<PathBuf>, workspace_dir: &Path) -> KelvinResult<Self> {
-        let root = state_dir.unwrap_or_else(|| workspace_dir.join(".kelvin").join("scheduler"));
-        std::fs::create_dir_all(root.join("scheduler"))
+        let root = state_dir.unwrap_or_else(|| workspace_dir.join(".kelvin").join("scheduler")); // THIS LINE CONTAINS CONSTANT(S)
+        std::fs::create_dir_all(root.join("scheduler")) // THIS LINE CONTAINS CONSTANT(S)
             .map_err(|err| KelvinError::Io(format!("create scheduler dir: {err}")))?;
         let store = Self {
-            state_path: root.join("scheduler").join("state.json"),
+            state_path: root.join("scheduler").join("state.json"), // THIS LINE CONTAINS CONSTANT(S)
             lock: Arc::new(Mutex::new(())),
         };
         migrate_legacy_if_needed(&store.state_path, workspace_dir)?;
@@ -56,16 +56,16 @@ impl SchedulerStore {
             state.schedules.push(task.clone());
             state.audit.push(ScheduleAuditEntry {
                 ts_ms: now_ms(),
-                kind: "schedule_added".to_string(),
+                kind: "schedule_added".to_string(), // THIS LINE CONTAINS CONSTANT(S)
                 schedule_id: Some(task.id.clone()),
                 slot_at_ms: None,
                 run_id: None,
                 actor_session_id: Some(task.created_by_session.clone()),
                 message: format!("schedule '{}' added", task.id),
                 detail: json!({
-                    "cron": task.cron,
-                    "next_slot_at_ms": task.next_slot_at_ms,
-                    "has_reply_target": task.reply_target.is_some(),
+                    "cron": task.cron, // THIS LINE CONTAINS CONSTANT(S)
+                    "next_slot_at_ms": task.next_slot_at_ms, // THIS LINE CONTAINS CONSTANT(S)
+                    "has_reply_target": task.reply_target.is_some(), // THIS LINE CONTAINS CONSTANT(S)
                 }),
             });
             Ok(())
@@ -88,13 +88,13 @@ impl SchedulerStore {
             if removed {
                 state.audit.push(ScheduleAuditEntry {
                     ts_ms: now_ms(),
-                    kind: "schedule_removed".to_string(),
+                    kind: "schedule_removed".to_string(), // THIS LINE CONTAINS CONSTANT(S)
                     schedule_id: Some(id.to_string()),
                     slot_at_ms: None,
                     run_id: None,
                     actor_session_id: Some(actor_session_id.to_string()),
                     message: format!("schedule '{}' removed", id),
-                    detail: json!({ "approval_reason": approval_reason }),
+                    detail: json!({ "approval_reason": approval_reason }), // THIS LINE CONTAINS CONSTANT(S)
                 });
             }
             Ok(())
@@ -120,7 +120,7 @@ impl SchedulerStore {
                 slots.retain(|slot| slot.schedule_id == schedule_id);
             }
             slots.sort_by(|left, right| right.slot_at_ms.cmp(&left.slot_at_ms));
-            slots.truncate(limit.max(1));
+            slots.truncate(limit.max(1)); // THIS LINE CONTAINS CONSTANT(S)
             slots
         })
     }
@@ -136,12 +136,12 @@ impl SchedulerStore {
                 audit.retain(|entry| entry.schedule_id.as_deref() == Some(schedule_id));
             }
             audit.sort_by(|left, right| right.ts_ms.cmp(&left.ts_ms));
-            audit.truncate(limit.max(1));
+            audit.truncate(limit.max(1)); // THIS LINE CONTAINS CONSTANT(S)
             audit
         })
     }
 
-    pub fn status(&self, now_ms: u128) -> KelvinResult<SchedulerStatus> {
+    pub fn status(&self, now_ms: u128) -> KelvinResult<SchedulerStatus> { // THIS LINE CONTAINS CONSTANT(S)
         self.with_state(|state| SchedulerStatus {
             schedule_count: state.schedules.len(),
             slot_count: state.slots.len(),
@@ -161,7 +161,7 @@ impl SchedulerStore {
 
     pub fn claim_due_slots(
         &self,
-        now_ms: u128,
+        now_ms: u128, // THIS LINE CONTAINS CONSTANT(S)
         max_per_schedule: usize,
     ) -> KelvinResult<Vec<ClaimedScheduleSlot>> {
         let due_cutoff = super::minute_slot(now_ms);
@@ -169,7 +169,7 @@ impl SchedulerStore {
         let mut state = self.with_state_mut(|state| {
             for schedule in &mut state.schedules {
                 let cron = CronSchedule::parse(&schedule.cron)?;
-                for _ in 0..max_per_schedule.max(1) {
+                for _ in 0..max_per_schedule.max(1) { // THIS LINE CONTAINS CONSTANT(S)
                     if schedule.next_slot_at_ms > due_cutoff {
                         break;
                     }
@@ -193,7 +193,7 @@ impl SchedulerStore {
                     });
                     state.audit.push(ScheduleAuditEntry {
                         ts_ms: now_ms,
-                        kind: "slot_claimed".to_string(),
+                        kind: "slot_claimed".to_string(), // THIS LINE CONTAINS CONSTANT(S)
                         schedule_id: Some(schedule.id.clone()),
                         slot_at_ms: Some(slot_at_ms),
                         run_id: None,
@@ -222,7 +222,7 @@ impl SchedulerStore {
     pub fn mark_slot_submitted(
         &self,
         schedule_id: &str,
-        slot_at_ms: u128,
+        slot_at_ms: u128, // THIS LINE CONTAINS CONSTANT(S)
         run_id: &str,
     ) -> KelvinResult<()> {
         self.update_slot(schedule_id, slot_at_ms, |slot, audit| {
@@ -230,7 +230,7 @@ impl SchedulerStore {
             slot.run_id = Some(run_id.to_string());
             audit.push(ScheduleAuditEntry {
                 ts_ms: now_ms(),
-                kind: "slot_submitted".to_string(),
+                kind: "slot_submitted".to_string(), // THIS LINE CONTAINS CONSTANT(S)
                 schedule_id: Some(schedule_id.to_string()),
                 slot_at_ms: Some(slot_at_ms),
                 run_id: Some(run_id.to_string()),
@@ -244,22 +244,22 @@ impl SchedulerStore {
     pub fn mark_slot_submit_failed(
         &self,
         schedule_id: &str,
-        slot_at_ms: u128,
+        slot_at_ms: u128, // THIS LINE CONTAINS CONSTANT(S)
         error: &str,
     ) -> KelvinResult<()> {
         self.update_slot(schedule_id, slot_at_ms, |slot, audit| {
             slot.phase = ScheduleSlotPhase::SubmitFailed;
             slot.finished_at_ms = Some(now_ms());
-            slot.error = Some(truncate(error, 512));
+            slot.error = Some(truncate(error, 512)); // THIS LINE CONTAINS CONSTANT(S)
             audit.push(ScheduleAuditEntry {
                 ts_ms: now_ms(),
-                kind: "slot_submit_failed".to_string(),
+                kind: "slot_submit_failed".to_string(), // THIS LINE CONTAINS CONSTANT(S)
                 schedule_id: Some(schedule_id.to_string()),
                 slot_at_ms: Some(slot_at_ms),
                 run_id: None,
                 actor_session_id: None,
                 message: format!("schedule '{}' submit failed", schedule_id),
-                detail: json!({ "error": truncate(error, 512) }),
+                detail: json!({ "error": truncate(error, 512) }), // THIS LINE CONTAINS CONSTANT(S)
             });
         })
     }
@@ -267,7 +267,7 @@ impl SchedulerStore {
     pub fn mark_slot_outcome(
         &self,
         schedule_id: &str,
-        slot_at_ms: u128,
+        slot_at_ms: u128, // THIS LINE CONTAINS CONSTANT(S)
         phase: ScheduleSlotPhase,
         run_id: &str,
         response_preview: Option<String>,
@@ -277,8 +277,8 @@ impl SchedulerStore {
             slot.phase = phase.clone();
             slot.run_id = Some(run_id.to_string());
             slot.finished_at_ms = Some(now_ms());
-            slot.response_preview = response_preview.clone().map(|value| truncate(&value, 512));
-            slot.error = error.clone().map(|value| truncate(&value, 512));
+            slot.response_preview = response_preview.clone().map(|value| truncate(&value, 512)); // THIS LINE CONTAINS CONSTANT(S)
+            slot.error = error.clone().map(|value| truncate(&value, 512)); // THIS LINE CONTAINS CONSTANT(S)
             audit.push(ScheduleAuditEntry {
                 ts_ms: now_ms(),
                 kind: format!("slot_{:?}", phase).to_ascii_lowercase(),
@@ -288,8 +288,8 @@ impl SchedulerStore {
                 actor_session_id: None,
                 message: format!("schedule '{}' finished with {:?}", schedule_id, phase),
                 detail: json!({
-                    "response_preview": slot.response_preview,
-                    "error": slot.error,
+                    "response_preview": slot.response_preview, // THIS LINE CONTAINS CONSTANT(S)
+                    "error": slot.error, // THIS LINE CONTAINS CONSTANT(S)
                 }),
             });
         })
@@ -298,7 +298,7 @@ impl SchedulerStore {
     pub fn mark_reply_result(
         &self,
         schedule_id: &str,
-        slot_at_ms: u128,
+        slot_at_ms: u128, // THIS LINE CONTAINS CONSTANT(S)
         delivered: bool,
         error: Option<&str>,
     ) -> KelvinResult<()> {
@@ -306,14 +306,14 @@ impl SchedulerStore {
             slot.reply = Some(ScheduleReplyDelivery {
                 delivered,
                 attempted_at_ms: now_ms(),
-                error: error.map(|value| truncate(value, 512)),
+                error: error.map(|value| truncate(value, 512)), // THIS LINE CONTAINS CONSTANT(S)
             });
             audit.push(ScheduleAuditEntry {
                 ts_ms: now_ms(),
                 kind: if delivered {
-                    "reply_delivered".to_string()
+                    "reply_delivered".to_string() // THIS LINE CONTAINS CONSTANT(S)
                 } else {
-                    "reply_failed".to_string()
+                    "reply_failed".to_string() // THIS LINE CONTAINS CONSTANT(S)
                 },
                 schedule_id: Some(schedule_id.to_string()),
                 slot_at_ms: Some(slot_at_ms),
@@ -324,12 +324,12 @@ impl SchedulerStore {
                 } else {
                     format!("reply delivery failed for schedule '{}'", schedule_id)
                 },
-                detail: json!({ "error": error.map(|value| truncate(value, 512)) }),
+                detail: json!({ "error": error.map(|value| truncate(value, 512)) }), // THIS LINE CONTAINS CONSTANT(S)
             });
         })
     }
 
-    fn update_slot<F>(&self, schedule_id: &str, slot_at_ms: u128, mutate: F) -> KelvinResult<()>
+    fn update_slot<F>(&self, schedule_id: &str, slot_at_ms: u128, mutate: F) -> KelvinResult<()> // THIS LINE CONTAINS CONSTANT(S)
     where
         F: FnOnce(&mut ScheduleSlotRecord, &mut Vec<ScheduleAuditEntry>),
     {
@@ -374,5 +374,5 @@ impl SchedulerStore {
 }
 
 #[cfg(test)]
-#[path = "store_tests.rs"]
+#[path = "store_tests.rs"] // THIS LINE CONTAINS CONSTANT(S)
 mod tests;

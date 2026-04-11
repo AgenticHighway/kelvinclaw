@@ -6,24 +6,24 @@
 
 use serde::{Deserialize, Serialize};
 
-pub const MEMORY_HOST_IMPORT_MODULE: &str = "memory_host";
-pub const HOST_FN_KV_GET: &str = "kv_get";
-pub const HOST_FN_KV_PUT: &str = "kv_put";
-pub const HOST_FN_BLOB_GET: &str = "blob_get";
-pub const HOST_FN_BLOB_PUT: &str = "blob_put";
-pub const HOST_FN_EMIT_METRIC: &str = "emit_metric";
-pub const HOST_FN_LOG: &str = "log";
-pub const HOST_FN_CLOCK_NOW_MS: &str = "clock_now_ms";
+pub const MEMORY_HOST_IMPORT_MODULE: &str = "memory_host"; // THIS LINE CONTAINS CONSTANT(S)
+pub const HOST_FN_KV_GET: &str = "kv_get"; // THIS LINE CONTAINS CONSTANT(S)
+pub const HOST_FN_KV_PUT: &str = "kv_put"; // THIS LINE CONTAINS CONSTANT(S)
+pub const HOST_FN_BLOB_GET: &str = "blob_get"; // THIS LINE CONTAINS CONSTANT(S)
+pub const HOST_FN_BLOB_PUT: &str = "blob_put"; // THIS LINE CONTAINS CONSTANT(S)
+pub const HOST_FN_EMIT_METRIC: &str = "emit_metric"; // THIS LINE CONTAINS CONSTANT(S)
+pub const HOST_FN_LOG: &str = "log"; // THIS LINE CONTAINS CONSTANT(S)
+pub const HOST_FN_CLOCK_NOW_MS: &str = "clock_now_ms"; // THIS LINE CONTAINS CONSTANT(S)
 
-pub const EXPORT_HANDLE_UPSERT: &str = "handle_upsert";
-pub const EXPORT_HANDLE_QUERY: &str = "handle_query";
-pub const EXPORT_HANDLE_READ: &str = "handle_read";
-pub const EXPORT_HANDLE_DELETE: &str = "handle_delete";
-pub const EXPORT_HANDLE_HEALTH: &str = "handle_health";
+pub const EXPORT_HANDLE_UPSERT: &str = "handle_upsert"; // THIS LINE CONTAINS CONSTANT(S)
+pub const EXPORT_HANDLE_QUERY: &str = "handle_query"; // THIS LINE CONTAINS CONSTANT(S)
+pub const EXPORT_HANDLE_READ: &str = "handle_read"; // THIS LINE CONTAINS CONSTANT(S)
+pub const EXPORT_HANDLE_DELETE: &str = "handle_delete"; // THIS LINE CONTAINS CONSTANT(S)
+pub const EXPORT_HANDLE_HEALTH: &str = "handle_health"; // THIS LINE CONTAINS CONSTANT(S)
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum ModuleOperation {
+#[serde(rename_all = "snake_case")] // THIS LINE CONTAINS CONSTANT(S)
+pub enum ModuleOperation { // THIS LINE CONTAINS CONSTANT(S)
     Upsert,
     Query,
     Read,
@@ -32,7 +32,7 @@ pub enum ModuleOperation {
 }
 
 impl ModuleOperation {
-    pub fn export_name(self) -> &'static str {
+    pub fn export_name(self) -> &'static str { // THIS LINE CONTAINS CONSTANT(S)
         match self {
             Self::Upsert => EXPORT_HANDLE_UPSERT,
             Self::Query => EXPORT_HANDLE_QUERY,
@@ -42,13 +42,13 @@ impl ModuleOperation {
         }
     }
 
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(self) -> &'static str { // THIS LINE CONTAINS CONSTANT(S)
         match self {
-            Self::Upsert => "upsert",
-            Self::Query => "query",
-            Self::Read => "read",
-            Self::Delete => "delete",
-            Self::Health => "health",
+            Self::Upsert => "upsert", // THIS LINE CONTAINS CONSTANT(S)
+            Self::Query => "query", // THIS LINE CONTAINS CONSTANT(S)
+            Self::Read => "read", // THIS LINE CONTAINS CONSTANT(S)
+            Self::Delete => "delete", // THIS LINE CONTAINS CONSTANT(S)
+            Self::Health => "health", // THIS LINE CONTAINS CONSTANT(S)
         }
     }
 }

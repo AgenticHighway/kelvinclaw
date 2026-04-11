@@ -5,70 +5,70 @@ use std::sync::OnceLock;
 use aws_config::BehaviorVersion;
 use aws_sdk_kms::Client as KmsClient;
 use aws_types::region::Region;
-use base64::{engine::general_purpose::STANDARD, Engine as _};
+use base64::{engine::general_purpose::STANDARD, Engine as _}; // THIS LINE CONTAINS CONSTANT(S)
 use rcgen::generate_simple_self_signed;
 use tokio::net::TcpListener;
 use tokio_stream::wrappers::TcpListenerStream;
 use tonic::transport::{Certificate, Identity, Server, ServerTlsConfig};
 
 use kelvin_core::{MemoryReadParams, MemorySearchManager};
-use kelvin_memory_api::v1alpha1::memory_service_server::MemoryServiceServer;
+use kelvin_memory_api::v1alpha1::memory_service_server::MemoryServiceServer; // THIS LINE CONTAINS CONSTANT(S)
 use kelvin_memory_api::MemoryModuleManifest;
 use kelvin_memory_client::{MemoryClientConfig, RpcMemoryManager};
 use kelvin_memory_controller::{MemoryController, MemoryControllerConfig, ProviderRegistry};
 
-const TEST_PRIVATE_KEY_DER_B64: &str =
-    "MC4CAQAwBQYDK2VwBCIEIHCRmiDXsIoP30rbpS6V729OHS4HzRnpgTwSC9zqETba";
-const TEST_PUBLIC_KEY_DER_B64: &str =
-    "MCowBQYDK2VwAyEAHOzip8DiPZOcMhc+e66Wzd1ifXEFAP8DEGUzJFg/DBc=";
+const TEST_PRIVATE_KEY_DER_B64: &str = // THIS LINE CONTAINS CONSTANT(S)
+    "MC4CAQAwBQYDK2VwBCIEIHCRmiDXsIoP30rbpS6V729OHS4HzRnpgTwSC9zqETba"; // THIS LINE CONTAINS CONSTANT(S)
+const TEST_PUBLIC_KEY_DER_B64: &str = // THIS LINE CONTAINS CONSTANT(S)
+    "MCowBQYDK2VwAyEAHOzip8DiPZOcMhc+e66Wzd1ifXEFAP8DEGUzJFg/DBc="; // THIS LINE CONTAINS CONSTANT(S)
 
 fn test_private_key_pem() -> String {
     format!(
         "-----{} PRIVATE KEY-----\n{}\n-----END PRIVATE KEY-----\n",
-        "BEGIN", TEST_PRIVATE_KEY_DER_B64
+        "BEGIN", TEST_PRIVATE_KEY_DER_B64 // THIS LINE CONTAINS CONSTANT(S)
     )
 }
 
 fn test_public_key_pem() -> String {
     format!(
         "-----{} PUBLIC KEY-----\n{}\n-----END PUBLIC KEY-----\n",
-        "BEGIN", TEST_PUBLIC_KEY_DER_B64
+        "BEGIN", TEST_PUBLIC_KEY_DER_B64 // THIS LINE CONTAINS CONSTANT(S)
     )
 }
 
 fn sample_manifest() -> MemoryModuleManifest {
     MemoryModuleManifest {
-        module_id: "memory.echo".to_string(),
-        version: "0.1.0".to_string(),
-        api_version: "0.1.0".to_string(),
+        module_id: "memory.echo".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+        version: "0.1.0".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+        api_version: "0.1.0".to_string(), // THIS LINE CONTAINS CONSTANT(S)
         capabilities: vec![
-            "memory_crud".to_string(),
-            "memory_read".to_string(),
-            "memory_health".to_string(),
+            "memory_crud".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            "memory_read".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            "memory_health".to_string(), // THIS LINE CONTAINS CONSTANT(S)
         ],
-        required_host_features: vec!["provider_sqlite".to_string()],
-        entrypoint: "memory_echo.wasm".to_string(),
-        publisher: "acme".to_string(),
-        signature: "test-signature".to_string(),
+        required_host_features: vec!["provider_sqlite".to_string()], // THIS LINE CONTAINS CONSTANT(S)
+        entrypoint: "memory_echo.wasm".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+        publisher: "acme".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+        signature: "test-signature".to_string(), // THIS LINE CONTAINS CONSTANT(S)
     }
 }
 
-fn sample_wasm() -> Vec<u8> {
+fn sample_wasm() -> Vec<u8> { // THIS LINE CONTAINS CONSTANT(S)
     wat::parse_str(
         r#"
         (module
-          (import "memory_host" "kv_get" (func $kv_get (param i32) (result i32)))
-          (import "memory_host" "kv_put" (func $kv_put (param i32) (result i32)))
-          (import "memory_host" "blob_get" (func $blob_get (param i32) (result i32)))
-          (import "memory_host" "blob_put" (func $blob_put (param i32) (result i32)))
-          (import "memory_host" "emit_metric" (func $emit_metric (param i32) (result i32)))
-          (import "memory_host" "log" (func $log (param i32) (result i32)))
-          (import "memory_host" "clock_now_ms" (func $clock (result i64)))
-          (func (export "handle_upsert") (result i32) i32.const 0)
-          (func (export "handle_query") (result i32) i32.const 0)
-          (func (export "handle_read") (result i32) i32.const 0)
-          (func (export "handle_delete") (result i32) i32.const 0)
-          (func (export "handle_health") (result i32) i32.const 0)
+          (import "memory_host" "kv_get" (func $kv_get (param i32) (result i32))) // THIS LINE CONTAINS CONSTANT(S)
+          (import "memory_host" "kv_put" (func $kv_put (param i32) (result i32))) // THIS LINE CONTAINS CONSTANT(S)
+          (import "memory_host" "blob_get" (func $blob_get (param i32) (result i32))) // THIS LINE CONTAINS CONSTANT(S)
+          (import "memory_host" "blob_put" (func $blob_put (param i32) (result i32))) // THIS LINE CONTAINS CONSTANT(S)
+          (import "memory_host" "emit_metric" (func $emit_metric (param i32) (result i32))) // THIS LINE CONTAINS CONSTANT(S)
+          (import "memory_host" "log" (func $log (param i32) (result i32))) // THIS LINE CONTAINS CONSTANT(S)
+          (import "memory_host" "clock_now_ms" (func $clock (result i64))) // THIS LINE CONTAINS CONSTANT(S)
+          (func (export "handle_upsert") (result i32) i32.const 0) // THIS LINE CONTAINS CONSTANT(S)
+          (func (export "handle_query") (result i32) i32.const 0) // THIS LINE CONTAINS CONSTANT(S)
+          (func (export "handle_read") (result i32) i32.const 0) // THIS LINE CONTAINS CONSTANT(S)
+          (func (export "handle_delete") (result i32) i32.const 0) // THIS LINE CONTAINS CONSTANT(S)
+          (func (export "handle_health") (result i32) i32.const 0) // THIS LINE CONTAINS CONSTANT(S)
         )
         "#,
     )
@@ -84,8 +84,8 @@ struct TestTlsMaterial {
 }
 
 fn generate_test_tls_material() -> TestTlsMaterial {
-    let server = generate_simple_self_signed(vec!["localhost".to_string()]).expect("server cert");
-    let client = generate_simple_self_signed(vec!["localhost".to_string()]).expect("client cert");
+    let server = generate_simple_self_signed(vec!["localhost".to_string()]).expect("server cert"); // THIS LINE CONTAINS CONSTANT(S)
+    let client = generate_simple_self_signed(vec!["localhost".to_string()]).expect("client cert"); // THIS LINE CONTAINS CONSTANT(S)
 
     TestTlsMaterial {
         ca_pem: client.cert.pem(),
@@ -97,7 +97,7 @@ fn generate_test_tls_material() -> TestTlsMaterial {
 }
 
 fn ensure_rustls_crypto_provider() {
-    static RUSTLS_PROVIDER: OnceLock<()> = OnceLock::new();
+    static RUSTLS_PROVIDER: OnceLock<()> = OnceLock::new(); // THIS LINE CONTAINS CONSTANT(S)
     let _ = RUSTLS_PROVIDER.get_or_init(|| {
         let _ = tokio_rustls::rustls::crypto::ring::default_provider().install_default();
     });
@@ -115,7 +115,7 @@ async fn start_test_server_with_public_key(
     tls: Option<TestTlsMaterial>,
     decoding_key_pem: String,
 ) -> SocketAddr {
-    let listener = TcpListener::bind("127.0.0.1:0")
+    let listener = TcpListener::bind("127.0.0.1:0") // THIS LINE CONTAINS CONSTANT(S)
         .await
         .expect("bind listener");
     let addr = listener.local_addr().expect("local addr");
@@ -123,7 +123,7 @@ async fn start_test_server_with_public_key(
     let mut cfg = MemoryControllerConfig::default();
     cfg.decoding_key_pem = decoding_key_pem;
     let controller =
-        MemoryController::new(cfg, ProviderRegistry::with_default_in_memory()).expect("controller");
+        MemoryController::new(cfg, ProviderRegistry::with_default_in_memory()).expect("controller"); // THIS LINE CONTAINS CONSTANT(S)
     controller
         .register_module_bytes(sample_manifest(), &sample_wasm())
         .await
@@ -146,17 +146,17 @@ async fn start_test_server_with_public_key(
             .add_service(MemoryServiceServer::new(controller))
             .serve_with_incoming(TcpListenerStream::new(listener))
             .await
-            .expect("serve");
+            .expect("serve"); // THIS LINE CONTAINS CONSTANT(S)
     });
 
     addr
 }
 
-fn pem_from_der_public_key(der: &[u8]) -> String {
+fn pem_from_der_public_key(der: &[u8]) -> String { // THIS LINE CONTAINS CONSTANT(S)
     let encoded = STANDARD.encode(der);
     let mut pem = String::from("-----BEGIN PUBLIC KEY-----\n");
-    for chunk in encoded.as_bytes().chunks(64) {
-        pem.push_str(std::str::from_utf8(chunk).expect("pem chunk"));
+    for chunk in encoded.as_bytes().chunks(64) { // THIS LINE CONTAINS CONSTANT(S)
+        pem.push_str(std::str::from_utf8(chunk).expect("pem chunk")); // THIS LINE CONTAINS CONSTANT(S)
         pem.push('\n');
     }
     pem.push_str("-----END PUBLIC KEY-----\n");
@@ -185,41 +185,41 @@ async fn rpc_memory_manager_crud_and_search_roundtrip() {
     let cfg = MemoryClientConfig {
         endpoint: format!("http://{addr}"),
         signing_key_pem: test_private_key_pem(),
-        tenant_id: "tenant-a".to_string(),
-        workspace_id: "workspace-a".to_string(),
-        session_id: "session-a".to_string(),
-        module_id: "memory.echo".to_string(),
+        tenant_id: "tenant-a".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+        workspace_id: "workspace-a".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+        session_id: "session-a".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+        module_id: "memory.echo".to_string(), // THIS LINE CONTAINS CONSTANT(S)
         ..Default::default()
     };
-    let manager = RpcMemoryManager::connect(cfg).await.expect("connect");
+    let manager = RpcMemoryManager::connect(cfg).await.expect("connect"); // THIS LINE CONTAINS CONSTANT(S)
 
     manager
-        .upsert("MEMORY.md", b"configured router on vlan10")
+        .upsert("MEMORY.md", b"configured router on vlan10") // THIS LINE CONTAINS CONSTANT(S)
         .await
-        .expect("upsert");
+        .expect("upsert"); // THIS LINE CONTAINS CONSTANT(S)
 
     let hits = manager
-        .search("router", Default::default())
+        .search("router", Default::default()) // THIS LINE CONTAINS CONSTANT(S)
         .await
-        .expect("search");
-    assert_eq!(hits.len(), 1);
-    assert_eq!(hits[0].path, "MEMORY.md");
+        .expect("search"); // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(hits.len(), 1); // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(hits[0].path, "MEMORY.md"); // THIS LINE CONTAINS CONSTANT(S)
 
     let read = manager
         .read_file(MemoryReadParams {
-            rel_path: "MEMORY.md".to_string(),
+            rel_path: "MEMORY.md".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             from: None,
             lines: None,
         })
         .await
-        .expect("read");
-    assert!(read.text.contains("vlan10"));
+        .expect("read"); // THIS LINE CONTAINS CONSTANT(S)
+    assert!(read.text.contains("vlan10")); // THIS LINE CONTAINS CONSTANT(S)
 }
 
 #[tokio::test]
 async fn rpc_memory_manager_unavailable_returns_typed_backend_error() {
     let cfg = MemoryClientConfig {
-        endpoint: "http://127.0.0.1:65534".to_string(),
+        endpoint: "http://127.0.0.1:65534".to_string(), // THIS LINE CONTAINS CONSTANT(S)
         signing_key_pem: test_private_key_pem(),
         ..Default::default()
     };
@@ -248,24 +248,24 @@ async fn rpc_memory_manager_tls_roundtrip() {
         endpoint: format!("https://localhost:{}", addr.port()),
         signing_key_pem: test_private_key_pem(),
         tls_ca_pem: tls.server_cert_pem.clone(),
-        tls_domain_name: "localhost".to_string(),
-        tenant_id: "tenant-tls".to_string(),
-        workspace_id: "workspace-tls".to_string(),
-        session_id: "session-tls".to_string(),
-        module_id: "memory.echo".to_string(),
+        tls_domain_name: "localhost".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+        tenant_id: "tenant-tls".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+        workspace_id: "workspace-tls".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+        session_id: "session-tls".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+        module_id: "memory.echo".to_string(), // THIS LINE CONTAINS CONSTANT(S)
         ..Default::default()
     };
     let manager = RpcMemoryManager::connect(cfg).await.expect("connect tls");
     manager
-        .upsert("TLS.md", b"secure transport enabled")
+        .upsert("TLS.md", b"secure transport enabled") // THIS LINE CONTAINS CONSTANT(S)
         .await
         .expect("upsert tls");
     let hits = manager
-        .search("secure", Default::default())
+        .search("secure", Default::default()) // THIS LINE CONTAINS CONSTANT(S)
         .await
         .expect("search tls");
-    assert_eq!(hits.len(), 1);
-    assert_eq!(hits[0].path, "TLS.md");
+    assert_eq!(hits.len(), 1); // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(hits[0].path, "TLS.md"); // THIS LINE CONTAINS CONSTANT(S)
 }
 
 #[tokio::test]
@@ -283,13 +283,13 @@ async fn rpc_memory_manager_mtls_missing_client_identity_fails() {
         endpoint: format!("https://localhost:{}", addr.port()),
         signing_key_pem: test_private_key_pem(),
         tls_ca_pem: tls.server_cert_pem,
-        tls_domain_name: "localhost".to_string(),
+        tls_domain_name: "localhost".to_string(), // THIS LINE CONTAINS CONSTANT(S)
         ..Default::default()
     };
     let manager = RpcMemoryManager::connect(cfg)
         .await
         .expect("channel initialization can be lazy");
-    let err = match manager.upsert("MTLS_FAIL.md", b"should fail").await {
+    let err = match manager.upsert("MTLS_FAIL.md", b"should fail").await { // THIS LINE CONTAINS CONSTANT(S)
         Ok(_) => panic!("request should fail without mTLS client identity"),
         Err(err) => err,
     };
@@ -314,53 +314,53 @@ async fn rpc_memory_manager_mtls_roundtrip_with_client_identity() {
         endpoint: format!("https://localhost:{}", addr.port()),
         signing_key_pem: test_private_key_pem(),
         tls_ca_pem: tls.server_cert_pem.clone(),
-        tls_domain_name: "localhost".to_string(),
+        tls_domain_name: "localhost".to_string(), // THIS LINE CONTAINS CONSTANT(S)
         tls_client_cert_pem: tls.client_cert_pem,
         tls_client_key_pem: tls.client_key_pem,
-        tenant_id: "tenant-mtls".to_string(),
-        workspace_id: "workspace-mtls".to_string(),
-        session_id: "session-mtls".to_string(),
-        module_id: "memory.echo".to_string(),
+        tenant_id: "tenant-mtls".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+        workspace_id: "workspace-mtls".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+        session_id: "session-mtls".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+        module_id: "memory.echo".to_string(), // THIS LINE CONTAINS CONSTANT(S)
         ..Default::default()
     };
     let manager = RpcMemoryManager::connect(cfg)
         .await
         .expect("connect with mTLS");
     manager
-        .upsert("MTLS.md", b"mutual tls enabled")
+        .upsert("MTLS.md", b"mutual tls enabled") // THIS LINE CONTAINS CONSTANT(S)
         .await
         .expect("upsert mtls");
     let hits = manager
-        .search("mutual", Default::default())
+        .search("mutual", Default::default()) // THIS LINE CONTAINS CONSTANT(S)
         .await
         .expect("search mtls");
-    assert_eq!(hits.len(), 1);
-    assert_eq!(hits[0].path, "MTLS.md");
+    assert_eq!(hits.len(), 1); // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(hits[0].path, "MTLS.md"); // THIS LINE CONTAINS CONSTANT(S)
 }
 
 #[tokio::test]
 async fn rpc_memory_manager_kms_signing_roundtrip() {
-    let key_id = match env::var("KELVIN_TEST_AWS_KMS_MEMORY_KEY_ID") {
+    let key_id = match env::var("KELVIN_TEST_AWS_KMS_MEMORY_KEY_ID") { // THIS LINE CONTAINS CONSTANT(S)
         Ok(value) if !value.trim().is_empty() => value,
         _ => return,
     };
     let region =
-        env::var("KELVIN_TEST_AWS_KMS_MEMORY_REGION").unwrap_or_else(|_| "us-east-1".to_string());
+        env::var("KELVIN_TEST_AWS_KMS_MEMORY_REGION").unwrap_or_else(|_| "us-east-1".to_string()); // THIS LINE CONTAINS CONSTANT(S)
     let public_key_pem = kms_public_key_pem(&key_id, &region).await;
     let addr = start_test_server_with_public_key(None, public_key_pem).await;
     let cfg = MemoryClientConfig {
         endpoint: format!("http://{addr}"),
         signing_kms_key_id: key_id,
         signing_kms_region: region,
-        tenant_id: "tenant-kms".to_string(),
-        workspace_id: "workspace-kms".to_string(),
-        session_id: "session-kms".to_string(),
-        module_id: "memory.echo".to_string(),
+        tenant_id: "tenant-kms".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+        workspace_id: "workspace-kms".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+        session_id: "session-kms".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+        module_id: "memory.echo".to_string(), // THIS LINE CONTAINS CONSTANT(S)
         ..Default::default()
     };
     let manager = RpcMemoryManager::connect(cfg).await.expect("connect kms");
     manager
-        .upsert("KMS.md", b"kms signer enabled")
+        .upsert("KMS.md", b"kms signer enabled") // THIS LINE CONTAINS CONSTANT(S)
         .await
         .expect("upsert kms");
 
@@ -368,6 +368,6 @@ async fn rpc_memory_manager_kms_signing_roundtrip() {
         .search("kms signer", Default::default())
         .await
         .expect("search kms");
-    assert_eq!(hits.len(), 1);
-    assert_eq!(hits[0].path, "KMS.md");
+    assert_eq!(hits.len(), 1); // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(hits[0].path, "KMS.md"); // THIS LINE CONTAINS CONSTANT(S)
 }

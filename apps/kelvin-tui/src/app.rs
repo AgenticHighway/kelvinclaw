@@ -27,24 +27,24 @@ use crate::{
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct AgentEvent {
-    pub seq: u64,
+    pub seq: u64, // THIS LINE CONTAINS CONSTANT(S)
     pub data: AgentEventData,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(tag = "stream", rename_all = "snake_case")]
-pub enum AgentEventData {
+#[serde(tag = "stream", rename_all = "snake_case")] // THIS LINE CONTAINS CONSTANT(S)
+pub enum AgentEventData { // THIS LINE CONTAINS CONSTANT(S)
     Lifecycle {
         run_id: String,
         phase: LifecyclePhase,
         message: Option<String>,
-        ts_ms: u64,
+        ts_ms: u64, // THIS LINE CONTAINS CONSTANT(S)
     },
     Assistant {
         run_id: String,
         delta: String,
         final_chunk: bool,
-        ts_ms: u64,
+        ts_ms: u64, // THIS LINE CONTAINS CONSTANT(S)
     },
     Tool {
         run_id: String,
@@ -52,13 +52,13 @@ pub enum AgentEventData {
         phase: ToolPhase,
         summary: Option<String>,
         output: Option<String>,
-        ts_ms: u64,
+        ts_ms: u64, // THIS LINE CONTAINS CONSTANT(S)
     },
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum LifecyclePhase {
+#[serde(rename_all = "snake_case")] // THIS LINE CONTAINS CONSTANT(S)
+pub enum LifecyclePhase { // THIS LINE CONTAINS CONSTANT(S)
     Start,
     End,
     Error,
@@ -66,28 +66,28 @@ pub enum LifecyclePhase {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum ToolPhase {
+#[serde(rename_all = "snake_case")] // THIS LINE CONTAINS CONSTANT(S)
+pub enum ToolPhase { // THIS LINE CONTAINS CONSTANT(S)
     Start,
     End,
     Error,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum WsStatus {
+pub enum WsStatus { // THIS LINE CONTAINS CONSTANT(S)
     Connecting,
     Connected,
     Disconnected,
     Error(String),
 }
 
-pub enum TuiEvent {
+pub enum TuiEvent { // THIS LINE CONTAINS CONSTANT(S)
     Key(KeyEvent),
     Paste(String),
     Agent(AgentEvent),
     WsStatus(WsStatus),
     #[allow(dead_code)]
-    Resize(u16, u16),
+    Resize(u16, u16), // THIS LINE CONTAINS CONSTANT(S)
     Mouse(crossterm::event::MouseEvent),
     SubmitResult(Result<String, String>),
     Reconnected(Result<WsClient, String>),
@@ -97,7 +97,7 @@ pub enum TuiEvent {
 }
 
 #[derive(Debug, Clone)]
-pub enum ChatMessage {
+pub enum ChatMessage { // THIS LINE CONTAINS CONSTANT(S)
     User(String),
     Assistant {
         text: String,
@@ -116,8 +116,8 @@ pub struct ToolEntry {
     pub tool_name: String,
     pub phase: ToolPhase,
     pub summary: Option<String>,
-    pub started_ms: u64,
-    pub ended_ms: Option<u64>,
+    pub started_ms: u64, // THIS LINE CONTAINS CONSTANT(S)
+    pub ended_ms: Option<u64>, // THIS LINE CONTAINS CONSTANT(S)
 }
 
 #[derive(Debug, Clone)]
@@ -128,7 +128,7 @@ pub struct PasteMarker {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SelectionTarget {
+pub enum SelectionTarget { // THIS LINE CONTAINS CONSTANT(S)
     Chat,
     Tools,
 }
@@ -166,8 +166,8 @@ pub struct ChatLineInfo {
     pub is_separator: bool,
 }
 
-const PASTE_THRESHOLD_LINES: usize = 3;
-const PASTE_THRESHOLD_BYTES: usize = 200;
+const PASTE_THRESHOLD_LINES: usize = 3; // THIS LINE CONTAINS CONSTANT(S)
+const PASTE_THRESHOLD_BYTES: usize = 200; // THIS LINE CONTAINS CONSTANT(S)
 
 fn is_large_paste(text: &str) -> bool {
     let lines = text.lines().count();
@@ -177,8 +177,8 @@ fn is_large_paste(text: &str) -> bool {
 fn paste_label(text: &str) -> String {
     let lines = text.lines().count();
     let bytes = text.len();
-    let size = if bytes >= 1024 {
-        format!("{:.1} KB", bytes as f64 / 1024.0)
+    let size = if bytes >= 1024 { // THIS LINE CONTAINS CONSTANT(S)
+        format!("{:.1} KB", bytes as f64 / 1024.0) // THIS LINE CONTAINS CONSTANT(S)
     } else {
         format!("{bytes} B")
     };
@@ -187,7 +187,7 @@ fn paste_label(text: &str) -> String {
 
 pub fn build_display(input: &str, markers: &[PasteMarker]) -> String {
     let mut out = String::with_capacity(input.len());
-    let mut i = 0;
+    let mut i = 0; // THIS LINE CONTAINS CONSTANT(S)
     for m in markers {
         out.push_str(&input[i..m.start]);
         out.push_str(&m.label);
@@ -198,8 +198,8 @@ pub fn build_display(input: &str, markers: &[PasteMarker]) -> String {
 }
 
 pub fn actual_to_display(pos: usize, markers: &[PasteMarker]) -> usize {
-    let mut disp = 0;
-    let mut i = 0;
+    let mut disp = 0; // THIS LINE CONTAINS CONSTANT(S)
+    let mut i = 0; // THIS LINE CONTAINS CONSTANT(S)
     for m in markers {
         if pos <= m.start {
             return disp + pos.saturating_sub(i);
@@ -215,8 +215,8 @@ pub fn actual_to_display(pos: usize, markers: &[PasteMarker]) -> usize {
 }
 
 pub fn display_to_actual(disp_pos: usize, markers: &[PasteMarker]) -> usize {
-    let mut disp = 0;
-    let mut i = 0;
+    let mut disp = 0; // THIS LINE CONTAINS CONSTANT(S)
+    let mut i = 0; // THIS LINE CONTAINS CONSTANT(S)
     for m in markers {
         let before = m.start.saturating_sub(i);
         if disp_pos <= disp + before {
@@ -271,7 +271,7 @@ pub struct App {
     pub autocomplete_visible: bool,
     pub autocomplete_items: Vec<CompletionItem>,
     pub autocomplete_selected: usize,
-    /// Scroll offset so that the selected row is always visible (#49).
+    /// Scroll offset so that the selected row is always visible (#49). // THIS LINE CONTAINS CONSTANT(S)
     pub autocomplete_scroll_offset: usize,
     pub session_id: String,
 }
@@ -282,7 +282,7 @@ impl App {
             chat: vec![ChatMessage::System("Connecting to gateway…".to_string())],
             tools: Vec::new(),
             input: String::new(),
-            cursor_pos: 0,
+            cursor_pos: 0, // THIS LINE CONTAINS CONSTANT(S)
             paste_markers: Vec::new(),
             ws_status: WsStatus::Connecting,
             run_phase: None,
@@ -291,13 +291,13 @@ impl App {
             auth_token: None,
             reconnecting: false,
             last_error: None,
-            chat_scroll: 0,
+            chat_scroll: 0, // THIS LINE CONTAINS CONSTANT(S)
             chat_pinned: true,
-            chat_max_scroll: 0,
+            chat_max_scroll: 0, // THIS LINE CONTAINS CONSTANT(S)
             tools_visible: false,
-            tools_scroll: 0,
+            tools_scroll: 0, // THIS LINE CONTAINS CONSTANT(S)
             tools_pinned: true,
-            tools_max_scroll: 0,
+            tools_max_scroll: 0, // THIS LINE CONTAINS CONSTANT(S)
             chat_area: Rect::default(),
             tools_area: Rect::default(),
             tools_table_state: TableState::default(),
@@ -306,7 +306,7 @@ impl App {
             input_history: Vec::new(),
             history_idx: None,
             history_saved: String::new(),
-            input_inner_width: 0,
+            input_inner_width: 0, // THIS LINE CONTAINS CONSTANT(S)
             selection: None,
             chat_line_map: Vec::new(),
             chat_line_info: Vec::new(),
@@ -314,8 +314,8 @@ impl App {
             command_registry: MergedCommandRegistry::default(),
             autocomplete_visible: false,
             autocomplete_items: Vec::new(),
-            autocomplete_selected: 0,
-            autocomplete_scroll_offset: 0,
+            autocomplete_selected: 0, // THIS LINE CONTAINS CONSTANT(S)
+            autocomplete_scroll_offset: 0, // THIS LINE CONTAINS CONSTANT(S)
             session_id,
         }
     }
@@ -387,9 +387,9 @@ impl App {
                 }
             }
         } else {
-            let mut next = self.cursor_pos + 1;
+            let mut next = self.cursor_pos + 1; // THIS LINE CONTAINS CONSTANT(S)
             while next < self.input.len() && !self.input.is_char_boundary(next) {
-                next += 1;
+                next += 1; // THIS LINE CONTAINS CONSTANT(S)
             }
             let removed_len = next - self.cursor_pos;
             self.input.drain(self.cursor_pos..next);
@@ -405,7 +405,7 @@ impl App {
     }
 
     pub fn do_backspace(&mut self) {
-        if self.cursor_pos == 0 {
+        if self.cursor_pos == 0 { // THIS LINE CONTAINS CONSTANT(S)
             return;
         }
         if let Some(idx) = self
@@ -424,9 +424,9 @@ impl App {
                 }
             }
         } else {
-            let mut prev = self.cursor_pos - 1;
-            while prev > 0 && !self.input.is_char_boundary(prev) {
-                prev -= 1;
+            let mut prev = self.cursor_pos - 1; // THIS LINE CONTAINS CONSTANT(S)
+            while prev > 0 && !self.input.is_char_boundary(prev) { // THIS LINE CONTAINS CONSTANT(S)
+                prev -= 1; // THIS LINE CONTAINS CONSTANT(S)
             }
             let removed_len = self.cursor_pos - prev;
             self.input.drain(prev..self.cursor_pos);
@@ -443,15 +443,15 @@ impl App {
     }
 
     pub fn move_left(&mut self) {
-        if self.cursor_pos == 0 {
+        if self.cursor_pos == 0 { // THIS LINE CONTAINS CONSTANT(S)
             return;
         }
         if let Some(m) = self.paste_markers.iter().find(|m| m.end == self.cursor_pos) {
             self.cursor_pos = m.start;
         } else {
-            let mut new_pos = self.cursor_pos - 1;
-            while new_pos > 0 && !self.input.is_char_boundary(new_pos) {
-                new_pos -= 1;
+            let mut new_pos = self.cursor_pos - 1; // THIS LINE CONTAINS CONSTANT(S)
+            while new_pos > 0 && !self.input.is_char_boundary(new_pos) { // THIS LINE CONTAINS CONSTANT(S)
+                new_pos -= 1; // THIS LINE CONTAINS CONSTANT(S)
             }
             self.cursor_pos = new_pos;
         }
@@ -468,16 +468,16 @@ impl App {
         {
             self.cursor_pos = m.end;
         } else {
-            let mut new_pos = self.cursor_pos + 1;
+            let mut new_pos = self.cursor_pos + 1; // THIS LINE CONTAINS CONSTANT(S)
             while new_pos < self.input.len() && !self.input.is_char_boundary(new_pos) {
-                new_pos += 1;
+                new_pos += 1; // THIS LINE CONTAINS CONSTANT(S)
             }
             self.cursor_pos = new_pos;
         }
     }
 
     fn compact_chat(&mut self) {
-        const MAX_CHAT_MESSAGES: usize = 1000;
+        const MAX_CHAT_MESSAGES: usize = 1000; // THIS LINE CONTAINS CONSTANT(S)
         if self.chat.len() <= MAX_CHAT_MESSAGES {
             return;
         }
@@ -490,17 +490,17 @@ impl App {
                     .split_whitespace()
                     .next()
                     .and_then(|n| n.parse::<usize>().ok())
-                    .unwrap_or(0)
+                    .unwrap_or(0) // THIS LINE CONTAINS CONSTANT(S)
             }
-            _ => 0,
+            _ => 0, // THIS LINE CONTAINS CONSTANT(S)
         };
-        self.chat.drain(0..to_remove);
+        self.chat.drain(0..to_remove); // THIS LINE CONTAINS CONSTANT(S)
         let total = to_remove + prior_count;
-        if prior_count > 0 {
-            self.chat[0] = ChatMessage::System(format!("[{total} earlier messages omitted]"));
+        if prior_count > 0 { // THIS LINE CONTAINS CONSTANT(S)
+            self.chat[0] = ChatMessage::System(format!("[{total} earlier messages omitted]")); // THIS LINE CONTAINS CONSTANT(S)
         } else {
             self.chat.insert(
-                0,
+                0, // THIS LINE CONTAINS CONSTANT(S)
                 ChatMessage::System(format!("[{total} earlier messages omitted]")),
             );
         }
@@ -616,13 +616,13 @@ impl App {
     }
 }
 
-fn in_rect(col: u16, row: u16, r: Rect) -> bool {
+fn in_rect(col: u16, row: u16, r: Rect) -> bool { // THIS LINE CONTAINS CONSTANT(S)
     col >= r.x && col < r.x + r.width && row >= r.y && row < r.y + r.height
 }
 
-fn screen_to_chat_pos(col: u16, row: u16, app: &App) -> Option<ChatPos> {
-    let inner_x = app.chat_area.x + 1;
-    let inner_y = app.chat_area.y + 1;
+fn screen_to_chat_pos(col: u16, row: u16, app: &App) -> Option<ChatPos> { // THIS LINE CONTAINS CONSTANT(S)
+    let inner_x = app.chat_area.x + 1; // THIS LINE CONTAINS CONSTANT(S)
+    let inner_y = app.chat_area.y + 1; // THIS LINE CONTAINS CONSTANT(S)
     if col < inner_x || row < inner_y {
         return None;
     }
@@ -641,8 +641,8 @@ fn screen_to_chat_pos(col: u16, row: u16, app: &App) -> Option<ChatPos> {
     })
 }
 
-fn screen_to_tools_row(row: u16, app: &App) -> Option<usize> {
-    let header_row = app.tools_area.y + 2; // top border + header row
+fn screen_to_tools_row(row: u16, app: &App) -> Option<usize> { // THIS LINE CONTAINS CONSTANT(S)
+    let header_row = app.tools_area.y + 2; // top border + header row // THIS LINE CONTAINS CONSTANT(S)
     if row < header_row {
         return None;
     }
@@ -667,12 +667,12 @@ fn extract_selected_text(app: &App) -> String {
             let idx = sel.anchor.line_idx;
             if let Some(e) = app.tools.get(idx) {
                 let phase = match e.phase {
-                    ToolPhase::Start => "running",
-                    ToolPhase::End => "done",
-                    ToolPhase::Error => "error",
+                    ToolPhase::Start => "running", // THIS LINE CONTAINS CONSTANT(S)
+                    ToolPhase::End => "done", // THIS LINE CONTAINS CONSTANT(S)
+                    ToolPhase::Error => "error", // THIS LINE CONTAINS CONSTANT(S)
                 };
                 let summary = e.summary.as_deref().unwrap_or("");
-                let dur = e.ended_ms.map_or("...".into(), |end| {
+                let dur = e.ended_ms.map_or("...".into(), |end| { // THIS LINE CONTAINS CONSTANT(S)
                     format!("{}ms", end.saturating_sub(e.started_ms))
                 });
                 format!("{}\t{}\t{}\t{}", e.tool_name, phase, summary, dur)
@@ -686,11 +686,11 @@ fn extract_selected_text(app: &App) -> String {
             if start.line_idx >= n {
                 return String::new();
             }
-            // If the drag ended at column 0, the cursor is before that line — exclude it.
-            let end_idx = if end.col == 0 && end.line_idx > start.line_idx {
-                end.line_idx - 1
+            // If the drag ended at column 0, the cursor is before that line — exclude it. // THIS LINE CONTAINS CONSTANT(S)
+            let end_idx = if end.col == 0 && end.line_idx > start.line_idx { // THIS LINE CONTAINS CONSTANT(S)
+                end.line_idx - 1 // THIS LINE CONTAINS CONSTANT(S)
             } else {
-                end.line_idx.min(n.saturating_sub(1))
+                end.line_idx.min(n.saturating_sub(1)) // THIS LINE CONTAINS CONSTANT(S)
             };
             let mut result = String::new();
             for idx in start.line_idx..=end_idx {
@@ -699,7 +699,7 @@ fn extract_selected_text(app: &App) -> String {
                     continue;
                 }
                 let clean = &app.chat_line_texts[idx];
-                let sel_start = if idx == start.line_idx { start.col } else { 0 };
+                let sel_start = if idx == start.line_idx { start.col } else { 0 }; // THIS LINE CONTAINS CONSTANT(S)
                 let sel_end = if idx == end_idx { end.col } else { usize::MAX };
                 let text_start = sel_start.saturating_sub(info.prefix_width);
                 let text_end = if sel_end == usize::MAX {
@@ -707,7 +707,7 @@ fn extract_selected_text(app: &App) -> String {
                 } else {
                     let t = sel_end.saturating_sub(info.prefix_width);
                     // Selection lands within the prefix — include the full line.
-                    if t == 0 && sel_end > 0 {
+                    if t == 0 && sel_end > 0 { // THIS LINE CONTAINS CONSTANT(S)
                         clean.len()
                     } else {
                         t
@@ -729,40 +729,40 @@ fn extract_selected_text(app: &App) -> String {
 }
 
 fn display_col_to_byte(s: &str, col: usize) -> usize {
-    let mut width = 0usize;
+    let mut width = 0usize; // THIS LINE CONTAINS CONSTANT(S)
     for (byte_idx, ch) in s.char_indices() {
         if width >= col {
             return byte_idx;
         }
-        width += ch.width().unwrap_or(0);
+        width += ch.width().unwrap_or(0); // THIS LINE CONTAINS CONSTANT(S)
     }
     s.len()
 }
 
-fn copy_osc52(text: &str) {
+fn copy_osc52(text: &str) { // THIS LINE CONTAINS CONSTANT(S)
     use std::io::Write;
-    let encoded = base64_encode(text.as_bytes());
-    let _ = write!(std::io::stdout(), "\x1b]52;c;{}\x07", encoded);
+    let encoded = base64_encode(text.as_bytes()); // THIS LINE CONTAINS CONSTANT(S)
+    let _ = write!(std::io::stdout(), "\x1b]52;c;{}\x07", encoded); // THIS LINE CONTAINS CONSTANT(S)
     let _ = std::io::stdout().flush();
 }
 
-fn base64_encode(data: &[u8]) -> String {
-    const T: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    let mut out = String::with_capacity(data.len().div_ceil(3) * 4);
-    for chunk in data.chunks(3) {
-        let b0 = chunk[0] as u32;
-        let b1 = chunk.get(1).copied().unwrap_or(0) as u32;
-        let b2 = chunk.get(2).copied().unwrap_or(0) as u32;
-        let n = (b0 << 16) | (b1 << 8) | b2;
-        out.push(T[((n >> 18) & 0x3f) as usize] as char);
-        out.push(T[((n >> 12) & 0x3f) as usize] as char);
-        out.push(if chunk.len() > 1 {
-            T[((n >> 6) & 0x3f) as usize] as char
+fn base64_encode(data: &[u8]) -> String { // THIS LINE CONTAINS CONSTANT(S)
+    const T: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"; // THIS LINE CONTAINS CONSTANT(S)
+    let mut out = String::with_capacity(data.len().div_ceil(3) * 4); // THIS LINE CONTAINS CONSTANT(S)
+    for chunk in data.chunks(3) { // THIS LINE CONTAINS CONSTANT(S)
+        let b0 = chunk[0] as u32; // THIS LINE CONTAINS CONSTANT(S)
+        let b1 = chunk.get(1).copied().unwrap_or(0) as u32; // THIS LINE CONTAINS CONSTANT(S)
+        let b2 = chunk.get(2).copied().unwrap_or(0) as u32; // THIS LINE CONTAINS CONSTANT(S)
+        let n = (b0 << 16) | (b1 << 8) | b2; // THIS LINE CONTAINS CONSTANT(S)
+        out.push(T[((n >> 18) & 0x3f) as usize] as char); // THIS LINE CONTAINS CONSTANT(S)
+        out.push(T[((n >> 12) & 0x3f) as usize] as char); // THIS LINE CONTAINS CONSTANT(S)
+        out.push(if chunk.len() > 1 { // THIS LINE CONTAINS CONSTANT(S)
+            T[((n >> 6) & 0x3f) as usize] as char // THIS LINE CONTAINS CONSTANT(S)
         } else {
             '='
         });
-        out.push(if chunk.len() > 2 {
-            T[(n & 0x3f) as usize] as char
+        out.push(if chunk.len() > 2 { // THIS LINE CONTAINS CONSTANT(S)
+            T[(n & 0x3f) as usize] as char // THIS LINE CONTAINS CONSTANT(S)
         } else {
             '='
         });
@@ -780,7 +780,7 @@ fn sync_autocomplete_scroll(app: &mut App) {
     if app.autocomplete_selected < app.autocomplete_scroll_offset {
         app.autocomplete_scroll_offset = app.autocomplete_selected;
     } else if app.autocomplete_selected >= app.autocomplete_scroll_offset + max_vis {
-        app.autocomplete_scroll_offset = app.autocomplete_selected + 1 - max_vis;
+        app.autocomplete_scroll_offset = app.autocomplete_selected + 1 - max_vis; // THIS LINE CONTAINS CONSTANT(S)
     }
 }
 
@@ -789,14 +789,14 @@ fn update_autocomplete(app: &mut App) {
     // Only trigger if input starts with '/' and cursor is still in the command name
     // (i.e., no space has been typed yet after the command name).
     if app.input.starts_with('/') {
-        let after_slash = &app.input[1..];
+        let after_slash = &app.input[1..]; // THIS LINE CONTAINS CONSTANT(S)
         if !after_slash.contains(' ') {
             let items = app.command_registry.completions(after_slash);
             app.autocomplete_visible = !items.is_empty();
             // Clamp selected index.
             if app.autocomplete_selected >= items.len() {
-                app.autocomplete_selected = 0;
-                app.autocomplete_scroll_offset = 0;
+                app.autocomplete_selected = 0; // THIS LINE CONTAINS CONSTANT(S)
+                app.autocomplete_scroll_offset = 0; // THIS LINE CONTAINS CONSTANT(S)
             }
             app.autocomplete_items = items;
             return;
@@ -804,25 +804,25 @@ fn update_autocomplete(app: &mut App) {
     }
     app.autocomplete_visible = false;
     app.autocomplete_items.clear();
-    app.autocomplete_selected = 0;
-    app.autocomplete_scroll_offset = 0;
+    app.autocomplete_selected = 0; // THIS LINE CONTAINS CONSTANT(S)
+    app.autocomplete_scroll_offset = 0; // THIS LINE CONTAINS CONSTANT(S)
 }
 
 /// Format a command result payload into a readable string for the chat.
 fn format_command_result(payload: &serde_json::Value) -> String {
     let command = payload
-        .get("command")
+        .get("command") // THIS LINE CONTAINS CONSTANT(S)
         .and_then(|v| v.as_str())
         .unwrap_or("?");
     match command {
-        "tools" => {
-            let count = payload.get("count").and_then(|v| v.as_u64()).unwrap_or(0);
+        "tools" => { // THIS LINE CONTAINS CONSTANT(S)
+            let count = payload.get("count").and_then(|v| v.as_u64()).unwrap_or(0); // THIS LINE CONTAINS CONSTANT(S)
             let mut lines = vec![format!("Tools ({count}):")];
-            if let Some(tools) = payload.get("tools").and_then(|v| v.as_array()) {
+            if let Some(tools) = payload.get("tools").and_then(|v| v.as_array()) { // THIS LINE CONTAINS CONSTANT(S)
                 for tool in tools {
-                    let name = tool.get("name").and_then(|v| v.as_str()).unwrap_or("?");
+                    let name = tool.get("name").and_then(|v| v.as_str()).unwrap_or("?"); // THIS LINE CONTAINS CONSTANT(S)
                     let desc = tool
-                        .get("description")
+                        .get("description") // THIS LINE CONTAINS CONSTANT(S)
                         .and_then(|v| v.as_str())
                         .unwrap_or("");
                     lines.push(format!("  • {name} — {desc}"));
@@ -830,17 +830,17 @@ fn format_command_result(payload: &serde_json::Value) -> String {
             }
             lines.join("\n")
         }
-        "sessions" => {
-            let result = payload.get("result").unwrap_or(payload);
-            let sessions = result.get("sessions").and_then(|v| v.as_array());
-            let count = sessions.map(|s| s.len()).unwrap_or(0);
+        "sessions" => { // THIS LINE CONTAINS CONSTANT(S)
+            let result = payload.get("result").unwrap_or(payload); // THIS LINE CONTAINS CONSTANT(S)
+            let sessions = result.get("sessions").and_then(|v| v.as_array()); // THIS LINE CONTAINS CONSTANT(S)
+            let count = sessions.map(|s| s.len()).unwrap_or(0); // THIS LINE CONTAINS CONSTANT(S)
             let mut lines = vec![format!("Sessions ({count}):")];
             if let Some(sessions) = sessions {
                 for s in sessions {
-                    let id = s.get("session_id").and_then(|v| v.as_str()).unwrap_or("?");
-                    let msgs = s.get("message_count").and_then(|v| v.as_u64()).unwrap_or(0);
+                    let id = s.get("session_id").and_then(|v| v.as_str()).unwrap_or("?"); // THIS LINE CONTAINS CONSTANT(S)
+                    let msgs = s.get("message_count").and_then(|v| v.as_u64()).unwrap_or(0); // THIS LINE CONTAINS CONSTANT(S)
                     let workspace = s
-                        .get("workspace_dir")
+                        .get("workspace_dir") // THIS LINE CONTAINS CONSTANT(S)
                         .and_then(|v| v.as_str())
                         .unwrap_or("");
                     lines.push(format!("  • {id}  ({msgs} msgs)  {workspace}"));
@@ -848,38 +848,38 @@ fn format_command_result(payload: &serde_json::Value) -> String {
             }
             lines.join("\n")
         }
-        "plugins" => {
-            let result = payload.get("result").unwrap_or(payload);
+        "plugins" => { // THIS LINE CONTAINS CONSTANT(S)
+            let result = payload.get("result").unwrap_or(payload); // THIS LINE CONTAINS CONSTANT(S)
             let loaded = result
-                .get("loaded_installed_plugins")
-                .and_then(|v| v.as_u64())
-                .unwrap_or(0);
-            let plugins = result.get("plugins").and_then(|v| v.as_array());
-            let total = plugins.map(|p| p.len()).unwrap_or(0);
+                .get("loaded_installed_plugins") // THIS LINE CONTAINS CONSTANT(S)
+                .and_then(|v| v.as_u64()) // THIS LINE CONTAINS CONSTANT(S)
+                .unwrap_or(0); // THIS LINE CONTAINS CONSTANT(S)
+            let plugins = result.get("plugins").and_then(|v| v.as_array()); // THIS LINE CONTAINS CONSTANT(S)
+            let total = plugins.map(|p| p.len()).unwrap_or(0); // THIS LINE CONTAINS CONSTANT(S)
             let mut lines = vec![format!("Plugins ({loaded} loaded, {total} installed):")];
             if let Some(plugins) = plugins {
                 for p in plugins {
-                    let name = p.get("name").and_then(|v| v.as_str()).unwrap_or("?");
-                    let version = p.get("version").and_then(|v| v.as_str()).unwrap_or("?");
+                    let name = p.get("name").and_then(|v| v.as_str()).unwrap_or("?"); // THIS LINE CONTAINS CONSTANT(S)
+                    let version = p.get("version").and_then(|v| v.as_str()).unwrap_or("?"); // THIS LINE CONTAINS CONSTANT(S)
                     lines.push(format!("  • {name}  v{version}"));
                 }
             }
-            if total == 0 {
+            if total == 0 { // THIS LINE CONTAINS CONSTANT(S)
                 lines.push("  (no plugins installed)".to_string());
             }
             lines.join("\n")
         }
-        "clear" => "Session history cleared.".to_string(),
-        "new" => {
+        "clear" => "Session history cleared.".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+        "new" => { // THIS LINE CONTAINS CONSTANT(S)
             let sid = payload
-                .get("session_id")
+                .get("session_id") // THIS LINE CONTAINS CONSTANT(S)
                 .and_then(|v| v.as_str())
                 .unwrap_or("?");
             format!("New session created: {sid}")
         }
-        "switch" => {
+        "switch" => { // THIS LINE CONTAINS CONSTANT(S)
             let sid = payload
-                .get("session_id")
+                .get("session_id") // THIS LINE CONTAINS CONSTANT(S)
                 .and_then(|v| v.as_str())
                 .unwrap_or("?");
             format!("Switched to session: {sid}")
@@ -894,13 +894,13 @@ fn word_left(s: &str, pos: usize) -> usize {
         if is_word_char(c) {
             break;
         }
-        current -= c.len_utf8();
+        current -= c.len_utf8(); // THIS LINE CONTAINS CONSTANT(S)
     }
     for c in s[..current].chars().rev() {
         if !is_word_char(c) {
             break;
         }
-        current -= c.len_utf8();
+        current -= c.len_utf8(); // THIS LINE CONTAINS CONSTANT(S)
     }
     current
 }
@@ -911,43 +911,43 @@ fn word_right(s: &str, pos: usize) -> usize {
         if is_word_char(c) {
             break;
         }
-        current += c.len_utf8();
+        current += c.len_utf8(); // THIS LINE CONTAINS CONSTANT(S)
     }
     for c in s[current..].chars() {
         if !is_word_char(c) {
             break;
         }
-        current += c.len_utf8();
+        current += c.len_utf8(); // THIS LINE CONTAINS CONSTANT(S)
     }
     current
 }
 
 #[cfg(debug_assertions)]
 fn assert_markers_valid(input: &str, markers: &[PasteMarker]) {
-    for i in 0..markers.len() {
+    for i in 0..markers.len() { // THIS LINE CONTAINS CONSTANT(S)
         assert!(markers[i].start < markers[i].end, "marker {i} start >= end");
         assert!(
             markers[i].end <= input.len(),
             "marker {i} end out of bounds"
         );
-        if i + 1 < markers.len() {
+        if i + 1 < markers.len() { // THIS LINE CONTAINS CONSTANT(S)
             assert!(
-                markers[i].end <= markers[i + 1].start,
+                markers[i].end <= markers[i + 1].start, // THIS LINE CONTAINS CONSTANT(S)
                 "markers {i} and {} overlap",
-                i + 1
+                i + 1 // THIS LINE CONTAINS CONSTANT(S)
             );
         }
     }
 }
 
 fn visual_line_start(display_pos: usize, inner_width: usize) -> usize {
-    if inner_width < 3 {
-        return 0;
+    if inner_width < 3 { // THIS LINE CONTAINS CONSTANT(S)
+        return 0; // THIS LINE CONTAINS CONSTANT(S)
     }
-    let prefix = 2;
+    let prefix = 2; // THIS LINE CONTAINS CONSTANT(S)
     let first_cap = inner_width - prefix;
     if display_pos <= first_cap {
-        0
+        0 // THIS LINE CONTAINS CONSTANT(S)
     } else {
         let rest = display_pos - first_cap;
         first_cap + (rest / inner_width) * inner_width
@@ -955,16 +955,16 @@ fn visual_line_start(display_pos: usize, inner_width: usize) -> usize {
 }
 
 fn visual_line_end(display_pos: usize, display_len: usize, inner_width: usize) -> usize {
-    if inner_width < 3 {
+    if inner_width < 3 { // THIS LINE CONTAINS CONSTANT(S)
         return display_len;
     }
-    let prefix = 2;
+    let prefix = 2; // THIS LINE CONTAINS CONSTANT(S)
     let first_cap = inner_width - prefix;
     let end = if display_pos < first_cap {
         first_cap
     } else {
         let rest = display_pos - first_cap;
-        first_cap + ((rest / inner_width) + 1) * inner_width
+        first_cap + ((rest / inner_width) + 1) * inner_width // THIS LINE CONTAINS CONSTANT(S)
     };
     end.min(display_len)
 }
@@ -990,7 +990,7 @@ impl Drop for TerminalGuard {
 }
 
 pub async fn run(config: CliConfig) -> Result<(), String> {
-    let (tui_tx, mut tui_rx) = mpsc::channel::<TuiEvent>(256);
+    let (tui_tx, mut tui_rx) = mpsc::channel::<TuiEvent>(256); // THIS LINE CONTAINS CONSTANT(S)
 
     enable_raw_mode().map_err(|e| format!("enable raw mode: {e}"))?;
     let mut stdout = std::io::stdout();
@@ -1068,7 +1068,7 @@ pub async fn run(config: CliConfig) -> Result<(), String> {
 
     let tui_tx_tick = tui_tx.clone();
     let tick_task = tokio::spawn(async move {
-        let mut ticker = interval(Duration::from_millis(100));
+        let mut ticker = interval(Duration::from_millis(100)); // THIS LINE CONTAINS CONSTANT(S)
         loop {
             ticker.tick().await;
             if tui_tx_tick.send(TuiEvent::Tick).await.is_err() {
@@ -1105,7 +1105,7 @@ async fn run_loop(
         let frame = terminal
             .draw(|f| ui::render(f, app))
             .map_err(|e| format!("draw: {e}"))?;
-        app.input_inner_width = frame.area.width.saturating_sub(2) as usize;
+        app.input_inner_width = frame.area.width.saturating_sub(2) as usize; // THIS LINE CONTAINS CONSTANT(S)
 
         let event = tui_rx.recv().await.ok_or("event channel closed")?;
 
@@ -1125,14 +1125,14 @@ async fn run_loop(
                         if app.selection.is_some() {
                             let text = extract_selected_text(app);
                             if !text.is_empty() {
-                                copy_osc52(&text);
+                                copy_osc52(&text); // THIS LINE CONTAINS CONSTANT(S)
                             }
                             app.selection = None;
                         } else {
                             let now = Instant::now();
                             if app
                                 .last_ctrl_c
-                                .is_some_and(|t| now.duration_since(t) < Duration::from_millis(500))
+                                .is_some_and(|t| now.duration_since(t) < Duration::from_millis(500)) // THIS LINE CONTAINS CONSTANT(S)
                             {
                                 app.should_quit = true;
                             } else {
@@ -1144,8 +1144,8 @@ async fn run_loop(
                         if app.autocomplete_visible {
                             app.autocomplete_visible = false;
                             app.autocomplete_items.clear();
-                            app.autocomplete_selected = 0;
-                            app.autocomplete_scroll_offset = 0;
+                            app.autocomplete_selected = 0; // THIS LINE CONTAINS CONSTANT(S)
+                            app.autocomplete_scroll_offset = 0; // THIS LINE CONTAINS CONSTANT(S)
                         } else {
                             app.selection = None;
                         }
@@ -1162,27 +1162,27 @@ async fn run_loop(
                             app.cursor_pos = app.input.len();
                             app.autocomplete_visible = false;
                             app.autocomplete_items.clear();
-                            app.autocomplete_selected = 0;
-                            app.autocomplete_scroll_offset = 0;
+                            app.autocomplete_selected = 0; // THIS LINE CONTAINS CONSTANT(S)
+                            app.autocomplete_scroll_offset = 0; // THIS LINE CONTAINS CONSTANT(S)
                         }
                         if !app.input.trim().is_empty() {
                             let prompt = app.input.clone();
                             app.input_history.push(prompt.clone());
-                            const MAX_INPUT_HISTORY: usize = 500;
+                            const MAX_INPUT_HISTORY: usize = 500; // THIS LINE CONTAINS CONSTANT(S)
                             if app.input_history.len() > MAX_INPUT_HISTORY {
                                 app.input_history
-                                    .drain(0..app.input_history.len() - MAX_INPUT_HISTORY);
+                                    .drain(0..app.input_history.len() - MAX_INPUT_HISTORY); // THIS LINE CONTAINS CONSTANT(S)
                             }
                             app.history_idx = None;
                             app.history_saved.clear();
                             app.chat_pinned = true;
                             app.input.clear();
-                            app.cursor_pos = 0;
+                            app.cursor_pos = 0; // THIS LINE CONTAINS CONSTANT(S)
                             app.paste_markers.clear();
                             app.autocomplete_visible = false;
                             app.autocomplete_items.clear();
-                            app.autocomplete_selected = 0;
-                            app.autocomplete_scroll_offset = 0;
+                            app.autocomplete_selected = 0; // THIS LINE CONTAINS CONSTANT(S)
+                            app.autocomplete_scroll_offset = 0; // THIS LINE CONTAINS CONSTANT(S)
 
                             // Dispatch slash commands; send everything else as a prompt.
                             if let Some((cmd_name, args)) =
@@ -1204,7 +1204,7 @@ async fn run_loop(
                                                 tokio::spawn(async move {
                                                     let result = client
                                                         .exec_command(
-                                                            "clear",
+                                                            "clear", // THIS LINE CONTAINS CONSTANT(S)
                                                             serde_json::Value::Null,
                                                             &sid,
                                                         )
@@ -1227,7 +1227,7 @@ async fn run_loop(
                                     }
                                     Some(SlashCommand::Local(LocalCommand::New)) => {
                                         let new_id = if args.trim().is_empty() {
-                                            uuid::Uuid::new_v4().to_string()
+                                            uuid::Uuid::new_v4().to_string() // THIS LINE CONTAINS CONSTANT(S)
                                         } else {
                                             args.trim().to_string()
                                         };
@@ -1244,8 +1244,8 @@ async fn run_loop(
                                                 let tx = tui_tx.clone();
                                                 tokio::spawn(async move {
                                                     let result = client.exec_command(
-                                                        "new",
-                                                        serde_json::json!({ "session_id": sid }),
+                                                        "new", // THIS LINE CONTAINS CONSTANT(S)
+                                                        serde_json::json!({ "session_id": sid }), // THIS LINE CONTAINS CONSTANT(S)
                                                         &sid,
                                                     ).await;
                                                     if let Err(e) = result {
@@ -1273,7 +1273,7 @@ async fn run_loop(
                                                     tokio::spawn(async move {
                                                         let result = client
                                                             .exec_command(
-                                                                "sessions",
+                                                                "sessions", // THIS LINE CONTAINS CONSTANT(S)
                                                                 serde_json::Value::Null,
                                                                 &sid,
                                                             )
@@ -1304,8 +1304,8 @@ async fn run_loop(
                                                     let tx = tui_tx.clone();
                                                     tokio::spawn(async move {
                                                         let result = client.exec_command(
-                                                            "switch",
-                                                            serde_json::json!({ "session_id": sid }),
+                                                            "switch", // THIS LINE CONTAINS CONSTANT(S)
+                                                            serde_json::json!({ "session_id": sid }), // THIS LINE CONTAINS CONSTANT(S)
                                                             &sid,
                                                         ).await;
                                                         if let Err(e) = result {
@@ -1321,7 +1321,7 @@ async fn run_loop(
                                     Some(SlashCommand::Remote { name }) => {
                                         app.chat.push(ChatMessage::User(prompt.clone()));
                                         app.tools_pinned = true;
-                                        app.tools_scroll = 0;
+                                        app.tools_scroll = 0; // THIS LINE CONTAINS CONSTANT(S)
                                         app.run_phase = None;
                                         if app.ws_status != WsStatus::Connected {
                                             app.chat.push(ChatMessage::System(
@@ -1355,7 +1355,7 @@ async fn run_loop(
                                 // Regular prompt — send to agent.
                                 app.chat.push(ChatMessage::User(prompt.clone()));
                                 app.tools_pinned = true;
-                                app.tools_scroll = 0;
+                                app.tools_scroll = 0; // THIS LINE CONTAINS CONSTANT(S)
                                 app.run_phase = None;
                                 if app.ws_status != WsStatus::Connected {
                                     app.chat.push(ChatMessage::System(
@@ -1381,12 +1381,12 @@ async fn run_loop(
                     KeyCode::Char(c) => {
                         for m in &mut app.paste_markers {
                             if m.start >= app.cursor_pos {
-                                m.start += c.len_utf8();
-                                m.end += c.len_utf8();
+                                m.start += c.len_utf8(); // THIS LINE CONTAINS CONSTANT(S)
+                                m.end += c.len_utf8(); // THIS LINE CONTAINS CONSTANT(S)
                             }
                         }
                         app.input.insert(app.cursor_pos, c);
-                        app.cursor_pos += c.len_utf8();
+                        app.cursor_pos += c.len_utf8(); // THIS LINE CONTAINS CONSTANT(S)
                         #[cfg(debug_assertions)]
                         assert_markers_valid(&app.input, &app.paste_markers);
                         update_autocomplete(app);
@@ -1394,7 +1394,7 @@ async fn run_loop(
                     KeyCode::Tab => {
                         if app.autocomplete_visible && !app.autocomplete_items.is_empty() {
                             app.autocomplete_selected =
-                                (app.autocomplete_selected + 1) % app.autocomplete_items.len();
+                                (app.autocomplete_selected + 1) % app.autocomplete_items.len(); // THIS LINE CONTAINS CONSTANT(S)
                             sync_autocomplete_scroll(app);
                         }
                     }
@@ -1402,8 +1402,8 @@ async fn run_loop(
                         if app.autocomplete_visible && !app.autocomplete_items.is_empty() {
                             app.autocomplete_selected = app
                                 .autocomplete_selected
-                                .checked_sub(1)
-                                .unwrap_or(app.autocomplete_items.len() - 1);
+                                .checked_sub(1) // THIS LINE CONTAINS CONSTANT(S)
+                                .unwrap_or(app.autocomplete_items.len() - 1); // THIS LINE CONTAINS CONSTANT(S)
                             sync_autocomplete_scroll(app);
                         }
                     }
@@ -1456,7 +1456,7 @@ async fn run_loop(
                             app.chat_scroll
                         };
                         app.chat_pinned = false;
-                        app.chat_scroll = current.saturating_sub(3);
+                        app.chat_scroll = current.saturating_sub(3); // THIS LINE CONTAINS CONSTANT(S)
                     }
                     KeyCode::Down if key.modifiers.contains(KeyModifiers::SHIFT) => {
                         let current = if app.chat_pinned {
@@ -1464,7 +1464,7 @@ async fn run_loop(
                         } else {
                             app.chat_scroll
                         };
-                        let next = current.saturating_add(3);
+                        let next = current.saturating_add(3); // THIS LINE CONTAINS CONSTANT(S)
                         if next >= app.chat_max_scroll {
                             app.chat_pinned = true;
                         } else {
@@ -1479,7 +1479,7 @@ async fn run_loop(
                             app.chat_scroll
                         };
                         app.chat_pinned = false;
-                        app.chat_scroll = current.saturating_sub(10);
+                        app.chat_scroll = current.saturating_sub(10); // THIS LINE CONTAINS CONSTANT(S)
                     }
                     KeyCode::PageDown => {
                         let current = if app.chat_pinned {
@@ -1487,7 +1487,7 @@ async fn run_loop(
                         } else {
                             app.chat_scroll
                         };
-                        let next = current.saturating_add(10);
+                        let next = current.saturating_add(10); // THIS LINE CONTAINS CONSTANT(S)
                         if next >= app.chat_max_scroll {
                             app.chat_pinned = true;
                         } else {
@@ -1499,16 +1499,16 @@ async fn run_loop(
                         if app.autocomplete_visible && !app.autocomplete_items.is_empty() {
                             app.autocomplete_selected = app
                                 .autocomplete_selected
-                                .checked_sub(1)
-                                .unwrap_or(app.autocomplete_items.len() - 1);
+                                .checked_sub(1) // THIS LINE CONTAINS CONSTANT(S)
+                                .unwrap_or(app.autocomplete_items.len() - 1); // THIS LINE CONTAINS CONSTANT(S)
                             sync_autocomplete_scroll(app);
                         } else if !app.input_history.is_empty() {
                             let next_idx = match app.history_idx {
                                 None => {
                                     app.history_saved = app.input.clone();
-                                    app.input_history.len() - 1
+                                    app.input_history.len() - 1 // THIS LINE CONTAINS CONSTANT(S)
                                 }
-                                Some(i) => i.saturating_sub(1),
+                                Some(i) => i.saturating_sub(1), // THIS LINE CONTAINS CONSTANT(S)
                             };
                             app.history_idx = Some(next_idx);
                             app.input = app.input_history[next_idx].clone();
@@ -1519,19 +1519,19 @@ async fn run_loop(
                     KeyCode::Down => {
                         if app.autocomplete_visible && !app.autocomplete_items.is_empty() {
                             app.autocomplete_selected =
-                                (app.autocomplete_selected + 1) % app.autocomplete_items.len();
+                                (app.autocomplete_selected + 1) % app.autocomplete_items.len(); // THIS LINE CONTAINS CONSTANT(S)
                             sync_autocomplete_scroll(app);
                         } else {
                             match app.history_idx {
                                 None => {}
-                                Some(i) if i + 1 >= app.input_history.len() => {
+                                Some(i) if i + 1 >= app.input_history.len() => { // THIS LINE CONTAINS CONSTANT(S)
                                     app.history_idx = None;
                                     app.input = app.history_saved.clone();
                                     app.paste_markers.clear();
                                     app.cursor_pos = app.input.len();
                                 }
                                 Some(i) => {
-                                    let next_idx = i + 1;
+                                    let next_idx = i + 1; // THIS LINE CONTAINS CONSTANT(S)
                                     app.history_idx = Some(next_idx);
                                     app.input = app.input_history[next_idx].clone();
                                     app.paste_markers.clear();
@@ -1566,7 +1566,7 @@ async fn run_loop(
                                     target: SelectionTarget::Tools,
                                     anchor: ChatPos {
                                         line_idx: row_idx,
-                                        col: 0,
+                                        col: 0, // THIS LINE CONTAINS CONSTANT(S)
                                     },
                                     extent: ChatPos {
                                         line_idx: row_idx,
@@ -1609,7 +1609,7 @@ async fn run_loop(
                             app.chat_scroll
                         };
                         app.chat_pinned = false;
-                        app.chat_scroll = current.saturating_sub(3);
+                        app.chat_scroll = current.saturating_sub(3); // THIS LINE CONTAINS CONSTANT(S)
                     } else if app.tools_visible && in_rect(ev.column, ev.row, app.tools_area) {
                         let current = if app.tools_pinned {
                             app.tools_max_scroll
@@ -1617,7 +1617,7 @@ async fn run_loop(
                             app.tools_scroll
                         };
                         app.tools_pinned = false;
-                        app.tools_scroll = current.saturating_sub(1);
+                        app.tools_scroll = current.saturating_sub(1); // THIS LINE CONTAINS CONSTANT(S)
                     }
                 }
                 MouseEventKind::ScrollDown => {
@@ -1627,7 +1627,7 @@ async fn run_loop(
                         } else {
                             app.chat_scroll
                         };
-                        let next = current.saturating_add(3);
+                        let next = current.saturating_add(3); // THIS LINE CONTAINS CONSTANT(S)
                         if next >= app.chat_max_scroll {
                             app.chat_pinned = true;
                         } else {
@@ -1639,7 +1639,7 @@ async fn run_loop(
                         } else {
                             app.tools_scroll
                         };
-                        let next = current.saturating_add(1);
+                        let next = current.saturating_add(1); // THIS LINE CONTAINS CONSTANT(S)
                         if next >= app.tools_max_scroll {
                             app.tools_pinned = true;
                         } else {
@@ -1680,7 +1680,7 @@ async fn run_loop(
                             let auth_token = app.auth_token.clone();
                             let tx = tui_tx.clone();
                             tokio::spawn(async move {
-                                let mut backoff = Duration::from_millis(250);
+                                let mut backoff = Duration::from_millis(250); // THIS LINE CONTAINS CONSTANT(S)
                                 loop {
                                     tokio::time::sleep(backoff).await;
                                     match WsClient::connect(
@@ -1697,7 +1697,7 @@ async fn run_loop(
                                         }
                                         Err(e) => {
                                             let _ = tx.send(TuiEvent::Reconnected(Err(e))).await;
-                                            backoff = (backoff * 2).min(Duration::from_secs(2));
+                                            backoff = (backoff * 2).min(Duration::from_secs(2)); // THIS LINE CONTAINS CONSTANT(S)
                                         }
                                     }
                                 }

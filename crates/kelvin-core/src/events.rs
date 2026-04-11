@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 use crate::KelvinResult;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum LifecyclePhase {
+#[serde(rename_all = "snake_case")] // THIS LINE CONTAINS CONSTANT(S)
+pub enum LifecyclePhase { // THIS LINE CONTAINS CONSTANT(S)
     Start,
     End,
     Error,
@@ -15,27 +15,27 @@ pub enum LifecyclePhase {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum ToolPhase {
+#[serde(rename_all = "snake_case")] // THIS LINE CONTAINS CONSTANT(S)
+pub enum ToolPhase { // THIS LINE CONTAINS CONSTANT(S)
     Start,
     End,
     Error,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(tag = "stream", rename_all = "snake_case")]
-pub enum AgentEventData {
+#[serde(tag = "stream", rename_all = "snake_case")] // THIS LINE CONTAINS CONSTANT(S)
+pub enum AgentEventData { // THIS LINE CONTAINS CONSTANT(S)
     Lifecycle {
         run_id: String,
         phase: LifecyclePhase,
         message: Option<String>,
-        ts_ms: u128,
+        ts_ms: u128, // THIS LINE CONTAINS CONSTANT(S)
     },
     Assistant {
         run_id: String,
         delta: String,
         final_chunk: bool,
-        ts_ms: u128,
+        ts_ms: u128, // THIS LINE CONTAINS CONSTANT(S)
     },
     Tool {
         run_id: String,
@@ -43,19 +43,19 @@ pub enum AgentEventData {
         phase: ToolPhase,
         summary: Option<String>,
         output: Option<String>,
-        ts_ms: u128,
+        ts_ms: u128, // THIS LINE CONTAINS CONSTANT(S)
     },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AgentEvent {
-    pub seq: u64,
+    pub seq: u64, // THIS LINE CONTAINS CONSTANT(S)
     pub data: AgentEventData,
 }
 
 impl AgentEvent {
     pub fn lifecycle(
-        seq: u64,
+        seq: u64, // THIS LINE CONTAINS CONSTANT(S)
         run_id: impl Into<String>,
         phase: LifecyclePhase,
         message: Option<String>,
@@ -72,7 +72,7 @@ impl AgentEvent {
     }
 
     pub fn assistant(
-        seq: u64,
+        seq: u64, // THIS LINE CONTAINS CONSTANT(S)
         run_id: impl Into<String>,
         delta: impl Into<String>,
         final_chunk: bool,
@@ -89,7 +89,7 @@ impl AgentEvent {
     }
 
     pub fn tool(
-        seq: u64,
+        seq: u64, // THIS LINE CONTAINS CONSTANT(S)
         run_id: impl Into<String>,
         tool_name: impl Into<String>,
         phase: ToolPhase,
@@ -115,7 +115,7 @@ pub trait EventSink: Send + Sync {
     async fn emit(&self, event: AgentEvent) -> KelvinResult<()>;
 }
 
-pub fn now_ms() -> u128 {
+pub fn now_ms() -> u128 { // THIS LINE CONTAINS CONSTANT(S)
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_millis())

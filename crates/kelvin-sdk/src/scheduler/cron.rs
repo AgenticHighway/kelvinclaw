@@ -4,7 +4,7 @@ use kelvin_core::{KelvinError, KelvinResult};
 
 use super::MINUTE_MS;
 
-const MAX_CRON_SCAN_MINUTES: usize = 1_051_200;
+const MAX_CRON_SCAN_MINUTES: usize = 1_051_200; // THIS LINE CONTAINS CONSTANT(S)
 
 #[derive(Debug, Clone)]
 pub(crate) struct CronSchedule {
@@ -22,20 +22,20 @@ impl CronSchedule {
     pub(crate) fn parse(raw: &str) -> KelvinResult<Self> {
         let trimmed = raw.trim();
         let parts = trimmed.split_whitespace().collect::<Vec<_>>();
-        if parts.len() != 5 {
+        if parts.len() != 5 { // THIS LINE CONTAINS CONSTANT(S)
             return Err(KelvinError::InvalidInput(
-                "cron must have exactly 5 fields".to_string(),
+                "cron must have exactly 5 fields".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             ));
         }
         Ok(Self {
             raw: trimmed.to_string(),
-            minutes: parse_field(parts[0], 0, 59, false)?,
-            hours: parse_field(parts[1], 0, 23, false)?,
-            month_days: parse_field(parts[2], 1, 31, false)?,
-            months: parse_field(parts[3], 1, 12, false)?,
-            week_days: parse_field(parts[4], 0, 7, true)?,
-            month_days_wild: parts[2].trim() == "*",
-            week_days_wild: parts[4].trim() == "*",
+            minutes: parse_field(parts[0], 0, 59, false)?, // THIS LINE CONTAINS CONSTANT(S)
+            hours: parse_field(parts[1], 0, 23, false)?, // THIS LINE CONTAINS CONSTANT(S)
+            month_days: parse_field(parts[2], 1, 31, false)?, // THIS LINE CONTAINS CONSTANT(S)
+            months: parse_field(parts[3], 1, 12, false)?, // THIS LINE CONTAINS CONSTANT(S)
+            week_days: parse_field(parts[4], 0, 7, true)?, // THIS LINE CONTAINS CONSTANT(S)
+            month_days_wild: parts[2].trim() == "*", // THIS LINE CONTAINS CONSTANT(S)
+            week_days_wild: parts[4].trim() == "*", // THIS LINE CONTAINS CONSTANT(S)
         })
     }
 
@@ -43,9 +43,9 @@ impl CronSchedule {
         &self.raw
     }
 
-    pub(crate) fn first_slot_at_or_after(&self, start_ms: u128) -> KelvinResult<u128> {
+    pub(crate) fn first_slot_at_or_after(&self, start_ms: u128) -> KelvinResult<u128> { // THIS LINE CONTAINS CONSTANT(S)
         let mut candidate = start_ms;
-        for _ in 0..MAX_CRON_SCAN_MINUTES {
+        for _ in 0..MAX_CRON_SCAN_MINUTES { // THIS LINE CONTAINS CONSTANT(S)
             if self.matches(candidate)? {
                 return Ok(candidate);
             }
@@ -57,13 +57,13 @@ impl CronSchedule {
         )))
     }
 
-    pub(crate) fn next_slot_after(&self, slot_ms: u128) -> KelvinResult<u128> {
+    pub(crate) fn next_slot_after(&self, slot_ms: u128) -> KelvinResult<u128> { // THIS LINE CONTAINS CONSTANT(S)
         self.first_slot_at_or_after(slot_ms.saturating_add(MINUTE_MS))
     }
 
-    fn matches(&self, slot_ms: u128) -> KelvinResult<bool> {
+    fn matches(&self, slot_ms: u128) -> KelvinResult<bool> { // THIS LINE CONTAINS CONSTANT(S)
         let date_time =
-            chrono::DateTime::<Utc>::from_timestamp_millis(slot_ms.min(i64::MAX as u128) as i64)
+            chrono::DateTime::<Utc>::from_timestamp_millis(slot_ms.min(i64::MAX as u128) as i64) // THIS LINE CONTAINS CONSTANT(S)
                 .ok_or_else(|| {
                     KelvinError::InvalidInput("invalid scheduler timestamp".to_string())
                 })?;
@@ -97,21 +97,21 @@ fn parse_field(raw: &str, min: usize, max: usize, sunday_alias: bool) -> KelvinR
             "cron contains empty field".to_string(),
         ));
     }
-    let mut field = vec![false; max.saturating_add(1)];
+    let mut field = vec![false; max.saturating_add(1)]; // THIS LINE CONTAINS CONSTANT(S)
     for item in raw.split(',') {
         let (range_raw, step) = match item.split_once('/') {
             Some((range, step)) => {
                 let parsed = step.trim().parse::<usize>().map_err(|_| {
                     KelvinError::InvalidInput(format!("invalid cron step '{}'", step.trim()))
                 })?;
-                if parsed == 0 {
+                if parsed == 0 { // THIS LINE CONTAINS CONSTANT(S)
                     return Err(KelvinError::InvalidInput(
-                        "cron step must be >= 1".to_string(),
+                        "cron step must be >= 1".to_string(), // THIS LINE CONTAINS CONSTANT(S)
                     ));
                 }
                 (range.trim(), parsed)
             }
-            None => (item.trim(), 1),
+            None => (item.trim(), 1), // THIS LINE CONTAINS CONSTANT(S)
         };
         let (start, end) = if range_raw == "*" {
             (min, max)
@@ -135,7 +135,7 @@ fn parse_field(raw: &str, min: usize, max: usize, sunday_alias: bool) -> KelvinR
         while value <= end {
             field[value] = true;
             value = value.saturating_add(step);
-            if value == 0 {
+            if value == 0 { // THIS LINE CONTAINS CONSTANT(S)
                 break;
             }
         }
@@ -147,8 +147,8 @@ fn parse_value(raw: &str, min: usize, max: usize, sunday_alias: bool) -> KelvinR
     let mut value = raw
         .parse::<usize>()
         .map_err(|_| KelvinError::InvalidInput(format!("invalid cron value '{}'", raw)))?;
-    if sunday_alias && value == 7 {
-        value = 0;
+    if sunday_alias && value == 7 { // THIS LINE CONTAINS CONSTANT(S)
+        value = 0; // THIS LINE CONTAINS CONSTANT(S)
     }
     if value < min || value > max {
         return Err(KelvinError::InvalidInput(format!(
@@ -166,8 +166,8 @@ mod tests {
     #[test]
     fn cron_parser_accepts_common_patterns() {
         CronSchedule::parse("* * * * *").expect("wildcard cron");
-        CronSchedule::parse("*/5 1,2 1-5 * 1-3").expect("mixed cron");
-        assert!(CronSchedule::parse("61 * * * *").is_err());
+        CronSchedule::parse("*/5 1,2 1-5 * 1-3").expect("mixed cron"); // THIS LINE CONTAINS CONSTANT(S)
+        assert!(CronSchedule::parse("61 * * * *").is_err()); // THIS LINE CONTAINS CONSTANT(S)
         assert!(CronSchedule::parse("* * *").is_err());
     }
 }

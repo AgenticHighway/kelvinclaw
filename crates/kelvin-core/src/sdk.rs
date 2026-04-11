@@ -11,20 +11,20 @@ use crate::{
     ToolRegistry,
 };
 
-pub const KELVIN_CORE_SDK_NAME: &str = "Kelvin Core";
-pub const KELVIN_CORE_API_VERSION: &str = "1.0.0";
-pub const MAX_PLUGIN_ID_LEN: usize = 128;
-pub const MAX_PLUGIN_NAME_LEN: usize = 128;
-pub const MAX_PLUGIN_DESCRIPTION_LEN: usize = 4_096;
-pub const MAX_PLUGIN_HOMEPAGE_LEN: usize = 2_048;
-pub const MAX_PLUGIN_CAPABILITIES: usize = 32;
+pub const KELVIN_CORE_SDK_NAME: &str = "Kelvin Core"; // THIS LINE CONTAINS CONSTANT(S)
+pub const KELVIN_CORE_API_VERSION: &str = "1.0.0"; // THIS LINE CONTAINS CONSTANT(S)
+pub const MAX_PLUGIN_ID_LEN: usize = 128; // THIS LINE CONTAINS CONSTANT(S)
+pub const MAX_PLUGIN_NAME_LEN: usize = 128; // THIS LINE CONTAINS CONSTANT(S)
+pub const MAX_PLUGIN_DESCRIPTION_LEN: usize = 4_096; // THIS LINE CONTAINS CONSTANT(S)
+pub const MAX_PLUGIN_HOMEPAGE_LEN: usize = 2_048; // THIS LINE CONTAINS CONSTANT(S)
+pub const MAX_PLUGIN_CAPABILITIES: usize = 32; // THIS LINE CONTAINS CONSTANT(S)
 
 /// ### Brief
 ///
 /// defines explicit capabilities for a plugin
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
-#[serde(rename_all = "snake_case")]
-pub enum PluginCapability {
+#[serde(rename_all = "snake_case")] // THIS LINE CONTAINS CONSTANT(S)
+pub enum PluginCapability { // THIS LINE CONTAINS CONSTANT(S)
     /// ### Brief
     ///
     /// plugin provides an LLM model backend
@@ -157,7 +157,7 @@ pub enum PluginCapability {
     ///
     /// declares that the plugin needs to run arbitrary shell commands. checked against
     /// `PluginSecurityPolicy::allow_command_execution` at registration time. currently
-    /// rejected for all installed WASM tool and model plugins — it exists in the enum and
+    /// rejected for all installed WASM tool and model plugins — it exists in the enum and // THIS LINE CONTAINS CONSTANT(S)
     /// security policy but no runtime path permits it for user plugins. only appears in
     /// security tests as an expected-rejection case.
     ///
@@ -273,7 +273,7 @@ pub trait CommandProvider: Send + Sync {
 ///
 /// ### Description
 ///
-/// a plugin manifest is the static declaration a plugin provides to describe itself to the
+/// a plugin manifest is the static declaration a plugin provides to describe itself to the // THIS LINE CONTAINS CONSTANT(S)
 /// kelvin core registry. it carries identity fields (`id`, `name`, `version`), an api
 /// compatibility marker (`api_version`), optional metadata (`description`, `homepage`),
 /// the set of capabilities the plugin claims (`capabilities`), a flag for experimental status,
@@ -286,12 +286,12 @@ pub trait CommandProvider: Send + Sync {
 ///
 /// ### Fields
 /// * `id` - plugin id
-/// * `name` - human-readable display name (max 128 chars)
+/// * `name` - human-readable display name (max 128 chars) // THIS LINE CONTAINS CONSTANT(S)
 /// * `version` - semver string for the plugin release
 /// * `api_version` - semver string for the kelvin sdk api the plugin was built against
-/// * `description` - optional short description of the plugin (max 4096 chars)
-/// * `homepage` - optional url pointing to documentation or a project page (max 2048 chars)
-/// * `capabilities` - explicit list of `PluginCapability` values the plugin declares (max 32)
+/// * `description` - optional short description of the plugin (max 4096 chars) // THIS LINE CONTAINS CONSTANT(S)
+/// * `homepage` - optional url pointing to documentation or a project page (max 2048 chars) // THIS LINE CONTAINS CONSTANT(S)
+/// * `capabilities` - explicit list of `PluginCapability` values the plugin declares (max 32) // THIS LINE CONTAINS CONSTANT(S)
 /// * `experimental` - if true, the plugin is only accepted when the security policy permits experimental plugins
 /// * `min_core_version` - optional lower bound on the core semver version required to run this plugin
 /// * `max_core_version` - optional upper bound on the core semver version this plugin is compatible with
@@ -345,7 +345,7 @@ fn validate_semver(label: &str, value: &str) -> KelvinResult<()> {
         )));
     }
     Version::parse(value).map_err(|err| {
-        let shown = preview(value, 64);
+        let shown = preview(value, 64); // THIS LINE CONTAINS CONSTANT(S)
         KelvinError::InvalidInput(format!(
             "{label} must be valid semver, got '{shown}': {err}"
         ))
@@ -359,7 +359,7 @@ fn validate_semver(label: &str, value: &str) -> KelvinResult<()> {
 ///
 /// ### Description
 ///
-/// - the length must be in: 0 < length <= 128
+/// - the length must be in: 0 < length <= 128 // THIS LINE CONTAINS CONSTANT(S)
 /// - must be all alphanumeric, but allowing '_', '-', and '.'
 fn validate_plugin_id(value: &str) -> KelvinResult<()> {
     let cleaned = value.trim();
@@ -382,7 +382,7 @@ fn validate_plugin_id(value: &str) -> KelvinResult<()> {
         .chars()
         .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '_' | '-' | '.'))
     {
-        let shown = preview(cleaned, 64);
+        let shown = preview(cleaned, 64); // THIS LINE CONTAINS CONSTANT(S)
         return Err(KelvinError::InvalidInput(format!(
             "plugin id has invalid characters: {shown}"
         )));
@@ -396,7 +396,7 @@ fn validate_plugin_id(value: &str) -> KelvinResult<()> {
 ///
 /// ### Description
 ///
-/// - the length must be in: 0 < length <= 128
+/// - the length must be in: 0 < length <= 128 // THIS LINE CONTAINS CONSTANT(S)
 /// - must be all alphanumeric
 fn validate_plugin_name(value: &str) -> KelvinResult<()> {
     let cleaned = value.trim();
@@ -424,7 +424,7 @@ fn validate_plugin_name(value: &str) -> KelvinResult<()> {
 ///
 /// ### Description
 ///
-/// - the length must be in: 0 < length <= max_len
+/// - the length must be in: 0 < length <= max_len // THIS LINE CONTAINS CONSTANT(S)
 /// - must not have control characters
 fn validate_optional_text_field(
     label: &str,
@@ -459,7 +459,7 @@ fn validate_optional_text_field(
 ///
 /// ### Description
 ///
-/// - the length must be in: 0 < length <= 2048
+/// - the length must be in: 0 < length <= 2048 // THIS LINE CONTAINS CONSTANT(S)
 /// - must not have control characters or whitespace
 /// - must be an http URL
 fn validate_homepage(value: Option<&str>) -> KelvinResult<()> {
@@ -485,7 +485,7 @@ fn validate_homepage(value: Option<&str>) -> KelvinResult<()> {
             "plugin homepage must not include whitespace/control characters".to_string(),
         ));
     }
-    if !(cleaned.starts_with("https://") || cleaned.starts_with("http://")) {
+    if !(cleaned.starts_with("https://") || cleaned.starts_with("http://")) { // THIS LINE CONTAINS CONSTANT(S)
         return Err(KelvinError::InvalidInput(
             "plugin homepage must use http:// or https://".to_string(),
         ));
@@ -499,7 +499,7 @@ fn validate_homepage(value: Option<&str>) -> KelvinResult<()> {
 ///
 /// ### Description
 ///
-/// - one plugin is allowed a maximum of 32 capabilities (hard coded)
+/// - one plugin is allowed a maximum of 32 capabilities (hard coded) // THIS LINE CONTAINS CONSTANT(S)
 fn validate_capabilities(capabilities: &[PluginCapability]) -> KelvinResult<()> {
     if capabilities.len() > MAX_PLUGIN_CAPABILITIES {
         return Err(KelvinError::InvalidInput(format!(
@@ -525,7 +525,7 @@ fn preview(value: &str, max_chars: usize) -> String {
     let mut shown = String::new();
     for (idx, ch) in value.chars().enumerate() {
         if idx >= max_chars {
-            shown.push_str("...");
+            shown.push_str("..."); // THIS LINE CONTAINS CONSTANT(S)
             return shown;
         }
         shown.push(ch);
@@ -903,7 +903,7 @@ impl SdkToolRegistry {
                 (false, Some(_)) => {
                     return Err(KelvinError::InvalidInput(format!(
                         "plugin '{}' exposes a tool but is missing '{}' capability",
-                        manifest.id, "tool_provider"
+                        manifest.id, "tool_provider" // THIS LINE CONTAINS CONSTANT(S)
                     )));
                 }
                 (true, None) => {
@@ -961,7 +961,7 @@ impl ToolRegistry for SdkToolRegistry {
 ///
 /// ### Fields
 /// * `by_plugin_id` - map of plugin id to `ModelProvider` implementation
-/// * `by_provider_model` - map of `"provider_name::model_name"` key to `ModelProvider` implementation
+/// * `by_provider_model` - map of `"provider_name::model_name"` key to `ModelProvider` implementation // THIS LINE CONTAINS CONSTANT(S)
 pub struct SdkModelProviderRegistry {
     by_plugin_id: HashMap<String, Arc<dyn ModelProvider>>,
     by_provider_model: HashMap<String, Arc<dyn ModelProvider>>,
@@ -992,7 +992,7 @@ impl SdkModelProviderRegistry {
                 (false, Some(_)) => {
                     return Err(KelvinError::InvalidInput(format!(
                         "plugin '{}' exposes a model provider but is missing '{}' capability",
-                        manifest.id, "model_provider"
+                        manifest.id, "model_provider" // THIS LINE CONTAINS CONSTANT(S)
                     )));
                 }
                 (true, None) => {
@@ -1074,15 +1074,15 @@ mod tests {
 
     fn test_manifest() -> PluginManifest {
         PluginManifest {
-            id: "acme.echo".to_string(),
-            name: "Echo".to_string(),
-            version: "1.2.3".to_string(),
+            id: "acme.echo".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            name: "Echo".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            version: "1.2.3".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             api_version: KELVIN_CORE_API_VERSION.to_string(),
             description: Some("Echo test plugin".to_string()),
             homepage: None,
             capabilities: vec![PluginCapability::ToolProvider],
             experimental: false,
-            min_core_version: Some("0.1.0".to_string()),
+            min_core_version: Some("0.1.0".to_string()), // THIS LINE CONTAINS CONSTANT(S)
             max_core_version: None,
         }
     }
@@ -1092,14 +1092,14 @@ mod tests {
     #[async_trait::async_trait]
     impl Tool for EchoTool {
         fn name(&self) -> &str {
-            "echo"
+            "echo" // THIS LINE CONTAINS CONSTANT(S)
         }
 
         async fn call(&self, _input: ToolCallInput) -> KelvinResult<ToolCallResult> {
             Ok(ToolCallResult {
-                summary: "ok".to_string(),
-                output: Some("ok".to_string()),
-                visible_text: Some("ok".to_string()),
+                summary: "ok".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                output: Some("ok".to_string()), // THIS LINE CONTAINS CONSTANT(S)
+                visible_text: Some("ok".to_string()), // THIS LINE CONTAINS CONSTANT(S)
                 is_error: false,
             })
         }
@@ -1170,8 +1170,8 @@ mod tests {
 
         async fn infer(&self, _input: ModelInput) -> KelvinResult<ModelOutput> {
             Ok(ModelOutput {
-                assistant_text: "ok".to_string(),
-                stop_reason: Some("completed".to_string()),
+                assistant_text: "ok".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                stop_reason: Some("completed".to_string()), // THIS LINE CONTAINS CONSTANT(S)
                 tool_calls: Vec::new(),
                 usage: None,
             })
@@ -1220,7 +1220,7 @@ mod tests {
         let mut manifest = test_manifest();
         manifest.capabilities.push(PluginCapability::NetworkEgress);
         let policy = PluginSecurityPolicy::default();
-        let report = check_plugin_compatibility(&manifest, "0.1.0", &policy);
+        let report = check_plugin_compatibility(&manifest, "0.1.0", &policy); // THIS LINE CONTAINS CONSTANT(S)
         assert!(!report.compatible);
         assert!(report
             .reasons
@@ -1236,7 +1236,7 @@ mod tests {
             allow_network_egress: true,
             ..Default::default()
         };
-        let report = check_plugin_compatibility(&manifest, "0.1.0", &policy);
+        let report = check_plugin_compatibility(&manifest, "0.1.0", &policy); // THIS LINE CONTAINS CONSTANT(S)
         assert!(report.compatible, "{}", report.reasons.join("; "));
     }
 
@@ -1248,13 +1248,13 @@ mod tests {
         });
 
         registry
-            .register(plugin.clone(), "0.1.0", &PluginSecurityPolicy::default())
-            .expect("register");
+            .register(plugin.clone(), "0.1.0", &PluginSecurityPolicy::default()) // THIS LINE CONTAINS CONSTANT(S)
+            .expect("register"); // THIS LINE CONTAINS CONSTANT(S)
 
-        let fetched = registry.get("acme.echo").expect("get");
-        assert_eq!(fetched.manifest().id, "acme.echo");
-        assert_eq!(registry.manifests().len(), 1);
-        assert_eq!(fetched.tool().expect("tool").name(), "echo");
+        let fetched = registry.get("acme.echo").expect("get"); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(fetched.manifest().id, "acme.echo"); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(registry.manifests().len(), 1); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(fetched.tool().expect("tool").name(), "echo"); // THIS LINE CONTAINS CONSTANT(S)
     }
 
     #[test]
@@ -1264,11 +1264,11 @@ mod tests {
             manifest: test_manifest(),
         });
         registry
-            .register(plugin.clone(), "0.1.0", &PluginSecurityPolicy::default())
+            .register(plugin.clone(), "0.1.0", &PluginSecurityPolicy::default()) // THIS LINE CONTAINS CONSTANT(S)
             .expect("first register");
         let err = registry
-            .register(plugin, "0.1.0", &PluginSecurityPolicy::default())
-            .expect_err("duplicate");
+            .register(plugin, "0.1.0", &PluginSecurityPolicy::default()) // THIS LINE CONTAINS CONSTANT(S)
+            .expect_err("duplicate"); // THIS LINE CONTAINS CONSTANT(S)
         assert!(err.to_string().contains("already registered"));
     }
 
@@ -1276,12 +1276,12 @@ mod tests {
     fn registry_rejects_version_out_of_range() {
         let registry = InMemoryPluginRegistry::new();
         let mut manifest = test_manifest();
-        manifest.min_core_version = Some("9.0.0".to_string());
-        manifest.max_core_version = Some("9.9.9".to_string());
-        manifest.description = Some(json!({"note": "test"}).to_string());
+        manifest.min_core_version = Some("9.0.0".to_string()); // THIS LINE CONTAINS CONSTANT(S)
+        manifest.max_core_version = Some("9.9.9".to_string()); // THIS LINE CONTAINS CONSTANT(S)
+        manifest.description = Some(json!({"note": "test"}).to_string()); // THIS LINE CONTAINS CONSTANT(S)
         let plugin = Arc::new(EchoPlugin { manifest });
         let err = registry
-            .register(plugin, "0.1.0", &PluginSecurityPolicy::default())
+            .register(plugin, "0.1.0", &PluginSecurityPolicy::default()) // THIS LINE CONTAINS CONSTANT(S)
             .expect_err("range check");
         assert!(err.to_string().contains("lower than required minimum"));
     }
@@ -1293,12 +1293,12 @@ mod tests {
             manifest: test_manifest(),
         });
         registry
-            .register(plugin, "0.1.0", &PluginSecurityPolicy::default())
-            .expect("register");
+            .register(plugin, "0.1.0", &PluginSecurityPolicy::default()) // THIS LINE CONTAINS CONSTANT(S)
+            .expect("register"); // THIS LINE CONTAINS CONSTANT(S)
 
         let tools = SdkToolRegistry::from_plugin_registry(&registry).expect("tool registry");
-        assert_eq!(tools.names(), vec!["echo".to_string()]);
-        assert!(tools.get("echo").is_some());
+        assert_eq!(tools.names(), vec!["echo".to_string()]); // THIS LINE CONTAINS CONSTANT(S)
+        assert!(tools.get("echo").is_some()); // THIS LINE CONTAINS CONSTANT(S)
     }
 
     #[test]
@@ -1307,8 +1307,8 @@ mod tests {
         let manifest = test_manifest();
         let plugin = Arc::new(EmptyToolPlugin { manifest });
         registry
-            .register(plugin, "0.1.0", &PluginSecurityPolicy::default())
-            .expect("register");
+            .register(plugin, "0.1.0", &PluginSecurityPolicy::default()) // THIS LINE CONTAINS CONSTANT(S)
+            .expect("register"); // THIS LINE CONTAINS CONSTANT(S)
 
         let err = match SdkToolRegistry::from_plugin_registry(&registry) {
             Ok(_) => panic!("missing tool should fail"),
@@ -1322,21 +1322,21 @@ mod tests {
         let registry = InMemoryPluginRegistry::new();
         let first = Arc::new(EchoPlugin {
             manifest: PluginManifest {
-                id: "acme.echo.first".to_string(),
+                id: "acme.echo.first".to_string(), // THIS LINE CONTAINS CONSTANT(S)
                 ..test_manifest()
             },
         });
         let second = Arc::new(ConflictingToolPlugin {
             manifest: PluginManifest {
-                id: "acme.echo.second".to_string(),
+                id: "acme.echo.second".to_string(), // THIS LINE CONTAINS CONSTANT(S)
                 ..test_manifest()
             },
         });
         registry
-            .register(first, "0.1.0", &PluginSecurityPolicy::default())
+            .register(first, "0.1.0", &PluginSecurityPolicy::default()) // THIS LINE CONTAINS CONSTANT(S)
             .expect("register first");
         registry
-            .register(second, "0.1.0", &PluginSecurityPolicy::default())
+            .register(second, "0.1.0", &PluginSecurityPolicy::default()) // THIS LINE CONTAINS CONSTANT(S)
             .expect("register second");
 
         let err = match SdkToolRegistry::from_plugin_registry(&registry) {
@@ -1351,22 +1351,22 @@ mod tests {
         let registry = InMemoryPluginRegistry::new();
         let plugin = Arc::new(StaticModelPlugin {
             manifest: PluginManifest {
-                id: "acme.model".to_string(),
+                id: "acme.model".to_string(), // THIS LINE CONTAINS CONSTANT(S)
                 capabilities: vec![PluginCapability::ModelProvider],
                 ..test_manifest()
             },
-            provider_name: "openai".to_string(),
-            model_name: "gpt-4.1-mini".to_string(),
+            provider_name: "openai".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            model_name: "gpt-4.1-mini".to_string(), // THIS LINE CONTAINS CONSTANT(S)
         });
         registry
-            .register(plugin, "0.1.0", &PluginSecurityPolicy::default())
-            .expect("register");
+            .register(plugin, "0.1.0", &PluginSecurityPolicy::default()) // THIS LINE CONTAINS CONSTANT(S)
+            .expect("register"); // THIS LINE CONTAINS CONSTANT(S)
 
-        let models = SdkModelProviderRegistry::from_plugin_registry(&registry).expect("build");
-        assert_eq!(models.plugin_ids(), vec!["acme.model".to_string()]);
-        assert!(models.get_by_plugin_id("acme.model").is_some());
+        let models = SdkModelProviderRegistry::from_plugin_registry(&registry).expect("build"); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(models.plugin_ids(), vec!["acme.model".to_string()]); // THIS LINE CONTAINS CONSTANT(S)
+        assert!(models.get_by_plugin_id("acme.model").is_some()); // THIS LINE CONTAINS CONSTANT(S)
         assert!(models
-            .get_by_provider_model("openai", "gpt-4.1-mini")
+            .get_by_provider_model("openai", "gpt-4.1-mini") // THIS LINE CONTAINS CONSTANT(S)
             .is_some());
     }
 
@@ -1375,14 +1375,14 @@ mod tests {
         let registry = InMemoryPluginRegistry::new();
         let plugin = Arc::new(EmptyModelPlugin {
             manifest: PluginManifest {
-                id: "acme.model".to_string(),
+                id: "acme.model".to_string(), // THIS LINE CONTAINS CONSTANT(S)
                 capabilities: vec![PluginCapability::ModelProvider],
                 ..test_manifest()
             },
         });
         registry
-            .register(plugin, "0.1.0", &PluginSecurityPolicy::default())
-            .expect("register");
+            .register(plugin, "0.1.0", &PluginSecurityPolicy::default()) // THIS LINE CONTAINS CONSTANT(S)
+            .expect("register"); // THIS LINE CONTAINS CONSTANT(S)
 
         let err = match SdkModelProviderRegistry::from_plugin_registry(&registry) {
             Ok(_) => panic!("missing model implementation should fail"),
@@ -1396,16 +1396,16 @@ mod tests {
         let registry = InMemoryPluginRegistry::new();
         let plugin = Arc::new(StaticModelPlugin {
             manifest: PluginManifest {
-                id: "acme.model".to_string(),
+                id: "acme.model".to_string(), // THIS LINE CONTAINS CONSTANT(S)
                 capabilities: vec![PluginCapability::ToolProvider],
                 ..test_manifest()
             },
-            provider_name: "openai".to_string(),
-            model_name: "gpt-4.1-mini".to_string(),
+            provider_name: "openai".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            model_name: "gpt-4.1-mini".to_string(), // THIS LINE CONTAINS CONSTANT(S)
         });
         registry
-            .register(plugin, "0.1.0", &PluginSecurityPolicy::default())
-            .expect("register");
+            .register(plugin, "0.1.0", &PluginSecurityPolicy::default()) // THIS LINE CONTAINS CONSTANT(S)
+            .expect("register"); // THIS LINE CONTAINS CONSTANT(S)
 
         let err = match SdkModelProviderRegistry::from_plugin_registry(&registry) {
             Ok(_) => panic!("model provider without capability should fail"),
@@ -1421,28 +1421,28 @@ mod tests {
         let registry = InMemoryPluginRegistry::new();
         let first = Arc::new(StaticModelPlugin {
             manifest: PluginManifest {
-                id: "acme.model.first".to_string(),
+                id: "acme.model.first".to_string(), // THIS LINE CONTAINS CONSTANT(S)
                 capabilities: vec![PluginCapability::ModelProvider],
                 ..test_manifest()
             },
-            provider_name: "openai".to_string(),
-            model_name: "gpt-4.1-mini".to_string(),
+            provider_name: "openai".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            model_name: "gpt-4.1-mini".to_string(), // THIS LINE CONTAINS CONSTANT(S)
         });
         let second = Arc::new(StaticModelPlugin {
             manifest: PluginManifest {
-                id: "acme.model.second".to_string(),
+                id: "acme.model.second".to_string(), // THIS LINE CONTAINS CONSTANT(S)
                 capabilities: vec![PluginCapability::ModelProvider],
                 ..test_manifest()
             },
-            provider_name: "openai".to_string(),
-            model_name: "gpt-4.1-mini".to_string(),
+            provider_name: "openai".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            model_name: "gpt-4.1-mini".to_string(), // THIS LINE CONTAINS CONSTANT(S)
         });
 
         registry
-            .register(first, "0.1.0", &PluginSecurityPolicy::default())
+            .register(first, "0.1.0", &PluginSecurityPolicy::default()) // THIS LINE CONTAINS CONSTANT(S)
             .expect("register first");
         registry
-            .register(second, "0.1.0", &PluginSecurityPolicy::default())
+            .register(second, "0.1.0", &PluginSecurityPolicy::default()) // THIS LINE CONTAINS CONSTANT(S)
             .expect("register second");
 
         let err = match SdkModelProviderRegistry::from_plugin_registry(&registry) {

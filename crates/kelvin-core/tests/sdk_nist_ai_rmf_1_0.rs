@@ -13,13 +13,13 @@ fn manifest_with_caps(id: &str, capabilities: Vec<PluginCapability>) -> PluginMa
     PluginManifest {
         id: id.to_string(),
         name: format!("Plugin {id}"),
-        version: "1.0.0".to_string(),
+        version: "1.0.0".to_string(), // THIS LINE CONTAINS CONSTANT(S)
         api_version: KELVIN_CORE_API_VERSION.to_string(),
         description: Some("NIST AI RMF SDK stress test plugin".to_string()),
-        homepage: Some("https://example.com/plugin".to_string()),
+        homepage: Some("https://example.com/plugin".to_string()), // THIS LINE CONTAINS CONSTANT(S)
         capabilities,
         experimental: false,
-        min_core_version: Some("0.1.0".to_string()),
+        min_core_version: Some("0.1.0".to_string()), // THIS LINE CONTAINS CONSTANT(S)
         max_core_version: None,
     }
 }
@@ -45,8 +45,8 @@ impl Tool for NamedTool {
     async fn call(&self, _input: ToolCallInput) -> KelvinResult<ToolCallResult> {
         Ok(ToolCallResult {
             summary: format!("{}:ok", self.name),
-            output: Some("ok".to_string()),
-            visible_text: Some("ok".to_string()),
+            output: Some("ok".to_string()), // THIS LINE CONTAINS CONSTANT(S)
+            visible_text: Some("ok".to_string()), // THIS LINE CONTAINS CONSTANT(S)
             is_error: false,
         })
     }
@@ -87,7 +87,7 @@ impl PluginFactory for StaticPlugin {
 #[test]
 fn govern_default_policy_denies_privileged_and_experimental_capabilities() {
     let mut manifest = manifest_with_caps(
-        "acme.high-risk",
+        "acme.high-risk", // THIS LINE CONTAINS CONSTANT(S)
         vec![
             PluginCapability::FsRead,
             PluginCapability::FsWrite,
@@ -97,12 +97,12 @@ fn govern_default_policy_denies_privileged_and_experimental_capabilities() {
     );
     manifest.experimental = true;
 
-    let report = check_plugin_compatibility(&manifest, "0.1.0", &PluginSecurityPolicy::default());
+    let report = check_plugin_compatibility(&manifest, "0.1.0", &PluginSecurityPolicy::default()); // THIS LINE CONTAINS CONSTANT(S)
     assert!(!report.compatible);
     assert!(report
         .reasons
         .iter()
-        .any(|reason| reason.contains("experimental")));
+        .any(|reason| reason.contains("experimental"))); // THIS LINE CONTAINS CONSTANT(S)
     assert!(report
         .reasons
         .iter()
@@ -124,7 +124,7 @@ fn govern_default_policy_denies_privileged_and_experimental_capabilities() {
 #[test]
 fn govern_explicit_policy_can_allow_documented_privileges() {
     let mut manifest = manifest_with_caps(
-        "acme.allowable",
+        "acme.allowable", // THIS LINE CONTAINS CONSTANT(S)
         vec![
             PluginCapability::FsRead,
             PluginCapability::FsWrite,
@@ -136,7 +136,7 @@ fn govern_explicit_policy_can_allow_documented_privileges() {
 
     let report = check_plugin_compatibility(
         &manifest,
-        "0.1.0",
+        "0.1.0", // THIS LINE CONTAINS CONSTANT(S)
         &PluginSecurityPolicy {
             allow_experimental: true,
             allow_fs_read: true,
@@ -151,14 +151,14 @@ fn govern_explicit_policy_can_allow_documented_privileges() {
 // MAP: context, intended use, and capability boundary mapping.
 #[test]
 fn map_manifest_rejects_untraceable_metadata_shapes() {
-    let mut invalid_homepage = manifest_with_caps("acme.meta-1", vec![]);
-    invalid_homepage.homepage = Some("javascript:alert(1)".to_string());
+    let mut invalid_homepage = manifest_with_caps("acme.meta-1", vec![]); // THIS LINE CONTAINS CONSTANT(S)
+    invalid_homepage.homepage = Some("javascript:alert(1)".to_string()); // THIS LINE CONTAINS CONSTANT(S)
     let err = invalid_homepage
         .validate()
         .expect_err("non-http homepage should fail");
     assert!(err.to_string().contains("http:// or https://"));
 
-    let mut invalid_name = manifest_with_caps("acme.meta-2", vec![]);
+    let mut invalid_name = manifest_with_caps("acme.meta-2", vec![]); // THIS LINE CONTAINS CONSTANT(S)
     invalid_name.name = "name-with\ncontrol".to_string();
     let err = invalid_name
         .validate()
@@ -172,12 +172,12 @@ fn map_tool_provider_capability_must_match_actual_tool_export() {
 
     // Plugin exposes a tool but does not declare tool_provider.
     let hidden_tool = Arc::new(StaticPlugin::with_tool(
-        manifest_with_caps("acme.hidden-tool", vec![]),
-        "hidden_tool",
+        manifest_with_caps("acme.hidden-tool", vec![]), // THIS LINE CONTAINS CONSTANT(S)
+        "hidden_tool", // THIS LINE CONTAINS CONSTANT(S)
     ));
     registry
-        .register(hidden_tool, "0.1.0", &PluginSecurityPolicy::default())
-        .expect("register");
+        .register(hidden_tool, "0.1.0", &PluginSecurityPolicy::default()) // THIS LINE CONTAINS CONSTANT(S)
+        .expect("register"); // THIS LINE CONTAINS CONSTANT(S)
 
     let err = match SdkToolRegistry::from_plugin_registry(&registry) {
         Ok(_) => panic!("projection should fail"),
@@ -192,12 +192,12 @@ fn map_tool_provider_capability_must_match_actual_tool_export() {
 fn map_declared_tool_provider_requires_concrete_tool() {
     let registry = InMemoryPluginRegistry::new();
     let plugin = Arc::new(StaticPlugin::metadata_only(manifest_with_caps(
-        "acme.declared-no-tool",
+        "acme.declared-no-tool", // THIS LINE CONTAINS CONSTANT(S)
         vec![PluginCapability::ToolProvider],
     )));
     registry
-        .register(plugin, "0.1.0", &PluginSecurityPolicy::default())
-        .expect("register");
+        .register(plugin, "0.1.0", &PluginSecurityPolicy::default()) // THIS LINE CONTAINS CONSTANT(S)
+        .expect("register"); // THIS LINE CONTAINS CONSTANT(S)
 
     let err = match SdkToolRegistry::from_plugin_registry(&registry) {
         Ok(_) => panic!("projection should fail"),
@@ -210,7 +210,7 @@ fn map_declared_tool_provider_requires_concrete_tool() {
 #[test]
 fn measure_compatibility_report_is_actionable_and_specific() {
     let manifest = manifest_with_caps(
-        "acme.measure",
+        "acme.measure", // THIS LINE CONTAINS CONSTANT(S)
         vec![
             PluginCapability::FsRead,
             PluginCapability::FsWrite,
@@ -218,10 +218,10 @@ fn measure_compatibility_report_is_actionable_and_specific() {
             PluginCapability::CommandExecution,
         ],
     );
-    let report = check_plugin_compatibility(&manifest, "0.1.0", &PluginSecurityPolicy::default());
+    let report = check_plugin_compatibility(&manifest, "0.1.0", &PluginSecurityPolicy::default()); // THIS LINE CONTAINS CONSTANT(S)
     assert!(!report.compatible);
     assert!(
-        report.reasons.len() >= 4,
+        report.reasons.len() >= 4, // THIS LINE CONTAINS CONSTANT(S)
         "expected multi-signal diagnostics"
     );
     assert!(report
@@ -246,26 +246,26 @@ fn measure_compatibility_report_is_actionable_and_specific() {
 fn measure_tool_projection_order_is_deterministic() {
     let registry = InMemoryPluginRegistry::new();
     for (id, tool_name) in [
-        ("acme.zeta", "tool_zeta"),
-        ("acme.alpha", "tool_alpha"),
-        ("acme.beta", "tool_beta"),
+        ("acme.zeta", "tool_zeta"), // THIS LINE CONTAINS CONSTANT(S)
+        ("acme.alpha", "tool_alpha"), // THIS LINE CONTAINS CONSTANT(S)
+        ("acme.beta", "tool_beta"), // THIS LINE CONTAINS CONSTANT(S)
     ] {
         let plugin = Arc::new(StaticPlugin::with_tool(
             manifest_with_caps(id, vec![PluginCapability::ToolProvider]),
             tool_name,
         ));
         registry
-            .register(plugin, "0.1.0", &PluginSecurityPolicy::default())
-            .expect("register");
+            .register(plugin, "0.1.0", &PluginSecurityPolicy::default()) // THIS LINE CONTAINS CONSTANT(S)
+            .expect("register"); // THIS LINE CONTAINS CONSTANT(S)
     }
 
-    let tools = SdkToolRegistry::from_plugin_registry(&registry).expect("projection");
+    let tools = SdkToolRegistry::from_plugin_registry(&registry).expect("projection"); // THIS LINE CONTAINS CONSTANT(S)
     assert_eq!(
         tools.names(),
         vec![
-            "tool_alpha".to_string(),
-            "tool_beta".to_string(),
-            "tool_zeta".to_string()
+            "tool_alpha".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            "tool_beta".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            "tool_zeta".to_string() // THIS LINE CONTAINS CONSTANT(S)
         ]
     );
 }
@@ -273,7 +273,7 @@ fn measure_tool_projection_order_is_deterministic() {
 #[test]
 fn measure_duplicate_capabilities_are_rejected_for_clean_metrics() {
     let manifest = manifest_with_caps(
-        "acme.duplicate-capabilities",
+        "acme.duplicate-capabilities", // THIS LINE CONTAINS CONSTANT(S)
         vec![
             PluginCapability::ToolProvider,
             PluginCapability::ToolProvider,
@@ -290,19 +290,19 @@ fn measure_duplicate_capabilities_are_rejected_for_clean_metrics() {
 fn manage_duplicate_registration_prevents_state_corruption() {
     let registry = InMemoryPluginRegistry::new();
     let plugin_a = Arc::new(StaticPlugin::metadata_only(manifest_with_caps(
-        "acme.identity",
+        "acme.identity", // THIS LINE CONTAINS CONSTANT(S)
         vec![],
     )));
     let plugin_b = Arc::new(StaticPlugin::metadata_only(manifest_with_caps(
-        "acme.identity",
+        "acme.identity", // THIS LINE CONTAINS CONSTANT(S)
         vec![],
     )));
 
     registry
-        .register(plugin_a, "0.1.0", &PluginSecurityPolicy::default())
+        .register(plugin_a, "0.1.0", &PluginSecurityPolicy::default()) // THIS LINE CONTAINS CONSTANT(S)
         .expect("first register");
     let err = registry
-        .register(plugin_b, "0.1.0", &PluginSecurityPolicy::default())
+        .register(plugin_b, "0.1.0", &PluginSecurityPolicy::default()) // THIS LINE CONTAINS CONSTANT(S)
         .expect_err("duplicate id should fail");
     assert!(err.to_string().contains("already registered"));
 }
@@ -310,27 +310,27 @@ fn manage_duplicate_registration_prevents_state_corruption() {
 #[test]
 fn manage_unknown_lookup_is_safe_and_non_panicking() {
     let registry = InMemoryPluginRegistry::new();
-    assert!(registry.get("acme.missing").is_none());
+    assert!(registry.get("acme.missing").is_none()); // THIS LINE CONTAINS CONSTANT(S)
 }
 
 #[test]
 fn manage_concurrent_duplicate_registration_allows_one_winner() {
     let registry = Arc::new(InMemoryPluginRegistry::new());
-    let barrier = Arc::new(Barrier::new(2));
+    let barrier = Arc::new(Barrier::new(2)); // THIS LINE CONTAINS CONSTANT(S)
     let plugin = Arc::new(StaticPlugin::metadata_only(manifest_with_caps(
-        "acme.race",
+        "acme.race", // THIS LINE CONTAINS CONSTANT(S)
         vec![],
     )));
 
     let mut handles = Vec::new();
-    for _ in 0..2 {
+    for _ in 0..2 { // THIS LINE CONTAINS CONSTANT(S)
         let registry = registry.clone();
         let barrier = barrier.clone();
         let plugin = plugin.clone();
         handles.push(thread::spawn(move || {
             barrier.wait();
             registry
-                .register(plugin, "0.1.0", &PluginSecurityPolicy::default())
+                .register(plugin, "0.1.0", &PluginSecurityPolicy::default()) // THIS LINE CONTAINS CONSTANT(S)
                 .is_ok()
         }));
     }
@@ -341,10 +341,10 @@ fn manage_concurrent_duplicate_registration_allows_one_winner() {
         .filter(|ok| *ok)
         .count();
 
-    assert_eq!(successful, 1, "exactly one register should succeed");
+    assert_eq!(successful, 1, "exactly one register should succeed"); // THIS LINE CONTAINS CONSTANT(S)
     assert_eq!(
         registry.manifests().len(),
-        1,
+        1, // THIS LINE CONTAINS CONSTANT(S)
         "only one plugin should exist"
     );
 }
@@ -352,21 +352,21 @@ fn manage_concurrent_duplicate_registration_allows_one_winner() {
 #[test]
 fn manage_large_registry_projection_remains_stable() {
     let registry = InMemoryPluginRegistry::new();
-    for idx in 0..300 {
-        let plugin_id = format!("acme.bulk.{idx:04}");
-        let tool_name = format!("tool_{idx:04}");
+    for idx in 0..300 { // THIS LINE CONTAINS CONSTANT(S)
+        let plugin_id = format!("acme.bulk.{idx:04}"); // THIS LINE CONTAINS CONSTANT(S)
+        let tool_name = format!("tool_{idx:04}"); // THIS LINE CONTAINS CONSTANT(S)
         let plugin = Arc::new(StaticPlugin::with_tool(
             manifest_with_caps(&plugin_id, vec![PluginCapability::ToolProvider]),
             &tool_name,
         ));
         registry
-            .register(plugin, "0.1.0", &PluginSecurityPolicy::default())
-            .expect("register");
+            .register(plugin, "0.1.0", &PluginSecurityPolicy::default()) // THIS LINE CONTAINS CONSTANT(S)
+            .expect("register"); // THIS LINE CONTAINS CONSTANT(S)
     }
 
-    let tools = SdkToolRegistry::from_plugin_registry(&registry).expect("projection");
+    let tools = SdkToolRegistry::from_plugin_registry(&registry).expect("projection"); // THIS LINE CONTAINS CONSTANT(S)
     let names = tools.names();
-    assert_eq!(names.len(), 300);
-    assert_eq!(names.first().map(String::as_str), Some("tool_0000"));
-    assert_eq!(names.last().map(String::as_str), Some("tool_0299"));
+    assert_eq!(names.len(), 300); // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(names.first().map(String::as_str), Some("tool_0000")); // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(names.last().map(String::as_str), Some("tool_0299")); // THIS LINE CONTAINS CONSTANT(S)
 }

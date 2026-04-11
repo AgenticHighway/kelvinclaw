@@ -13,8 +13,8 @@ use crate::{
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum RunPhase {
+#[serde(rename_all = "snake_case")] // THIS LINE CONTAINS CONSTANT(S)
+pub enum RunPhase { // THIS LINE CONTAINS CONSTANT(S)
     Accepted,
     Running,
     Completed,
@@ -25,26 +25,26 @@ pub enum RunPhase {
 pub struct RunState {
     pub run_id: String,
     pub phase: RunPhase,
-    pub started_at_ms: u128,
-    pub ended_at_ms: Option<u128>,
+    pub started_at_ms: u128, // THIS LINE CONTAINS CONSTANT(S)
+    pub ended_at_ms: Option<u128>, // THIS LINE CONTAINS CONSTANT(S)
     pub error: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RunAccepted {
     pub run_id: String,
-    pub accepted_at_ms: u128,
+    pub accepted_at_ms: u128, // THIS LINE CONTAINS CONSTANT(S)
 }
 
 #[derive(Debug, Clone)]
-pub enum RunOutcome {
+pub enum RunOutcome { // THIS LINE CONTAINS CONSTANT(S)
     Completed(AgentRunResult),
     Failed(String),
     Timeout,
 }
 
 #[derive(Debug, Clone)]
-enum RunStatus {
+enum RunStatus { // THIS LINE CONTAINS CONSTANT(S)
     Accepted,
     Running,
     Completed(AgentRunResult),
@@ -54,14 +54,14 @@ enum RunStatus {
 #[derive(Debug)]
 struct RunRecord {
     run_id: String,
-    started_at_ms: u128,
-    ended_at_ms: Option<u128>,
+    started_at_ms: u128, // THIS LINE CONTAINS CONSTANT(S)
+    ended_at_ms: Option<u128>, // THIS LINE CONTAINS CONSTANT(S)
     status: RunStatus,
     notify: Arc<Notify>,
 }
 
 #[derive(Debug, Clone)]
-pub enum StoredRunResult {
+pub enum StoredRunResult { // THIS LINE CONTAINS CONSTANT(S)
     Completed(AgentRunResult),
     Failed(String),
 }
@@ -150,9 +150,9 @@ impl RunRegistry {
         Ok(())
     }
 
-    pub async fn wait(&self, run_id: &str, timeout_ms: u64) -> KelvinResult<AgentWaitResult> {
+    pub async fn wait(&self, run_id: &str, timeout_ms: u64) -> KelvinResult<AgentWaitResult> { // THIS LINE CONTAINS CONSTANT(S)
         let record = self.get_record(run_id).await?;
-        let timeout = Duration::from_millis(timeout_ms.max(1));
+        let timeout = Duration::from_millis(timeout_ms.max(1)); // THIS LINE CONTAINS CONSTANT(S)
 
         loop {
             let (started_at, status, ended_at, notify) = {
@@ -322,14 +322,14 @@ impl CoreRuntime {
         self.registry.state(run_id).await
     }
 
-    pub async fn wait(&self, run_id: &str, timeout_ms: u64) -> KelvinResult<AgentWaitResult> {
+    pub async fn wait(&self, run_id: &str, timeout_ms: u64) -> KelvinResult<AgentWaitResult> { // THIS LINE CONTAINS CONSTANT(S)
         self.registry.wait(run_id, timeout_ms).await
     }
 
     pub async fn wait_for_outcome(
         &self,
         run_id: &str,
-        timeout_ms: u64,
+        timeout_ms: u64, // THIS LINE CONTAINS CONSTANT(S)
     ) -> KelvinResult<RunOutcome> {
         let wait_result = self.wait(run_id, timeout_ms).await?;
         match wait_result.status {
@@ -365,7 +365,7 @@ mod tests {
     #[derive(Clone)]
     struct RecordingBrain {
         order: Arc<Mutex<Vec<String>>>,
-        delay_ms: u64,
+        delay_ms: u64, // THIS LINE CONTAINS CONSTANT(S)
     }
 
     #[async_trait]
@@ -379,16 +379,16 @@ mod tests {
             self.order.lock().await.push(format!("{}-end", req.run_id));
             Ok(AgentRunResult {
                 payloads: vec![AgentPayload {
-                    text: "ok".to_string(),
+                    text: "ok".to_string(), // THIS LINE CONTAINS CONSTANT(S)
                     is_error: false,
                 }],
                 meta: AgentRunMeta {
-                    duration_ms: self.delay_ms as u128,
-                    provider: "test".to_string(),
-                    model: "test".to_string(),
-                    stop_reason: Some("completed".to_string()),
+                    duration_ms: self.delay_ms as u128, // THIS LINE CONTAINS CONSTANT(S)
+                    provider: "test".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                    model: "test".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                    stop_reason: Some("completed".to_string()), // THIS LINE CONTAINS CONSTANT(S)
                     error: None,
-                    tool_iterations: 0,
+                    tool_iterations: 0, // THIS LINE CONTAINS CONSTANT(S)
                 },
             })
         }
@@ -407,16 +407,16 @@ mod tests {
             self.release.notified().await;
             Ok(AgentRunResult {
                 payloads: vec![AgentPayload {
-                    text: "released".to_string(),
+                    text: "released".to_string(), // THIS LINE CONTAINS CONSTANT(S)
                     is_error: false,
                 }],
                 meta: AgentRunMeta {
-                    duration_ms: 0,
-                    provider: "test".to_string(),
-                    model: "test".to_string(),
-                    stop_reason: Some("completed".to_string()),
+                    duration_ms: 0, // THIS LINE CONTAINS CONSTANT(S)
+                    provider: "test".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                    model: "test".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                    stop_reason: Some("completed".to_string()), // THIS LINE CONTAINS CONSTANT(S)
                     error: None,
-                    tool_iterations: 0,
+                    tool_iterations: 0, // THIS LINE CONTAINS CONSTANT(S)
                 },
             })
         }
@@ -437,8 +437,8 @@ mod tests {
             run_id: run_id.to_string(),
             session_id: session.to_string(),
             session_key: session.to_string(),
-            workspace_dir: ".".to_string(),
-            prompt: "hello".to_string(),
+            workspace_dir: ".".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            prompt: "hello".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             extra_system_prompt: None,
             timeout_ms: None,
             memory_query: None,
@@ -468,18 +468,18 @@ mod tests {
         }));
 
         runtime
-            .submit(build_request("run-phase", "session-phase"))
+            .submit(build_request("run-phase", "session-phase")) // THIS LINE CONTAINS CONSTANT(S)
             .await
-            .expect("submit");
+            .expect("submit"); // THIS LINE CONTAINS CONSTANT(S)
 
         entered.notified().await;
-        let running_state = runtime.state("run-phase").await.expect("running state");
+        let running_state = runtime.state("run-phase").await.expect("running state"); // THIS LINE CONTAINS CONSTANT(S)
         assert_eq!(running_state.phase, RunPhase::Running);
 
         release.notify_waiters();
-        let wait = runtime.wait("run-phase", 2_000).await.expect("wait");
+        let wait = runtime.wait("run-phase", 2_000).await.expect("wait"); // THIS LINE CONTAINS CONSTANT(S)
         assert_eq!(wait.status, WaitStatus::Ok);
-        let completed_state = runtime.state("run-phase").await.expect("completed state");
+        let completed_state = runtime.state("run-phase").await.expect("completed state"); // THIS LINE CONTAINS CONSTANT(S)
         assert_eq!(completed_state.phase, RunPhase::Completed);
     }
 
@@ -493,14 +493,14 @@ mod tests {
         }));
 
         runtime
-            .submit(build_request("run-timeout", "session-timeout"))
+            .submit(build_request("run-timeout", "session-timeout")) // THIS LINE CONTAINS CONSTANT(S)
             .await
-            .expect("submit");
+            .expect("submit"); // THIS LINE CONTAINS CONSTANT(S)
         entered.notified().await;
 
-        let wait = runtime.wait("run-timeout", 20).await.expect("wait timeout");
+        let wait = runtime.wait("run-timeout", 20).await.expect("wait timeout"); // THIS LINE CONTAINS CONSTANT(S)
         assert_eq!(wait.status, WaitStatus::Timeout);
-        let state = runtime.state("run-timeout").await.expect("state");
+        let state = runtime.state("run-timeout").await.expect("state"); // THIS LINE CONTAINS CONSTANT(S)
         assert_eq!(state.phase, RunPhase::Running);
 
         release.notify_waiters();
@@ -510,18 +510,18 @@ mod tests {
     async fn runtime_reports_failed_state_for_brain_errors() {
         let runtime = CoreRuntime::new(Arc::new(FailingBrain));
         runtime
-            .submit(build_request("run-fail", "session-fail"))
+            .submit(build_request("run-fail", "session-fail")) // THIS LINE CONTAINS CONSTANT(S)
             .await
-            .expect("submit");
+            .expect("submit"); // THIS LINE CONTAINS CONSTANT(S)
 
-        let wait = runtime.wait("run-fail", 2_000).await.expect("wait");
+        let wait = runtime.wait("run-fail", 2_000).await.expect("wait"); // THIS LINE CONTAINS CONSTANT(S)
         assert_eq!(wait.status, WaitStatus::Error);
         assert!(wait
             .error
             .as_deref()
             .unwrap_or_default()
             .contains("forced failure"));
-        let failed_state = runtime.state("run-fail").await.expect("state");
+        let failed_state = runtime.state("run-fail").await.expect("state"); // THIS LINE CONTAINS CONSTANT(S)
         assert_eq!(failed_state.phase, RunPhase::Failed);
     }
 
@@ -530,7 +530,7 @@ mod tests {
         let order = Arc::new(Mutex::new(Vec::new()));
         let brain = Arc::new(RecordingBrain {
             order: order.clone(),
-            delay_ms: 40,
+            delay_ms: 40, // THIS LINE CONTAINS CONSTANT(S)
         });
         let runtime = CoreRuntime::with_components(
             brain,
@@ -539,16 +539,16 @@ mod tests {
         );
 
         runtime
-            .submit(build_request("run-1", "session-a"))
+            .submit(build_request("run-1", "session-a")) // THIS LINE CONTAINS CONSTANT(S)
             .await
-            .expect("submit run-1");
+            .expect("submit run-1"); // THIS LINE CONTAINS CONSTANT(S)
         runtime
-            .submit(build_request("run-2", "session-a"))
+            .submit(build_request("run-2", "session-a")) // THIS LINE CONTAINS CONSTANT(S)
             .await
-            .expect("submit run-2");
+            .expect("submit run-2"); // THIS LINE CONTAINS CONSTANT(S)
 
-        let wait_one = runtime.wait("run-1", 2_000).await.expect("wait run-1");
-        let wait_two = runtime.wait("run-2", 2_000).await.expect("wait run-2");
+        let wait_one = runtime.wait("run-1", 2_000).await.expect("wait run-1"); // THIS LINE CONTAINS CONSTANT(S)
+        let wait_two = runtime.wait("run-2", 2_000).await.expect("wait run-2"); // THIS LINE CONTAINS CONSTANT(S)
 
         assert_eq!(wait_one.status, WaitStatus::Ok);
         assert_eq!(wait_two.status, WaitStatus::Ok);
@@ -557,10 +557,10 @@ mod tests {
         assert_eq!(
             observed,
             vec![
-                "run-1-start".to_string(),
-                "run-1-end".to_string(),
-                "run-2-start".to_string(),
-                "run-2-end".to_string(),
+                "run-1-start".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                "run-1-end".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                "run-2-start".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                "run-2-end".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             ]
         );
     }
@@ -569,39 +569,39 @@ mod tests {
     async fn wait_and_result_schema_is_stable() {
         let runtime = CoreRuntime::new(Arc::new(RecordingBrain {
             order: Arc::new(Mutex::new(Vec::new())),
-            delay_ms: 1,
+            delay_ms: 1, // THIS LINE CONTAINS CONSTANT(S)
         }));
         runtime
-            .submit(build_request("run-schema", "session-schema"))
+            .submit(build_request("run-schema", "session-schema")) // THIS LINE CONTAINS CONSTANT(S)
             .await
-            .expect("submit");
+            .expect("submit"); // THIS LINE CONTAINS CONSTANT(S)
 
-        let wait = runtime.wait("run-schema", 2_000).await.expect("wait");
+        let wait = runtime.wait("run-schema", 2_000).await.expect("wait"); // THIS LINE CONTAINS CONSTANT(S)
         assert_eq!(wait.status, WaitStatus::Ok);
         let wait_json = serde_json::to_value(wait).expect("wait json");
         assert_object_keys(
             &wait_json,
-            &["status", "started_at_ms", "ended_at_ms", "error"],
+            &["status", "started_at_ms", "ended_at_ms", "error"], // THIS LINE CONTAINS CONSTANT(S)
         );
 
         let outcome = runtime
-            .wait_for_outcome("run-schema", 2_000)
+            .wait_for_outcome("run-schema", 2_000) // THIS LINE CONTAINS CONSTANT(S)
             .await
             .expect("wait outcome");
         match outcome {
             RunOutcome::Completed(result) => {
                 let result_json = serde_json::to_value(result).expect("result json");
-                assert_object_keys(&result_json, &["payloads", "meta"]);
-                let meta = &result_json["meta"];
+                assert_object_keys(&result_json, &["payloads", "meta"]); // THIS LINE CONTAINS CONSTANT(S)
+                let meta = &result_json["meta"]; // THIS LINE CONTAINS CONSTANT(S)
                 assert_object_keys(
                     meta,
                     &[
-                        "duration_ms",
-                        "provider",
-                        "model",
-                        "stop_reason",
-                        "error",
-                        "tool_iterations",
+                        "duration_ms", // THIS LINE CONTAINS CONSTANT(S)
+                        "provider", // THIS LINE CONTAINS CONSTANT(S)
+                        "model", // THIS LINE CONTAINS CONSTANT(S)
+                        "stop_reason", // THIS LINE CONTAINS CONSTANT(S)
+                        "error", // THIS LINE CONTAINS CONSTANT(S)
+                        "tool_iterations", // THIS LINE CONTAINS CONSTANT(S)
                     ],
                 );
             }
@@ -613,9 +613,9 @@ mod tests {
     async fn duplicate_run_id_returns_typed_error() {
         let runtime = CoreRuntime::new(Arc::new(RecordingBrain {
             order: Arc::new(Mutex::new(Vec::new())),
-            delay_ms: 2,
+            delay_ms: 2, // THIS LINE CONTAINS CONSTANT(S)
         }));
-        let request = build_request("duplicate-run", "session-dup");
+        let request = build_request("duplicate-run", "session-dup"); // THIS LINE CONTAINS CONSTANT(S)
         runtime.submit(request.clone()).await.expect("first submit");
         let error = runtime.submit(request).await.expect_err("duplicate run id");
         assert!(matches!(error, KelvinError::InvalidInput(_)));

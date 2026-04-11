@@ -16,9 +16,9 @@ use kelvin_memory_module_sdk::{
 #[derive(Debug, Clone)]
 pub struct ModuleRuntimeConfig {
     pub max_module_bytes: usize,
-    pub max_memory_pages: u32,
-    pub default_fuel: u64,
-    pub default_timeout_ms: u64,
+    pub max_memory_pages: u32, // THIS LINE CONTAINS CONSTANT(S)
+    pub default_fuel: u64, // THIS LINE CONTAINS CONSTANT(S)
+    pub default_timeout_ms: u64, // THIS LINE CONTAINS CONSTANT(S)
 }
 
 #[derive(Default)]
@@ -35,7 +35,7 @@ pub struct LoadedMemoryModule {
 impl LoadedMemoryModule {
     pub fn new(
         manifest: MemoryModuleManifest,
-        wasm_bytes: &[u8],
+        wasm_bytes: &[u8], // THIS LINE CONTAINS CONSTANT(S)
         config: ModuleRuntimeConfig,
     ) -> KelvinResult<Self> {
         manifest
@@ -86,8 +86,8 @@ impl LoadedMemoryModule {
     pub async fn execute(
         &self,
         operation: ModuleOperation,
-        timeout_ms: Option<u64>,
-        fuel: Option<u64>,
+        timeout_ms: Option<u64>, // THIS LINE CONTAINS CONSTANT(S)
+        fuel: Option<u64>, // THIS LINE CONTAINS CONSTANT(S)
     ) -> KelvinResult<()> {
         let engine = self.engine.clone();
         let module = self.module.clone();
@@ -106,52 +106,52 @@ impl LoadedMemoryModule {
                 .func_wrap(
                     MEMORY_HOST_IMPORT_MODULE,
                     HOST_FN_KV_GET,
-                    |_caller: Caller<'_, HostState>, _handle: i32| -> i32 { -1 },
+                    |_caller: Caller<'_, HostState>, _handle: i32| -> i32 { -1 }, // THIS LINE CONTAINS CONSTANT(S)
                 )
                 .map_err(|err| KelvinError::Backend(format!("link kv_get failed: {err}")))?;
             linker
                 .func_wrap(
                     MEMORY_HOST_IMPORT_MODULE,
                     HOST_FN_KV_PUT,
-                    |_caller: Caller<'_, HostState>, _handle: i32| -> i32 { 0 },
+                    |_caller: Caller<'_, HostState>, _handle: i32| -> i32 { 0 }, // THIS LINE CONTAINS CONSTANT(S)
                 )
                 .map_err(|err| KelvinError::Backend(format!("link kv_put failed: {err}")))?;
             linker
                 .func_wrap(
                     MEMORY_HOST_IMPORT_MODULE,
                     HOST_FN_BLOB_GET,
-                    |_caller: Caller<'_, HostState>, _handle: i32| -> i32 { -1 },
+                    |_caller: Caller<'_, HostState>, _handle: i32| -> i32 { -1 }, // THIS LINE CONTAINS CONSTANT(S)
                 )
                 .map_err(|err| KelvinError::Backend(format!("link blob_get failed: {err}")))?;
             linker
                 .func_wrap(
                     MEMORY_HOST_IMPORT_MODULE,
                     HOST_FN_BLOB_PUT,
-                    |_caller: Caller<'_, HostState>, _handle: i32| -> i32 { 0 },
+                    |_caller: Caller<'_, HostState>, _handle: i32| -> i32 { 0 }, // THIS LINE CONTAINS CONSTANT(S)
                 )
                 .map_err(|err| KelvinError::Backend(format!("link blob_put failed: {err}")))?;
             linker
                 .func_wrap(
                     MEMORY_HOST_IMPORT_MODULE,
                     HOST_FN_EMIT_METRIC,
-                    |_caller: Caller<'_, HostState>, _handle: i32| -> i32 { 0 },
+                    |_caller: Caller<'_, HostState>, _handle: i32| -> i32 { 0 }, // THIS LINE CONTAINS CONSTANT(S)
                 )
                 .map_err(|err| KelvinError::Backend(format!("link emit_metric failed: {err}")))?;
             linker
                 .func_wrap(
                     MEMORY_HOST_IMPORT_MODULE,
                     HOST_FN_LOG,
-                    |_caller: Caller<'_, HostState>, _handle: i32| -> i32 { 0 },
+                    |_caller: Caller<'_, HostState>, _handle: i32| -> i32 { 0 }, // THIS LINE CONTAINS CONSTANT(S)
                 )
                 .map_err(|err| KelvinError::Backend(format!("link log failed: {err}")))?;
             linker
                 .func_wrap(
                     MEMORY_HOST_IMPORT_MODULE,
                     HOST_FN_CLOCK_NOW_MS,
-                    |_caller: Caller<'_, HostState>| -> i64 {
+                    |_caller: Caller<'_, HostState>| -> i64 { // THIS LINE CONTAINS CONSTANT(S)
                         SystemTime::now()
                             .duration_since(UNIX_EPOCH)
-                            .map(|value| value.as_millis() as i64)
+                            .map(|value| value.as_millis() as i64) // THIS LINE CONTAINS CONSTANT(S)
                             .unwrap_or_default()
                     },
                 )
@@ -161,15 +161,15 @@ impl LoadedMemoryModule {
                 .instantiate(&mut store, &module)
                 .map_err(|err| KelvinError::Backend(format!("instantiate failed: {err}")))?;
             let func = instance
-                .get_typed_func::<(), i32>(&mut store, &export_name)
+                .get_typed_func::<(), i32>(&mut store, &export_name) // THIS LINE CONTAINS CONSTANT(S)
                 .map_err(|err| KelvinError::Backend(format!("missing typed export: {err}")))?;
             let code = func
                 .call(&mut store, ())
                 .map_err(|err| KelvinError::Backend(format!("module execution trap: {err}")))?;
-            if code != 0 {
+            if code != 0 { // THIS LINE CONTAINS CONSTANT(S)
                 return Err(KelvinError::Backend(format!(
                     "module '{}' returned non-zero code {} for op '{}'",
-                    module.name().unwrap_or("unknown"),
+                    module.name().unwrap_or("unknown"), // THIS LINE CONTAINS CONSTANT(S)
                     code,
                     export_name
                 )));
@@ -190,21 +190,21 @@ impl LoadedMemoryModule {
     }
 }
 
-fn validate_memory_pages(bytes: &[u8], max_memory_pages: u32) -> KelvinResult<()> {
-    for payload in Parser::new(0).parse_all(bytes) {
+fn validate_memory_pages(bytes: &[u8], max_memory_pages: u32) -> KelvinResult<()> { // THIS LINE CONTAINS CONSTANT(S)
+    for payload in Parser::new(0).parse_all(bytes) { // THIS LINE CONTAINS CONSTANT(S)
         if let Payload::MemorySection(section) =
             payload.map_err(|err| KelvinError::InvalidInput(err.to_string()))?
         {
             for memory in section {
                 let memory = memory.map_err(|err| KelvinError::InvalidInput(err.to_string()))?;
-                if memory.initial > u64::from(max_memory_pages) {
+                if memory.initial > u64::from(max_memory_pages) { // THIS LINE CONTAINS CONSTANT(S)
                     return Err(KelvinError::InvalidInput(format!(
                         "module initial memory pages {} exceed limit {}",
                         memory.initial, max_memory_pages
                     )));
                 }
                 if let Some(maximum) = memory.maximum {
-                    if maximum > u64::from(max_memory_pages) {
+                    if maximum > u64::from(max_memory_pages) { // THIS LINE CONTAINS CONSTANT(S)
                         return Err(KelvinError::InvalidInput(format!(
                             "module max memory pages {} exceed limit {}",
                             maximum, max_memory_pages

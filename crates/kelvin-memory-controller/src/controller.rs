@@ -6,8 +6,8 @@ use tokio::sync::{Mutex, RwLock};
 use tonic::{Request, Response, Status};
 
 use kelvin_core::{KelvinError, KelvinResult};
-use kelvin_memory_api::v1alpha1::memory_service_server::MemoryService;
-use kelvin_memory_api::v1alpha1::{
+use kelvin_memory_api::v1alpha1::memory_service_server::MemoryService; // THIS LINE CONTAINS CONSTANT(S)
+use kelvin_memory_api::v1alpha1::{ // THIS LINE CONTAINS CONSTANT(S)
     DeleteRequest, DeleteResponse, HealthRequest, HealthResponse, QueryRequest, QueryResponse,
     ReadRequest, ReadResponse, RequestContext, UpsertRequest, UpsertResponse,
 };
@@ -41,7 +41,7 @@ impl ReplayCache {
 }
 
 #[derive(Clone)]
-enum CachedResponse {
+enum CachedResponse { // THIS LINE CONTAINS CONSTANT(S)
     Upsert(UpsertResponse),
     Query(QueryResponse),
     Read(ReadResponse),
@@ -82,7 +82,7 @@ impl MemoryController {
     pub async fn register_module_bytes(
         &self,
         manifest: MemoryModuleManifest,
-        wasm_bytes: &[u8],
+        wasm_bytes: &[u8], // THIS LINE CONTAINS CONSTANT(S)
     ) -> KelvinResult<()> {
         enforce_required_host_features(&manifest, &self.providers.available_features())?;
         let runtime_cfg = ModuleRuntimeConfig {
@@ -124,9 +124,9 @@ impl MemoryController {
                 "request_id must not be empty".to_string(),
             ));
         }
-        if context.request_id.len() > 256 {
+        if context.request_id.len() > 256 { // THIS LINE CONTAINS CONSTANT(S)
             return Err(KelvinError::InvalidInput(
-                "request_id exceeds 256 chars".to_string(),
+                "request_id exceeds 256 chars".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             ));
         }
         let claims = verify_delegation_token(
@@ -154,7 +154,7 @@ impl MemoryController {
             ));
         }
         let now = now_secs();
-        let replay_exp = if self.config.replay_window_secs == 0 {
+        let replay_exp = if self.config.replay_window_secs == 0 { // THIS LINE CONTAINS CONSTANT(S)
             claims.exp
         } else {
             claims
@@ -265,19 +265,19 @@ impl MemoryController {
         request_id: &str,
         allowed: bool,
         reason: &str,
-        started_at_ms: u128,
+        started_at_ms: u128, // THIS LINE CONTAINS CONSTANT(S)
     ) {
         let latency_ms = now_ms().saturating_sub(started_at_ms);
         let line = serde_json::json!({
-            "request_id": request_id,
-            "module_id": claims.module_id,
-            "tenant_id": claims.tenant_id,
-            "workspace_id": claims.workspace_id,
-            "session_id": claims.session_id,
-            "operation": operation.as_str(),
-            "allowed": allowed,
-            "reason": reason,
-            "latency_ms": latency_ms,
+            "request_id": request_id, // THIS LINE CONTAINS CONSTANT(S)
+            "module_id": claims.module_id, // THIS LINE CONTAINS CONSTANT(S)
+            "tenant_id": claims.tenant_id, // THIS LINE CONTAINS CONSTANT(S)
+            "workspace_id": claims.workspace_id, // THIS LINE CONTAINS CONSTANT(S)
+            "session_id": claims.session_id, // THIS LINE CONTAINS CONSTANT(S)
+            "operation": operation.as_str(), // THIS LINE CONTAINS CONSTANT(S)
+            "allowed": allowed, // THIS LINE CONTAINS CONSTANT(S)
+            "reason": reason, // THIS LINE CONTAINS CONSTANT(S)
+            "latency_ms": latency_ms, // THIS LINE CONTAINS CONSTANT(S)
         });
         println!("{line}");
     }
@@ -308,7 +308,7 @@ impl MemoryService for MemoryController {
                 &validated.claims,
                 &validated.request_id,
                 true,
-                "idempotency_cache_hit",
+                "idempotency_cache_hit", // THIS LINE CONTAINS CONSTANT(S)
                 started,
             );
             return Ok(Response::new(cached));
@@ -322,7 +322,7 @@ impl MemoryService for MemoryController {
                 &validated.claims,
                 &validated.request_id,
                 false,
-                "payload_too_large",
+                "payload_too_large", // THIS LINE CONTAINS CONSTANT(S)
                 started,
             );
             return Err(to_status(KelvinError::InvalidInput(format!(
@@ -337,7 +337,7 @@ impl MemoryService for MemoryController {
                 &validated.module_id,
                 ModuleOperation::Upsert,
                 &validated.claims,
-                "memory_crud",
+                "memory_crud", // THIS LINE CONTAINS CONSTANT(S)
             )
             .await?;
             let provider = self.providers.primary()?;
@@ -360,7 +360,7 @@ impl MemoryService for MemoryController {
                     &validated.claims,
                     &validated.request_id,
                     true,
-                    "ok",
+                    "ok", // THIS LINE CONTAINS CONSTANT(S)
                     started,
                 );
                 Ok(Response::new(response))
@@ -402,7 +402,7 @@ impl MemoryService for MemoryController {
                 &validated.claims,
                 &validated.request_id,
                 true,
-                "idempotency_cache_hit",
+                "idempotency_cache_hit", // THIS LINE CONTAINS CONSTANT(S)
                 started,
             );
             return Ok(Response::new(cached));
@@ -420,7 +420,7 @@ impl MemoryService for MemoryController {
                 &validated.module_id,
                 ModuleOperation::Query,
                 &validated.claims,
-                "memory_read",
+                "memory_read", // THIS LINE CONTAINS CONSTANT(S)
             )
             .await?;
             let provider = self.providers.primary()?;
@@ -446,7 +446,7 @@ impl MemoryService for MemoryController {
                     &validated.claims,
                     &validated.request_id,
                     true,
-                    "ok",
+                    "ok", // THIS LINE CONTAINS CONSTANT(S)
                     started,
                 );
                 Ok(Response::new(response))
@@ -485,7 +485,7 @@ impl MemoryService for MemoryController {
                 &validated.claims,
                 &validated.request_id,
                 true,
-                "idempotency_cache_hit",
+                "idempotency_cache_hit", // THIS LINE CONTAINS CONSTANT(S)
                 started,
             );
             return Ok(Response::new(cached));
@@ -496,7 +496,7 @@ impl MemoryService for MemoryController {
                 &validated.module_id,
                 ModuleOperation::Read,
                 &validated.claims,
-                "memory_read",
+                "memory_read", // THIS LINE CONTAINS CONSTANT(S)
             )
             .await?;
             let provider = self.providers.primary()?;
@@ -522,7 +522,7 @@ impl MemoryService for MemoryController {
                     &validated.claims,
                     &validated.request_id,
                     true,
-                    "ok",
+                    "ok", // THIS LINE CONTAINS CONSTANT(S)
                     started,
                 );
                 Ok(Response::new(response))
@@ -564,7 +564,7 @@ impl MemoryService for MemoryController {
                 &validated.claims,
                 &validated.request_id,
                 true,
-                "idempotency_cache_hit",
+                "idempotency_cache_hit", // THIS LINE CONTAINS CONSTANT(S)
                 started,
             );
             return Ok(Response::new(cached));
@@ -575,7 +575,7 @@ impl MemoryService for MemoryController {
                 &validated.module_id,
                 ModuleOperation::Delete,
                 &validated.claims,
-                "memory_crud",
+                "memory_crud", // THIS LINE CONTAINS CONSTANT(S)
             )
             .await?;
             let provider = self.providers.primary()?;
@@ -596,7 +596,7 @@ impl MemoryService for MemoryController {
                     &validated.claims,
                     &validated.request_id,
                     true,
-                    "ok",
+                    "ok", // THIS LINE CONTAINS CONSTANT(S)
                     started,
                 );
                 Ok(Response::new(response))
@@ -638,7 +638,7 @@ impl MemoryService for MemoryController {
                 &validated.claims,
                 &validated.request_id,
                 true,
-                "idempotency_cache_hit",
+                "idempotency_cache_hit", // THIS LINE CONTAINS CONSTANT(S)
                 started,
             );
             return Ok(Response::new(cached));
@@ -649,7 +649,7 @@ impl MemoryService for MemoryController {
                 &validated.module_id,
                 ModuleOperation::Health,
                 &validated.claims,
-                "memory_health",
+                "memory_health", // THIS LINE CONTAINS CONSTANT(S)
             )
             .await?;
             let provider = self.providers.primary()?;
@@ -675,7 +675,7 @@ impl MemoryService for MemoryController {
                     &validated.claims,
                     &validated.request_id,
                     true,
-                    "ok",
+                    "ok", // THIS LINE CONTAINS CONSTANT(S)
                     started,
                 );
                 Ok(Response::new(response))
@@ -714,21 +714,21 @@ fn enforce_required_host_features(
 fn validate_profile_compatibility(profile: ProviderProfile) -> KelvinResult<()> {
     match profile {
         ProviderProfile::Minimal => {
-            if cfg!(feature = "provider_vector_nvidia") {
+            if cfg!(feature = "provider_vector_nvidia") { // THIS LINE CONTAINS CONSTANT(S)
                 return Err(KelvinError::InvalidInput(
                     "profile_minimal must not include provider_vector_nvidia".to_string(),
                 ));
             }
         }
         ProviderProfile::IPhone => {
-            if cfg!(feature = "provider_vector_nvidia") {
+            if cfg!(feature = "provider_vector_nvidia") { // THIS LINE CONTAINS CONSTANT(S)
                 return Err(KelvinError::InvalidInput(
                     "profile_iphone must not include provider_vector_nvidia".to_string(),
                 ));
             }
         }
         ProviderProfile::LinuxGpu => {
-            if !cfg!(feature = "provider_vector_nvidia") {
+            if !cfg!(feature = "provider_vector_nvidia") { // THIS LINE CONTAINS CONSTANT(S)
                 return Err(KelvinError::InvalidInput(
                     "profile_linux_gpu requires provider_vector_nvidia".to_string(),
                 ));
@@ -748,7 +748,7 @@ fn to_status(err: KelvinError) -> Status {
     }
 }
 
-fn now_ms() -> u128 {
+fn now_ms() -> u128 { // THIS LINE CONTAINS CONSTANT(S)
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|value| value.as_millis())
@@ -769,8 +769,8 @@ mod tests {
     use jsonwebtoken::{EncodingKey, Header};
     use tonic::Request;
 
-    use kelvin_memory_api::v1alpha1::memory_service_server::MemoryService;
-    use kelvin_memory_api::v1alpha1::{
+    use kelvin_memory_api::v1alpha1::memory_service_server::MemoryService; // THIS LINE CONTAINS CONSTANT(S)
+    use kelvin_memory_api::v1alpha1::{ // THIS LINE CONTAINS CONSTANT(S)
         DeleteRequest, HealthRequest, QueryRequest, ReadRequest, RequestContext, UpsertRequest,
     };
     use kelvin_memory_api::{
@@ -781,97 +781,97 @@ mod tests {
     use crate::controller::{now_secs, MemoryController};
     use crate::provider::ProviderRegistry;
 
-    const TEST_PRIVATE_KEY_DER_B64: &str =
-        "MC4CAQAwBQYDK2VwBCIEIHCRmiDXsIoP30rbpS6V729OHS4HzRnpgTwSC9zqETba";
-    const TEST_PUBLIC_KEY_DER_B64: &str =
-        "MCowBQYDK2VwAyEAHOzip8DiPZOcMhc+e66Wzd1ifXEFAP8DEGUzJFg/DBc=";
+    const TEST_PRIVATE_KEY_DER_B64: &str = // THIS LINE CONTAINS CONSTANT(S)
+        "MC4CAQAwBQYDK2VwBCIEIHCRmiDXsIoP30rbpS6V729OHS4HzRnpgTwSC9zqETba"; // THIS LINE CONTAINS CONSTANT(S)
+    const TEST_PUBLIC_KEY_DER_B64: &str = // THIS LINE CONTAINS CONSTANT(S)
+        "MCowBQYDK2VwAyEAHOzip8DiPZOcMhc+e66Wzd1ifXEFAP8DEGUzJFg/DBc="; // THIS LINE CONTAINS CONSTANT(S)
 
     fn test_private_key_pem() -> String {
         format!(
             "-----{} PRIVATE KEY-----\n{}\n-----END PRIVATE KEY-----\n",
-            "BEGIN", TEST_PRIVATE_KEY_DER_B64
+            "BEGIN", TEST_PRIVATE_KEY_DER_B64 // THIS LINE CONTAINS CONSTANT(S)
         )
     }
 
     fn test_public_key_pem() -> String {
         format!(
             "-----{} PUBLIC KEY-----\n{}\n-----END PUBLIC KEY-----\n",
-            "BEGIN", TEST_PUBLIC_KEY_DER_B64
+            "BEGIN", TEST_PUBLIC_KEY_DER_B64 // THIS LINE CONTAINS CONSTANT(S)
         )
     }
 
     fn sample_manifest(required_host_features: Vec<String>) -> MemoryModuleManifest {
         MemoryModuleManifest {
-            module_id: "memory.echo".to_string(),
-            version: "0.1.0".to_string(),
-            api_version: "0.1.0".to_string(),
+            module_id: "memory.echo".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            version: "0.1.0".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            api_version: "0.1.0".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             capabilities: vec![
-                "memory_crud".to_string(),
-                "memory_read".to_string(),
-                "memory_health".to_string(),
+                "memory_crud".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                "memory_read".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                "memory_health".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             ],
             required_host_features,
-            entrypoint: "memory_echo.wasm".to_string(),
-            publisher: "acme".to_string(),
-            signature: "test-signature".to_string(),
+            entrypoint: "memory_echo.wasm".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            publisher: "acme".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            signature: "test-signature".to_string(), // THIS LINE CONTAINS CONSTANT(S)
         }
     }
 
-    fn sample_wasm() -> Vec<u8> {
+    fn sample_wasm() -> Vec<u8> { // THIS LINE CONTAINS CONSTANT(S)
         wat::parse_str(
             r#"
             (module
-              (import "memory_host" "kv_get" (func $kv_get (param i32) (result i32)))
-              (import "memory_host" "kv_put" (func $kv_put (param i32) (result i32)))
-              (import "memory_host" "blob_get" (func $blob_get (param i32) (result i32)))
-              (import "memory_host" "blob_put" (func $blob_put (param i32) (result i32)))
-              (import "memory_host" "emit_metric" (func $emit_metric (param i32) (result i32)))
-              (import "memory_host" "log" (func $log (param i32) (result i32)))
-              (import "memory_host" "clock_now_ms" (func $clock (result i64)))
-              (func (export "handle_upsert") (result i32)
-                i32.const 1
+              (import "memory_host" "kv_get" (func $kv_get (param i32) (result i32))) // THIS LINE CONTAINS CONSTANT(S)
+              (import "memory_host" "kv_put" (func $kv_put (param i32) (result i32))) // THIS LINE CONTAINS CONSTANT(S)
+              (import "memory_host" "blob_get" (func $blob_get (param i32) (result i32))) // THIS LINE CONTAINS CONSTANT(S)
+              (import "memory_host" "blob_put" (func $blob_put (param i32) (result i32))) // THIS LINE CONTAINS CONSTANT(S)
+              (import "memory_host" "emit_metric" (func $emit_metric (param i32) (result i32))) // THIS LINE CONTAINS CONSTANT(S)
+              (import "memory_host" "log" (func $log (param i32) (result i32))) // THIS LINE CONTAINS CONSTANT(S)
+              (import "memory_host" "clock_now_ms" (func $clock (result i64))) // THIS LINE CONTAINS CONSTANT(S)
+              (func (export "handle_upsert") (result i32) // THIS LINE CONTAINS CONSTANT(S)
+                i32.const 1 // THIS LINE CONTAINS CONSTANT(S)
                 call $kv_put
                 drop
-                i32.const 0
+                i32.const 0 // THIS LINE CONTAINS CONSTANT(S)
               )
-              (func (export "handle_query") (result i32)
-                i32.const 1
+              (func (export "handle_query") (result i32) // THIS LINE CONTAINS CONSTANT(S)
+                i32.const 1 // THIS LINE CONTAINS CONSTANT(S)
                 call $kv_get
                 drop
-                i32.const 0
+                i32.const 0 // THIS LINE CONTAINS CONSTANT(S)
               )
-              (func (export "handle_read") (result i32)
+              (func (export "handle_read") (result i32) // THIS LINE CONTAINS CONSTANT(S)
                 call $clock
                 drop
-                i32.const 0
+                i32.const 0 // THIS LINE CONTAINS CONSTANT(S)
               )
-              (func (export "handle_delete") (result i32) i32.const 0)
-              (func (export "handle_health") (result i32) i32.const 0)
+              (func (export "handle_delete") (result i32) i32.const 0) // THIS LINE CONTAINS CONSTANT(S)
+              (func (export "handle_health") (result i32) i32.const 0) // THIS LINE CONTAINS CONSTANT(S)
             )
             "#,
         )
         .expect("compile wat")
     }
 
-    fn busy_loop_wasm() -> Vec<u8> {
+    fn busy_loop_wasm() -> Vec<u8> { // THIS LINE CONTAINS CONSTANT(S)
         wat::parse_str(
             r#"
             (module
-              (import "memory_host" "kv_get" (func $kv_get (param i32) (result i32)))
-              (import "memory_host" "kv_put" (func $kv_put (param i32) (result i32)))
-              (import "memory_host" "blob_get" (func $blob_get (param i32) (result i32)))
-              (import "memory_host" "blob_put" (func $blob_put (param i32) (result i32)))
-              (import "memory_host" "emit_metric" (func $emit_metric (param i32) (result i32)))
-              (import "memory_host" "log" (func $log (param i32) (result i32)))
-              (import "memory_host" "clock_now_ms" (func $clock (result i64)))
-              (func (export "handle_upsert") (result i32)
+              (import "memory_host" "kv_get" (func $kv_get (param i32) (result i32))) // THIS LINE CONTAINS CONSTANT(S)
+              (import "memory_host" "kv_put" (func $kv_put (param i32) (result i32))) // THIS LINE CONTAINS CONSTANT(S)
+              (import "memory_host" "blob_get" (func $blob_get (param i32) (result i32))) // THIS LINE CONTAINS CONSTANT(S)
+              (import "memory_host" "blob_put" (func $blob_put (param i32) (result i32))) // THIS LINE CONTAINS CONSTANT(S)
+              (import "memory_host" "emit_metric" (func $emit_metric (param i32) (result i32))) // THIS LINE CONTAINS CONSTANT(S)
+              (import "memory_host" "log" (func $log (param i32) (result i32))) // THIS LINE CONTAINS CONSTANT(S)
+              (import "memory_host" "clock_now_ms" (func $clock (result i64))) // THIS LINE CONTAINS CONSTANT(S)
+              (func (export "handle_upsert") (result i32) // THIS LINE CONTAINS CONSTANT(S)
                 (loop $spin br $spin)
-                i32.const 0
+                i32.const 0 // THIS LINE CONTAINS CONSTANT(S)
               )
-              (func (export "handle_query") (result i32) i32.const 0)
-              (func (export "handle_read") (result i32) i32.const 0)
-              (func (export "handle_delete") (result i32) i32.const 0)
-              (func (export "handle_health") (result i32) i32.const 0)
+              (func (export "handle_query") (result i32) i32.const 0) // THIS LINE CONTAINS CONSTANT(S)
+              (func (export "handle_read") (result i32) i32.const 0) // THIS LINE CONTAINS CONSTANT(S)
+              (func (export "handle_delete") (result i32) i32.const 0) // THIS LINE CONTAINS CONSTANT(S)
+              (func (export "handle_health") (result i32) i32.const 0) // THIS LINE CONTAINS CONSTANT(S)
             )
             "#,
         )
@@ -883,9 +883,9 @@ mod tests {
             jti,
             operation,
             vec![
-                "memory_crud".to_string(),
-                "memory_read".to_string(),
-                "memory_health".to_string(),
+                "memory_crud".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                "memory_read".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                "memory_health".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             ],
         )
     }
@@ -896,22 +896,22 @@ mod tests {
         allowed_capabilities: Vec<String>,
     ) -> DelegationClaims {
         DelegationClaims {
-            iss: "kelvin-root".to_string(),
-            sub: "run-1".to_string(),
-            aud: "kelvin-memory-controller".to_string(),
+            iss: "kelvin-root".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            sub: "run-1".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            aud: "kelvin-memory-controller".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             jti: jti.to_string(),
-            exp: 4_102_444_800,
-            nbf: 1_700_000_000,
-            tenant_id: "tenant-a".to_string(),
-            workspace_id: "workspace-a".to_string(),
-            session_id: "session-a".to_string(),
-            module_id: "memory.echo".to_string(),
+            exp: 4_102_444_800, // THIS LINE CONTAINS CONSTANT(S)
+            nbf: 1_700_000_000, // THIS LINE CONTAINS CONSTANT(S)
+            tenant_id: "tenant-a".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            workspace_id: "workspace-a".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            session_id: "session-a".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            module_id: "memory.echo".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             allowed_ops: vec![operation.as_str().to_string()],
             allowed_capabilities,
             request_limits: RequestLimits {
-                timeout_ms: 300,
-                max_bytes: 1024,
-                max_results: 5,
+                timeout_ms: 300, // THIS LINE CONTAINS CONSTANT(S)
+                max_bytes: 1024, // THIS LINE CONTAINS CONSTANT(S)
+                max_results: 5, // THIS LINE CONTAINS CONSTANT(S)
             },
         }
     }
@@ -919,30 +919,30 @@ mod tests {
     fn mint_context(jti: &str, request_id: &str, operation: MemoryOperation) -> RequestContext {
         let claims = claims(jti, operation);
         let private_key = test_private_key_pem();
-        let key = EncodingKey::from_ed_pem(private_key.as_bytes()).expect("encoding");
+        let key = EncodingKey::from_ed_pem(private_key.as_bytes()).expect("encoding"); // THIS LINE CONTAINS CONSTANT(S)
         let token =
             jsonwebtoken::encode(&Header::new(JWT_ALGORITHM), &claims, &key).expect("encode token");
         RequestContext {
             delegation_token: token,
             request_id: request_id.to_string(),
-            tenant_id: "tenant-a".to_string(),
-            workspace_id: "workspace-a".to_string(),
-            session_id: "session-a".to_string(),
-            module_id: "memory.echo".to_string(),
+            tenant_id: "tenant-a".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            workspace_id: "workspace-a".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            session_id: "session-a".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            module_id: "memory.echo".to_string(), // THIS LINE CONTAINS CONSTANT(S)
         }
     }
 
-    async fn controller_with_module(wasm: Vec<u8>) -> Arc<MemoryController> {
+    async fn controller_with_module(wasm: Vec<u8>) -> Arc<MemoryController> { // THIS LINE CONTAINS CONSTANT(S)
         let mut config = MemoryControllerConfig::default();
         config.decoding_key_pem = test_public_key_pem();
-        config.default_timeout_ms = 150;
-        config.default_fuel = 5_000;
+        config.default_timeout_ms = 150; // THIS LINE CONTAINS CONSTANT(S)
+        config.default_fuel = 5_000; // THIS LINE CONTAINS CONSTANT(S)
         let controller = Arc::new(
             MemoryController::new(config, ProviderRegistry::with_default_in_memory())
-                .expect("controller"),
+                .expect("controller"), // THIS LINE CONTAINS CONSTANT(S)
         );
         controller
-            .register_module_bytes(sample_manifest(vec!["provider_sqlite".to_string()]), &wasm)
+            .register_module_bytes(sample_manifest(vec!["provider_sqlite".to_string()]), &wasm) // THIS LINE CONTAINS CONSTANT(S)
             .await
             .expect("register module");
         controller
@@ -955,50 +955,50 @@ mod tests {
         let upsert = controller
             .upsert(Request::new(UpsertRequest {
                 context: Some(mint_context(
-                    "jti-upsert-1",
-                    "req-1",
+                    "jti-upsert-1", // THIS LINE CONTAINS CONSTANT(S)
+                    "req-1", // THIS LINE CONTAINS CONSTANT(S)
                     MemoryOperation::Upsert,
                 )),
-                key: "MEMORY.md".to_string(),
-                value: b"router on vlan10".to_vec(),
+                key: "MEMORY.md".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                value: b"router on vlan10".to_vec(), // THIS LINE CONTAINS CONSTANT(S)
                 metadata: Default::default(),
             }))
             .await
-            .expect("upsert")
+            .expect("upsert") // THIS LINE CONTAINS CONSTANT(S)
             .into_inner();
         assert!(upsert.stored);
 
         let query = controller
             .query(Request::new(QueryRequest {
-                context: Some(mint_context("jti-query-1", "req-2", MemoryOperation::Query)),
-                query: "router".to_string(),
-                max_results: 5,
+                context: Some(mint_context("jti-query-1", "req-2", MemoryOperation::Query)), // THIS LINE CONTAINS CONSTANT(S)
+                query: "router".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                max_results: 5, // THIS LINE CONTAINS CONSTANT(S)
             }))
             .await
-            .expect("query")
+            .expect("query") // THIS LINE CONTAINS CONSTANT(S)
             .into_inner();
-        assert_eq!(query.hits.len(), 1);
+        assert_eq!(query.hits.len(), 1); // THIS LINE CONTAINS CONSTANT(S)
 
         let read = controller
             .read(Request::new(ReadRequest {
-                context: Some(mint_context("jti-read-1", "req-3", MemoryOperation::Read)),
-                key: "MEMORY.md".to_string(),
+                context: Some(mint_context("jti-read-1", "req-3", MemoryOperation::Read)), // THIS LINE CONTAINS CONSTANT(S)
+                key: "MEMORY.md".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             }))
             .await
-            .expect("read")
+            .expect("read") // THIS LINE CONTAINS CONSTANT(S)
             .into_inner();
         assert!(read.found);
 
         let health = controller
             .health(Request::new(HealthRequest {
                 context: Some(mint_context(
-                    "jti-health-1",
-                    "req-4",
+                    "jti-health-1", // THIS LINE CONTAINS CONSTANT(S)
+                    "req-4", // THIS LINE CONTAINS CONSTANT(S)
                     MemoryOperation::Health,
                 )),
             }))
             .await
-            .expect("health")
+            .expect("health") // THIS LINE CONTAINS CONSTANT(S)
             .into_inner();
         assert!(health.ok);
     }
@@ -1008,12 +1008,12 @@ mod tests {
         let controller = controller_with_module(sample_wasm()).await;
         let request = UpsertRequest {
             context: Some(mint_context(
-                "jti-replay",
-                "req-replay-1",
+                "jti-replay", // THIS LINE CONTAINS CONSTANT(S)
+                "req-replay-1", // THIS LINE CONTAINS CONSTANT(S)
                 MemoryOperation::Upsert,
             )),
-            key: "a".to_string(),
-            value: b"b".to_vec(),
+            key: "a".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            value: b"b".to_vec(), // THIS LINE CONTAINS CONSTANT(S)
             metadata: Default::default(),
         };
 
@@ -1025,7 +1025,7 @@ mod tests {
         assert!(second.is_err());
         assert!(second
             .err()
-            .expect("status")
+            .expect("status") // THIS LINE CONTAINS CONSTANT(S)
             .message()
             .contains("replayed delegation token"));
     }
@@ -1033,12 +1033,12 @@ mod tests {
     #[tokio::test]
     async fn rejects_context_claim_mismatch() {
         let controller = controller_with_module(sample_wasm()).await;
-        let mut context = mint_context("jti-mismatch", "req-ctx-mismatch", MemoryOperation::Read);
-        context.workspace_id = "workspace-bad".to_string();
+        let mut context = mint_context("jti-mismatch", "req-ctx-mismatch", MemoryOperation::Read); // THIS LINE CONTAINS CONSTANT(S)
+        context.workspace_id = "workspace-bad".to_string(); // THIS LINE CONTAINS CONSTANT(S)
         let result = controller
             .read(Request::new(ReadRequest {
                 context: Some(context),
-                key: "a".to_string(),
+                key: "a".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             }))
             .await;
         assert!(result.is_err());
@@ -1050,17 +1050,17 @@ mod tests {
         let result = controller
             .delete(Request::new(DeleteRequest {
                 context: Some(mint_context(
-                    "jti-op-denied",
-                    "req-op-denied",
+                    "jti-op-denied", // THIS LINE CONTAINS CONSTANT(S)
+                    "req-op-denied", // THIS LINE CONTAINS CONSTANT(S)
                     MemoryOperation::Read,
                 )),
-                key: "a".to_string(),
+                key: "a".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             }))
             .await;
         assert!(result.is_err());
         assert!(result
             .err()
-            .expect("status")
+            .expect("status") // THIS LINE CONTAINS CONSTANT(S)
             .message()
             .contains("does not allow operation"));
     }
@@ -1070,9 +1070,9 @@ mod tests {
         let controller = controller_with_module(sample_wasm()).await;
         let result = controller
             .upsert(Request::new(UpsertRequest {
-                context: Some(mint_context("jti-big", "req-big", MemoryOperation::Upsert)),
-                key: "big".to_string(),
-                value: vec![1_u8; 2048],
+                context: Some(mint_context("jti-big", "req-big", MemoryOperation::Upsert)), // THIS LINE CONTAINS CONSTANT(S)
+                key: "big".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                value: vec![1_u8; 2048], // THIS LINE CONTAINS CONSTANT(S)
                 metadata: Default::default(),
             }))
             .await;
@@ -1086,32 +1086,32 @@ mod tests {
         let first = controller
             .upsert(Request::new(UpsertRequest {
                 context: Some(mint_context(
-                    "jti-cache-1",
-                    "req-cache",
+                    "jti-cache-1", // THIS LINE CONTAINS CONSTANT(S)
+                    "req-cache", // THIS LINE CONTAINS CONSTANT(S)
                     MemoryOperation::Upsert,
                 )),
-                key: "k".to_string(),
-                value: b"v".to_vec(),
+                key: "k".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                value: b"v".to_vec(), // THIS LINE CONTAINS CONSTANT(S)
                 metadata: Default::default(),
             }))
             .await
-            .expect("first")
+            .expect("first") // THIS LINE CONTAINS CONSTANT(S)
             .into_inner();
         assert!(first.stored);
 
         let second = controller
             .upsert(Request::new(UpsertRequest {
                 context: Some(mint_context(
-                    "jti-cache-2",
-                    "req-cache",
+                    "jti-cache-2", // THIS LINE CONTAINS CONSTANT(S)
+                    "req-cache", // THIS LINE CONTAINS CONSTANT(S)
                     MemoryOperation::Upsert,
                 )),
-                key: "k".to_string(),
-                value: b"v".to_vec(),
+                key: "k".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                value: b"v".to_vec(), // THIS LINE CONTAINS CONSTANT(S)
                 metadata: Default::default(),
             }))
             .await
-            .expect("second")
+            .expect("second") // THIS LINE CONTAINS CONSTANT(S)
             .into_inner();
         assert!(second.stored);
     }
@@ -1122,18 +1122,18 @@ mod tests {
         let result = controller
             .upsert(Request::new(UpsertRequest {
                 context: Some(mint_context(
-                    "jti-timeout",
-                    "req-timeout",
+                    "jti-timeout", // THIS LINE CONTAINS CONSTANT(S)
+                    "req-timeout", // THIS LINE CONTAINS CONSTANT(S)
                     MemoryOperation::Upsert,
                 )),
-                key: "k".to_string(),
-                value: b"v".to_vec(),
+                key: "k".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                value: b"v".to_vec(), // THIS LINE CONTAINS CONSTANT(S)
                 metadata: Default::default(),
             }))
             .await;
         assert!(result.is_err());
-        let msg = result.err().expect("status").message().to_string();
-        assert!(msg.contains("timed out") || msg.contains("trap") || msg.contains("fuel"));
+        let msg = result.err().expect("status").message().to_string(); // THIS LINE CONTAINS CONSTANT(S)
+        assert!(msg.contains("timed out") || msg.contains("trap") || msg.contains("fuel")); // THIS LINE CONTAINS CONSTANT(S)
     }
 
     #[tokio::test]
@@ -1141,11 +1141,11 @@ mod tests {
         let mut config = MemoryControllerConfig::default();
         config.decoding_key_pem = test_public_key_pem();
         let controller = MemoryController::new(config, ProviderRegistry::with_default_in_memory())
-            .expect("controller");
+            .expect("controller"); // THIS LINE CONTAINS CONSTANT(S)
 
         let err = controller
             .register_module_bytes(
-                sample_manifest(vec!["provider_vector_nvidia".to_string()]),
+                sample_manifest(vec!["provider_vector_nvidia".to_string()]), // THIS LINE CONTAINS CONSTANT(S)
                 &sample_wasm(),
             )
             .await
@@ -1159,30 +1159,30 @@ mod tests {
     async fn token_with_wrong_audience_is_rejected() {
         let controller = controller_with_module(sample_wasm()).await;
         let bad_claims = DelegationClaims {
-            aud: "wrong-audience".to_string(),
-            ..claims("jti-wrong-aud", MemoryOperation::Read)
+            aud: "wrong-audience".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            ..claims("jti-wrong-aud", MemoryOperation::Read) // THIS LINE CONTAINS CONSTANT(S)
         };
         let private_key = test_private_key_pem();
-        let key = EncodingKey::from_ed_pem(private_key.as_bytes()).expect("encoding");
+        let key = EncodingKey::from_ed_pem(private_key.as_bytes()).expect("encoding"); // THIS LINE CONTAINS CONSTANT(S)
         let token =
-            jsonwebtoken::encode(&Header::new(JWT_ALGORITHM), &bad_claims, &key).expect("token");
+            jsonwebtoken::encode(&Header::new(JWT_ALGORITHM), &bad_claims, &key).expect("token"); // THIS LINE CONTAINS CONSTANT(S)
         let result = controller
             .read(Request::new(ReadRequest {
                 context: Some(RequestContext {
                     delegation_token: token,
-                    request_id: "req-aud".to_string(),
-                    tenant_id: "tenant-a".to_string(),
-                    workspace_id: "workspace-a".to_string(),
-                    session_id: "session-a".to_string(),
-                    module_id: "memory.echo".to_string(),
+                    request_id: "req-aud".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                    tenant_id: "tenant-a".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                    workspace_id: "workspace-a".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                    session_id: "session-a".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                    module_id: "memory.echo".to_string(), // THIS LINE CONTAINS CONSTANT(S)
                 }),
-                key: "k".to_string(),
+                key: "k".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             }))
             .await;
         assert!(result.is_err());
     }
 
-    #[cfg(not(feature = "provider_vector_nvidia"))]
+    #[cfg(not(feature = "provider_vector_nvidia"))] // THIS LINE CONTAINS CONSTANT(S)
     #[test]
     fn profile_config_validation_rejects_mismatched_build() {
         let mut cfg = MemoryControllerConfig::default();
@@ -1192,7 +1192,7 @@ mod tests {
         assert!(result.is_err());
         assert!(result
             .err()
-            .expect("error")
+            .expect("error") // THIS LINE CONTAINS CONSTANT(S)
             .to_string()
             .contains("requires provider_vector_nvidia"));
     }
@@ -1202,25 +1202,25 @@ mod tests {
         let controller = controller_with_module(sample_wasm()).await;
         let now = now_secs();
         let expired = DelegationClaims {
-            exp: now.saturating_sub(120),
-            nbf: now.saturating_sub(180),
-            ..claims("jti-expired", MemoryOperation::Read)
+            exp: now.saturating_sub(120), // THIS LINE CONTAINS CONSTANT(S)
+            nbf: now.saturating_sub(180), // THIS LINE CONTAINS CONSTANT(S)
+            ..claims("jti-expired", MemoryOperation::Read) // THIS LINE CONTAINS CONSTANT(S)
         };
         let private_key = test_private_key_pem();
-        let key = EncodingKey::from_ed_pem(private_key.as_bytes()).expect("encoding");
+        let key = EncodingKey::from_ed_pem(private_key.as_bytes()).expect("encoding"); // THIS LINE CONTAINS CONSTANT(S)
         let token =
-            jsonwebtoken::encode(&Header::new(JWT_ALGORITHM), &expired, &key).expect("token");
+            jsonwebtoken::encode(&Header::new(JWT_ALGORITHM), &expired, &key).expect("token"); // THIS LINE CONTAINS CONSTANT(S)
         let result = controller
             .read(Request::new(ReadRequest {
                 context: Some(RequestContext {
                     delegation_token: token,
-                    request_id: "req-expired".to_string(),
-                    tenant_id: "tenant-a".to_string(),
-                    workspace_id: "workspace-a".to_string(),
-                    session_id: "session-a".to_string(),
-                    module_id: "memory.echo".to_string(),
+                    request_id: "req-expired".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                    tenant_id: "tenant-a".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                    workspace_id: "workspace-a".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                    session_id: "session-a".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                    module_id: "memory.echo".to_string(), // THIS LINE CONTAINS CONSTANT(S)
                 }),
-                key: "k".to_string(),
+                key: "k".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             }))
             .await;
         assert!(result.is_err());
@@ -1230,31 +1230,31 @@ mod tests {
     async fn denied_capability_is_rejected() {
         let controller = controller_with_module(sample_wasm()).await;
         let restricted = claims_with_caps(
-            "jti-no-read-cap",
+            "jti-no-read-cap", // THIS LINE CONTAINS CONSTANT(S)
             MemoryOperation::Read,
-            vec!["memory_crud".to_string()],
+            vec!["memory_crud".to_string()], // THIS LINE CONTAINS CONSTANT(S)
         );
         let private_key = test_private_key_pem();
-        let key = EncodingKey::from_ed_pem(private_key.as_bytes()).expect("encoding");
+        let key = EncodingKey::from_ed_pem(private_key.as_bytes()).expect("encoding"); // THIS LINE CONTAINS CONSTANT(S)
         let token =
-            jsonwebtoken::encode(&Header::new(JWT_ALGORITHM), &restricted, &key).expect("token");
+            jsonwebtoken::encode(&Header::new(JWT_ALGORITHM), &restricted, &key).expect("token"); // THIS LINE CONTAINS CONSTANT(S)
         let result = controller
             .read(Request::new(ReadRequest {
                 context: Some(RequestContext {
                     delegation_token: token,
-                    request_id: "req-no-read-cap".to_string(),
-                    tenant_id: "tenant-a".to_string(),
-                    workspace_id: "workspace-a".to_string(),
-                    session_id: "session-a".to_string(),
-                    module_id: "memory.echo".to_string(),
+                    request_id: "req-no-read-cap".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                    tenant_id: "tenant-a".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                    workspace_id: "workspace-a".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                    session_id: "session-a".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                    module_id: "memory.echo".to_string(), // THIS LINE CONTAINS CONSTANT(S)
                 }),
-                key: "k".to_string(),
+                key: "k".to_string(), // THIS LINE CONTAINS CONSTANT(S)
             }))
             .await;
         assert!(result.is_err());
         assert!(result
             .err()
-            .expect("status")
+            .expect("status") // THIS LINE CONTAINS CONSTANT(S)
             .message()
             .contains("missing capability"));
     }
@@ -1265,18 +1265,18 @@ mod tests {
         let result = controller
             .query(Request::new(QueryRequest {
                 context: Some(mint_context(
-                    "jti-too-many-results",
-                    "req-too-many-results",
+                    "jti-too-many-results", // THIS LINE CONTAINS CONSTANT(S)
+                    "req-too-many-results", // THIS LINE CONTAINS CONSTANT(S)
                     MemoryOperation::Query,
                 )),
-                query: "router".to_string(),
-                max_results: 999,
+                query: "router".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                max_results: 999, // THIS LINE CONTAINS CONSTANT(S)
             }))
             .await;
         assert!(result.is_err());
         assert!(result
             .err()
-            .expect("status")
+            .expect("status") // THIS LINE CONTAINS CONSTANT(S)
             .message()
             .contains("exceeds limit"));
     }

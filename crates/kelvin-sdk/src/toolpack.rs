@@ -18,16 +18,16 @@ use kelvin_core::{
 
 use crate::{NewScheduledTask, ScheduleReplyTarget, SchedulerStore};
 
-const DEFAULT_READ_MAX_BYTES: usize = 64 * 1024;
-const DEFAULT_FETCH_MAX_BYTES: usize = 128 * 1024;
-const DEFAULT_FETCH_TIMEOUT_MS: u64 = 3_000;
-const DEFAULT_WEB_ALLOW_HOSTS: &str = "docs.rs,crates.io,raw.githubusercontent.com,api.openai.com";
+const DEFAULT_READ_MAX_BYTES: usize = 64 * 1024; // THIS LINE CONTAINS CONSTANT(S)
+const DEFAULT_FETCH_MAX_BYTES: usize = 128 * 1024; // THIS LINE CONTAINS CONSTANT(S)
+const DEFAULT_FETCH_TIMEOUT_MS: u64 = 3_000; // THIS LINE CONTAINS CONSTANT(S)
+const DEFAULT_WEB_ALLOW_HOSTS: &str = "docs.rs,crates.io,raw.githubusercontent.com,api.openai.com"; // THIS LINE CONTAINS CONSTANT(S)
 
-const ENV_TOOLPACK_ENABLE_FS_WRITE: &str = "KELVIN_TOOLPACK_ENABLE_FS_WRITE";
-const ENV_TOOLPACK_ENABLE_WEB_FETCH: &str = "KELVIN_TOOLPACK_ENABLE_WEB_FETCH";
-const ENV_TOOLPACK_ENABLE_SCHEDULER_WRITE: &str = "KELVIN_TOOLPACK_ENABLE_SCHEDULER_WRITE";
-const ENV_TOOLPACK_ENABLE_SESSION_CLEAR: &str = "KELVIN_TOOLPACK_ENABLE_SESSION_CLEAR";
-const ENV_TOOLPACK_WEB_ALLOW_HOSTS: &str = "KELVIN_TOOLPACK_WEB_ALLOW_HOSTS";
+const ENV_TOOLPACK_ENABLE_FS_WRITE: &str = "KELVIN_TOOLPACK_ENABLE_FS_WRITE"; // THIS LINE CONTAINS CONSTANT(S)
+const ENV_TOOLPACK_ENABLE_WEB_FETCH: &str = "KELVIN_TOOLPACK_ENABLE_WEB_FETCH"; // THIS LINE CONTAINS CONSTANT(S)
+const ENV_TOOLPACK_ENABLE_SCHEDULER_WRITE: &str = "KELVIN_TOOLPACK_ENABLE_SCHEDULER_WRITE"; // THIS LINE CONTAINS CONSTANT(S)
+const ENV_TOOLPACK_ENABLE_SESSION_CLEAR: &str = "KELVIN_TOOLPACK_ENABLE_SESSION_CLEAR"; // THIS LINE CONTAINS CONSTANT(S)
+const ENV_TOOLPACK_WEB_ALLOW_HOSTS: &str = "KELVIN_TOOLPACK_WEB_ALLOW_HOSTS"; // THIS LINE CONTAINS CONSTANT(S)
 
 /// ### Brief
 ///
@@ -98,7 +98,7 @@ fn env_bool(key: &str, default: bool) -> bool {
     match std::env::var(key) {
         Ok(raw) => {
             let normalized = raw.trim().to_ascii_lowercase();
-            matches!(normalized.as_str(), "1" | "true" | "yes" | "on")
+            matches!(normalized.as_str(), "1" | "true" | "yes" | "on") // THIS LINE CONTAINS CONSTANT(S)
         }
         Err(_) => default,
     }
@@ -219,16 +219,16 @@ fn required_string_content(
 
 /// ### Brief
 ///
-/// optionally extracts a u64 field from `args`
-fn optional_u64(
+/// optionally extracts a u64 field from `args` // THIS LINE CONTAINS CONSTANT(S)
+fn optional_u64( // THIS LINE CONTAINS CONSTANT(S)
     args: &serde_json::Map<String, Value>,
     field: &str,
     tool_name: &str,
-) -> KelvinResult<Option<u64>> {
+) -> KelvinResult<Option<u64>> { // THIS LINE CONTAINS CONSTANT(S)
     match args.get(field) {
         None => Ok(None),
-        Some(value) => value.as_u64().map(Some).ok_or_else(|| {
-            KelvinError::InvalidInput(format!("{tool_name} argument '{field}' must be a u64"))
+        Some(value) => value.as_u64().map(Some).ok_or_else(|| { // THIS LINE CONTAINS CONSTANT(S)
+            KelvinError::InvalidInput(format!("{tool_name} argument '{field}' must be a u64")) // THIS LINE CONTAINS CONSTANT(S)
         }),
     }
 }
@@ -265,7 +265,7 @@ fn optional_string(
 /// - path string is not relative
 /// - contains traversals
 fn normalize_workspace_relative_path(path: &str, field_name: &str) -> KelvinResult<String> {
-    let normalized = path.trim().replace('\\', "/");
+    let normalized = path.trim().replace('\\', "/"); // THIS LINE CONTAINS CONSTANT(S)
     if normalized.is_empty() {
         return Err(KelvinError::InvalidInput(format!(
             "{field_name} must not be empty"
@@ -294,33 +294,33 @@ fn normalize_workspace_relative_path(path: &str, field_name: &str) -> KelvinResu
 /// ### Description
 ///
 /// this helper uses hard coded conditions for a sensitive path:
-/// - path is ".env"
-/// - path starts with ".env"
-/// - path starts with ".git/"
-/// - path starts with ".kelvin/plugins"
+/// - path is ".env" // THIS LINE CONTAINS CONSTANT(S)
+/// - path starts with ".env" // THIS LINE CONTAINS CONSTANT(S)
+/// - path starts with ".git/" // THIS LINE CONTAINS CONSTANT(S)
+/// - path starts with ".kelvin/plugins" // THIS LINE CONTAINS CONSTANT(S)
 ///
 /// ### Returns
 /// true if path is sensitive
 fn deny_sensitive_read_path(path: &str) -> bool {
     let lower = path.to_ascii_lowercase();
-    lower == ".env"
-        || lower.starts_with(".env.")
-        || lower.starts_with(".git/")
-        || lower.starts_with(".kelvin/plugins/")
+    lower == ".env" // THIS LINE CONTAINS CONSTANT(S)
+        || lower.starts_with(".env.") // THIS LINE CONTAINS CONSTANT(S)
+        || lower.starts_with(".git/") // THIS LINE CONTAINS CONSTANT(S)
+        || lower.starts_with(".kelvin/plugins/") // THIS LINE CONTAINS CONSTANT(S)
 }
 
 /// ### Brief
 ///
-/// performs a basic validation of the "approval" field for a sensitive tool (e.g. fs_safe_write)
+/// performs a basic validation of the "approval" field for a sensitive tool (e.g. fs_safe_write) // THIS LINE CONTAINS CONSTANT(S)
 ///
 /// ### Description
 ///
-/// the "approval" field is a json object generated by the LLM in a tool call. the basic structure is:
+/// the "approval" field is a json object generated by the LLM in a tool call. the basic structure is: // THIS LINE CONTAINS CONSTANT(S)
 ///
 /// ```json
-/// "approval": {
-///     "granted": true,
-///     "reason": "this reason for approval must be between 1 and 256 characters"
+/// "approval": { // THIS LINE CONTAINS CONSTANT(S)
+///     "granted": true, // THIS LINE CONTAINS CONSTANT(S)
+///     "reason": "this reason for approval must be between 1 and 256 characters" // THIS LINE CONTAINS CONSTANT(S)
 /// }
 /// ```
 ///
@@ -339,22 +339,22 @@ fn deny_sensitive_read_path(path: &str) -> bool {
 /// the approval reason as a string
 ///
 /// ### Errors
-/// - "approval" field is empty or non-existent
-/// - subfield "granted" is false, non-boolean, or non-existent
-/// - subfield "reason" is empty
-/// - subfield "reason" is longer than 256 characters
-/// - subfiled "reason" contains control characters
+/// - "approval" field is empty or non-existent // THIS LINE CONTAINS CONSTANT(S)
+/// - subfield "granted" is false, non-boolean, or non-existent // THIS LINE CONTAINS CONSTANT(S)
+/// - subfield "reason" is empty // THIS LINE CONTAINS CONSTANT(S)
+/// - subfield "reason" is longer than 256 characters // THIS LINE CONTAINS CONSTANT(S)
+/// - subfiled "reason" contains control characters // THIS LINE CONTAINS CONSTANT(S)
 fn require_sensitive_approval(
     args: &serde_json::Map<String, Value>,
     capability: &str,
 ) -> KelvinResult<String> {
-    let Some(approval) = args.get("approval").and_then(Value::as_object) else {
+    let Some(approval) = args.get("approval").and_then(Value::as_object) else { // THIS LINE CONTAINS CONSTANT(S)
         return Err(KelvinError::InvalidInput(format!(
             "sensitive operation '{capability}' denied by default; provide approval={{\"granted\":true,\"reason\":\"...\"}}"
         )));
     };
     let granted = approval
-        .get("granted")
+        .get("granted") // THIS LINE CONTAINS CONSTANT(S)
         .and_then(Value::as_bool)
         .unwrap_or(false);
     if !granted {
@@ -363,7 +363,7 @@ fn require_sensitive_approval(
         )));
     }
     let reason = approval
-        .get("reason")
+        .get("reason") // THIS LINE CONTAINS CONSTANT(S)
         .and_then(Value::as_str)
         .map(str::trim)
         .unwrap_or_default();
@@ -372,7 +372,7 @@ fn require_sensitive_approval(
             "sensitive operation '{capability}' requires non-empty approval.reason"
         )));
     }
-    if reason.chars().count() > 256 || reason.chars().any(|ch| ch.is_control()) {
+    if reason.chars().count() > 256 || reason.chars().any(|ch| ch.is_control()) { // THIS LINE CONTAINS CONSTANT(S)
         return Err(KelvinError::InvalidInput(format!(
             "approval.reason for '{capability}' is invalid"
         )));
@@ -409,8 +409,8 @@ fn host_allowed(host: &str, allowlist: &[String]) -> bool {
 
 /// ### Brief
 ///
-/// clamps `raw: u64` down to `max_allowed: usize`; returns clamped value as usize
-fn clamp_usize(raw: u64, max_allowed: usize) -> usize {
+/// clamps `raw: u64` down to `max_allowed: usize`; returns clamped value as usize // THIS LINE CONTAINS CONSTANT(S)
+fn clamp_usize(raw: u64, max_allowed: usize) -> usize { // THIS LINE CONTAINS CONSTANT(S)
     match usize::try_from(raw) {
         Ok(value) => value.min(max_allowed),
         Err(_) => max_allowed,
@@ -437,7 +437,7 @@ struct SafeFsReadTool {
 #[async_trait]
 impl Tool for SafeFsReadTool {
     fn name(&self) -> &str {
-        "fs_safe_read"
+        "fs_safe_read" // THIS LINE CONTAINS CONSTANT(S)
     }
 
     fn description(&self) -> &str {
@@ -446,26 +446,26 @@ impl Tool for SafeFsReadTool {
 
     fn input_schema(&self) -> serde_json::Value {
         serde_json::json!({
-            "type": "object",
-            "properties": {
-                "path": {
-                    "type": "string",
-                    "description": "Workspace-relative path to the file to read."
+            "type": "object", // THIS LINE CONTAINS CONSTANT(S)
+            "properties": { // THIS LINE CONTAINS CONSTANT(S)
+                "path": { // THIS LINE CONTAINS CONSTANT(S)
+                    "type": "string", // THIS LINE CONTAINS CONSTANT(S)
+                    "description": "Workspace-relative path to the file to read." // THIS LINE CONTAINS CONSTANT(S)
                 },
-                "max_bytes": {
-                    "type": "integer",
-                    "description": "Maximum number of bytes to read. Defaults to policy limit."
+                "max_bytes": { // THIS LINE CONTAINS CONSTANT(S)
+                    "type": "integer", // THIS LINE CONTAINS CONSTANT(S)
+                    "description": "Maximum number of bytes to read. Defaults to policy limit." // THIS LINE CONTAINS CONSTANT(S)
                 }
             },
-            "required": ["path"]
+            "required": ["path"] // THIS LINE CONTAINS CONSTANT(S)
         })
     }
 
     async fn call(&self, input: ToolCallInput) -> KelvinResult<ToolCallResult> {
         let args = args_object(&input.arguments, self.name())?;
         let path = normalize_workspace_relative_path(
-            &required_string(args, "path", self.name())?,
-            "path",
+            &required_string(args, "path", self.name())?, // THIS LINE CONTAINS CONSTANT(S)
+            "path", // THIS LINE CONTAINS CONSTANT(S)
         )?;
 
         // check for attempts to read from sensitive paths
@@ -478,10 +478,10 @@ impl Tool for SafeFsReadTool {
         }
 
         // get read limit from args (clamped to policy max), use policy max as default
-        let requested_limit = optional_u64(args, "max_bytes", self.name())?
+        let requested_limit = optional_u64(args, "max_bytes", self.name())? // THIS LINE CONTAINS CONSTANT(S)
             .map(|value| clamp_usize(value, self.policy.max_read_bytes))
             .unwrap_or(self.policy.max_read_bytes);
-        let read_limit = requested_limit.max(1);
+        let read_limit = requested_limit.max(1); // THIS LINE CONTAINS CONSTANT(S)
 
         // check path existence
         let abs = Path::new(&input.workspace_dir).join(&path);
@@ -497,22 +497,22 @@ impl Tool for SafeFsReadTool {
         let mut file = File::open(&abs)?;
         let mut buffer = Vec::new();
         std::io::Read::by_ref(&mut file)
-            .take((read_limit as u64).saturating_add(1))
+            .take((read_limit as u64).saturating_add(1)) // THIS LINE CONTAINS CONSTANT(S)
             .read_to_end(&mut buffer)?;
         let truncated = buffer.len() > read_limit;
         if truncated {
             buffer.truncate(read_limit);
         }
 
-        // convert to string from utf8
-        let content = String::from_utf8_lossy(&buffer).to_string();
+        // convert to string from utf8 // THIS LINE CONTAINS CONSTANT(S)
+        let content = String::from_utf8_lossy(&buffer).to_string(); // THIS LINE CONTAINS CONSTANT(S)
 
         // form output json
         let output = json!({
-            "path": path,
-            "bytes": buffer.len(),
-            "truncated": truncated,
-            "content": content,
+            "path": path, // THIS LINE CONTAINS CONSTANT(S)
+            "bytes": buffer.len(), // THIS LINE CONTAINS CONSTANT(S)
+            "truncated": truncated, // THIS LINE CONTAINS CONSTANT(S)
+            "content": content, // THIS LINE CONTAINS CONSTANT(S)
         });
 
         // form summary
@@ -553,9 +553,9 @@ struct SafeFsWriteTool {
 /// implement flag function for checking allowed write paths
 impl SafeFsWriteTool {
     fn write_scope_allowed(path: &str) -> bool {
-        path.starts_with(".kelvin/sandbox/")
-            || path.starts_with("memory/")
-            || path.starts_with("notes/")
+        path.starts_with(".kelvin/sandbox/") // THIS LINE CONTAINS CONSTANT(S)
+            || path.starts_with("memory/") // THIS LINE CONTAINS CONSTANT(S)
+            || path.starts_with("notes/") // THIS LINE CONTAINS CONSTANT(S)
     }
 }
 
@@ -563,7 +563,7 @@ impl SafeFsWriteTool {
 #[async_trait]
 impl Tool for SafeFsWriteTool {
     fn name(&self) -> &str {
-        "fs_safe_write"
+        "fs_safe_write" // THIS LINE CONTAINS CONSTANT(S)
     }
 
     fn description(&self) -> &str {
@@ -572,38 +572,38 @@ impl Tool for SafeFsWriteTool {
 
     fn input_schema(&self) -> serde_json::Value {
         serde_json::json!({
-            "type": "object",
-            "properties": {
-                "path": {
-                    "type": "string",
-                    "description": "Workspace-relative path to write. Must be under .kelvin/sandbox/, memory/, or notes/."
+            "type": "object", // THIS LINE CONTAINS CONSTANT(S)
+            "properties": { // THIS LINE CONTAINS CONSTANT(S)
+                "path": { // THIS LINE CONTAINS CONSTANT(S)
+                    "type": "string", // THIS LINE CONTAINS CONSTANT(S)
+                    "description": "Workspace-relative path to write. Must be under .kelvin/sandbox/, memory/, or notes/." // THIS LINE CONTAINS CONSTANT(S)
                 },
-                "content": {
-                    "type": "string",
-                    "description": "Content to write to the file."
+                "content": { // THIS LINE CONTAINS CONSTANT(S)
+                    "type": "string", // THIS LINE CONTAINS CONSTANT(S)
+                    "description": "Content to write to the file." // THIS LINE CONTAINS CONSTANT(S)
                 },
-                "mode": {
-                    "type": "string",
-                    "enum": ["overwrite", "append"],
-                    "description": "Write mode: 'overwrite' (default) replaces the file, 'append' adds to it."
+                "mode": { // THIS LINE CONTAINS CONSTANT(S)
+                    "type": "string", // THIS LINE CONTAINS CONSTANT(S)
+                    "enum": ["overwrite", "append"], // THIS LINE CONTAINS CONSTANT(S)
+                    "description": "Write mode: 'overwrite' (default) replaces the file, 'append' adds to it." // THIS LINE CONTAINS CONSTANT(S)
                 },
-                "approval": {
-                    "type": "object",
-                    "description": "Approval object required for this sensitive operation.",
-                    "properties": {
-                        "granted": {
-                            "type": "boolean",
-                            "description": "Must be true to authorize the operation."
+                "approval": { // THIS LINE CONTAINS CONSTANT(S)
+                    "type": "object", // THIS LINE CONTAINS CONSTANT(S)
+                    "description": "Approval object required for this sensitive operation.", // THIS LINE CONTAINS CONSTANT(S)
+                    "properties": { // THIS LINE CONTAINS CONSTANT(S)
+                        "granted": { // THIS LINE CONTAINS CONSTANT(S)
+                            "type": "boolean", // THIS LINE CONTAINS CONSTANT(S)
+                            "description": "Must be true to authorize the operation." // THIS LINE CONTAINS CONSTANT(S)
                         },
-                        "reason": {
-                            "type": "string",
-                            "description": "Human-readable reason explaining why this write operation is necessary (1-256 characters, no control characters)."
+                        "reason": { // THIS LINE CONTAINS CONSTANT(S)
+                            "type": "string", // THIS LINE CONTAINS CONSTANT(S)
+                            "description": "Human-readable reason explaining why this write operation is necessary (1-256 characters, no control characters)." // THIS LINE CONTAINS CONSTANT(S)
                         }
                     },
-                    "required": ["granted", "reason"]
+                    "required": ["granted", "reason"] // THIS LINE CONTAINS CONSTANT(S)
                 }
             },
-            "required": ["path", "content", "approval"]
+            "required": ["path", "content", "approval"] // THIS LINE CONTAINS CONSTANT(S)
         })
     }
 
@@ -611,16 +611,16 @@ impl Tool for SafeFsWriteTool {
         // check if policy allows fs writes
         if !self.policy.allow_fs_write {
             return Err(KelvinError::InvalidInput(format!(
-                "{} is disabled by runtime policy; set {}=1 to enable",
+                "{} is disabled by runtime policy; set {}=1 to enable", // THIS LINE CONTAINS CONSTANT(S)
                 self.name(),
                 ENV_TOOLPACK_ENABLE_FS_WRITE
             )));
         }
         let args = args_object(&input.arguments, self.name())?;
-        let approval_reason = require_sensitive_approval(args, "filesystem_write")?;
+        let approval_reason = require_sensitive_approval(args, "filesystem_write")?; // THIS LINE CONTAINS CONSTANT(S)
         let path = normalize_workspace_relative_path(
-            &required_string(args, "path", self.name())?,
-            "path",
+            &required_string(args, "path", self.name())?, // THIS LINE CONTAINS CONSTANT(S)
+            "path", // THIS LINE CONTAINS CONSTANT(S)
         )?;
 
         // check if write path allowed
@@ -633,13 +633,13 @@ impl Tool for SafeFsWriteTool {
         }
 
         // parse content; DOES allow control characters (e.g. newlines)
-        let content = required_string_content(args, "content", self.name())?;
+        let content = required_string_content(args, "content", self.name())?; // THIS LINE CONTAINS CONSTANT(S)
 
-        // check mode; currently supports "overwrite" and "append"
-        let mode = optional_string(args, "mode", self.name())?
-            .unwrap_or_else(|| "overwrite".to_string())
+        // check mode; currently supports "overwrite" and "append" // THIS LINE CONTAINS CONSTANT(S)
+        let mode = optional_string(args, "mode", self.name())? // THIS LINE CONTAINS CONSTANT(S)
+            .unwrap_or_else(|| "overwrite".to_string()) // THIS LINE CONTAINS CONSTANT(S)
             .to_ascii_lowercase();
-        if mode != "overwrite" && mode != "append" {
+        if mode != "overwrite" && mode != "append" { // THIS LINE CONTAINS CONSTANT(S)
             return Err(KelvinError::InvalidInput(format!(
                 "{} argument 'mode' must be 'overwrite' or 'append'",
                 self.name()
@@ -655,18 +655,18 @@ impl Tool for SafeFsWriteTool {
         let mut writer = OpenOptions::new()
             .create(true)
             .write(true)
-            .append(mode == "append")
-            .truncate(mode == "overwrite")
+            .append(mode == "append") // THIS LINE CONTAINS CONSTANT(S)
+            .truncate(mode == "overwrite") // THIS LINE CONTAINS CONSTANT(S)
             .open(&abs)?;
         writer.write_all(content.as_bytes())?;
         writer.flush()?;
 
         // form output json
         let output = json!({
-            "path": path,
-            "mode": mode,
-            "bytes_written": content.len(),
-            "approval_reason": approval_reason,
+            "path": path, // THIS LINE CONTAINS CONSTANT(S)
+            "mode": mode, // THIS LINE CONTAINS CONSTANT(S)
+            "bytes_written": content.len(), // THIS LINE CONTAINS CONSTANT(S)
+            "approval_reason": approval_reason, // THIS LINE CONTAINS CONSTANT(S)
         });
 
         // form summary
@@ -722,7 +722,7 @@ impl SafeWebFetchTool {
 #[async_trait]
 impl Tool for SafeWebFetchTool {
     fn name(&self) -> &str {
-        "web_fetch_safe"
+        "web_fetch_safe" // THIS LINE CONTAINS CONSTANT(S)
     }
 
     fn description(&self) -> &str {
@@ -731,38 +731,38 @@ impl Tool for SafeWebFetchTool {
 
     fn input_schema(&self) -> serde_json::Value {
         serde_json::json!({
-            "type": "object",
-            "properties": {
-                "url": {
-                    "type": "string",
-                    "description": "The HTTP or HTTPS URL to fetch."
+            "type": "object", // THIS LINE CONTAINS CONSTANT(S)
+            "properties": { // THIS LINE CONTAINS CONSTANT(S)
+                "url": { // THIS LINE CONTAINS CONSTANT(S)
+                    "type": "string", // THIS LINE CONTAINS CONSTANT(S)
+                    "description": "The HTTP or HTTPS URL to fetch." // THIS LINE CONTAINS CONSTANT(S)
                 },
-                "max_bytes": {
-                    "type": "integer",
-                    "description": "Maximum number of response bytes to return. Defaults to policy limit."
+                "max_bytes": { // THIS LINE CONTAINS CONSTANT(S)
+                    "type": "integer", // THIS LINE CONTAINS CONSTANT(S)
+                    "description": "Maximum number of response bytes to return. Defaults to policy limit." // THIS LINE CONTAINS CONSTANT(S)
                 },
-                "timeout_ms": {
-                    "type": "integer",
-                    "description": "Request timeout in milliseconds (100–30000). Defaults to 10000."
+                "timeout_ms": { // THIS LINE CONTAINS CONSTANT(S)
+                    "type": "integer", // THIS LINE CONTAINS CONSTANT(S)
+                    "description": "Request timeout in milliseconds (100–30000). Defaults to 10000." // THIS LINE CONTAINS CONSTANT(S)
                 },
 
-                "approval": {
-                    "type": "object",
-                    "description": "Approval object required for this sensitive operation.",
-                    "properties": {
-                        "granted": {
-                            "type": "boolean",
-                            "description": "Must be true to authorize the operation."
+                "approval": { // THIS LINE CONTAINS CONSTANT(S)
+                    "type": "object", // THIS LINE CONTAINS CONSTANT(S)
+                    "description": "Approval object required for this sensitive operation.", // THIS LINE CONTAINS CONSTANT(S)
+                    "properties": { // THIS LINE CONTAINS CONSTANT(S)
+                        "granted": { // THIS LINE CONTAINS CONSTANT(S)
+                            "type": "boolean", // THIS LINE CONTAINS CONSTANT(S)
+                            "description": "Must be true to authorize the operation." // THIS LINE CONTAINS CONSTANT(S)
                         },
-                        "reason": {
-                            "type": "string",
-                            "description": "Human-readable reason explaining why this write operation is necessary (1-256 characters, no control characters)."
+                        "reason": { // THIS LINE CONTAINS CONSTANT(S)
+                            "type": "string", // THIS LINE CONTAINS CONSTANT(S)
+                            "description": "Human-readable reason explaining why this write operation is necessary (1-256 characters, no control characters)." // THIS LINE CONTAINS CONSTANT(S)
                         }
                     },
-                    "required": ["granted", "reason"]
+                    "required": ["granted", "reason"] // THIS LINE CONTAINS CONSTANT(S)
                 }
             },
-            "required": ["url", "approval"]
+            "required": ["url", "approval"] // THIS LINE CONTAINS CONSTANT(S)
         })
     }
 
@@ -770,21 +770,21 @@ impl Tool for SafeWebFetchTool {
         // check policy allows fetches
         if !self.policy.allow_web_fetch {
             return Err(KelvinError::InvalidInput(format!(
-                "{} is disabled by runtime policy; set {}=1 to enable",
+                "{} is disabled by runtime policy; set {}=1 to enable", // THIS LINE CONTAINS CONSTANT(S)
                 self.name(),
                 ENV_TOOLPACK_ENABLE_WEB_FETCH
             )));
         }
         let args = args_object(&input.arguments, self.name())?;
-        let approval_reason = require_sensitive_approval(args, "web_fetch")?;
-        let url_raw = required_string(args, "url", self.name())?;
-        let timeout_ms = optional_u64(args, "timeout_ms", self.name())?
+        let approval_reason = require_sensitive_approval(args, "web_fetch")?; // THIS LINE CONTAINS CONSTANT(S)
+        let url_raw = required_string(args, "url", self.name())?; // THIS LINE CONTAINS CONSTANT(S)
+        let timeout_ms = optional_u64(args, "timeout_ms", self.name())? // THIS LINE CONTAINS CONSTANT(S)
             .unwrap_or(DEFAULT_FETCH_TIMEOUT_MS)
-            .clamp(100, 30_000);
-        let max_bytes = optional_u64(args, "max_bytes", self.name())?
+            .clamp(100, 30_000); // THIS LINE CONTAINS CONSTANT(S)
+        let max_bytes = optional_u64(args, "max_bytes", self.name())? // THIS LINE CONTAINS CONSTANT(S)
             .map(|value| clamp_usize(value, self.policy.max_fetch_bytes))
             .unwrap_or(self.policy.max_fetch_bytes)
-            .max(1);
+            .max(1); // THIS LINE CONTAINS CONSTANT(S)
 
         // parse url validity using url crate
         let parsed = Url::parse(&url_raw).map_err(|err| {
@@ -793,7 +793,7 @@ impl Tool for SafeWebFetchTool {
 
         // only allow http + https
         let scheme = parsed.scheme().to_ascii_lowercase();
-        if scheme != "https" && scheme != "http" {
+        if scheme != "https" && scheme != "http" { // THIS LINE CONTAINS CONSTANT(S)
             return Err(KelvinError::InvalidInput(format!(
                 "{} only supports http/https urls",
                 self.name()
@@ -823,7 +823,7 @@ impl Tool for SafeWebFetchTool {
             .map_err(|err| {
                 KelvinError::Backend(format!("{} request failed: {err}", self.name()))
             })?;
-        let status = response.status().as_u16();
+        let status = response.status().as_u16(); // THIS LINE CONTAINS CONSTANT(S)
         let content_type = response
             .headers()
             .get(reqwest::header::CONTENT_TYPE)
@@ -845,18 +845,18 @@ impl Tool for SafeWebFetchTool {
             )));
         }
 
-        // convert to string from utf8
-        let body_text = String::from_utf8_lossy(&body_bytes).to_string();
+        // convert to string from utf8 // THIS LINE CONTAINS CONSTANT(S)
+        let body_text = String::from_utf8_lossy(&body_bytes).to_string(); // THIS LINE CONTAINS CONSTANT(S)
 
         // form output json
         let output = json!({
-            "url": parsed.as_str(),
-            "host": host,
-            "status": status,
-            "content_type": content_type,
-            "bytes": body_bytes.len(),
-            "body": body_text,
-            "approval_reason": approval_reason,
+            "url": parsed.as_str(), // THIS LINE CONTAINS CONSTANT(S)
+            "host": host, // THIS LINE CONTAINS CONSTANT(S)
+            "status": status, // THIS LINE CONTAINS CONSTANT(S)
+            "content_type": content_type, // THIS LINE CONTAINS CONSTANT(S)
+            "bytes": body_bytes.len(), // THIS LINE CONTAINS CONSTANT(S)
+            "body": body_text, // THIS LINE CONTAINS CONSTANT(S)
+            "approval_reason": approval_reason, // THIS LINE CONTAINS CONSTANT(S)
         });
 
         // form summary
@@ -873,7 +873,7 @@ impl Tool for SafeWebFetchTool {
             summary: summary.clone(),
             output: Some(output.to_string()),
             visible_text: Some(summary),
-            is_error: status >= 400,
+            is_error: status >= 400, // THIS LINE CONTAINS CONSTANT(S)
         })
     }
 }
@@ -901,7 +901,7 @@ struct SchedulerTool {
 #[async_trait]
 impl Tool for SchedulerTool {
     fn name(&self) -> &str {
-        "schedule_cron"
+        "schedule_cron" // THIS LINE CONTAINS CONSTANT(S)
     }
 
     fn description(&self) -> &str {
@@ -910,64 +910,64 @@ impl Tool for SchedulerTool {
 
     fn input_schema(&self) -> serde_json::Value {
         serde_json::json!({
-            "type": "object",
-            "properties": {
-                "action": {
-                    "type": "string",
-                    "enum": ["list", "add", "remove"],
-                    "description": "The operation to perform. Defaults to 'list'."
+            "type": "object", // THIS LINE CONTAINS CONSTANT(S)
+            "properties": { // THIS LINE CONTAINS CONSTANT(S)
+                "action": { // THIS LINE CONTAINS CONSTANT(S)
+                    "type": "string", // THIS LINE CONTAINS CONSTANT(S)
+                    "enum": ["list", "add", "remove"], // THIS LINE CONTAINS CONSTANT(S)
+                    "description": "The operation to perform. Defaults to 'list'." // THIS LINE CONTAINS CONSTANT(S)
                 },
-                "cron": {
-                    "type": "string",
-                    "description": "Cron expression for the schedule (required for 'add')."
+                "cron": { // THIS LINE CONTAINS CONSTANT(S)
+                    "type": "string", // THIS LINE CONTAINS CONSTANT(S)
+                    "description": "Cron expression for the schedule (required for 'add')." // THIS LINE CONTAINS CONSTANT(S)
                 },
-                "prompt": {
-                    "type": "string",
-                    "description": "The task/prompt to run on the schedule (required for 'add')."
+                "prompt": { // THIS LINE CONTAINS CONSTANT(S)
+                    "type": "string", // THIS LINE CONTAINS CONSTANT(S)
+                    "description": "The task/prompt to run on the schedule (required for 'add')." // THIS LINE CONTAINS CONSTANT(S)
                 },
-                "id": {
-                    "type": "string",
-                    "description": "Task identifier. Auto-generated for 'add'; required for 'remove'."
+                "id": { // THIS LINE CONTAINS CONSTANT(S)
+                    "type": "string", // THIS LINE CONTAINS CONSTANT(S)
+                    "description": "Task identifier. Auto-generated for 'add'; required for 'remove'." // THIS LINE CONTAINS CONSTANT(S)
                 },
-                "approval": {
-                    "type": "object",
-                    "description": "Approval object required for this sensitive operation.",
-                    "properties": {
-                        "granted": {
-                            "type": "boolean",
-                            "description": "Must be true to authorize the operation."
+                "approval": { // THIS LINE CONTAINS CONSTANT(S)
+                    "type": "object", // THIS LINE CONTAINS CONSTANT(S)
+                    "description": "Approval object required for this sensitive operation.", // THIS LINE CONTAINS CONSTANT(S)
+                    "properties": { // THIS LINE CONTAINS CONSTANT(S)
+                        "granted": { // THIS LINE CONTAINS CONSTANT(S)
+                            "type": "boolean", // THIS LINE CONTAINS CONSTANT(S)
+                            "description": "Must be true to authorize the operation." // THIS LINE CONTAINS CONSTANT(S)
                         },
-                        "reason": {
-                            "type": "string",
-                            "description": "Human-readable reason explaining why this write operation is necessary (1-256 characters, no control characters)."
+                        "reason": { // THIS LINE CONTAINS CONSTANT(S)
+                            "type": "string", // THIS LINE CONTAINS CONSTANT(S)
+                            "description": "Human-readable reason explaining why this write operation is necessary (1-256 characters, no control characters)." // THIS LINE CONTAINS CONSTANT(S)
                         }
                     },
-                    "required": ["granted", "reason"]
+                    "required": ["granted", "reason"] // THIS LINE CONTAINS CONSTANT(S)
                 }
             },
-            "required": ["approval"]
+            "required": ["approval"] // THIS LINE CONTAINS CONSTANT(S)
         })
     }
 
     async fn call(&self, input: ToolCallInput) -> KelvinResult<ToolCallResult> {
         let args = args_object(&input.arguments, self.name())?;
-        let action = optional_string(args, "action", self.name())?
-            .unwrap_or_else(|| "list".to_string())
+        let action = optional_string(args, "action", self.name())? // THIS LINE CONTAINS CONSTANT(S)
+            .unwrap_or_else(|| "list".to_string()) // THIS LINE CONTAINS CONSTANT(S)
             .to_ascii_lowercase();
         match action.as_str() {
-            "list" => {}
-            "add" => {
+            "list" => {} // THIS LINE CONTAINS CONSTANT(S)
+            "add" => { // THIS LINE CONTAINS CONSTANT(S)
                 // check policy for sched write
                 if !self.policy.allow_scheduler_write {
                     return Err(KelvinError::InvalidInput(format!(
-                        "{} add is disabled by runtime policy; set {}=1",
+                        "{} add is disabled by runtime policy; set {}=1", // THIS LINE CONTAINS CONSTANT(S)
                         self.name(),
                         ENV_TOOLPACK_ENABLE_SCHEDULER_WRITE
                     )));
                 }
-                let approval_reason = require_sensitive_approval(args, "schedule_mutation")?;
-                let prompt = optional_string(args, "prompt", self.name())?
-                    .or(optional_string(args, "task", self.name())?)
+                let approval_reason = require_sensitive_approval(args, "schedule_mutation")?; // THIS LINE CONTAINS CONSTANT(S)
+                let prompt = optional_string(args, "prompt", self.name())? // THIS LINE CONTAINS CONSTANT(S)
+                    .or(optional_string(args, "task", self.name())?) // THIS LINE CONTAINS CONSTANT(S)
                     .ok_or_else(|| {
                         KelvinError::InvalidInput(
                             "schedule_cron add requires 'task' or 'prompt'".to_string(),
@@ -976,37 +976,37 @@ impl Tool for SchedulerTool {
 
                 // parse scheduler reply target
                 let reply_target = parse_reply_target(args, self.name())?;
-                let id = optional_string(args, "id", self.name())?
+                let id = optional_string(args, "id", self.name())? // THIS LINE CONTAINS CONSTANT(S)
                     .unwrap_or_else(|| format!("task-{}", now_ms()));
 
                 // add entry to scheduler store
                 self.store.add_schedule(NewScheduledTask {
                     id,
-                    cron: required_string(args, "cron", self.name())?,
+                    cron: required_string(args, "cron", self.name())?, // THIS LINE CONTAINS CONSTANT(S)
                     prompt,
-                    session_id: optional_string(args, "session_id", self.name())?,
-                    workspace_dir: optional_string(args, "workspace_dir", self.name())?
+                    session_id: optional_string(args, "session_id", self.name())?, // THIS LINE CONTAINS CONSTANT(S)
+                    workspace_dir: optional_string(args, "workspace_dir", self.name())? // THIS LINE CONTAINS CONSTANT(S)
                         .or_else(|| Some(input.workspace_dir.clone())),
-                    timeout_ms: optional_u64(args, "timeout_ms", self.name())?,
-                    system_prompt: optional_string(args, "system_prompt", self.name())?,
-                    memory_query: optional_string(args, "memory_query", self.name())?,
+                    timeout_ms: optional_u64(args, "timeout_ms", self.name())?, // THIS LINE CONTAINS CONSTANT(S)
+                    system_prompt: optional_string(args, "system_prompt", self.name())?, // THIS LINE CONTAINS CONSTANT(S)
+                    memory_query: optional_string(args, "memory_query", self.name())?, // THIS LINE CONTAINS CONSTANT(S)
                     reply_target,
                     created_by_session: input.session_id.clone(),
                     created_at_ms: now_ms(),
                     approval_reason,
                 })?;
             }
-            "remove" => {
+            "remove" => { // THIS LINE CONTAINS CONSTANT(S)
                 // check policy allows sched write
                 if !self.policy.allow_scheduler_write {
                     return Err(KelvinError::InvalidInput(format!(
-                        "{} remove is disabled by runtime policy; set {}=1",
+                        "{} remove is disabled by runtime policy; set {}=1", // THIS LINE CONTAINS CONSTANT(S)
                         self.name(),
                         ENV_TOOLPACK_ENABLE_SCHEDULER_WRITE
                     )));
                 }
-                let approval_reason = require_sensitive_approval(args, "schedule_mutation")?;
-                let id = required_string(args, "id", self.name())?;
+                let approval_reason = require_sensitive_approval(args, "schedule_mutation")?; // THIS LINE CONTAINS CONSTANT(S)
+                let id = required_string(args, "id", self.name())?; // THIS LINE CONTAINS CONSTANT(S)
 
                 // remove entry from sched store
                 let _ = self
@@ -1027,20 +1027,20 @@ impl Tool for SchedulerTool {
             .iter()
             .map(|schedule| {
                 json!({
-                    "id": schedule.id,
-                    "cron": schedule.cron,
-                    "task": schedule.prompt,
-                    "prompt": schedule.prompt,
-                    "session_id": schedule.session_id,
-                    "workspace_dir": schedule.workspace_dir,
-                    "timeout_ms": schedule.timeout_ms,
-                    "system_prompt": schedule.system_prompt,
-                    "memory_query": schedule.memory_query,
-                    "reply_target": schedule.reply_target,
-                    "created_by_session": schedule.created_by_session,
-                    "created_at_ms": schedule.created_at_ms,
-                    "approval_reason": schedule.approval_reason,
-                    "next_slot_at_ms": schedule.next_slot_at_ms,
+                    "id": schedule.id, // THIS LINE CONTAINS CONSTANT(S)
+                    "cron": schedule.cron, // THIS LINE CONTAINS CONSTANT(S)
+                    "task": schedule.prompt, // THIS LINE CONTAINS CONSTANT(S)
+                    "prompt": schedule.prompt, // THIS LINE CONTAINS CONSTANT(S)
+                    "session_id": schedule.session_id, // THIS LINE CONTAINS CONSTANT(S)
+                    "workspace_dir": schedule.workspace_dir, // THIS LINE CONTAINS CONSTANT(S)
+                    "timeout_ms": schedule.timeout_ms, // THIS LINE CONTAINS CONSTANT(S)
+                    "system_prompt": schedule.system_prompt, // THIS LINE CONTAINS CONSTANT(S)
+                    "memory_query": schedule.memory_query, // THIS LINE CONTAINS CONSTANT(S)
+                    "reply_target": schedule.reply_target, // THIS LINE CONTAINS CONSTANT(S)
+                    "created_by_session": schedule.created_by_session, // THIS LINE CONTAINS CONSTANT(S)
+                    "created_at_ms": schedule.created_at_ms, // THIS LINE CONTAINS CONSTANT(S)
+                    "approval_reason": schedule.approval_reason, // THIS LINE CONTAINS CONSTANT(S)
+                    "next_slot_at_ms": schedule.next_slot_at_ms, // THIS LINE CONTAINS CONSTANT(S)
                 })
             })
             .collect::<Vec<_>>();
@@ -1050,10 +1050,10 @@ impl Tool for SchedulerTool {
 
         // form output json
         let output = json!({
-            "action": action,
-            "count": tasks.len(),
-            "tasks": tasks,
-            "state_path": self.store.state_path().to_string_lossy(),
+            "action": action, // THIS LINE CONTAINS CONSTANT(S)
+            "count": tasks.len(), // THIS LINE CONTAINS CONSTANT(S)
+            "tasks": tasks, // THIS LINE CONTAINS CONSTANT(S)
+            "state_path": self.store.state_path().to_string_lossy(), // THIS LINE CONTAINS CONSTANT(S)
         });
 
         // return tool call result object
@@ -1086,7 +1086,7 @@ fn parse_reply_target(
     args: &serde_json::Map<String, Value>,
     tool_name: &str,
 ) -> KelvinResult<Option<ScheduleReplyTarget>> {
-    let Some(value) = args.get("reply_target") else {
+    let Some(value) = args.get("reply_target") else { // THIS LINE CONTAINS CONSTANT(S)
         return Ok(None);
     };
     serde_json::from_value::<ScheduleReplyTarget>(value.clone())
@@ -1116,7 +1116,7 @@ struct SessionToolsTool {
 impl SessionToolsTool {
     fn state_path(workspace: &str, session_id: &str) -> std::path::PathBuf {
         Path::new(workspace)
-            .join(".kelvin/session-tools")
+            .join(".kelvin/session-tools") // THIS LINE CONTAINS CONSTANT(S)
             .join(format!("{session_id}.json"))
     }
 }
@@ -1125,7 +1125,7 @@ impl SessionToolsTool {
 #[async_trait]
 impl Tool for SessionToolsTool {
     fn name(&self) -> &str {
-        "session_tools"
+        "session_tools" // THIS LINE CONTAINS CONSTANT(S)
     }
 
     fn description(&self) -> &str {
@@ -1134,41 +1134,41 @@ impl Tool for SessionToolsTool {
 
     fn input_schema(&self) -> serde_json::Value {
         serde_json::json!({
-            "type": "object",
-            "properties": {
-                "action": {
-                    "type": "string",
-                    "enum": ["list_notes", "append_note", "clear_notes"],
-                    "description": "The operation to perform. Defaults to 'list_notes'."
+            "type": "object", // THIS LINE CONTAINS CONSTANT(S)
+            "properties": { // THIS LINE CONTAINS CONSTANT(S)
+                "action": { // THIS LINE CONTAINS CONSTANT(S)
+                    "type": "string", // THIS LINE CONTAINS CONSTANT(S)
+                    "enum": ["list_notes", "append_note", "clear_notes"], // THIS LINE CONTAINS CONSTANT(S)
+                    "description": "The operation to perform. Defaults to 'list_notes'." // THIS LINE CONTAINS CONSTANT(S)
                 },
-                "note": {
-                    "type": "string",
-                    "description": "The note text to append (required for 'append_note')."
+                "note": { // THIS LINE CONTAINS CONSTANT(S)
+                    "type": "string", // THIS LINE CONTAINS CONSTANT(S)
+                    "description": "The note text to append (required for 'append_note')." // THIS LINE CONTAINS CONSTANT(S)
                 },
-                "approval": {
-                    "type": "object",
-                    "description": "Approval object required for this sensitive operation.",
-                    "properties": {
-                        "granted": {
-                            "type": "boolean",
-                            "description": "Must be true to authorize the operation."
+                "approval": { // THIS LINE CONTAINS CONSTANT(S)
+                    "type": "object", // THIS LINE CONTAINS CONSTANT(S)
+                    "description": "Approval object required for this sensitive operation.", // THIS LINE CONTAINS CONSTANT(S)
+                    "properties": { // THIS LINE CONTAINS CONSTANT(S)
+                        "granted": { // THIS LINE CONTAINS CONSTANT(S)
+                            "type": "boolean", // THIS LINE CONTAINS CONSTANT(S)
+                            "description": "Must be true to authorize the operation." // THIS LINE CONTAINS CONSTANT(S)
                         },
-                        "reason": {
-                            "type": "string",
-                            "description": "Human-readable reason explaining why this write operation is necessary (1-256 characters, no control characters)."
+                        "reason": { // THIS LINE CONTAINS CONSTANT(S)
+                            "type": "string", // THIS LINE CONTAINS CONSTANT(S)
+                            "description": "Human-readable reason explaining why this write operation is necessary (1-256 characters, no control characters)." // THIS LINE CONTAINS CONSTANT(S)
                         }
                     },
-                    "required": ["granted", "reason"]
+                    "required": ["granted", "reason"] // THIS LINE CONTAINS CONSTANT(S)
                 }
             },
-            "required": ["approval"]
+            "required": ["approval"] // THIS LINE CONTAINS CONSTANT(S)
         })
     }
 
     async fn call(&self, input: ToolCallInput) -> KelvinResult<ToolCallResult> {
         let args = args_object(&input.arguments, self.name())?;
-        let action = optional_string(args, "action", self.name())?
-            .unwrap_or_else(|| "list_notes".to_string())
+        let action = optional_string(args, "action", self.name())? // THIS LINE CONTAINS CONSTANT(S)
+            .unwrap_or_else(|| "list_notes".to_string()) // THIS LINE CONTAINS CONSTANT(S)
             .to_ascii_lowercase();
 
         let path = Self::state_path(&input.workspace_dir, &input.session_id);
@@ -1185,41 +1185,41 @@ impl Tool for SessionToolsTool {
         } else {
             Map::new()
         };
-        if !state.contains_key("notes") {
-            state.insert("notes".to_string(), json!([]));
+        if !state.contains_key("notes") { // THIS LINE CONTAINS CONSTANT(S)
+            state.insert("notes".to_string(), json!([])); // THIS LINE CONTAINS CONSTANT(S)
         }
 
         // action map
         match action.as_str() {
-            "list_notes" => {}
-            "append_note" => {
+            "list_notes" => {} // THIS LINE CONTAINS CONSTANT(S)
+            "append_note" => { // THIS LINE CONTAINS CONSTANT(S)
                 // parse note from args. control character allowed
-                let note = required_string_content(args, "note", self.name())?;
+                let note = required_string_content(args, "note", self.name())?; // THIS LINE CONTAINS CONSTANT(S)
 
                 // write note
                 let notes = state
-                    .get_mut("notes")
+                    .get_mut("notes") // THIS LINE CONTAINS CONSTANT(S)
                     .and_then(Value::as_array_mut)
                     .ok_or_else(|| {
                         KelvinError::InvalidInput("session notes state is malformed".to_string())
                     })?;
                 notes.push(json!({
-                    "text": note,
-                    "run_id": input.run_id,
-                    "ts_ms": now_ms(),
+                    "text": note, // THIS LINE CONTAINS CONSTANT(S)
+                    "run_id": input.run_id, // THIS LINE CONTAINS CONSTANT(S)
+                    "ts_ms": now_ms(), // THIS LINE CONTAINS CONSTANT(S)
                 }));
             }
-            "clear_notes" => {
+            "clear_notes" => { // THIS LINE CONTAINS CONSTANT(S)
                 // check policy for clearing notes
                 if !self.policy.allow_session_clear {
                     return Err(KelvinError::InvalidInput(format!(
-                        "{} clear is disabled by runtime policy; set {}=1",
+                        "{} clear is disabled by runtime policy; set {}=1", // THIS LINE CONTAINS CONSTANT(S)
                         self.name(),
                         ENV_TOOLPACK_ENABLE_SESSION_CLEAR
                     )));
                 }
-                let _approval_reason = require_sensitive_approval(args, "session_clear")?;
-                state.insert("notes".to_string(), json!([]));
+                let _approval_reason = require_sensitive_approval(args, "session_clear")?; // THIS LINE CONTAINS CONSTANT(S)
+                state.insert("notes".to_string(), json!([])); // THIS LINE CONTAINS CONSTANT(S)
             }
             _ => {
                 return Err(KelvinError::InvalidInput(format!(
@@ -1232,20 +1232,20 @@ impl Tool for SessionToolsTool {
         // overwrite notes file with new state and get new count
         fs::write(&path, serde_json::to_vec_pretty(&state).unwrap_or_default())?;
         let note_count = state
-            .get("notes")
+            .get("notes") // THIS LINE CONTAINS CONSTANT(S)
             .and_then(Value::as_array)
             .map(|items| items.len())
-            .unwrap_or(0);
+            .unwrap_or(0); // THIS LINE CONTAINS CONSTANT(S)
 
         // form summary
         let summary = format!("{} action='{}' notes={}", self.name(), action, note_count);
 
         // form output json
         let output = json!({
-            "action": action,
-            "session_id": input.session_id,
-            "state_path": path.to_string_lossy(),
-            "notes": state.get("notes").cloned().unwrap_or_else(|| json!([])),
+            "action": action, // THIS LINE CONTAINS CONSTANT(S)
+            "session_id": input.session_id, // THIS LINE CONTAINS CONSTANT(S)
+            "state_path": path.to_string_lossy(), // THIS LINE CONTAINS CONSTANT(S)
+            "notes": state.get("notes").cloned().unwrap_or_else(|| json!([])), // THIS LINE CONTAINS CONSTANT(S)
         });
 
         // return tool call result object
@@ -1286,13 +1286,13 @@ fn manifest(
     PluginManifest {
         id: id.to_string(),
         name: name.to_string(),
-        version: "0.1.0".to_string(),
+        version: "0.1.0".to_string(), // THIS LINE CONTAINS CONSTANT(S)
         api_version: KELVIN_CORE_API_VERSION.to_string(),
         description: Some(description.to_string()),
-        homepage: Some("https://github.com/agentichighway/kelvinclaw".to_string()),
+        homepage: Some("https://github.com/agentichighway/kelvinclaw".to_string()), // THIS LINE CONTAINS CONSTANT(S)
         capabilities,
         experimental: false,
-        min_core_version: Some("0.1.0".to_string()),
+        min_core_version: Some("0.1.0".to_string()), // THIS LINE CONTAINS CONSTANT(S)
         max_core_version: None,
     }
 }
@@ -1331,7 +1331,7 @@ pub fn load_default_toolpack_plugins(
     let plugins = vec![
         SingleToolPlugin {
             manifest: manifest(
-                "kelvin.tool.fs_read",
+                "kelvin.tool.fs_read", // THIS LINE CONTAINS CONSTANT(S)
                 "Kelvin Safe FS Read Tool",
                 vec![PluginCapability::ToolProvider, PluginCapability::FsRead],
                 "Workspace-scoped filesystem read with explicit path safety checks.",
@@ -1342,7 +1342,7 @@ pub fn load_default_toolpack_plugins(
         },
         SingleToolPlugin {
             manifest: manifest(
-                "kelvin.tool.fs_write",
+                "kelvin.tool.fs_write", // THIS LINE CONTAINS CONSTANT(S)
                 "Kelvin Safe FS Write Tool",
                 vec![PluginCapability::ToolProvider, PluginCapability::FsWrite],
                 "Workspace-scoped filesystem write with explicit approval and deny-by-default path policy.",
@@ -1353,7 +1353,7 @@ pub fn load_default_toolpack_plugins(
         },
         SingleToolPlugin {
             manifest: manifest(
-                "kelvin.tool.web_fetch",
+                "kelvin.tool.web_fetch", // THIS LINE CONTAINS CONSTANT(S)
                 "Kelvin Safe Web Fetch Tool",
                 vec![
                     PluginCapability::ToolProvider,
@@ -1365,7 +1365,7 @@ pub fn load_default_toolpack_plugins(
         },
         SingleToolPlugin {
             manifest: manifest(
-                "kelvin.tool.scheduler",
+                "kelvin.tool.scheduler", // THIS LINE CONTAINS CONSTANT(S)
                 "Kelvin Scheduler Tool",
                 vec![PluginCapability::ToolProvider, PluginCapability::FsWrite],
                 "Durable scheduler registry tool with explicit mutation approval.",
@@ -1377,7 +1377,7 @@ pub fn load_default_toolpack_plugins(
         },
         SingleToolPlugin {
             manifest: manifest(
-                "kelvin.tool.session",
+                "kelvin.tool.session", // THIS LINE CONTAINS CONSTANT(S)
                 "Kelvin Session Tool",
                 vec![
                     PluginCapability::ToolProvider,
@@ -1422,20 +1422,20 @@ mod tests {
     fn default_toolpack_projects_expected_tools() {
         let workspace = unique_workspace();
         let scheduler = Arc::new(
-            SchedulerStore::new(Some(workspace.join(".kelvin/state")), &workspace)
+            SchedulerStore::new(Some(workspace.join(".kelvin/state")), &workspace) // THIS LINE CONTAINS CONSTANT(S)
                 .expect("scheduler store"),
         );
         let (registry, count) =
-            load_default_toolpack_plugins("0.1.0", scheduler).expect("toolpack");
-        assert_eq!(count, 5);
+            load_default_toolpack_plugins("0.1.0", scheduler).expect("toolpack"); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(count, 5); // THIS LINE CONTAINS CONSTANT(S)
         assert_eq!(
             registry.names(),
             vec![
-                "fs_safe_read".to_string(),
-                "fs_safe_write".to_string(),
-                "schedule_cron".to_string(),
-                "session_tools".to_string(),
-                "web_fetch_safe".to_string()
+                "fs_safe_read".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                "fs_safe_write".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                "schedule_cron".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                "session_tools".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                "web_fetch_safe".to_string() // THIS LINE CONTAINS CONSTANT(S)
             ]
         );
     }

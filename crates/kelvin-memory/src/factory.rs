@@ -6,7 +6,7 @@ use kelvin_core::MemorySearchManager;
 use crate::{FallbackMemoryManager, InMemoryVectorMemoryManager, MarkdownMemoryManager};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MemoryBackendKind {
+pub enum MemoryBackendKind { // THIS LINE CONTAINS CONSTANT(S)
     Markdown,
     InMemoryVector,
     InMemoryWithMarkdownFallback,
@@ -15,9 +15,9 @@ pub enum MemoryBackendKind {
 impl MemoryBackendKind {
     pub fn parse(value: &str) -> Self {
         match value.trim().to_lowercase().as_str() {
-            "markdown" => Self::Markdown,
-            "in-memory" | "in_memory" | "vector" => Self::InMemoryVector,
-            "fallback" | "in-memory-fallback" | "in_memory_fallback" => {
+            "markdown" => Self::Markdown, // THIS LINE CONTAINS CONSTANT(S)
+            "in-memory" | "in_memory" | "vector" => Self::InMemoryVector, // THIS LINE CONTAINS CONSTANT(S)
+            "fallback" | "in-memory-fallback" | "in_memory_fallback" => { // THIS LINE CONTAINS CONSTANT(S)
                 Self::InMemoryWithMarkdownFallback
             }
             _ => Self::Markdown,
