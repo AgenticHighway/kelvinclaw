@@ -450,51 +450,71 @@ impl TextChannelConfig {
             allow_senders.extend(allow_accounts.iter().cloned());
         }
 
-        let quota_standard_per_minute =
-            read_env_usize(&format!("{prefix}_MAX_MESSAGES_PER_MINUTE"), 20, 1, 20_000)?;
+        let quota_standard_per_minute = read_env_usize(
+            &format!("{prefix}_MAX_MESSAGES_PER_MINUTE"),
+            crate::consts::CHANNEL_QUOTA_STANDARD_DEFAULT_PER_MINUTE,
+            crate::consts::CHANNEL_QUOTA_MIN_PER_MINUTE,
+            crate::consts::CHANNEL_QUOTA_MAX_STANDARD_PER_MINUTE,
+        )?;
         let quota_owner_per_minute = read_env_usize(
             &format!("{prefix}_MAX_MESSAGES_PER_MINUTE_OWNER"),
-            quota_standard_per_minute.saturating_mul(4).max(1),
-            1,
-            80_000,
+            quota_standard_per_minute
+                .saturating_mul(4)
+                .max(crate::consts::CHANNEL_QUOTA_MIN_PER_MINUTE),
+            crate::consts::CHANNEL_QUOTA_MIN_PER_MINUTE,
+            crate::consts::CHANNEL_QUOTA_MAX_OWNER_PER_MINUTE,
         )?;
         let quota_trusted_per_minute = read_env_usize(
             &format!("{prefix}_MAX_MESSAGES_PER_MINUTE_TRUSTED"),
-            quota_standard_per_minute.saturating_mul(2).max(1),
-            1,
-            40_000,
+            quota_standard_per_minute
+                .saturating_mul(2)
+                .max(crate::consts::CHANNEL_QUOTA_MIN_PER_MINUTE),
+            crate::consts::CHANNEL_QUOTA_MIN_PER_MINUTE,
+            crate::consts::CHANNEL_QUOTA_MAX_TRUSTED_PER_MINUTE,
         )?;
         let quota_probation_per_minute = read_env_usize(
             &format!("{prefix}_MAX_MESSAGES_PER_MINUTE_PROBATION"),
-            (quota_standard_per_minute / 2).max(1),
-            1,
-            20_000,
+            (quota_standard_per_minute / 2).max(crate::consts::CHANNEL_QUOTA_MIN_PER_MINUTE),
+            crate::consts::CHANNEL_QUOTA_MIN_PER_MINUTE,
+            crate::consts::CHANNEL_QUOTA_MAX_STANDARD_PER_MINUTE,
         )?;
         let cooldown_probation_ms = read_env_u64(
             &format!("{prefix}_COOLDOWN_MS_PROBATION"),
-            1_000,
+            crate::consts::CHANNEL_COOLDOWN_PROBATION_DEFAULT_MS,
             0,
-            600_000,
+            crate::consts::CHANNEL_COOLDOWN_PROBATION_MAX_MS,
         )?;
 
         let max_seen_delivery_ids = read_env_usize(
             &format!("{prefix}_MAX_SEEN_DELIVERY_IDS"),
-            4_096,
-            128,
-            200_000,
+            crate::consts::CHANNEL_MAX_SEEN_DELIVERY_IDS_DEFAULT,
+            crate::consts::CHANNEL_MAX_SEEN_DELIVERY_IDS_MIN,
+            crate::consts::CHANNEL_MAX_SEEN_DELIVERY_IDS_MAX,
         )?;
-        let max_queue_depth =
-            read_env_usize(&format!("{prefix}_MAX_QUEUE_DEPTH"), 1_024, 1, 100_000)?;
-        let max_text_bytes =
-            read_env_usize(&format!("{prefix}_MAX_TEXT_BYTES"), 4_096, 64, 64_000)?;
+        let max_queue_depth = read_env_usize(
+            &format!("{prefix}_MAX_QUEUE_DEPTH"),
+            crate::consts::CHANNEL_MAX_QUEUE_DEPTH_DEFAULT,
+            crate::consts::CHANNEL_QUOTA_MIN_PER_MINUTE,
+            crate::consts::CHANNEL_MAX_QUEUE_DEPTH_MAX,
+        )?;
+        let max_text_bytes = read_env_usize(
+            &format!("{prefix}_MAX_TEXT_BYTES"),
+            crate::consts::CHANNEL_MAX_TEXT_BYTES_DEFAULT,
+            crate::consts::CHANNEL_MAX_TEXT_BYTES_MIN,
+            crate::consts::CHANNEL_MAX_TEXT_BYTES_MAX,
+        )?;
 
-        let outbound_max_retries =
-            read_env_u8(&format!("{prefix}_OUTBOUND_MAX_RETRIES"), 2, 0, 10)?;
+        let outbound_max_retries = read_env_u8(
+            &format!("{prefix}_OUTBOUND_MAX_RETRIES"),
+            crate::consts::CHANNEL_OUTBOUND_MAX_RETRIES_DEFAULT,
+            0,
+            crate::consts::CHANNEL_OUTBOUND_MAX_RETRIES_MAX,
+        )?;
         let outbound_retry_backoff_ms = read_env_u64(
             &format!("{prefix}_OUTBOUND_RETRY_BACKOFF_MS"),
-            200,
+            crate::consts::CHANNEL_OUTBOUND_RETRY_BACKOFF_DEFAULT_MS,
             1,
-            20_000,
+            crate::consts::CHANNEL_OUTBOUND_RETRY_BACKOFF_MAX_MS,
         )?;
 
         if enabled && bot_token.is_none() {
@@ -649,26 +669,26 @@ impl WasmChannelPolicyPlugin {
         let max_module_bytes = read_env_usize(
             &format!("{prefix}_WASM_MAX_MODULE_BYTES"),
             ChannelSandboxPolicy::default().max_module_bytes,
-            1_024,
-            16 * 1024 * 1024,
+            crate::consts::CHANNEL_WASM_MIN_MODULE_BYTES,
+            crate::consts::CHANNEL_WASM_MAX_MODULE_BYTES,
         )?;
         let max_request_bytes = read_env_usize(
             &format!("{prefix}_WASM_MAX_REQUEST_BYTES"),
             ChannelSandboxPolicy::default().max_request_bytes,
-            256,
-            2 * 1024 * 1024,
+            crate::consts::CHANNEL_WASM_MIN_IO_BYTES,
+            crate::consts::CHANNEL_WASM_MAX_IO_BYTES,
         )?;
         let max_response_bytes = read_env_usize(
             &format!("{prefix}_WASM_MAX_RESPONSE_BYTES"),
             ChannelSandboxPolicy::default().max_response_bytes,
-            256,
-            2 * 1024 * 1024,
+            crate::consts::CHANNEL_WASM_MIN_IO_BYTES,
+            crate::consts::CHANNEL_WASM_MAX_IO_BYTES,
         )?;
         let fuel_budget = read_env_u64(
             &format!("{prefix}_WASM_FUEL_BUDGET"),
             ChannelSandboxPolicy::default().fuel_budget,
-            1_000,
-            100_000_000,
+            crate::consts::CHANNEL_WASM_MIN_FUEL_BUDGET,
+            crate::consts::CHANNEL_WASM_MAX_FUEL_BUDGET,
         )?;
 
         let policy = ChannelSandboxPolicy {
@@ -1148,9 +1168,21 @@ impl TextChannelAdapter {
     ) -> KelvinErrorOr<Value> {
         self.metrics.ingest_total = self.metrics.ingest_total.saturating_add(1);
 
-        envelope.delivery_id = normalize_identifier("delivery_id", &envelope.delivery_id, 256)?;
-        envelope.sender_id = normalize_identifier("sender_id", &envelope.sender_id, 256)?;
-        envelope.account_id = normalize_identifier("account_id", &envelope.account_id, 256)?;
+        envelope.delivery_id = normalize_identifier(
+            "delivery_id",
+            &envelope.delivery_id,
+            crate::consts::MAX_CHANNEL_IDENTIFIER_BYTES,
+        )?;
+        envelope.sender_id = normalize_identifier(
+            "sender_id",
+            &envelope.sender_id,
+            crate::consts::MAX_CHANNEL_IDENTIFIER_BYTES,
+        )?;
+        envelope.account_id = normalize_identifier(
+            "account_id",
+            &envelope.account_id,
+            crate::consts::MAX_CHANNEL_IDENTIFIER_BYTES,
+        )?;
         envelope.text = envelope.text.trim().to_string();
         if envelope.text.is_empty() {
             return Err(KelvinError::InvalidInput(

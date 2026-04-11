@@ -662,10 +662,14 @@ pub async fn run_gateway_with_listener_secure_and_ingress(
         auth_token: auth_token.map(|value| value.trim().to_string()),
         security: security.clone(),
         started_at: Instant::now(),
-        idempotency: Arc::new(Mutex::new(IdempotencyCache::new(2_048))),
+        idempotency: Arc::new(Mutex::new(IdempotencyCache::new(
+            crate::consts::IDEMPOTENCY_CACHE_MAX_ENTRIES,
+        ))),
         channels,
         scheduler,
-        auth_failures: Arc::new(Mutex::new(AuthFailureTracker::new(512))),
+        auth_failures: Arc::new(Mutex::new(AuthFailureTracker::new(
+            crate::consts::AUTH_FAILURE_MAX_ENTRIES,
+        ))),
         connection_semaphore: Arc::new(Semaphore::new(security.max_connections)),
     };
     if let Some(listener) = ingress_listener {
@@ -729,22 +733,34 @@ fn validate_gateway_security(
         return Err("gateway max_connections must be >= 1".to_string());
     }
     if security.max_message_size_bytes < crate::consts::MIN_MESSAGE_SIZE_BYTES {
-        return Err("gateway max_message_size_bytes must be >= 1024".to_string());
+        return Err(format!(
+            "gateway max_message_size_bytes must be >= {}",
+            crate::consts::MIN_MESSAGE_SIZE_BYTES
+        ));
     }
     if security.max_frame_size_bytes < crate::consts::MIN_FRAME_SIZE_BYTES {
-        return Err("gateway max_frame_size_bytes must be >= 512".to_string());
+        return Err(format!(
+            "gateway max_frame_size_bytes must be >= {}",
+            crate::consts::MIN_FRAME_SIZE_BYTES
+        ));
     }
     if security.max_frame_size_bytes > security.max_message_size_bytes {
         return Err("gateway max_frame_size_bytes must be <= max_message_size_bytes".to_string());
     }
     if security.handshake_timeout_ms < crate::consts::MIN_HANDSHAKE_TIMEOUT_MS {
-        return Err("gateway handshake_timeout_ms must be >= 100".to_string());
+        return Err(format!(
+            "gateway handshake_timeout_ms must be >= {}",
+            crate::consts::MIN_HANDSHAKE_TIMEOUT_MS
+        ));
     }
     if security.auth_failure_threshold == 0 {
         return Err("gateway auth_failure_threshold must be >= 1".to_string());
     }
     if security.auth_failure_backoff_ms < crate::consts::MIN_AUTH_FAILURE_BACKOFF_MS {
-        return Err("gateway auth_failure_backoff_ms must be >= 100".to_string());
+        return Err(format!(
+            "gateway auth_failure_backoff_ms must be >= {}",
+            crate::consts::MIN_AUTH_FAILURE_BACKOFF_MS
+        ));
     }
     if security.max_outbound_messages_per_connection == 0 {
         return Err("gateway max_outbound_messages_per_connection must be >= 1".to_string());
