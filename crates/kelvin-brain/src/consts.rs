@@ -16,8 +16,8 @@ pub const DEFAULT_MEMORY_APPEND_PATH: &str = "memory/skill-events.md";
 pub const WASM_SKILL_PLUGIN_ID: &str = "kelvin.wasm_skill";
 pub const WASM_SKILL_PLUGIN_NAME: &str = "Kelvin WASM Skill Tool";
 pub const WASM_SKILL_TOOL_DEFAULT_NAME: &str = "wasm_skill";
-pub const WASM_SKILL_PLUGIN_VERSION: &str = "0.1.0";
-pub const WASM_SKILL_MIN_CORE_VERSION: &str = "0.1.0";
+pub const WASM_SKILL_PLUGIN_VERSION: &str = "0.1.0"; // HARDCODED VERSION
+pub const WASM_SKILL_MIN_CORE_VERSION: &str = "0.1.0"; // HARDCODED VERSION
 
 // --- WASM Skill Tool Field Names ---
 pub const FIELD_WASM_PATH: &str = "wasm_path";
@@ -126,7 +126,7 @@ pub const APPROVAL_FIELD_NAME: &str = "approval";
 pub const QUALITY_TIER_UNSIGNED_LOCAL: &str = "unsigned_local";
 
 // --- Core Version ---
-pub const KELVIN_CORE_DEFAULT_VERSION: &str = "0.1.0";
+pub const KELVIN_CORE_DEFAULT_VERSION: &str = "0.1.0"; // HARDCODED VERSION
 
 // --- UTF-8 Conversion ---
 pub const UTF8_FORMAT_STRING: &str = "{:02x}";

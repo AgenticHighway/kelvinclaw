@@ -26,3 +26,50 @@ pub const MAX_SLOT_ENTRIES: usize = 4_096;
 
 // --- Validation ---
 pub const MAX_APPROVAL_REASON_LEN: usize = 256;
+
+// --- Paths and Directories ---
+pub const STATE_DIR_NAME: &str = "state";
+pub const KELVIN_DIR_NAME: &str = ".kelvin";
+pub const STATE_SESSIONS_SUBDIR: &str = "sessions";
+pub const STATE_RUNS_SUBDIR: &str = "runs";
+pub const TEMP_FILE_EXTENSION: &str = "tmp";
+
+// --- Session Defaults ---
+pub const DEFAULT_SESSION_ID: &str = "main";
+
+// --- Role Names ---
+pub const ROLE_USER: &str = "user";
+pub const ROLE_ASSISTANT: &str = "assistant";
+pub const ROLE_TOOL: &str = "tool";
+pub const ROLE_SYSTEM: &str = "system";
+
+// --- Built-in Tools ---
+pub const BUILTIN_TOOL_HELLO: &str = "hello_tool";
+pub const BUILTIN_TOOL_TIME: &str = "time";
+pub const PLUGIN_TOOL_KELVIN_CLI: &str = "kelvin_cli";
+
+// --- Model Provider Identifiers ---
+pub const MODEL_PROVIDER_KELVIN: &str = "kelvin";
+pub const MODEL_VERSION_ECHO_V1: &str = "echo-v1";
+
+// --- JSON Keys ---
+pub const JSON_KEY_RUN_ID: &str = "run_id";
+pub const JSON_KEY_UPDATED_AT_MS: &str = "updated_at_ms";
+pub const JSON_KEY_LAST_STATE: &str = "last_state";
+pub const JSON_KEY_LAST_WAIT: &str = "last_wait";
+pub const JSON_KEY_LAST_OUTCOME: &str = "last_outcome";
+pub const JSON_KEY_STATUS: &str = "status";
+pub const JSON_KEY_RESULT: &str = "result";
+pub const JSON_KEY_ERROR: &str = "error";
+pub const JSON_KEY_TIMEOUT: &str = "timeout";
+pub const JSON_KEY_COMPLETED: &str = "completed";
+pub const JSON_KEY_FAILED: &str = "failed";
+pub const JSON_KEY_COMPACTED: &str = "compacted";
+pub const JSON_KEY_DROPPED_MESSAGES: &str = "dropped_messages";
+pub const JSON_KEY_ACCEPTED_AT_MS: &str = "accepted_at_ms";
+pub const JSON_KEY_SESSION_ID: &str = "session_id";
+pub const JSON_KEY_WORKSPACE_DIR: &str = "workspace_dir";
+pub const JSON_KEY_PROMPT_LENGTH: &str = "prompt_length";
+pub const JSON_KEY_TIME: &str = "time";
+pub const JSON_KEY_HUMAN: &str = "human";
+pub const JSON_KEY_ISO8601: &str = "iso8601";
