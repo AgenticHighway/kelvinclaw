@@ -148,6 +148,8 @@ Subcommands:
   restart [-- <gateway-args>]
                    Stop (if running) and start the gateway.
   status           Show gateway status, PID, model provider, log path, uptime.
+  approve-pairing <code>
+                   Approve a Telegram pairing request by code.
   -h, --help       Show this help.
 
 State files:
@@ -170,6 +172,7 @@ Examples:
   ./kelvin-gateway status
   ./kelvin-gateway stop
   ./kelvin-gateway restart
+  ./kelvin-gateway approve-pairing <code>
 USAGE
 }
 
@@ -297,6 +300,18 @@ cmd_status() {
   echo "pid:    ${pid}"
 }
 
+cmd_approve_pairing() {
+  local code="${1:-}"
+  if [[ -z "${code}" ]]; then
+    echo "error: approve-pairing requires a pairing code" >&2
+    echo "Usage: ./kelvin-gateway approve-pairing <code>" >&2
+    exit 1
+  fi
+  local -a args=(--approve-pairing "${code}")
+  [[ -n "${KELVIN_GATEWAY_TOKEN:-}" ]] && args+=(--token "${KELVIN_GATEWAY_TOKEN}")
+  "${GATEWAY_BINARY}" "${args[@]}"
+}
+
 # ── dispatch ──────────────────────────────────────────────────────────────────
 
 if [[ $# -eq 0 ]]; then
@@ -308,10 +323,11 @@ SUBCOMMAND="$1"
 shift
 
 case "${SUBCOMMAND}" in
-  start)   cmd_start "$@" ;;
-  stop)    cmd_stop ;;
-  restart) cmd_restart "$@" ;;
-  status)  cmd_status ;;
+  start)            cmd_start "$@" ;;
+  stop)             cmd_stop ;;
+  restart)          cmd_restart "$@" ;;
+  status)           cmd_status ;;
+  approve-pairing)  cmd_approve_pairing "$@" ;;
   -h|--help) usage; exit 0 ;;
   *)
     echo "error: unknown subcommand: ${SUBCOMMAND}" >&2
