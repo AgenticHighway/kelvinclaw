@@ -125,6 +125,13 @@ pub const APPROVAL_FIELD_NAME: &str = "approval";
 // --- Plugin Quality Tiers ---
 pub const QUALITY_TIER_UNSIGNED_LOCAL: &str = "unsigned_local";
 
+// --- Plugin Operational Controls ---
+pub const OPERATIONAL_MAX_TIMEOUT: u64 = 600_000;
+pub const OPERATIONAL_MAX_RETRIES: u32 = 5;
+pub const OPERATIONAL_MAX_CALLS_PER_MINUTE: usize = 10_000;
+pub const OPERATIONAL_MAX_CIRCUIT_BREAKER_FAILURES: u32 = 100;
+pub const OPERATIONAL_MAX_CIRCUIT_BREAKER_COOLDOWN: u64 = 600_000;
+
 // --- UTF-8 Conversion ---
 pub const UTF8_FORMAT_STRING: &str = "{:02x}";
 

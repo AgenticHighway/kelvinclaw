@@ -2829,35 +2829,45 @@ fn normalize_controls(
     manifest: &InstalledPluginPackageManifest,
 ) -> KelvinResult<OperationalControls> {
     let controls = &manifest.operational_controls;
-    if controls.timeout_ms == 0 || controls.timeout_ms > 600_000 {
+    if controls.timeout_ms == 0 || controls.timeout_ms > consts::OPERATIONAL_MAX_TIMEOUT {
         return Err(KelvinError::InvalidInput(format!(
-            "plugin '{}' timeout_ms must be between 1 and 600000",
-            manifest.id
+            "plugin '{}' timeout_ms must be between 1 and {}",
+            manifest.id,
+            consts::OPERATIONAL_MAX_TIMEOUT
         )));
     }
-    if controls.max_retries > 5 {
+    if controls.max_retries > consts::OPERATIONAL_MAX_RETRIES {
         return Err(KelvinError::InvalidInput(format!(
-            "plugin '{}' max_retries must be <= 5",
-            manifest.id
+            "plugin '{}' max_retries must be <= {}",
+            manifest.id,
+            consts::OPERATIONAL_MAX_RETRIES
         )));
     }
-    if controls.max_calls_per_minute == 0 || controls.max_calls_per_minute > 10_000 {
-        return Err(KelvinError::InvalidInput(format!(
-            "plugin '{}' max_calls_per_minute must be between 1 and 10000",
-            manifest.id
-        )));
-    }
-    if controls.circuit_breaker_failures == 0 || controls.circuit_breaker_failures > 100 {
-        return Err(KelvinError::InvalidInput(format!(
-            "plugin '{}' circuit_breaker_failures must be between 1 and 100",
-            manifest.id
-        )));
-    }
-    if controls.circuit_breaker_cooldown_ms < 100 || controls.circuit_breaker_cooldown_ms > 600_000
+    if controls.max_calls_per_minute == 0
+        || controls.max_calls_per_minute > consts::OPERATIONAL_MAX_CALLS_PER_MINUTE
     {
         return Err(KelvinError::InvalidInput(format!(
-            "plugin '{}' circuit_breaker_cooldown_ms must be between 100 and 600000",
-            manifest.id
+            "plugin '{}' max_calls_per_minute must be between 1 and {}",
+            manifest.id,
+            consts::OPERATIONAL_MAX_CALLS_PER_MINUTE
+        )));
+    }
+    if controls.circuit_breaker_failures == 0
+        || controls.circuit_breaker_failures > consts::OPERATIONAL_MAX_CIRCUIT_BREAKER_FAILURES
+    {
+        return Err(KelvinError::InvalidInput(format!(
+            "plugin '{}' circuit_breaker_failures must be between 1 and {}",
+            manifest.id,
+            consts::OPERATIONAL_MAX_CIRCUIT_BREAKER_FAILURES
+        )));
+    }
+    if controls.circuit_breaker_cooldown_ms < 100
+        || controls.circuit_breaker_cooldown_ms > consts::OPERATIONAL_MAX_CIRCUIT_BREAKER_COOLDOWN
+    {
+        return Err(KelvinError::InvalidInput(format!(
+            "plugin '{}' circuit_breaker_cooldown_ms must be between 100 and {}",
+            manifest.id,
+            consts::OPERATIONAL_MAX_CIRCUIT_BREAKER_COOLDOWN
         )));
     }
 
