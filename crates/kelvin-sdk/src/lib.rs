@@ -1330,46 +1330,6 @@ impl Tool for TimeTool {
 
 /// ### Brief
 ///
-/// built-in tool that always returns a fixed text response
-///
-/// ### Fields
-/// * `name` - tool name exposed to the agent
-/// * `text` - static text returned on every call
-#[derive(Debug, Clone)]
-struct StaticTextTool {
-    name: String,
-    text: String,
-}
-
-/// static text tool construction
-impl StaticTextTool {
-    fn new(name: &str, text: &str) -> Self {
-        Self {
-            name: name.to_string(),
-            text: text.to_string(),
-        }
-    }
-}
-
-/// `Tool` implementation for the static text tool
-#[async_trait]
-impl Tool for StaticTextTool {
-    fn name(&self) -> &str {
-        &self.name
-    }
-
-    async fn call(&self, _input: ToolCallInput) -> KelvinResult<ToolCallResult> {
-        Ok(ToolCallResult {
-            summary: format!("{} returned static text", self.name),
-            output: Some(self.text.clone()),
-            visible_text: Some(self.text.clone()),
-            is_error: false,
-        })
-    }
-}
-
-/// ### Brief
-///
 /// `ModelProvider` that retries across a chain of providers on retryable failures
 ///
 /// ### Description
@@ -1524,10 +1484,6 @@ impl KelvinSdkRuntime {
 
         let builtin_tools = Arc::new(HashMapToolRegistry::default());
         builtin_tools.register(TimeTool);
-        builtin_tools.register(StaticTextTool::new(
-            crate::consts::BUILTIN_TOOL_HELLO,
-            "Hello from Kelvin SDK built-in tools.",
-        ));
         let (toolpack_tools, toolpack_count) =
             toolpack::load_default_toolpack_plugins(&config.core_version, scheduler_store.clone())?;
         println!("loaded kelvin core toolpack plugins: {toolpack_count}");

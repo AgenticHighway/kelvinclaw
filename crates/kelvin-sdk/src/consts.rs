@@ -60,7 +60,6 @@ pub const ROLE_TOOL: &str = "tool";
 pub const ROLE_SYSTEM: &str = "system";
 
 // --- Built-in Tools ---
-pub const BUILTIN_TOOL_HELLO: &str = "hello_tool";
 pub const BUILTIN_TOOL_TIME: &str = "time";
 pub const PLUGIN_TOOL_KELVIN_CLI: &str = "kelvin_cli";
 
