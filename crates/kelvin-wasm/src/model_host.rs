@@ -11,6 +11,8 @@ use serde_json::{json, Value};
 use url::Url;
 use wasmtime::{Caller, Config, Engine, Linker, Memory, Module, Store};
 
+use crate::consts;
+
 pub mod model_abi {
     use crate::consts;
 
@@ -299,7 +301,7 @@ fn model_input_to_anthropic_request(input: &ModelInput, model_name: &str) -> Val
     let messages = build_anthropic_messages(input);
     let mut payload = json!({
         "model": model_name,
-        "max_tokens": 1024,
+        "max_tokens": consts::MODEL_PAYLOAD_MAX_TOKENS,
         "messages": messages
     });
 
@@ -650,7 +652,11 @@ impl WasmModelHost {
                 model_abi::MODULE,
                 model_abi::IMPORT_LOG,
                 |mut caller: Caller<'_, ModelHostState>, _level: i32, ptr: i32, len: i32| -> i32 {
-                    let max_len = caller.data().policy.max_request_bytes.min(16 * 1024);
+                    let max_len = caller
+                        .data()
+                        .policy
+                        .max_request_bytes
+                        .min(consts::MODEL_DEFAULT_MAX_REQUEST_BYTES);
                     if let Ok(bytes) =
                         read_caller_bytes(&mut caller, ptr, len, max_len, "log message")
                     {

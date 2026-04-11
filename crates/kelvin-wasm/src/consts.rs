@@ -25,6 +25,7 @@ pub const MODEL_IMPORT_OPENAI_RESPONSES_CALL: &str = "openai_responses_call";
 pub const MODEL_IMPORT_PROVIDER_PROFILE_CALL: &str = "provider_profile_call";
 pub const MODEL_IMPORT_LOG: &str = "log";
 pub const MODEL_IMPORT_CLOCK_NOW_MS: &str = "clock_now_ms";
+pub const MODEL_PAYLOAD_MAX_TOKENS: usize = 1024;
 
 // --- ABI: Channel Host ---
 pub const CHANNEL_ABI_VERSION: &str = "1.0.0";
