@@ -36,6 +36,9 @@ pub const TEMP_FILE_EXTENSION: &str = "tmp";
 
 // --- Session Defaults ---
 pub const DEFAULT_SESSION_ID: &str = "main";
+pub const DEFAULT_MAX_SESSION_HISTORY_MESSAGES: usize = 128;
+pub const DEFAULT_COMPACT_TO_MESSAGES: usize = 64;
+pub const DEFAULT_MAX_TOOL_ITERATIONS: usize = 10;
 
 // --- Role Names ---
 pub const ROLE_USER: &str = "user";

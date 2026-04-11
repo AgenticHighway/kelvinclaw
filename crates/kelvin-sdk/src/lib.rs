@@ -182,7 +182,7 @@ impl KelvinSdkConfig {
             session_id: crate::consts::DEFAULT_SESSION_ID.to_string(),
             workspace_dir: std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")),
             memory_mode: KelvinCliMemoryMode::Markdown,
-            timeout_ms: 300_000,
+            timeout_ms: crate::consts::MAX_DEFAULT_TIMEOUT_MS,
             system_prompt: None,
             core_version: env!("CARGO_PKG_VERSION").to_string(),
             plugin_security_policy: PluginSecurityPolicy::default(),
@@ -190,9 +190,9 @@ impl KelvinSdkConfig {
             model_provider: KelvinSdkModelSelection::Echo,
             state_dir: None,
             persist_runs: true,
-            max_session_history_messages: 128,
-            compact_to_messages: 64,
-            max_tool_iterations: 10,
+            max_session_history_messages: crate::consts::DEFAULT_MAX_SESSION_HISTORY_MESSAGES,
+            compact_to_messages: crate::consts::DEFAULT_COMPACT_TO_MESSAGES,
+            max_tool_iterations: crate::consts::DEFAULT_MAX_TOOL_ITERATIONS,
         }
     }
 }
