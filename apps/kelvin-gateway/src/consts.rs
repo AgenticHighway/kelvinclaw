@@ -33,6 +33,12 @@ pub const GATEWAY_METHODS_V1: &[&str] = &[
     "schedule.list",
 ];
 
+// --- WebSocket Security Minimums ---
+pub const MIN_MESSAGE_SIZE_BYTES: usize = 1024;
+pub const MIN_FRAME_SIZE_BYTES: usize = 512;
+pub const MIN_HANDSHAKE_TIMEOUT_MS: u64 = 100;
+pub const MIN_AUTH_FAILURE_BACKOFF_MS: u64 = 100;
+
 // --- WebSocket Security ---
 pub const DEFAULT_MAX_CONNECTIONS: usize = 128;
 pub const DEFAULT_MAX_MESSAGE_BYTES: usize = 64 * 1024;
@@ -100,6 +106,25 @@ pub const WHATSAPP_TEXT_MESSAGE_TYPE: &str = "text";
 // --- Content Types ---
 pub const CONTENT_TYPE_JAVASCRIPT: &str = "application/javascript; charset=utf-8";
 pub const CONTENT_TYPE_CSS: &str = "text/css; charset=utf-8";
+
+// --- Operator API ---
+pub const DEFAULT_PLUGIN_INDEX_URL: &str = "";
+pub const RUN_LIST_LIMIT_DEFAULT: usize = 25;
+pub const RUN_LIST_LIMIT_MAX: usize = 200;
+pub const SESSION_LIST_LIMIT_DEFAULT: usize = 25;
+pub const SESSION_LIST_LIMIT_MAX: usize = 200;
+pub const SESSION_MESSAGE_LIMIT_DEFAULT: usize = 20;
+pub const SESSION_MESSAGE_LIMIT_MAX: usize = 200;
+
+// --- Scheduler ---
+pub const DEFAULT_TICK_MS: u64 = 1_000;
+pub const DEFAULT_MAX_CLAIMS_PER_SCHEDULE: usize = 4;
+pub const HISTORY_LIMIT_MAX: usize = 200;
+pub const OUTCOME_PREVIEW_MAX_LEN: usize = 512;
+
+// --- Hashing ---
+pub const SIMPLE_HASH_SEED: u128 = 1_469_598_103_934_665_603;
+pub const SIMPLE_HASH_MULTIPLIER: u128 = 1_099_511_628_211;
 
 // --- Verification Methods ---
 pub const VERIFICATION_METHOD_TELEGRAM: &str = "telegram_secret_token";

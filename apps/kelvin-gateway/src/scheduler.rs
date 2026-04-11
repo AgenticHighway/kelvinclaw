@@ -12,10 +12,9 @@ use tokio::time::{sleep, Duration};
 
 use crate::channels::ChannelEngine;
 
-const DEFAULT_TICK_MS: u64 = 1_000;
-const DEFAULT_MAX_CLAIMS_PER_SCHEDULE: usize = 4;
-const HISTORY_LIMIT_MAX: usize = 200;
-const OUTCOME_PREVIEW_MAX_LEN: usize = 512;
+use crate::consts::{
+    DEFAULT_MAX_CLAIMS_PER_SCHEDULE, DEFAULT_TICK_MS, HISTORY_LIMIT_MAX, OUTCOME_PREVIEW_MAX_LEN,
+};
 
 #[derive(Debug, Default)]
 struct SchedulerMetrics {

@@ -728,22 +728,22 @@ fn validate_gateway_security(
     if security.max_connections == 0 {
         return Err("gateway max_connections must be >= 1".to_string());
     }
-    if security.max_message_size_bytes < 1024 {
+    if security.max_message_size_bytes < crate::consts::MIN_MESSAGE_SIZE_BYTES {
         return Err("gateway max_message_size_bytes must be >= 1024".to_string());
     }
-    if security.max_frame_size_bytes < 512 {
+    if security.max_frame_size_bytes < crate::consts::MIN_FRAME_SIZE_BYTES {
         return Err("gateway max_frame_size_bytes must be >= 512".to_string());
     }
     if security.max_frame_size_bytes > security.max_message_size_bytes {
         return Err("gateway max_frame_size_bytes must be <= max_message_size_bytes".to_string());
     }
-    if security.handshake_timeout_ms < 100 {
+    if security.handshake_timeout_ms < crate::consts::MIN_HANDSHAKE_TIMEOUT_MS {
         return Err("gateway handshake_timeout_ms must be >= 100".to_string());
     }
     if security.auth_failure_threshold == 0 {
         return Err("gateway auth_failure_threshold must be >= 1".to_string());
     }
-    if security.auth_failure_backoff_ms < 100 {
+    if security.auth_failure_backoff_ms < crate::consts::MIN_AUTH_FAILURE_BACKOFF_MS {
         return Err("gateway auth_failure_backoff_ms must be >= 100".to_string());
     }
     if security.max_outbound_messages_per_connection == 0 {

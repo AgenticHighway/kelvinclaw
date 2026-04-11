@@ -2050,10 +2050,10 @@ fn read_env_u64(name: &str, default: u64, min: u64, max: u64) -> KelvinErrorOr<u
 }
 
 fn simple_hash(input: &str) -> u128 {
-    let mut hash: u128 = 1469598103934665603;
+    let mut hash: u128 = crate::consts::SIMPLE_HASH_SEED;
     for byte in input.as_bytes() {
         hash ^= u128::from(*byte);
-        hash = hash.wrapping_mul(1099511628211);
+        hash = hash.wrapping_mul(crate::consts::SIMPLE_HASH_MULTIPLIER);
     }
     hash
 }
