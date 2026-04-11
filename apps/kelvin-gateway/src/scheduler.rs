@@ -12,23 +12,23 @@ use tokio::time::{sleep, Duration};
 
 use crate::channels::ChannelEngine;
 
-const DEFAULT_TICK_MS: u64 = 1_000; // THIS LINE CONTAINS CONSTANT(S)
-const DEFAULT_MAX_CLAIMS_PER_SCHEDULE: usize = 4; // THIS LINE CONTAINS CONSTANT(S)
-const HISTORY_LIMIT_MAX: usize = 200; // THIS LINE CONTAINS CONSTANT(S)
-const OUTCOME_PREVIEW_MAX_LEN: usize = 512; // THIS LINE CONTAINS CONSTANT(S)
+const DEFAULT_TICK_MS: u64 = 1_000;
+const DEFAULT_MAX_CLAIMS_PER_SCHEDULE: usize = 4;
+const HISTORY_LIMIT_MAX: usize = 200;
+const OUTCOME_PREVIEW_MAX_LEN: usize = 512;
 
 #[derive(Debug, Default)]
 struct SchedulerMetrics {
-    last_scan_started_ms: Option<u128>, // THIS LINE CONTAINS CONSTANT(S)
-    last_scan_finished_ms: Option<u128>, // THIS LINE CONTAINS CONSTANT(S)
-    claimed_total: u64, // THIS LINE CONTAINS CONSTANT(S)
-    submitted_total: u64, // THIS LINE CONTAINS CONSTANT(S)
-    submit_failed_total: u64, // THIS LINE CONTAINS CONSTANT(S)
-    completed_total: u64, // THIS LINE CONTAINS CONSTANT(S)
-    failed_total: u64, // THIS LINE CONTAINS CONSTANT(S)
-    timeout_total: u64, // THIS LINE CONTAINS CONSTANT(S)
-    reply_delivered_total: u64, // THIS LINE CONTAINS CONSTANT(S)
-    reply_failed_total: u64, // THIS LINE CONTAINS CONSTANT(S)
+    last_scan_started_ms: Option<u128>,
+    last_scan_finished_ms: Option<u128>,
+    claimed_total: u64,
+    submitted_total: u64,
+    submit_failed_total: u64,
+    completed_total: u64,
+    failed_total: u64,
+    timeout_total: u64,
+    reply_delivered_total: u64,
+    reply_failed_total: u64,
     last_error: Option<String>,
 }
 
@@ -36,7 +36,7 @@ struct SchedulerMetrics {
 pub(crate) struct RuntimeScheduler {
     store: Arc<SchedulerStore>,
     metrics: Arc<Mutex<SchedulerMetrics>>,
-    tick_ms: u64, // THIS LINE CONTAINS CONSTANT(S)
+    tick_ms: u64,
     max_claims_per_schedule: usize,
 }
 
@@ -75,42 +75,42 @@ impl RuntimeScheduler {
             Err(err) => {
                 let message = format!("scheduler status unavailable: {err}");
                 json!({
-                    "schedule_count": 0, // THIS LINE CONTAINS CONSTANT(S)
-                    "slot_count": 0, // THIS LINE CONTAINS CONSTANT(S)
-                    "audit_count": 0, // THIS LINE CONTAINS CONSTANT(S)
-                    "due_now_count": 0, // THIS LINE CONTAINS CONSTANT(S)
-                    "next_slot_at_ms": null, // THIS LINE CONTAINS CONSTANT(S)
-                    "error": message, // THIS LINE CONTAINS CONSTANT(S)
+                    "schedule_count": 0,
+                    "slot_count": 0,
+                    "audit_count": 0,
+                    "due_now_count": 0,
+                    "next_slot_at_ms": null,
+                    "error": message,
                 })
             }
         };
         let metrics = self.metrics.lock().await;
         json!({
-            "state_path": self.store.state_path().to_string_lossy(), // THIS LINE CONTAINS CONSTANT(S)
-            "tick_ms": self.tick_ms, // THIS LINE CONTAINS CONSTANT(S)
-            "max_claims_per_schedule": self.max_claims_per_schedule, // THIS LINE CONTAINS CONSTANT(S)
-            "status": status, // THIS LINE CONTAINS CONSTANT(S)
-            "metrics": { // THIS LINE CONTAINS CONSTANT(S)
-                "last_scan_started_ms": metrics.last_scan_started_ms, // THIS LINE CONTAINS CONSTANT(S)
-                "last_scan_finished_ms": metrics.last_scan_finished_ms, // THIS LINE CONTAINS CONSTANT(S)
-                "claimed_total": metrics.claimed_total, // THIS LINE CONTAINS CONSTANT(S)
-                "submitted_total": metrics.submitted_total, // THIS LINE CONTAINS CONSTANT(S)
-                "submit_failed_total": metrics.submit_failed_total, // THIS LINE CONTAINS CONSTANT(S)
-                "completed_total": metrics.completed_total, // THIS LINE CONTAINS CONSTANT(S)
-                "failed_total": metrics.failed_total, // THIS LINE CONTAINS CONSTANT(S)
-                "timeout_total": metrics.timeout_total, // THIS LINE CONTAINS CONSTANT(S)
-                "reply_delivered_total": metrics.reply_delivered_total, // THIS LINE CONTAINS CONSTANT(S)
-                "reply_failed_total": metrics.reply_failed_total, // THIS LINE CONTAINS CONSTANT(S)
-                "last_error": metrics.last_error, // THIS LINE CONTAINS CONSTANT(S)
+            "state_path": self.store.state_path().to_string_lossy(),
+            "tick_ms": self.tick_ms,
+            "max_claims_per_schedule": self.max_claims_per_schedule,
+            "status": status,
+            "metrics": {
+                "last_scan_started_ms": metrics.last_scan_started_ms,
+                "last_scan_finished_ms": metrics.last_scan_finished_ms,
+                "claimed_total": metrics.claimed_total,
+                "submitted_total": metrics.submitted_total,
+                "submit_failed_total": metrics.submit_failed_total,
+                "completed_total": metrics.completed_total,
+                "failed_total": metrics.failed_total,
+                "timeout_total": metrics.timeout_total,
+                "reply_delivered_total": metrics.reply_delivered_total,
+                "reply_failed_total": metrics.reply_failed_total,
+                "last_error": metrics.last_error,
             }
         })
     }
 
     pub(crate) fn list_payload(&self) -> Result<Value, KelvinError> {
         Ok(json!({
-            "state_path": self.store.state_path().to_string_lossy(), // THIS LINE CONTAINS CONSTANT(S)
-            "status": self.store.status(now_ms())?, // THIS LINE CONTAINS CONSTANT(S)
-            "schedules": self.store.list_schedules()?, // THIS LINE CONTAINS CONSTANT(S)
+            "state_path": self.store.state_path().to_string_lossy(),
+            "status": self.store.status(now_ms())?,
+            "schedules": self.store.list_schedules()?,
         }))
     }
 
@@ -118,14 +118,14 @@ impl RuntimeScheduler {
         &self,
         params: ScheduleHistoryParams,
     ) -> Result<Value, KelvinError> {
-        let limit = params.limit.unwrap_or(20).clamp(1, HISTORY_LIMIT_MAX); // THIS LINE CONTAINS CONSTANT(S)
+        let limit = params.limit.unwrap_or(20).clamp(1, HISTORY_LIMIT_MAX);
         let schedule_id = params.schedule_id.as_deref();
         Ok(json!({
-            "state_path": self.store.state_path().to_string_lossy(), // THIS LINE CONTAINS CONSTANT(S)
-            "schedule_id": params.schedule_id, // THIS LINE CONTAINS CONSTANT(S)
-            "limit": limit, // THIS LINE CONTAINS CONSTANT(S)
-            "slots": self.store.recent_slots(schedule_id, limit)?, // THIS LINE CONTAINS CONSTANT(S)
-            "audit": self.store.recent_audit(schedule_id, limit)?, // THIS LINE CONTAINS CONSTANT(S)
+            "state_path": self.store.state_path().to_string_lossy(),
+            "schedule_id": params.schedule_id,
+            "limit": limit,
+            "slots": self.store.recent_slots(schedule_id, limit)?,
+            "audit": self.store.recent_audit(schedule_id, limit)?,
         }))
     }
 
@@ -150,7 +150,7 @@ impl RuntimeScheduler {
 
         if !claimed.is_empty() {
             let mut metrics = self.metrics.lock().await;
-            metrics.claimed_total = metrics.claimed_total.saturating_add(claimed.len() as u64); // THIS LINE CONTAINS CONSTANT(S)
+            metrics.claimed_total = metrics.claimed_total.saturating_add(claimed.len() as u64);
         }
 
         for slot in claimed {
@@ -191,7 +191,7 @@ impl RuntimeScheduler {
                     self.store
                         .mark_slot_submit_failed(&schedule.id, claimed.slot_at_ms, &message);
                 let mut metrics = self.metrics.lock().await;
-                metrics.submit_failed_total = metrics.submit_failed_total.saturating_add(1); // THIS LINE CONTAINS CONSTANT(S)
+                metrics.submit_failed_total = metrics.submit_failed_total.saturating_add(1);
                 metrics.last_error = Some(message);
                 return;
             }
@@ -202,10 +202,10 @@ impl RuntimeScheduler {
             .mark_slot_submitted(&schedule.id, claimed.slot_at_ms, &accepted.run_id);
         {
             let mut metrics = self.metrics.lock().await;
-            metrics.submitted_total = metrics.submitted_total.saturating_add(1); // THIS LINE CONTAINS CONSTANT(S)
+            metrics.submitted_total = metrics.submitted_total.saturating_add(1);
         }
 
-        let timeout_ms = schedule.timeout_ms.unwrap_or(300_000).saturating_add(3_000); // THIS LINE CONTAINS CONSTANT(S)
+        let timeout_ms = schedule.timeout_ms.unwrap_or(300_000).saturating_add(3_000);
         match runtime.wait_for_outcome(&accepted.run_id, timeout_ms).await {
             Ok(RunOutcome::Completed(result)) => {
                 let preview = join_payloads(
@@ -225,7 +225,7 @@ impl RuntimeScheduler {
                 );
                 {
                     let mut metrics = self.metrics.lock().await;
-                    metrics.completed_total = metrics.completed_total.saturating_add(1); // THIS LINE CONTAINS CONSTANT(S)
+                    metrics.completed_total = metrics.completed_total.saturating_add(1);
                 }
                 self.deliver_reply(channels, &schedule, claimed.slot_at_ms, &preview)
                     .await;
@@ -241,7 +241,7 @@ impl RuntimeScheduler {
                     Some(error.clone()),
                 );
                 let mut metrics = self.metrics.lock().await;
-                metrics.failed_total = metrics.failed_total.saturating_add(1); // THIS LINE CONTAINS CONSTANT(S)
+                metrics.failed_total = metrics.failed_total.saturating_add(1);
                 metrics.last_error = Some(error);
                 drop(metrics);
                 self.deliver_reply(channels, &schedule, claimed.slot_at_ms, &text)
@@ -257,7 +257,7 @@ impl RuntimeScheduler {
                     None,
                 );
                 let mut metrics = self.metrics.lock().await;
-                metrics.timeout_total = metrics.timeout_total.saturating_add(1); // THIS LINE CONTAINS CONSTANT(S)
+                metrics.timeout_total = metrics.timeout_total.saturating_add(1);
                 metrics.last_error = Some("scheduled run timed out".to_string());
                 drop(metrics);
                 self.deliver_reply(
@@ -274,7 +274,7 @@ impl RuntimeScheduler {
                     self.store
                         .mark_slot_submit_failed(&schedule.id, claimed.slot_at_ms, &message);
                 let mut metrics = self.metrics.lock().await;
-                metrics.submit_failed_total = metrics.submit_failed_total.saturating_add(1); // THIS LINE CONTAINS CONSTANT(S)
+                metrics.submit_failed_total = metrics.submit_failed_total.saturating_add(1);
                 metrics.last_error = Some(message);
             }
         }
@@ -284,7 +284,7 @@ impl RuntimeScheduler {
         &self,
         channels: Arc<Mutex<ChannelEngine>>,
         schedule: &kelvin_sdk::ScheduledTask,
-        slot_at_ms: u128, // THIS LINE CONTAINS CONSTANT(S)
+        slot_at_ms: u128,
         text: &str,
     ) {
         let Some(target) = schedule.reply_target.as_ref() else {
@@ -303,14 +303,14 @@ impl RuntimeScheduler {
                 let _ = self
                     .store
                     .mark_reply_result(&schedule.id, slot_at_ms, true, None);
-                metrics.reply_delivered_total = metrics.reply_delivered_total.saturating_add(1); // THIS LINE CONTAINS CONSTANT(S)
+                metrics.reply_delivered_total = metrics.reply_delivered_total.saturating_add(1);
             }
             Err(err) => {
                 let error = err.to_string();
                 let _ = self
                     .store
                     .mark_reply_result(&schedule.id, slot_at_ms, false, Some(&error));
-                metrics.reply_failed_total = metrics.reply_failed_total.saturating_add(1); // THIS LINE CONTAINS CONSTANT(S)
+                metrics.reply_failed_total = metrics.reply_failed_total.saturating_add(1);
                 metrics.last_error = Some(error);
             }
         }

@@ -1,5 +1,5 @@
 use std::sync::{
-    atomic::{AtomicU64, Ordering}, // THIS LINE CONTAINS CONSTANT(S)
+    atomic::{AtomicU64, Ordering},
     Arc,
 };
 use std::time::Duration;
@@ -24,7 +24,7 @@ pub struct KelvinBrain {
     model: Arc<dyn ModelProvider>,
     tools: Arc<dyn ToolRegistry>,
     events: Arc<dyn EventSink>,
-    seq: Arc<AtomicU64>, // THIS LINE CONTAINS CONSTANT(S)
+    seq: Arc<AtomicU64>,
     max_tool_iterations: usize,
 }
 
@@ -35,7 +35,7 @@ struct ToolReceipt<'a> {
     tool_call_id: &'a str,
     result_class: &'a str,
     reason: &'a str,
-    latency_ms: u128, // THIS LINE CONTAINS CONSTANT(S)
+    latency_ms: u128,
 }
 
 impl KelvinBrain {
@@ -52,8 +52,8 @@ impl KelvinBrain {
             model,
             tools,
             events,
-            seq: Arc::new(AtomicU64::new(0)), // THIS LINE CONTAINS CONSTANT(S)
-            max_tool_iterations: 10, // THIS LINE CONTAINS CONSTANT(S)
+            seq: Arc::new(AtomicU64::new(0)),
+            max_tool_iterations: crate::consts::MAX_TOOL_ITERATIONS,
         }
     }
 
@@ -62,8 +62,8 @@ impl KelvinBrain {
         self
     }
 
-    fn next_seq(&self) -> u64 { // THIS LINE CONTAINS CONSTANT(S)
-        self.seq.fetch_add(1, Ordering::SeqCst) + 1 // THIS LINE CONTAINS CONSTANT(S)
+    fn next_seq(&self) -> u64 {
+        self.seq.fetch_add(1, Ordering::SeqCst) + 1
     }
 
     async fn emit_lifecycle(
@@ -112,18 +112,18 @@ impl KelvinBrain {
 
     fn emit_tool_receipt(&self, receipt: ToolReceipt<'_>) {
         let line = json!({
-            "stream": "tool_receipt", // THIS LINE CONTAINS CONSTANT(S)
-            "run_id": receipt.run_id, // THIS LINE CONTAINS CONSTANT(S)
-            "who": { // THIS LINE CONTAINS CONSTANT(S)
-                "session_id": receipt.session_id, // THIS LINE CONTAINS CONSTANT(S)
+            "stream": crate::consts::JSON_KEY_TOOL_RECEIPT,
+            "run_id": receipt.run_id,
+            "who": {
+                "session_id": receipt.session_id,
             },
-            "what": { // THIS LINE CONTAINS CONSTANT(S)
-                "tool_name": receipt.tool_name, // THIS LINE CONTAINS CONSTANT(S)
-                "tool_call_id": receipt.tool_call_id, // THIS LINE CONTAINS CONSTANT(S)
+            "what": {
+                "tool_name": receipt.tool_name,
+                "tool_call_id": receipt.tool_call_id,
             },
-            "why": sanitize_receipt_reason(receipt.reason), // THIS LINE CONTAINS CONSTANT(S)
-            "result_class": receipt.result_class, // THIS LINE CONTAINS CONSTANT(S)
-            "latency_ms": receipt.latency_ms, // THIS LINE CONTAINS CONSTANT(S)
+            "why": sanitize_receipt_reason(receipt.reason),
+            "result_class": receipt.result_class,
+            "latency_ms": receipt.latency_ms,
         });
         println!("{line}");
     }
@@ -161,7 +161,7 @@ impl KelvinBrain {
                     session_id: &req.session_id,
                     tool_name: &tool_call.name,
                     tool_call_id: &tool_call.id,
-                    result_class: "denied", // THIS LINE CONTAINS CONSTANT(S)
+                    result_class: crate::consts::RESULT_CLASS_DENIED,
                     reason: &summary,
                     latency_ms: now_ms().saturating_sub(started_tool_at),
                 });
@@ -202,9 +202,9 @@ impl KelvinBrain {
                             SessionMessage::tool(
                                 format!("{}\n\nError:\n{}", summary, err),
                                 json!({
-                                    "tool": tool.name(), // THIS LINE CONTAINS CONSTANT(S)
-                                    "is_error": true, // THIS LINE CONTAINS CONSTANT(S)
-                                    "error": err.to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                                    "tool": tool.name(),
+                                    "is_error": true,
+                                    "error": err.to_string(),
                                 }),
                             ),
                         )
@@ -214,7 +214,7 @@ impl KelvinBrain {
                         session_id: &req.session_id,
                         tool_name: tool.name(),
                         tool_call_id: &tool_call.id,
-                        result_class: "error", // THIS LINE CONTAINS CONSTANT(S)
+                        result_class: crate::consts::RESULT_CLASS_ERROR,
                         reason: &summary,
                         latency_ms: now_ms().saturating_sub(started_tool_at),
                     });
@@ -253,9 +253,9 @@ impl KelvinBrain {
                     SessionMessage::tool(
                         tool_content,
                         json!({
-                            "tool": tool.name(), // THIS LINE CONTAINS CONSTANT(S)
-                            "is_error": result.is_error, // THIS LINE CONTAINS CONSTANT(S)
-                            "output": result.output, // THIS LINE CONTAINS CONSTANT(S)
+                            "tool": tool.name(),
+                            "is_error": result.is_error,
+                            "output": result.output,
                         }),
                     ),
                 )
@@ -267,9 +267,9 @@ impl KelvinBrain {
                 tool_name: tool.name(),
                 tool_call_id: &tool_call.id,
                 result_class: if result.is_error {
-                    "tool_error" // THIS LINE CONTAINS CONSTANT(S)
+                    crate::consts::RESULT_CLASS_TOOL_ERROR
                 } else {
-                    "success" // THIS LINE CONTAINS CONSTANT(S)
+                    crate::consts::RESULT_CLASS_SUCCESS
                 },
                 reason: &result.summary,
                 latency_ms: now_ms().saturating_sub(started_tool_at),
@@ -309,7 +309,7 @@ impl KelvinBrain {
             .await?;
 
         // Load prior history BEFORE appending the current user message so that
-        // iteration 0 can pass it as context without duplicating the user prompt. // THIS LINE CONTAINS CONSTANT(S)
+        // iteration 0 can pass it as context without duplicating the user prompt.
         let prior_history = self.session_store.history(&req.session_id).await?;
 
         self.session_store
@@ -344,7 +344,7 @@ impl KelvinBrain {
             });
 
         let max_iter = req.max_tool_iterations.unwrap_or(self.max_tool_iterations);
-        let mut iteration = 0usize; // THIS LINE CONTAINS CONSTANT(S)
+        let mut iteration = 0usize;
         let mut payloads: Vec<AgentPayload> = Vec::new();
         #[allow(unused_assignments)]
         let mut stop_reason: Option<String> = None;
@@ -352,17 +352,17 @@ impl KelvinBrain {
         let mut loop_detector = ToolLoopDetector::new();
 
         loop {
-            // For iteration 0 use the prior-history snapshot (before the current user // THIS LINE CONTAINS CONSTANT(S)
+            // For iteration 0 use the prior-history snapshot (before the current user
             // message was appended) so that user_prompt is the sole source of the
             // current turn.  For subsequent iterations reload the full session so the
             // model sees all intermediate assistant / tool messages.
-            let history = if iteration == 0 { // THIS LINE CONTAINS CONSTANT(S)
+            let history = if iteration == 0 {
                 prior_history.clone()
             } else {
                 self.session_store.history(&req.session_id).await?
             };
 
-            let user_prompt = if iteration == 0 { // THIS LINE CONTAINS CONSTANT(S)
+            let user_prompt = if iteration == 0 {
                 req.prompt.clone()
             } else {
                 "Tool calls completed. Based on the results in the conversation history above, respond to the user's original request.".to_string()
@@ -383,7 +383,7 @@ impl KelvinBrain {
             let text = output.assistant_text.trim().to_string();
             let has_tools = !output.tool_calls.is_empty();
 
-            if !text.is_empty() && text != "NO_REPLY" { // THIS LINE CONTAINS CONSTANT(S)
+            if !text.is_empty() && text != crate::consts::NO_REPLY_SIGNAL {
                 self.emit_assistant(&req.run_id, &text, !has_tools).await?;
                 self.session_store
                     .append_message(&req.session_id, SessionMessage::assistant(text.clone()))
@@ -415,7 +415,7 @@ impl KelvinBrain {
                     .map(|(_, tc)| tc)
                     .collect::<Vec<_>>(),
             );
-            iteration += 1; // THIS LINE CONTAINS CONSTANT(S)
+            iteration += 1;
 
             let force_reason = if iteration >= max_iter {
                 Some(format!("max tool iterations ({max_iter}) reached"))
@@ -450,7 +450,7 @@ impl KelvinBrain {
                 stop_reason = final_output.stop_reason.clone();
                 let final_text = final_output.assistant_text.trim().to_string();
 
-                if !final_text.is_empty() && final_text != "NO_REPLY" { // THIS LINE CONTAINS CONSTANT(S)
+                if !final_text.is_empty() && final_text != crate::consts::NO_REPLY_SIGNAL {
                     self.emit_assistant(&req.run_id, &final_text, true).await?;
                     self.session_store
                         .append_message(
@@ -488,8 +488,8 @@ impl KelvinBrain {
 fn sanitize_receipt_reason(reason: &str) -> String {
     let mut out = String::new();
     for (idx, ch) in reason.chars().enumerate() {
-        if idx >= 512 { // THIS LINE CONTAINS CONSTANT(S)
-            out.push_str("..."); // THIS LINE CONTAINS CONSTANT(S)
+        if idx >= crate::consts::RECEIPT_REASON_MAX_LENGTH {
+            out.push_str("...");
             break;
         }
         if ch.is_control() {

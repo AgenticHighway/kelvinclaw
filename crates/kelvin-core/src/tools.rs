@@ -74,35 +74,35 @@ pub trait Tool: Send + Sync {
     /// ### Description
     ///
     /// the returned schema is surfaced to the LLM as part of the tool definition and drives
-    /// argument validation. it must be a JSON Schema object (`"type": "object"`) with a // THIS LINE CONTAINS CONSTANT(S)
+    /// argument validation. it must be a JSON Schema object (`"type": "object"`) with a
     /// `properties` map and a `required` array listing mandatory fields. the default
     /// implementation returns a permissive empty object schema with no required fields.
     ///
     /// example schema for a tool that writes a file with an approval gate:
     /// ```json
     /// {
-    ///   "type": "object", // THIS LINE CONTAINS CONSTANT(S)
-    ///   "properties": { // THIS LINE CONTAINS CONSTANT(S)
-    ///     "path":    { "type": "string", "description": "Workspace-relative path to write." }, // THIS LINE CONTAINS CONSTANT(S)
-    ///     "content": { "type": "string", "description": "Content to write to the file." }, // THIS LINE CONTAINS CONSTANT(S)
-    ///     "mode":    { "type": "string", "enum": ["overwrite", "append"] }, // THIS LINE CONTAINS CONSTANT(S)
-    ///     "approval": { // THIS LINE CONTAINS CONSTANT(S)
-    ///       "type": "object", // THIS LINE CONTAINS CONSTANT(S)
-    ///       "properties": { // THIS LINE CONTAINS CONSTANT(S)
-    ///         "granted": { "type": "boolean" }, // THIS LINE CONTAINS CONSTANT(S)
-    ///         "reason":  { "type": "string" } // THIS LINE CONTAINS CONSTANT(S)
+    ///   "type": "object",
+    ///   "properties": {
+    ///     "path":    { "type": "string", "description": "Workspace-relative path to write." },
+    ///     "content": { "type": "string", "description": "Content to write to the file." },
+    ///     "mode":    { "type": "string", "enum": ["overwrite", "append"] },
+    ///     "approval": {
+    ///       "type": "object",
+    ///       "properties": {
+    ///         "granted": { "type": "boolean" },
+    ///         "reason":  { "type": "string" }
     ///       },
-    ///       "required": ["granted", "reason"] // THIS LINE CONTAINS CONSTANT(S)
+    ///       "required": ["granted", "reason"]
     ///     }
     ///   },
-    ///   "required": ["path", "content", "approval"] // THIS LINE CONTAINS CONSTANT(S)
+    ///   "required": ["path", "content", "approval"]
     /// }
     /// ```
     ///
     /// ### Returns
     /// a `serde_json::Value` containing the JSON Schema object for this tool's arguments
     fn input_schema(&self) -> Value {
-        serde_json::json!({"type": "object"}) // THIS LINE CONTAINS CONSTANT(S)
+        serde_json::json!({"type": "object"})
     }
 
     /// ### Brief

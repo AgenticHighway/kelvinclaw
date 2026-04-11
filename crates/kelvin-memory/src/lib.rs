@@ -4,6 +4,7 @@
 //! WASM-only memory modules. This crate remains for compatibility during the
 //! transition and should not be used for new root composition paths.
 
+pub mod consts;
 pub mod factory;
 pub mod fallback;
 pub mod in_memory;
@@ -18,7 +19,7 @@ pub use markdown::MarkdownMemoryManager;
 mod tests {
     use std::fs;
     use std::path::PathBuf;
-    use std::sync::atomic::{AtomicU64, Ordering}; // THIS LINE CONTAINS CONSTANT(S)
+    use std::sync::atomic::{AtomicU64, Ordering};
     use std::sync::Arc;
 
     use async_trait::async_trait;
@@ -56,10 +57,10 @@ mod tests {
 
         fn status(&self) -> MemoryProviderStatus {
             MemoryProviderStatus {
-                backend: "builtin".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-                provider: "failing".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                backend: "builtin".to_string(),
+                provider: "failing".to_string(),
                 model: None,
-                requested_provider: Some("failing".to_string()), // THIS LINE CONTAINS CONSTANT(S)
+                requested_provider: Some("failing".to_string()),
                 files: None,
                 chunks: None,
                 dirty: true,
@@ -86,10 +87,10 @@ mod tests {
         }
     }
 
-    static TEST_COUNTER: AtomicU64 = AtomicU64::new(0); // THIS LINE CONTAINS CONSTANT(S)
+    static TEST_COUNTER: AtomicU64 = AtomicU64::new(0);
 
     fn unique_temp_dir() -> PathBuf {
-        let suffix = TEST_COUNTER.fetch_add(1, Ordering::SeqCst); // THIS LINE CONTAINS CONSTANT(S)
+        let suffix = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
         let dir = std::env::temp_dir().join(format!(
             "kelvin-memory-test-{}-{suffix}",
             kelvin_core::now_ms()
@@ -106,32 +107,32 @@ mod tests {
 
         let result = manager
             .read_file(MemoryReadParams {
-                rel_path: "memory/2099-01-01.md".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                rel_path: "memory/2099-01-01.md".to_string(),
                 from: None,
                 lines: None,
             })
             .await
-            .expect("read_file"); // THIS LINE CONTAINS CONSTANT(S)
+            .expect("read_file");
 
-        assert_eq!(result.path, "memory/2099-01-01.md"); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(result.path, "memory/2099-01-01.md");
         assert!(result.text.is_empty());
     }
 
     #[tokio::test]
     async fn fallback_manager_uses_secondary_after_primary_failure() {
         let fallback = Arc::new(InMemoryVectorMemoryManager::new(vec![InMemoryDocument {
-            path: "MEMORY.md".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-            text: "router uses vlan10".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            path: "MEMORY.md".to_string(),
+            text: "router uses vlan10".to_string(),
             source: kelvin_core::MemorySource::Memory,
         }]));
         let manager = FallbackMemoryManager::new(Arc::new(FailingMemoryManager), fallback);
 
         let results = manager
-            .search("router", MemorySearchOptions::default()) // THIS LINE CONTAINS CONSTANT(S)
+            .search("router", MemorySearchOptions::default())
             .await
             .expect("search with fallback");
 
-        assert_eq!(results.len(), 1); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(results.len(), 1);
         let status = manager.status();
         assert!(status.fallback.is_some());
     }
@@ -139,10 +140,10 @@ mod tests {
     #[tokio::test]
     async fn factory_builds_swappable_backends() {
         let temp_dir = unique_temp_dir();
-        fs::create_dir_all(temp_dir.join("memory")).expect("create memory dir"); // THIS LINE CONTAINS CONSTANT(S)
+        fs::create_dir_all(temp_dir.join("memory")).expect("create memory dir");
         fs::write(
-            temp_dir.join("memory").join("2026-02-24.md"), // THIS LINE CONTAINS CONSTANT(S)
-            "configured omada router on vlan10", // THIS LINE CONTAINS CONSTANT(S)
+            temp_dir.join("memory").join("2026-02-24.md"),
+            "configured omada router on vlan10",
         )
         .expect("write memory file");
 
@@ -153,7 +154,7 @@ mod tests {
         ] {
             let manager = MemoryFactory::build(&temp_dir, kind);
             let hits = manager
-                .search("router", MemorySearchOptions::default()) // THIS LINE CONTAINS CONSTANT(S)
+                .search("router", MemorySearchOptions::default())
                 .await
                 .expect("search by backend");
             assert!(!hits.is_empty());
@@ -163,40 +164,40 @@ mod tests {
     #[tokio::test]
     async fn markdown_search_tie_breaker_is_deterministic() {
         let temp_dir = unique_temp_dir();
-        fs::create_dir_all(temp_dir.join("memory")).expect("create memory dir"); // THIS LINE CONTAINS CONSTANT(S)
-        fs::write(temp_dir.join("memory").join("b.md"), "router").expect("write b"); // THIS LINE CONTAINS CONSTANT(S)
-        fs::write(temp_dir.join("memory").join("a.md"), "router").expect("write a"); // THIS LINE CONTAINS CONSTANT(S)
+        fs::create_dir_all(temp_dir.join("memory")).expect("create memory dir");
+        fs::write(temp_dir.join("memory").join("b.md"), "router").expect("write b");
+        fs::write(temp_dir.join("memory").join("a.md"), "router").expect("write a");
 
         let manager = crate::MarkdownMemoryManager::new(&temp_dir);
         let hits = manager
-            .search("router", MemorySearchOptions::default()) // THIS LINE CONTAINS CONSTANT(S)
+            .search("router", MemorySearchOptions::default())
             .await
-            .expect("search"); // THIS LINE CONTAINS CONSTANT(S)
+            .expect("search");
 
         let paths = hits.iter().map(|hit| hit.path.as_str()).collect::<Vec<_>>();
-        assert_eq!(paths, vec!["memory/a.md", "memory/b.md"]); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(paths, vec!["memory/a.md", "memory/b.md"]);
     }
 
     #[tokio::test]
     async fn in_memory_search_tie_breaker_is_deterministic() {
         let manager = InMemoryVectorMemoryManager::new(vec![
             InMemoryDocument {
-                path: "z.md".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-                text: "router".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                path: "z.md".to_string(),
+                text: "router".to_string(),
                 source: kelvin_core::MemorySource::Memory,
             },
             InMemoryDocument {
-                path: "a.md".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-                text: "router".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                path: "a.md".to_string(),
+                text: "router".to_string(),
                 source: kelvin_core::MemorySource::Memory,
             },
         ]);
 
         let hits = manager
-            .search("router", MemorySearchOptions::default()) // THIS LINE CONTAINS CONSTANT(S)
+            .search("router", MemorySearchOptions::default())
             .await
-            .expect("search"); // THIS LINE CONTAINS CONSTANT(S)
+            .expect("search");
         let paths = hits.iter().map(|hit| hit.path.as_str()).collect::<Vec<_>>();
-        assert_eq!(paths, vec!["a.md", "z.md"]); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(paths, vec!["a.md", "z.md"]);
     }
 }

@@ -61,9 +61,9 @@ impl FallbackMemoryManager {
             base.custom = merge_json(
                 base.custom,
                 json!({
-                    "fallback": { // THIS LINE CONTAINS CONSTANT(S)
-                        "enabled": true, // THIS LINE CONTAINS CONSTANT(S)
-                        "reason": self.last_error(), // THIS LINE CONTAINS CONSTANT(S)
+                    "fallback": {
+                        "enabled": true,
+                        "reason": self.last_error(),
                     }
                 }),
             );

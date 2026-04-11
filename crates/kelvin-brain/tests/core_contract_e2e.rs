@@ -94,20 +94,20 @@ impl MemorySearchManager for StaticMemory {
         _opts: MemorySearchOptions,
     ) -> KelvinResult<Vec<MemorySearchResult>> {
         Ok(vec![MemorySearchResult {
-            path: "MEMORY.md".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-            start_line: 1, // THIS LINE CONTAINS CONSTANT(S)
-            end_line: 1, // THIS LINE CONTAINS CONSTANT(S)
-            score: 1.0, // THIS LINE CONTAINS CONSTANT(S)
-            snippet: "router vlan10".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            path: "MEMORY.md".to_string(),
+            start_line: 1,
+            end_line: 1,
+            score: 1.0,
+            snippet: "router vlan10".to_string(),
             source: MemorySource::Memory,
-            citation: Some("MEMORY.md#1".to_string()), // THIS LINE CONTAINS CONSTANT(S)
+            citation: Some("MEMORY.md#1".to_string()),
         }])
     }
 
     async fn read_file(&self, _params: MemoryReadParams) -> KelvinResult<MemoryReadResult> {
         Ok(MemoryReadResult {
             text: String::new(),
-            path: "MEMORY.md".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            path: "MEMORY.md".to_string(),
         })
     }
 
@@ -128,7 +128,7 @@ impl MemorySearchManager for StaticMemory {
 }
 
 struct StubModelProvider {
-    delay_ms: u64, // THIS LINE CONTAINS CONSTANT(S)
+    delay_ms: u64,
     call_count: AtomicUsize,
     first_output: ModelOutput,
     subsequent_output: ModelOutput,
@@ -138,8 +138,8 @@ impl StubModelProvider {
     /// Convenience constructor: always returns the same output regardless of call count.
     fn single(output: ModelOutput) -> Self {
         Self {
-            delay_ms: 0, // THIS LINE CONTAINS CONSTANT(S)
-            call_count: AtomicUsize::new(0), // THIS LINE CONTAINS CONSTANT(S)
+            delay_ms: 0,
+            call_count: AtomicUsize::new(0),
             subsequent_output: output.clone(),
             first_output: output,
         }
@@ -148,14 +148,14 @@ impl StubModelProvider {
     /// First call returns `first_output`; all subsequent calls return `subsequent_output`.
     fn two_phase(first_output: ModelOutput, subsequent_output: ModelOutput) -> Self {
         Self {
-            delay_ms: 0, // THIS LINE CONTAINS CONSTANT(S)
-            call_count: AtomicUsize::new(0), // THIS LINE CONTAINS CONSTANT(S)
+            delay_ms: 0,
+            call_count: AtomicUsize::new(0),
             first_output,
             subsequent_output,
         }
     }
 
-    fn with_delay(mut self, delay_ms: u64) -> Self { // THIS LINE CONTAINS CONSTANT(S)
+    fn with_delay(mut self, delay_ms: u64) -> Self {
         self.delay_ms = delay_ms;
         self
     }
@@ -164,19 +164,19 @@ impl StubModelProvider {
 #[async_trait]
 impl ModelProvider for StubModelProvider {
     fn provider_name(&self) -> &str {
-        "stub" // THIS LINE CONTAINS CONSTANT(S)
+        "stub"
     }
 
     fn model_name(&self) -> &str {
-        "stub-model" // THIS LINE CONTAINS CONSTANT(S)
+        "stub-model"
     }
 
     async fn infer(&self, _input: ModelInput) -> KelvinResult<ModelOutput> {
-        if self.delay_ms > 0 { // THIS LINE CONTAINS CONSTANT(S)
+        if self.delay_ms > 0 {
             tokio::time::sleep(Duration::from_millis(self.delay_ms)).await;
         }
-        let count = self.call_count.fetch_add(1, Ordering::SeqCst); // THIS LINE CONTAINS CONSTANT(S)
-        if count == 0 { // THIS LINE CONTAINS CONSTANT(S)
+        let count = self.call_count.fetch_add(1, Ordering::SeqCst);
+        if count == 0 {
             Ok(self.first_output.clone())
         } else {
             Ok(self.subsequent_output.clone())
@@ -253,7 +253,7 @@ impl MultiPhaseStubModelProvider {
         assert!(!outputs.is_empty(), "must provide at least one output");
         Self {
             outputs,
-            call_count: AtomicUsize::new(0), // THIS LINE CONTAINS CONSTANT(S)
+            call_count: AtomicUsize::new(0),
         }
     }
 }
@@ -261,26 +261,26 @@ impl MultiPhaseStubModelProvider {
 #[async_trait]
 impl ModelProvider for MultiPhaseStubModelProvider {
     fn provider_name(&self) -> &str {
-        "stub" // THIS LINE CONTAINS CONSTANT(S)
+        "stub"
     }
 
     fn model_name(&self) -> &str {
-        "stub-model" // THIS LINE CONTAINS CONSTANT(S)
+        "stub-model"
     }
 
     async fn infer(&self, _input: ModelInput) -> KelvinResult<ModelOutput> {
-        let idx = self.call_count.fetch_add(1, Ordering::SeqCst); // THIS LINE CONTAINS CONSTANT(S)
-        let clamped = idx.min(self.outputs.len() - 1); // THIS LINE CONTAINS CONSTANT(S)
+        let idx = self.call_count.fetch_add(1, Ordering::SeqCst);
+        let clamped = idx.min(self.outputs.len() - 1);
         Ok(self.outputs[clamped].clone())
     }
 }
 
-fn request(prompt: &str, timeout_ms: Option<u64>) -> AgentRunRequest { // THIS LINE CONTAINS CONSTANT(S)
+fn request(prompt: &str, timeout_ms: Option<u64>) -> AgentRunRequest {
     AgentRunRequest {
-        run_id: "run-1".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-        session_id: "session-1".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-        session_key: "session-1".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-        workspace_dir: ".".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+        run_id: "run-1".to_string(),
+        session_id: "session-1".to_string(),
+        session_key: "session-1".to_string(),
+        workspace_dir: ".".to_string(),
         prompt: prompt.to_string(),
         extra_system_prompt: None,
         timeout_ms,
@@ -298,37 +298,37 @@ fn tool_call(id: &str, name: &str, arguments: Value) -> ToolCall {
 }
 
 #[tokio::test]
-async fn e2e_events_are_complete_and_ordered_and_tool_execution_is_deterministic() { // THIS LINE CONTAINS CONSTANT(S)
+async fn e2e_events_are_complete_and_ordered_and_tool_execution_is_deterministic() {
     let event_sink = Arc::new(RecordingEventSink::default());
     let session_store = Arc::new(InMemorySessionStore::default());
     let tool_calls = Arc::new(Mutex::new(Vec::new()));
 
     let tools = Arc::new(MapToolRegistry::from_tools(vec![
         Arc::new(RecordingTool::new(
-            "first", // THIS LINE CONTAINS CONSTANT(S)
-            "first-output", // THIS LINE CONTAINS CONSTANT(S)
+            "first",
+            "first-output",
             tool_calls.clone(),
         )),
         Arc::new(RecordingTool::new(
-            "second", // THIS LINE CONTAINS CONSTANT(S)
-            "second-output", // THIS LINE CONTAINS CONSTANT(S)
+            "second",
+            "second-output",
             tool_calls.clone(),
         )),
     ]));
 
     let model = Arc::new(StubModelProvider::two_phase(
         ModelOutput {
-            assistant_text: "assistant-response".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-            stop_reason: Some("tool_calls".to_string()), // THIS LINE CONTAINS CONSTANT(S)
+            assistant_text: "assistant-response".to_string(),
+            stop_reason: Some("tool_calls".to_string()),
             tool_calls: vec![
-                tool_call("1", "first", json!({"x": 1})), // THIS LINE CONTAINS CONSTANT(S)
-                tool_call("2", "second", json!({"x": 2})), // THIS LINE CONTAINS CONSTANT(S)
+                tool_call("1", "first", json!({"x": 1})),
+                tool_call("2", "second", json!({"x": 2})),
             ],
             usage: None,
         },
         ModelOutput {
-            assistant_text: "assistant-response".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-            stop_reason: Some("completed".to_string()), // THIS LINE CONTAINS CONSTANT(S)
+            assistant_text: "assistant-response".to_string(),
+            stop_reason: Some("completed".to_string()),
             tool_calls: vec![],
             usage: None,
         },
@@ -356,42 +356,42 @@ async fn e2e_events_are_complete_and_ordered_and_tool_execution_is_deterministic
     assert_eq!(
         payload_text,
         vec![
-            "first-output".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-            "second-output".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-            "assistant-response".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            "first-output".to_string(),
+            "second-output".to_string(),
+            "assistant-response".to_string(),
         ]
     );
 
     let observed_tool_order = tool_calls.lock().await.clone();
     assert_eq!(
         observed_tool_order,
-        vec!["first".to_string(), "second".to_string()] // THIS LINE CONTAINS CONSTANT(S)
+        vec!["first".to_string(), "second".to_string()]
     );
 
     let history = session_store
-        .history("session-1") // THIS LINE CONTAINS CONSTANT(S)
+        .history("session-1")
         .await
         .expect("session history");
     // user → assistant (pre-tool) → tool → tool → assistant (followup)
-    assert_eq!(history.len(), 5); // THIS LINE CONTAINS CONSTANT(S)
-    assert!(matches!(history[0].role, kelvin_core::SessionRole::User)); // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(history.len(), 5);
+    assert!(matches!(history[0].role, kelvin_core::SessionRole::User));
     assert!(matches!(
-        history[1].role, // THIS LINE CONTAINS CONSTANT(S)
+        history[1].role,
         kelvin_core::SessionRole::Assistant
     ));
-    assert!(matches!(history[2].role, kelvin_core::SessionRole::Tool)); // THIS LINE CONTAINS CONSTANT(S)
-    assert!(matches!(history[3].role, kelvin_core::SessionRole::Tool)); // THIS LINE CONTAINS CONSTANT(S)
+    assert!(matches!(history[2].role, kelvin_core::SessionRole::Tool));
+    assert!(matches!(history[3].role, kelvin_core::SessionRole::Tool));
     assert!(matches!(
-        history[4].role, // THIS LINE CONTAINS CONSTANT(S)
+        history[4].role,
         kelvin_core::SessionRole::Assistant
     ));
 
     let events = event_sink.all().await;
-    assert!(events.len() >= 7, "expected full lifecycle and tool events"); // THIS LINE CONTAINS CONSTANT(S)
+    assert!(events.len() >= 7, "expected full lifecycle and tool events");
 
-    for pair in events.windows(2) { // THIS LINE CONTAINS CONSTANT(S)
+    for pair in events.windows(2) {
         assert!(
-            pair[0].seq < pair[1].seq, // THIS LINE CONTAINS CONSTANT(S)
+            pair[0].seq < pair[1].seq,
             "event sequence must be increasing"
         );
     }
@@ -423,35 +423,35 @@ async fn e2e_events_are_complete_and_ordered_and_tool_execution_is_deterministic
     assert_eq!(
         tool_phases,
         vec![
-            ("first".to_string(), ToolPhase::Start), // THIS LINE CONTAINS CONSTANT(S)
-            ("first".to_string(), ToolPhase::End), // THIS LINE CONTAINS CONSTANT(S)
-            ("second".to_string(), ToolPhase::Start), // THIS LINE CONTAINS CONSTANT(S)
-            ("second".to_string(), ToolPhase::End), // THIS LINE CONTAINS CONSTANT(S)
+            ("first".to_string(), ToolPhase::Start),
+            ("first".to_string(), ToolPhase::End),
+            ("second".to_string(), ToolPhase::Start),
+            ("second".to_string(), ToolPhase::End),
         ]
     );
 }
 
 #[tokio::test]
-async fn e2e_timeout_produces_typed_error_and_lifecycle_error_event() { // THIS LINE CONTAINS CONSTANT(S)
+async fn e2e_timeout_produces_typed_error_and_lifecycle_error_event() {
     let event_sink = Arc::new(RecordingEventSink::default());
     let brain = KelvinBrain::new(
         Arc::new(InMemorySessionStore::default()),
         Arc::new(StaticMemory),
         Arc::new(
             StubModelProvider::single(ModelOutput {
-                assistant_text: "late-response".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-                stop_reason: Some("completed".to_string()), // THIS LINE CONTAINS CONSTANT(S)
+                assistant_text: "late-response".to_string(),
+                stop_reason: Some("completed".to_string()),
                 tool_calls: Vec::new(),
                 usage: None,
             })
-            .with_delay(120), // THIS LINE CONTAINS CONSTANT(S)
+            .with_delay(120),
         ),
         Arc::new(MapToolRegistry::from_tools(Vec::new())),
         event_sink.clone(),
     );
 
     let error = brain
-        .run(request("slow run", Some(20))) // THIS LINE CONTAINS CONSTANT(S)
+        .run(request("slow run", Some(20)))
         .await
         .expect_err("timeout expected");
     assert!(matches!(error, KelvinError::Timeout(_)));
@@ -474,14 +474,14 @@ async fn e2e_timeout_produces_typed_error_and_lifecycle_error_event() { // THIS 
 }
 
 #[tokio::test]
-async fn e2e_invalid_prompt_returns_typed_input_error() { // THIS LINE CONTAINS CONSTANT(S)
+async fn e2e_invalid_prompt_returns_typed_input_error() {
     let event_sink = Arc::new(RecordingEventSink::default());
     let brain = KelvinBrain::new(
         Arc::new(InMemorySessionStore::default()),
         Arc::new(StaticMemory),
         Arc::new(StubModelProvider::single(ModelOutput {
             assistant_text: String::new(),
-            stop_reason: Some("completed".to_string()), // THIS LINE CONTAINS CONSTANT(S)
+            stop_reason: Some("completed".to_string()),
             tool_calls: Vec::new(),
             usage: None,
         })),
@@ -490,15 +490,15 @@ async fn e2e_invalid_prompt_returns_typed_input_error() { // THIS LINE CONTAINS 
     );
 
     let error = brain
-        .run(request("   ", Some(100))) // THIS LINE CONTAINS CONSTANT(S)
+        .run(request("   ", Some(100)))
         .await
         .expect_err("invalid input expected");
     assert!(matches!(error, KelvinError::InvalidInput(_)));
 
     let events = event_sink.all().await;
-    assert_eq!(events.len(), 1); // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(events.len(), 1);
     assert!(matches!(
-        events[0].data, // THIS LINE CONTAINS CONSTANT(S)
+        events[0].data,
         AgentEventData::Lifecycle {
             phase: LifecyclePhase::Error,
             ..
@@ -507,41 +507,41 @@ async fn e2e_invalid_prompt_returns_typed_input_error() { // THIS LINE CONTAINS 
 }
 
 #[tokio::test]
-async fn e2e_multi_iteration_tool_calls() { // THIS LINE CONTAINS CONSTANT(S)
-    // Model: call 1 → tools A, call 2 → tools B, call 3 → final text // THIS LINE CONTAINS CONSTANT(S)
+async fn e2e_multi_iteration_tool_calls() {
+    // Model: call 1 → tools A, call 2 → tools B, call 3 → final text
     let tool_out = |name: &str| tool_call(name, name, json!({}));
     let session_store = Arc::new(InMemorySessionStore::default());
     let tool_calls_log = Arc::new(Mutex::new(Vec::<String>::new()));
 
     let tools = Arc::new(MapToolRegistry::from_tools(vec![
         Arc::new(RecordingTool::new(
-            "alpha", // THIS LINE CONTAINS CONSTANT(S)
-            "alpha-out", // THIS LINE CONTAINS CONSTANT(S)
+            "alpha",
+            "alpha-out",
             tool_calls_log.clone(),
         )),
         Arc::new(RecordingTool::new(
-            "beta", // THIS LINE CONTAINS CONSTANT(S)
-            "beta-out", // THIS LINE CONTAINS CONSTANT(S)
+            "beta",
+            "beta-out",
             tool_calls_log.clone(),
         )),
     ]));
 
     let model = Arc::new(MultiPhaseStubModelProvider::new(vec![
         ModelOutput {
-            assistant_text: "thinking".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-            stop_reason: Some("tool_calls".to_string()), // THIS LINE CONTAINS CONSTANT(S)
-            tool_calls: vec![tool_out("alpha")], // THIS LINE CONTAINS CONSTANT(S)
+            assistant_text: "thinking".to_string(),
+            stop_reason: Some("tool_calls".to_string()),
+            tool_calls: vec![tool_out("alpha")],
             usage: None,
         },
         ModelOutput {
-            assistant_text: "more-thinking".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-            stop_reason: Some("tool_calls".to_string()), // THIS LINE CONTAINS CONSTANT(S)
-            tool_calls: vec![tool_out("beta")], // THIS LINE CONTAINS CONSTANT(S)
+            assistant_text: "more-thinking".to_string(),
+            stop_reason: Some("tool_calls".to_string()),
+            tool_calls: vec![tool_out("beta")],
             usage: None,
         },
         ModelOutput {
-            assistant_text: "final-answer".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-            stop_reason: Some("completed".to_string()), // THIS LINE CONTAINS CONSTANT(S)
+            assistant_text: "final-answer".to_string(),
+            stop_reason: Some("completed".to_string()),
             tool_calls: vec![],
             usage: None,
         },
@@ -556,57 +556,57 @@ async fn e2e_multi_iteration_tool_calls() { // THIS LINE CONTAINS CONSTANT(S)
     );
 
     let result = brain
-        .run(request("multi-step", None)) // THIS LINE CONTAINS CONSTANT(S)
+        .run(request("multi-step", None))
         .await
         .expect("multi-iteration run");
 
     // tool visible outputs + final text
     let texts: Vec<_> = result.payloads.iter().map(|p| p.text.as_str()).collect();
-    assert_eq!(texts, vec!["alpha-out", "beta-out", "final-answer"]); // THIS LINE CONTAINS CONSTANT(S)
-    assert_eq!(result.meta.tool_iterations, 2); // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(texts, vec!["alpha-out", "beta-out", "final-answer"]);
+    assert_eq!(result.meta.tool_iterations, 2);
 
-    let history = session_store.history("session-1").await.expect("history"); // THIS LINE CONTAINS CONSTANT(S)
-    // user → assistant1 → tool(alpha) → assistant2 → tool(beta) → assistant3 // THIS LINE CONTAINS CONSTANT(S)
-    assert_eq!(history.len(), 6); // THIS LINE CONTAINS CONSTANT(S)
-    assert!(matches!(history[0].role, kelvin_core::SessionRole::User)); // THIS LINE CONTAINS CONSTANT(S)
+    let history = session_store.history("session-1").await.expect("history");
+    // user → assistant1 → tool(alpha) → assistant2 → tool(beta) → assistant3
+    assert_eq!(history.len(), 6);
+    assert!(matches!(history[0].role, kelvin_core::SessionRole::User));
     assert!(matches!(
-        history[1].role, // THIS LINE CONTAINS CONSTANT(S)
+        history[1].role,
         kelvin_core::SessionRole::Assistant
     ));
-    assert!(matches!(history[2].role, kelvin_core::SessionRole::Tool)); // THIS LINE CONTAINS CONSTANT(S)
+    assert!(matches!(history[2].role, kelvin_core::SessionRole::Tool));
     assert!(matches!(
-        history[3].role, // THIS LINE CONTAINS CONSTANT(S)
+        history[3].role,
         kelvin_core::SessionRole::Assistant
     ));
-    assert!(matches!(history[4].role, kelvin_core::SessionRole::Tool)); // THIS LINE CONTAINS CONSTANT(S)
+    assert!(matches!(history[4].role, kelvin_core::SessionRole::Tool));
     assert!(matches!(
-        history[5].role, // THIS LINE CONTAINS CONSTANT(S)
+        history[5].role,
         kelvin_core::SessionRole::Assistant
     ));
 }
 
 #[tokio::test]
-async fn e2e_max_iterations_cap_is_enforced() { // THIS LINE CONTAINS CONSTANT(S)
-    // Stub always returns tool calls; brain should stop after max_tool_iterations=2 // THIS LINE CONTAINS CONSTANT(S)
+async fn e2e_max_iterations_cap_is_enforced() {
+    // Stub always returns tool calls; brain should stop after max_tool_iterations=2
     // and emit a Warning lifecycle event, then a forced final text.
     let tool_calls_log = Arc::new(Mutex::new(Vec::<String>::new()));
     let event_sink = Arc::new(RecordingEventSink::default());
 
     let tools = Arc::new(MapToolRegistry::from_tools(vec![Arc::new(
-        RecordingTool::new("looper", "loop-out", tool_calls_log.clone()), // THIS LINE CONTAINS CONSTANT(S)
+        RecordingTool::new("looper", "loop-out", tool_calls_log.clone()),
     )]));
 
     // Always returns a tool call
     let looping_output = ModelOutput {
         assistant_text: String::new(),
-        stop_reason: Some("tool_calls".to_string()), // THIS LINE CONTAINS CONSTANT(S)
-        tool_calls: vec![tool_call("tc", "looper", json!({}))], // THIS LINE CONTAINS CONSTANT(S)
+        stop_reason: Some("tool_calls".to_string()),
+        tool_calls: vec![tool_call("tc", "looper", json!({}))],
         usage: None,
     };
     // Final forced inference (no tools offered) → text
     let final_output = ModelOutput {
-        assistant_text: "forced-final".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-        stop_reason: Some("completed".to_string()), // THIS LINE CONTAINS CONSTANT(S)
+        assistant_text: "forced-final".to_string(),
+        stop_reason: Some("completed".to_string()),
         tool_calls: vec![],
         usage: None,
     };
@@ -625,7 +625,7 @@ async fn e2e_max_iterations_cap_is_enforced() { // THIS LINE CONTAINS CONSTANT(S
     );
 
     let mut req = request("loop forever", None);
-    req.max_tool_iterations = Some(2); // THIS LINE CONTAINS CONSTANT(S)
+    req.max_tool_iterations = Some(2);
 
     let result = brain.run(req).await.expect("capped run");
 
@@ -644,29 +644,29 @@ async fn e2e_max_iterations_cap_is_enforced() { // THIS LINE CONTAINS CONSTANT(S
 
     // Final payload is the forced response
     let last_payload = result.payloads.last().expect("at least one payload");
-    assert_eq!(last_payload.text, "forced-final"); // THIS LINE CONTAINS CONSTANT(S)
-    assert_eq!(result.meta.tool_iterations, 2); // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(last_payload.text, "forced-final");
+    assert_eq!(result.meta.tool_iterations, 2);
 }
 
 #[tokio::test]
-async fn e2e_per_request_max_overrides_brain_default() { // THIS LINE CONTAINS CONSTANT(S)
-    // Brain default = 10; request override = 1. Only 1 tool iteration should run. // THIS LINE CONTAINS CONSTANT(S)
+async fn e2e_per_request_max_overrides_brain_default() {
+    // Brain default = 10; request override = 1. Only 1 tool iteration should run.
     let tool_calls_log = Arc::new(Mutex::new(Vec::<String>::new()));
     let event_sink = Arc::new(RecordingEventSink::default());
 
     let tools = Arc::new(MapToolRegistry::from_tools(vec![Arc::new(
-        RecordingTool::new("t", "t-out", tool_calls_log.clone()), // THIS LINE CONTAINS CONSTANT(S)
+        RecordingTool::new("t", "t-out", tool_calls_log.clone()),
     )]));
 
     let always_tool = ModelOutput {
         assistant_text: String::new(),
-        stop_reason: Some("tool_calls".to_string()), // THIS LINE CONTAINS CONSTANT(S)
-        tool_calls: vec![tool_call("tc", "t", json!({}))], // THIS LINE CONTAINS CONSTANT(S)
+        stop_reason: Some("tool_calls".to_string()),
+        tool_calls: vec![tool_call("tc", "t", json!({}))],
         usage: None,
     };
     let final_output = ModelOutput {
-        assistant_text: "override-final".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-        stop_reason: Some("completed".to_string()), // THIS LINE CONTAINS CONSTANT(S)
+        assistant_text: "override-final".to_string(),
+        stop_reason: Some("completed".to_string()),
         tool_calls: vec![],
         usage: None,
     };
@@ -682,14 +682,14 @@ async fn e2e_per_request_max_overrides_brain_default() { // THIS LINE CONTAINS C
         tools,
         event_sink.clone(),
     )
-    .with_max_tool_iterations(10); // THIS LINE CONTAINS CONSTANT(S)
+    .with_max_tool_iterations(10);
 
     let mut req = request("override test", None);
-    req.max_tool_iterations = Some(1); // THIS LINE CONTAINS CONSTANT(S)
+    req.max_tool_iterations = Some(1);
 
     let result = brain.run(req).await.expect("override run");
 
-    assert_eq!(result.meta.tool_iterations, 1); // THIS LINE CONTAINS CONSTANT(S)
-    let last = result.payloads.last().expect("payload"); // THIS LINE CONTAINS CONSTANT(S)
-    assert_eq!(last.text, "override-final"); // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(result.meta.tool_iterations, 1);
+    let last = result.payloads.last().expect("payload");
+    assert_eq!(last.text, "override-final");
 }

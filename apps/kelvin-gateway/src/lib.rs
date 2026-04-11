@@ -1,6 +1,7 @@
-#![recursion_limit = "256"] // THIS LINE CONTAINS CONSTANT(S)
+#![recursion_limit = "256"]
 
 mod channels;
+pub mod consts;
 mod ingress;
 mod operator;
 mod scheduler;
@@ -42,45 +43,12 @@ use tokio_rustls::TlsAcceptor;
 use tokio_tungstenite::connect_async;
 use tokio_tungstenite::tungstenite::{self, Message};
 
-pub const GATEWAY_PROTOCOL_VERSION: &str = "1.0.0"; // THIS LINE CONTAINS CONSTANT(S)
-pub const GATEWAY_METHODS_V1: &[&str] = &[ // THIS LINE CONTAINS CONSTANT(S)
-    "agent", // THIS LINE CONTAINS CONSTANT(S)
-    "agent.outcome", // THIS LINE CONTAINS CONSTANT(S)
-    "agent.state", // THIS LINE CONTAINS CONSTANT(S)
-    "agent.wait", // THIS LINE CONTAINS CONSTANT(S)
-    "channel.discord.ingest", // THIS LINE CONTAINS CONSTANT(S)
-    "channel.discord.status", // THIS LINE CONTAINS CONSTANT(S)
-    "channel.route.inspect", // THIS LINE CONTAINS CONSTANT(S)
-    "channel.slack.ingest", // THIS LINE CONTAINS CONSTANT(S)
-    "channel.slack.status", // THIS LINE CONTAINS CONSTANT(S)
-    "channel.telegram.ingest", // THIS LINE CONTAINS CONSTANT(S)
-    "channel.telegram.pair.approve", // THIS LINE CONTAINS CONSTANT(S)
-    "channel.telegram.status", // THIS LINE CONTAINS CONSTANT(S)
-    "channel.whatsapp.ingest", // THIS LINE CONTAINS CONSTANT(S)
-    "channel.whatsapp.status", // THIS LINE CONTAINS CONSTANT(S)
-    "command.exec", // THIS LINE CONTAINS CONSTANT(S)
-    "commands.list", // THIS LINE CONTAINS CONSTANT(S)
-    "connect", // THIS LINE CONTAINS CONSTANT(S)
-    "health", // THIS LINE CONTAINS CONSTANT(S)
-    "operator.plugins.inspect", // THIS LINE CONTAINS CONSTANT(S)
-    "operator.runs.list", // THIS LINE CONTAINS CONSTANT(S)
-    "operator.session.get", // THIS LINE CONTAINS CONSTANT(S)
-    "operator.sessions.list", // THIS LINE CONTAINS CONSTANT(S)
-    "run.outcome", // THIS LINE CONTAINS CONSTANT(S)
-    "run.state", // THIS LINE CONTAINS CONSTANT(S)
-    "run.submit", // THIS LINE CONTAINS CONSTANT(S)
-    "run.wait", // THIS LINE CONTAINS CONSTANT(S)
-    "schedule.history", // THIS LINE CONTAINS CONSTANT(S)
-    "schedule.list", // THIS LINE CONTAINS CONSTANT(S)
-];
-
-const DEFAULT_MAX_CONNECTIONS: usize = 128; // THIS LINE CONTAINS CONSTANT(S)
-const DEFAULT_MAX_MESSAGE_BYTES: usize = 64 * 1024; // THIS LINE CONTAINS CONSTANT(S)
-const DEFAULT_MAX_FRAME_BYTES: usize = 16 * 1024; // THIS LINE CONTAINS CONSTANT(S)
-const DEFAULT_HANDSHAKE_TIMEOUT_MS: u64 = 5_000; // THIS LINE CONTAINS CONSTANT(S)
-const DEFAULT_AUTH_FAILURE_THRESHOLD: u32 = 3; // THIS LINE CONTAINS CONSTANT(S)
-const DEFAULT_AUTH_FAILURE_BACKOFF_MS: u64 = 1_500; // THIS LINE CONTAINS CONSTANT(S)
-const DEFAULT_MAX_OUTBOUND_MESSAGES_PER_CONNECTION: usize = 128; // THIS LINE CONTAINS CONSTANT(S)
+pub use consts::{
+    DEFAULT_AUTH_FAILURE_BACKOFF_MS, DEFAULT_AUTH_FAILURE_THRESHOLD, DEFAULT_HANDSHAKE_TIMEOUT_MS,
+    DEFAULT_MAX_CONNECTIONS, DEFAULT_MAX_FRAME_BYTES, DEFAULT_MAX_MESSAGE_BYTES,
+    DEFAULT_MAX_OUTBOUND_MESSAGES_PER_CONNECTION,
+};
+pub use consts::{GATEWAY_METHODS_V1, GATEWAY_PROTOCOL_VERSION};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GatewayTlsConfig {
@@ -95,9 +63,9 @@ pub struct GatewaySecurityConfig {
     pub max_connections: usize,
     pub max_message_size_bytes: usize,
     pub max_frame_size_bytes: usize,
-    pub handshake_timeout_ms: u64, // THIS LINE CONTAINS CONSTANT(S)
-    pub auth_failure_threshold: u32, // THIS LINE CONTAINS CONSTANT(S)
-    pub auth_failure_backoff_ms: u64, // THIS LINE CONTAINS CONSTANT(S)
+    pub handshake_timeout_ms: u64,
+    pub auth_failure_threshold: u32,
+    pub auth_failure_backoff_ms: u64,
     pub max_outbound_messages_per_connection: usize,
 }
 
@@ -145,7 +113,7 @@ struct GatewayState {
 #[derive(Debug, Clone)]
 struct CachedAgentAcceptance {
     run_id: String,
-    accepted_at_ms: u128, // THIS LINE CONTAINS CONSTANT(S)
+    accepted_at_ms: u128,
     cli_plugin_preflight: Option<String>,
 }
 
@@ -158,8 +126,8 @@ struct IdempotencyCache {
 
 #[derive(Debug, Clone, Copy)]
 struct AuthFailureEntry {
-    failures: u32, // THIS LINE CONTAINS CONSTANT(S)
-    blocked_until_ms: u128, // THIS LINE CONTAINS CONSTANT(S)
+    failures: u32,
+    blocked_until_ms: u128,
 }
 
 #[derive(Debug, Default)]
@@ -172,39 +140,39 @@ struct AuthFailureTracker {
 impl AuthFailureTracker {
     fn new(max_entries: usize) -> Self {
         Self {
-            max_entries: max_entries.max(32), // THIS LINE CONTAINS CONSTANT(S)
+            max_entries: max_entries.max(32),
             map: HashMap::new(),
             order: VecDeque::new(),
         }
     }
 
-    fn backoff_remaining_ms(&mut self, peer_ip: IpAddr) -> Option<u64> { // THIS LINE CONTAINS CONSTANT(S)
+    fn backoff_remaining_ms(&mut self, peer_ip: IpAddr) -> Option<u64> {
         let now = now_ms();
         let entry = self.map.get_mut(&peer_ip)?;
         if entry.blocked_until_ms <= now {
-            entry.blocked_until_ms = 0; // THIS LINE CONTAINS CONSTANT(S)
+            entry.blocked_until_ms = 0;
             return None;
         }
         let remaining = entry.blocked_until_ms.saturating_sub(now);
-        Some(remaining.min(u128::from(u64::MAX)) as u64) // THIS LINE CONTAINS CONSTANT(S)
+        Some(remaining.min(u128::from(u64::MAX)) as u64)
     }
 
     fn record_failure(&mut self, peer_ip: IpAddr, security: &GatewaySecurityConfig) {
         let now = now_ms();
         let mut entry = self.map.remove(&peer_ip).unwrap_or(AuthFailureEntry {
-            failures: 0, // THIS LINE CONTAINS CONSTANT(S)
-            blocked_until_ms: 0, // THIS LINE CONTAINS CONSTANT(S)
+            failures: 0,
+            blocked_until_ms: 0,
         });
-        entry.failures = entry.failures.saturating_add(1); // THIS LINE CONTAINS CONSTANT(S)
+        entry.failures = entry.failures.saturating_add(1);
         if entry.failures >= security.auth_failure_threshold {
-            let multiplier = u64::from( // THIS LINE CONTAINS CONSTANT(S)
+            let multiplier = u64::from(
                 entry
                     .failures
                     .saturating_sub(security.auth_failure_threshold)
-                    .saturating_add(1), // THIS LINE CONTAINS CONSTANT(S)
+                    .saturating_add(1),
             );
             entry.blocked_until_ms = now.saturating_add(
-                u128::from(security.auth_failure_backoff_ms) * u128::from(multiplier), // THIS LINE CONTAINS CONSTANT(S)
+                u128::from(security.auth_failure_backoff_ms) * u128::from(multiplier),
             );
         }
         self.touch(peer_ip, entry);
@@ -217,7 +185,7 @@ impl AuthFailureTracker {
 
     fn touch(&mut self, peer_ip: IpAddr, entry: AuthFailureEntry) {
         self.order.retain(|ip| *ip != peer_ip);
-        if self.max_entries > 0 && self.order.len() >= self.max_entries { // THIS LINE CONTAINS CONSTANT(S)
+        if self.max_entries > 0 && self.order.len() >= self.max_entries {
             if let Some(evicted) = self.order.pop_front() {
                 self.map.remove(&evicted);
             }
@@ -248,7 +216,7 @@ impl IdempotencyCache {
             return;
         }
 
-        if self.max_entries > 0 && self.order.len() >= self.max_entries { // THIS LINE CONTAINS CONSTANT(S)
+        if self.max_entries > 0 && self.order.len() >= self.max_entries {
             if let Some(evicted) = self.order.pop_front() {
                 self.map.remove(&evicted);
             }
@@ -260,8 +228,8 @@ impl IdempotencyCache {
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)] // THIS LINE CONTAINS CONSTANT(S)
-enum ClientFrame { // THIS LINE CONTAINS CONSTANT(S)
+#[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
+enum ClientFrame {
     Req {
         id: String,
         method: String,
@@ -271,14 +239,14 @@ enum ClientFrame { // THIS LINE CONTAINS CONSTANT(S)
 }
 
 #[derive(Debug, Serialize)]
-#[serde(tag = "type", rename_all = "snake_case")] // THIS LINE CONTAINS CONSTANT(S)
-enum ServerFrame { // THIS LINE CONTAINS CONSTANT(S)
+#[serde(tag = "type", rename_all = "snake_case")]
+enum ServerFrame {
     Res {
         id: String,
         ok: bool,
-        #[serde(skip_serializing_if = "Option::is_none")] // THIS LINE CONTAINS CONSTANT(S)
+        #[serde(skip_serializing_if = "Option::is_none")]
         payload: Option<Value>,
-        #[serde(skip_serializing_if = "Option::is_none")] // THIS LINE CONTAINS CONSTANT(S)
+        #[serde(skip_serializing_if = "Option::is_none")]
         error: Option<GatewayErrorPayload>,
     },
     Event {
@@ -313,7 +281,7 @@ struct AgentParams {
     prompt: String,
     session_id: Option<String>,
     workspace_dir: Option<String>,
-    timeout_ms: Option<u64>, // THIS LINE CONTAINS CONSTANT(S)
+    timeout_ms: Option<u64>,
     system_prompt: Option<String>,
     memory_query: Option<String>,
     run_id: Option<String>,
@@ -323,7 +291,7 @@ struct AgentParams {
 #[serde(deny_unknown_fields)]
 struct RunWaitParams {
     run_id: String,
-    timeout_ms: Option<u64>, // THIS LINE CONTAINS CONSTANT(S)
+    timeout_ms: Option<u64>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -338,7 +306,7 @@ pub struct GatewayDoctorConfig {
     pub auth_token: Option<String>,
     pub plugin_home: PathBuf,
     pub trust_policy_path: PathBuf,
-    pub timeout_ms: u64, // THIS LINE CONTAINS CONSTANT(S)
+    pub timeout_ms: u64,
 }
 
 pub async fn run_gateway_doctor(config: GatewayDoctorConfig) -> Result<Value, String> {
@@ -360,7 +328,7 @@ pub async fn run_gateway_doctor(config: GatewayDoctorConfig) -> Result<Value, St
     let mut checks = Vec::new();
 
     let connect_result = tokio::time::timeout(
-        Duration::from_millis(config.timeout_ms.max(250)), // THIS LINE CONTAINS CONSTANT(S)
+        Duration::from_millis(config.timeout_ms.max(250)),
         connect_async(config.endpoint.clone()),
     )
     .await;
@@ -368,12 +336,12 @@ pub async fn run_gateway_doctor(config: GatewayDoctorConfig) -> Result<Value, St
         Ok(Ok((mut socket, _))) => {
             ws_ok = true;
             let connect_payload = json!({
-                "type": "req", // THIS LINE CONTAINS CONSTANT(S)
-                "id": "doctor-connect", // THIS LINE CONTAINS CONSTANT(S)
-                "method": "connect", // THIS LINE CONTAINS CONSTANT(S)
-                "params": { // THIS LINE CONTAINS CONSTANT(S)
-                    "auth": config.auth_token.as_ref().map(|token| json!({ "token": token })), // THIS LINE CONTAINS CONSTANT(S)
-                    "client_id": "kelvin-doctor" // THIS LINE CONTAINS CONSTANT(S)
+                "type": "req",
+                "id": "doctor-connect",
+                "method": "connect",
+                "params": {
+                    "auth": config.auth_token.as_ref().map(|token| json!({ "token": token })),
+                    "client_id": "kelvin-doctor"
                 }
             });
             if socket
@@ -384,15 +352,15 @@ pub async fn run_gateway_doctor(config: GatewayDoctorConfig) -> Result<Value, St
                 let message = "failed to send connect request".to_string();
                 connect_error = Some(message.clone());
                 doctor_errors.push(message);
-            } else if let Ok(response) = wait_for_response(&mut socket, "doctor-connect").await { // THIS LINE CONTAINS CONSTANT(S)
+            } else if let Ok(response) = wait_for_response(&mut socket, "doctor-connect").await {
                 connect_ok = response
-                    .get("ok") // THIS LINE CONTAINS CONSTANT(S)
+                    .get("ok")
                     .and_then(|value| value.as_bool())
                     .unwrap_or(false);
                 if !connect_ok {
                     let message = response
-                        .get("error") // THIS LINE CONTAINS CONSTANT(S)
-                        .and_then(|value| value.get("message")) // THIS LINE CONTAINS CONSTANT(S)
+                        .get("error")
+                        .and_then(|value| value.get("message"))
                         .and_then(|value| value.as_str())
                         .unwrap_or("connect failed")
                         .to_string();
@@ -400,10 +368,10 @@ pub async fn run_gateway_doctor(config: GatewayDoctorConfig) -> Result<Value, St
                     doctor_errors.push(message);
                 } else {
                     let health_payload = json!({
-                        "type": "req", // THIS LINE CONTAINS CONSTANT(S)
-                        "id": "doctor-health", // THIS LINE CONTAINS CONSTANT(S)
-                        "method": "health", // THIS LINE CONTAINS CONSTANT(S)
-                        "params": {} // THIS LINE CONTAINS CONSTANT(S)
+                        "type": "req",
+                        "id": "doctor-health",
+                        "method": "health",
+                        "params": {}
                     });
                     if socket
                         .send(Message::Text(health_payload.to_string()))
@@ -414,45 +382,45 @@ pub async fn run_gateway_doctor(config: GatewayDoctorConfig) -> Result<Value, St
                         health_error = Some(message.clone());
                         doctor_errors.push(message);
                     } else if let Ok(health_response) =
-                        wait_for_response(&mut socket, "doctor-health").await // THIS LINE CONTAINS CONSTANT(S)
+                        wait_for_response(&mut socket, "doctor-health").await
                     {
                         health_ok = health_response
-                            .get("ok") // THIS LINE CONTAINS CONSTANT(S)
+                            .get("ok")
                             .and_then(|value| value.as_bool())
                             .unwrap_or(false);
                         if !health_ok {
                             let message = health_response
-                                .get("error") // THIS LINE CONTAINS CONSTANT(S)
-                                .and_then(|value| value.get("message")) // THIS LINE CONTAINS CONSTANT(S)
+                                .get("error")
+                                .and_then(|value| value.get("message"))
                                 .and_then(|value| value.as_str())
                                 .unwrap_or("health check failed")
                                 .to_string();
                             health_error = Some(message.clone());
                             doctor_errors.push(message);
                         } else if let Some(security) = health_response
-                            .get("payload") // THIS LINE CONTAINS CONSTANT(S)
-                            .and_then(|value| value.get("security")) // THIS LINE CONTAINS CONSTANT(S)
+                            .get("payload")
+                            .and_then(|value| value.get("security"))
                         {
                             let bind_scope = security
-                                .get("bind_scope") // THIS LINE CONTAINS CONSTANT(S)
+                                .get("bind_scope")
                                 .and_then(Value::as_str)
-                                .unwrap_or("unknown"); // THIS LINE CONTAINS CONSTANT(S)
+                                .unwrap_or("unknown");
                             let tls_enabled = security
-                                .get("tls_enabled") // THIS LINE CONTAINS CONSTANT(S)
+                                .get("tls_enabled")
                                 .and_then(Value::as_bool)
                                 .unwrap_or(false);
                             let insecure_override = security
-                                .get("allow_insecure_public_bind") // THIS LINE CONTAINS CONSTANT(S)
+                                .get("allow_insecure_public_bind")
                                 .and_then(Value::as_bool)
                                 .unwrap_or(false);
                             let transport = security
-                                .get("transport") // THIS LINE CONTAINS CONSTANT(S)
+                                .get("transport")
                                 .and_then(Value::as_str)
-                                .unwrap_or("unknown"); // THIS LINE CONTAINS CONSTANT(S)
-                            let ok = bind_scope != "public" || tls_enabled || insecure_override; // THIS LINE CONTAINS CONSTANT(S)
-                            let message = if bind_scope == "public" && tls_enabled { // THIS LINE CONTAINS CONSTANT(S)
+                                .unwrap_or("unknown");
+                            let ok = bind_scope != "public" || tls_enabled || insecure_override;
+                            let message = if bind_scope == "public" && tls_enabled {
                                 format!("gateway public bind is protected by {}", transport)
-                            } else if bind_scope == "public" && insecure_override { // THIS LINE CONTAINS CONSTANT(S)
+                            } else if bind_scope == "public" && insecure_override {
                                 "gateway public bind is using an explicit insecure override"
                                     .to_string()
                             } else {
@@ -486,7 +454,7 @@ pub async fn run_gateway_doctor(config: GatewayDoctorConfig) -> Result<Value, St
     }
 
     checks.push(build_doctor_check(
-        "plugin_home", // THIS LINE CONTAINS CONSTANT(S)
+        "plugin_home",
         plugin_home_ok,
         if plugin_home_ok {
             format!(
@@ -502,7 +470,7 @@ pub async fn run_gateway_doctor(config: GatewayDoctorConfig) -> Result<Value, St
         "create the plugin home and install required plugins, for example: scripts/kelvin-setup.sh --force",
     ));
     checks.push(build_doctor_check(
-        "trust_policy", // THIS LINE CONTAINS CONSTANT(S)
+        "trust_policy",
         trust_policy_parse_ok,
         if trust_policy_parse_ok {
             format!(
@@ -518,26 +486,26 @@ pub async fn run_gateway_doctor(config: GatewayDoctorConfig) -> Result<Value, St
         "install plugins again to refresh trust policy, or provide --trust-policy <path> with a valid trusted_publishers.json",
     ));
     checks.push(build_doctor_check(
-        "websocket_connect", // THIS LINE CONTAINS CONSTANT(S)
+        "websocket_connect",
         ws_ok,
         ws_error.unwrap_or_else(|| "gateway websocket endpoint reachable".to_string()),
         "start the gateway daemon and verify endpoint/token, for example: scripts/kelvin-gateway-daemon.sh start",
     ));
     checks.push(build_doctor_check(
-        "gateway_connect_handshake", // THIS LINE CONTAINS CONSTANT(S)
+        "gateway_connect_handshake",
         connect_ok,
         connect_error.unwrap_or_else(|| "gateway connect handshake succeeded".to_string()),
         "verify gateway auth token and connect method parameters, then rerun scripts/kelvin-doctor.sh",
     ));
     checks.push(build_doctor_check(
-        "gateway_health", // THIS LINE CONTAINS CONSTANT(S)
+        "gateway_health",
         health_ok,
         health_error.unwrap_or_else(|| "gateway health check succeeded".to_string()),
         "inspect daemon logs and runtime state (scripts/kelvin-gateway-daemon.sh logs), then fix reported runtime errors",
     ));
     if let Some((ok, message)) = security_check {
         checks.push(build_doctor_check(
-            "gateway_security_profile", // THIS LINE CONTAINS CONSTANT(S)
+            "gateway_security_profile",
             ok,
             message,
             "for public binds, configure --token and --tls-cert/--tls-key unless you intentionally opted into the insecure override",
@@ -546,40 +514,40 @@ pub async fn run_gateway_doctor(config: GatewayDoctorConfig) -> Result<Value, St
 
     let failed = checks
         .iter()
-        .filter(|item| item.get("status") != Some(&json!("pass"))) // THIS LINE CONTAINS CONSTANT(S)
+        .filter(|item| item.get("status") != Some(&json!("pass")))
         .count();
-    let ok = failed == 0; // THIS LINE CONTAINS CONSTANT(S)
+    let ok = failed == 0;
     Ok(json!({
-        "ok": ok, // THIS LINE CONTAINS CONSTANT(S)
-        "summary": { // THIS LINE CONTAINS CONSTANT(S)
-            "passed": checks.len().saturating_sub(failed), // THIS LINE CONTAINS CONSTANT(S)
-            "failed": failed, // THIS LINE CONTAINS CONSTANT(S)
-            "checked_at_ms": now_ms() // THIS LINE CONTAINS CONSTANT(S)
+        "ok": ok,
+        "summary": {
+            "passed": checks.len().saturating_sub(failed),
+            "failed": failed,
+            "checked_at_ms": now_ms()
         },
-        "checks": checks, // THIS LINE CONTAINS CONSTANT(S)
-        "legacy_checks": { // THIS LINE CONTAINS CONSTANT(S)
-            "plugin_home_ok": plugin_home_ok, // THIS LINE CONTAINS CONSTANT(S)
-            "trust_policy_ok": trust_policy_parse_ok, // THIS LINE CONTAINS CONSTANT(S)
-            "websocket_connect_ok": ws_ok, // THIS LINE CONTAINS CONSTANT(S)
-            "connect_ok": connect_ok, // THIS LINE CONTAINS CONSTANT(S)
-            "health_ok": health_ok // THIS LINE CONTAINS CONSTANT(S)
+        "checks": checks,
+        "legacy_checks": {
+            "plugin_home_ok": plugin_home_ok,
+            "trust_policy_ok": trust_policy_parse_ok,
+            "websocket_connect_ok": ws_ok,
+            "connect_ok": connect_ok,
+            "health_ok": health_ok
         },
-        "inputs": { // THIS LINE CONTAINS CONSTANT(S)
-            "endpoint": config.endpoint, // THIS LINE CONTAINS CONSTANT(S)
-            "plugin_home": config.plugin_home, // THIS LINE CONTAINS CONSTANT(S)
-            "trust_policy_path": config.trust_policy_path // THIS LINE CONTAINS CONSTANT(S)
+        "inputs": {
+            "endpoint": config.endpoint,
+            "plugin_home": config.plugin_home,
+            "trust_policy_path": config.trust_policy_path
         },
-        "errors": doctor_errors // THIS LINE CONTAINS CONSTANT(S)
+        "errors": doctor_errors
     }))
 }
 
 fn build_doctor_check(id: &str, ok: bool, message: String, remediation: &str) -> Value {
     json!({
-        "id": id, // THIS LINE CONTAINS CONSTANT(S)
-        "status": if ok { "pass" } else { "fail" }, // THIS LINE CONTAINS CONSTANT(S)
-        "severity": if ok { "info" } else { "error" }, // THIS LINE CONTAINS CONSTANT(S)
-        "message": message, // THIS LINE CONTAINS CONSTANT(S)
-        "remediation": remediation // THIS LINE CONTAINS CONSTANT(S)
+        "id": id,
+        "status": if ok { "pass" } else { "fail" },
+        "severity": if ok { "info" } else { "error" },
+        "message": message,
+        "remediation": remediation
     })
 }
 
@@ -593,7 +561,7 @@ async fn wait_for_response(
             continue;
         };
         let frame: Value = serde_json::from_str(&text).map_err(|err| err.to_string())?;
-        if frame.get("type") == Some(&json!("res")) && frame.get("id") == Some(&json!(target_id)) { // THIS LINE CONTAINS CONSTANT(S)
+        if frame.get("type") == Some(&json!("res")) && frame.get("id") == Some(&json!(target_id)) {
             return Ok(frame);
         }
     }
@@ -695,10 +663,10 @@ pub async fn run_gateway_with_listener_secure_and_ingress(
         auth_token: auth_token.map(|value| value.trim().to_string()),
         security: security.clone(),
         started_at: Instant::now(),
-        idempotency: Arc::new(Mutex::new(IdempotencyCache::new(2_048))), // THIS LINE CONTAINS CONSTANT(S)
+        idempotency: Arc::new(Mutex::new(IdempotencyCache::new(2_048))),
         channels,
         scheduler,
-        auth_failures: Arc::new(Mutex::new(AuthFailureTracker::new(512))), // THIS LINE CONTAINS CONSTANT(S)
+        auth_failures: Arc::new(Mutex::new(AuthFailureTracker::new(512))),
         connection_semaphore: Arc::new(Semaphore::new(security.max_connections)),
     };
     if let Some(listener) = ingress_listener {
@@ -741,11 +709,11 @@ pub async fn run_gateway_with_listener_secure_and_ingress(
     }
 }
 
-fn gateway_scheme(security: &GatewaySecurityConfig) -> &'static str { // THIS LINE CONTAINS CONSTANT(S)
+fn gateway_scheme(security: &GatewaySecurityConfig) -> &'static str {
     if security.tls.is_some() {
-        "wss" // THIS LINE CONTAINS CONSTANT(S)
+        "wss"
     } else {
-        "ws" // THIS LINE CONTAINS CONSTANT(S)
+        "ws"
     }
 }
 
@@ -758,29 +726,29 @@ fn validate_gateway_security(
     auth_token: Option<&str>,
     security: &GatewaySecurityConfig,
 ) -> Result<(), String> {
-    if security.max_connections == 0 { // THIS LINE CONTAINS CONSTANT(S)
-        return Err("gateway max_connections must be >= 1".to_string()); // THIS LINE CONTAINS CONSTANT(S)
+    if security.max_connections == 0 {
+        return Err("gateway max_connections must be >= 1".to_string());
     }
-    if security.max_message_size_bytes < 1024 { // THIS LINE CONTAINS CONSTANT(S)
-        return Err("gateway max_message_size_bytes must be >= 1024".to_string()); // THIS LINE CONTAINS CONSTANT(S)
+    if security.max_message_size_bytes < 1024 {
+        return Err("gateway max_message_size_bytes must be >= 1024".to_string());
     }
-    if security.max_frame_size_bytes < 512 { // THIS LINE CONTAINS CONSTANT(S)
-        return Err("gateway max_frame_size_bytes must be >= 512".to_string()); // THIS LINE CONTAINS CONSTANT(S)
+    if security.max_frame_size_bytes < 512 {
+        return Err("gateway max_frame_size_bytes must be >= 512".to_string());
     }
     if security.max_frame_size_bytes > security.max_message_size_bytes {
         return Err("gateway max_frame_size_bytes must be <= max_message_size_bytes".to_string());
     }
-    if security.handshake_timeout_ms < 100 { // THIS LINE CONTAINS CONSTANT(S)
-        return Err("gateway handshake_timeout_ms must be >= 100".to_string()); // THIS LINE CONTAINS CONSTANT(S)
+    if security.handshake_timeout_ms < 100 {
+        return Err("gateway handshake_timeout_ms must be >= 100".to_string());
     }
-    if security.auth_failure_threshold == 0 { // THIS LINE CONTAINS CONSTANT(S)
-        return Err("gateway auth_failure_threshold must be >= 1".to_string()); // THIS LINE CONTAINS CONSTANT(S)
+    if security.auth_failure_threshold == 0 {
+        return Err("gateway auth_failure_threshold must be >= 1".to_string());
     }
-    if security.auth_failure_backoff_ms < 100 { // THIS LINE CONTAINS CONSTANT(S)
-        return Err("gateway auth_failure_backoff_ms must be >= 100".to_string()); // THIS LINE CONTAINS CONSTANT(S)
+    if security.auth_failure_backoff_ms < 100 {
+        return Err("gateway auth_failure_backoff_ms must be >= 100".to_string());
     }
-    if security.max_outbound_messages_per_connection == 0 { // THIS LINE CONTAINS CONSTANT(S)
-        return Err("gateway max_outbound_messages_per_connection must be >= 1".to_string()); // THIS LINE CONTAINS CONSTANT(S)
+    if security.max_outbound_messages_per_connection == 0 {
+        return Err("gateway max_outbound_messages_per_connection must be >= 1".to_string());
     }
 
     let public_bind = !is_loopback_bind(bind_addr);
@@ -875,7 +843,7 @@ where
         let _ = send_error(
             &writer_tx,
             "",
-            "unauthorized", // THIS LINE CONTAINS CONSTANT(S)
+            "unauthorized",
             &format!("auth backoff active; retry after {}ms", remaining_ms),
         );
         let _ = writer_tx.try_send(Message::Close(None));
@@ -891,7 +859,7 @@ where
     .await
     {
         Err(_) => {
-            let _ = send_error(&writer_tx, "", "timeout", "connect handshake timed out"); // THIS LINE CONTAINS CONSTANT(S)
+            let _ = send_error(&writer_tx, "", "timeout", "connect handshake timed out");
             let _ = writer_tx.try_send(Message::Close(None));
             drop(writer_tx);
             let _ = writer_task.await;
@@ -902,7 +870,7 @@ where
             let _ = send_error(
                 &writer_tx,
                 "",
-                "handshake_required", // THIS LINE CONTAINS CONSTANT(S)
+                "handshake_required",
                 "first frame must be a connect request",
             );
             let _ = writer_tx.try_send(Message::Close(None));
@@ -927,7 +895,7 @@ where
     } = match parse_client_frame(&first_message) {
         Ok(frame) => frame,
         Err(err) => {
-            let _ = send_error(&writer_tx, "", "invalid_request", &err); // THIS LINE CONTAINS CONSTANT(S)
+            let _ = send_error(&writer_tx, "", "invalid_request", &err);
             let _ = writer_tx.try_send(Message::Close(None));
             drop(writer_tx);
             let _ = writer_task.await;
@@ -935,11 +903,11 @@ where
         }
     };
 
-    if first_method != "connect" { // THIS LINE CONTAINS CONSTANT(S)
+    if first_method != "connect" {
         let _ = send_error(
             &writer_tx,
             &first_id,
-            "handshake_required", // THIS LINE CONTAINS CONSTANT(S)
+            "handshake_required",
             "first method must be connect",
         );
         let _ = writer_tx.try_send(Message::Close(None));
@@ -948,7 +916,7 @@ where
         return Ok(());
     }
 
-    let connect_params: ConnectParams = match parse_params(first_params, "connect") { // THIS LINE CONTAINS CONSTANT(S)
+    let connect_params: ConnectParams = match parse_params(first_params, "connect") {
         Ok(params) => params,
         Err(err) => {
             let _ = send_gateway_error(&writer_tx, &first_id, err);
@@ -960,7 +928,7 @@ where
     };
     let _client_id = connect_params
         .client_id
-        .unwrap_or_else(|| "unknown".to_string()); // THIS LINE CONTAINS CONSTANT(S)
+        .unwrap_or_else(|| "unknown".to_string());
     if let Err(err) = verify_auth_token(state.auth_token.as_deref(), connect_params.auth.as_ref()) {
         state
             .auth_failures
@@ -978,11 +946,11 @@ where
         &writer_tx,
         &first_id,
         json!({
-            "status": "connected", // THIS LINE CONTAINS CONSTANT(S)
-            "protocol_version": GATEWAY_PROTOCOL_VERSION, // THIS LINE CONTAINS CONSTANT(S)
-            "supported_methods": GATEWAY_METHODS_V1, // THIS LINE CONTAINS CONSTANT(S)
-            "server_time_ms": now_ms(), // THIS LINE CONTAINS CONSTANT(S)
-            "loaded_installed_plugins": state.runtime.loaded_installed_plugins(), // THIS LINE CONTAINS CONSTANT(S)
+            "status": "connected",
+            "protocol_version": GATEWAY_PROTOCOL_VERSION,
+            "supported_methods": GATEWAY_METHODS_V1,
+            "server_time_ms": now_ms(),
+            "loaded_installed_plugins": state.runtime.loaded_installed_plugins(),
         }),
     )?;
 
@@ -1008,17 +976,17 @@ where
                 let frame = match parse_client_frame(&text) {
                     Ok(frame) => frame,
                     Err(err) => {
-                        let _ = send_error(&writer_tx, "", "invalid_request", &err); // THIS LINE CONTAINS CONSTANT(S)
+                        let _ = send_error(&writer_tx, "", "invalid_request", &err);
                         let _ = writer_tx.try_send(Message::Close(None));
                         break;
                     }
                 };
                 let ClientFrame::Req { id, method, params } = frame;
-                if method == "connect" { // THIS LINE CONTAINS CONSTANT(S)
+                if method == "connect" {
                     send_error(
                         &writer_tx,
                         &id,
-                        "invalid_request", // THIS LINE CONTAINS CONSTANT(S)
+                        "invalid_request",
                         "connect can only be sent once per socket",
                     )?;
                     continue;
@@ -1027,7 +995,7 @@ where
                     send_error(
                         &writer_tx,
                         &id,
-                        "method_not_found", // THIS LINE CONTAINS CONSTANT(S)
+                        "method_not_found",
                         &format!("unknown method: {method}"),
                     )?;
                     continue;
@@ -1060,55 +1028,55 @@ async fn handle_request(
     params: Value,
 ) -> Result<Value, GatewayErrorPayload> {
     match method {
-        "health" => { // THIS LINE CONTAINS CONSTANT(S)
+        "health" => {
             let channels = state.channels.lock().await;
             Ok(json!({
-                "status": "ok", // THIS LINE CONTAINS CONSTANT(S)
-                "protocol_version": GATEWAY_PROTOCOL_VERSION, // THIS LINE CONTAINS CONSTANT(S)
-                "supported_methods": GATEWAY_METHODS_V1, // THIS LINE CONTAINS CONSTANT(S)
-                "uptime_ms": state.started_at.elapsed().as_millis(), // THIS LINE CONTAINS CONSTANT(S)
-                "loaded_installed_plugins": state.runtime.loaded_installed_plugins(), // THIS LINE CONTAINS CONSTANT(S)
-                "security": { // THIS LINE CONTAINS CONSTANT(S)
-                    "transport": gateway_scheme(&state.security), // THIS LINE CONTAINS CONSTANT(S)
-                    "bind_addr": state.bind_addr.to_string(), // THIS LINE CONTAINS CONSTANT(S)
-                    "bind_scope": if is_loopback_bind(state.bind_addr) { "loopback" } else { "public" }, // THIS LINE CONTAINS CONSTANT(S)
-                    "tls_enabled": state.tls_enabled, // THIS LINE CONTAINS CONSTANT(S)
-                    "auth_required": state.auth_token.is_some(), // THIS LINE CONTAINS CONSTANT(S)
-                    "allow_insecure_public_bind": state.security.allow_insecure_public_bind, // THIS LINE CONTAINS CONSTANT(S)
-                    "max_connections": state.security.max_connections, // THIS LINE CONTAINS CONSTANT(S)
-                    "max_message_size_bytes": state.security.max_message_size_bytes, // THIS LINE CONTAINS CONSTANT(S)
-                    "max_frame_size_bytes": state.security.max_frame_size_bytes, // THIS LINE CONTAINS CONSTANT(S)
-                    "handshake_timeout_ms": state.security.handshake_timeout_ms, // THIS LINE CONTAINS CONSTANT(S)
-                    "auth_failure_threshold": state.security.auth_failure_threshold, // THIS LINE CONTAINS CONSTANT(S)
-                    "auth_failure_backoff_ms": state.security.auth_failure_backoff_ms, // THIS LINE CONTAINS CONSTANT(S)
-                    "max_outbound_messages_per_connection": state.security.max_outbound_messages_per_connection, // THIS LINE CONTAINS CONSTANT(S)
-                    "max_inflight_requests_per_connection": 1, // THIS LINE CONTAINS CONSTANT(S)
+                "status": "ok",
+                "protocol_version": GATEWAY_PROTOCOL_VERSION,
+                "supported_methods": GATEWAY_METHODS_V1,
+                "uptime_ms": state.started_at.elapsed().as_millis(),
+                "loaded_installed_plugins": state.runtime.loaded_installed_plugins(),
+                "security": {
+                    "transport": gateway_scheme(&state.security),
+                    "bind_addr": state.bind_addr.to_string(),
+                    "bind_scope": if is_loopback_bind(state.bind_addr) { "loopback" } else { "public" },
+                    "tls_enabled": state.tls_enabled,
+                    "auth_required": state.auth_token.is_some(),
+                    "allow_insecure_public_bind": state.security.allow_insecure_public_bind,
+                    "max_connections": state.security.max_connections,
+                    "max_message_size_bytes": state.security.max_message_size_bytes,
+                    "max_frame_size_bytes": state.security.max_frame_size_bytes,
+                    "handshake_timeout_ms": state.security.handshake_timeout_ms,
+                    "auth_failure_threshold": state.security.auth_failure_threshold,
+                    "auth_failure_backoff_ms": state.security.auth_failure_backoff_ms,
+                    "max_outbound_messages_per_connection": state.security.max_outbound_messages_per_connection,
+                    "max_inflight_requests_per_connection": 1,
                 },
-                "ingress": ingress::GatewayIngressConfig::status_json(state.ingress.as_ref()), // THIS LINE CONTAINS CONSTANT(S)
-                "channels": { // THIS LINE CONTAINS CONSTANT(S)
-                    "routing": channels.routing_status(), // THIS LINE CONTAINS CONSTANT(S)
-                    "telegram": channels.telegram_status(), // THIS LINE CONTAINS CONSTANT(S)
-                    "slack": channels.slack_status(), // THIS LINE CONTAINS CONSTANT(S)
-                    "discord": channels.discord_status(), // THIS LINE CONTAINS CONSTANT(S)
+                "ingress": ingress::GatewayIngressConfig::status_json(state.ingress.as_ref()),
+                "channels": {
+                    "routing": channels.routing_status(),
+                    "telegram": channels.telegram_status(),
+                    "slack": channels.slack_status(),
+                    "discord": channels.discord_status(),
                 },
-                "plugins": operator::plugins_summary_payload(&state.runtime), // THIS LINE CONTAINS CONSTANT(S)
-                "scheduler": state.scheduler.health_payload().await, // THIS LINE CONTAINS CONSTANT(S)
+                "plugins": operator::plugins_summary_payload(&state.runtime),
+                "scheduler": state.scheduler.health_payload().await,
             }))
         }
-        "agent" | "run.submit" => { // THIS LINE CONTAINS CONSTANT(S)
+        "agent" | "run.submit" => {
             let params: AgentParams = parse_params(params, method)?;
             submit_agent(state, params).await
         }
-        "agent.wait" | "run.wait" => { // THIS LINE CONTAINS CONSTANT(S)
+        "agent.wait" | "run.wait" => {
             let params: RunWaitParams = parse_params(params, method)?;
             let wait = state
                 .runtime
-                .wait(&params.run_id, params.timeout_ms.unwrap_or(30_000)) // THIS LINE CONTAINS CONSTANT(S)
+                .wait(&params.run_id, params.timeout_ms.unwrap_or(30_000))
                 .await
                 .map_err(map_kelvin_error)?;
             Ok(serde_json::to_value(wait).unwrap_or_else(|_| json!({})))
         }
-        "agent.state" | "run.state" => { // THIS LINE CONTAINS CONSTANT(S)
+        "agent.state" | "run.state" => {
             let params: RunStateParams = parse_params(params, method)?;
             let run_state = state
                 .runtime
@@ -1117,28 +1085,28 @@ async fn handle_request(
                 .map_err(map_kelvin_error)?;
             Ok(serde_json::to_value(run_state).unwrap_or_else(|_| json!({})))
         }
-        "agent.outcome" | "run.outcome" => { // THIS LINE CONTAINS CONSTANT(S)
+        "agent.outcome" | "run.outcome" => {
             let params: RunWaitParams = parse_params(params, method)?;
             let outcome = state
                 .runtime
-                .wait_for_outcome(&params.run_id, params.timeout_ms.unwrap_or(30_000)) // THIS LINE CONTAINS CONSTANT(S)
+                .wait_for_outcome(&params.run_id, params.timeout_ms.unwrap_or(30_000))
                 .await
                 .map_err(map_kelvin_error)?;
             match outcome {
                 RunOutcome::Completed(result) => Ok(json!({
-                    "status": "completed", // THIS LINE CONTAINS CONSTANT(S)
-                    "result": result, // THIS LINE CONTAINS CONSTANT(S)
+                    "status": "completed",
+                    "result": result,
                 })),
                 RunOutcome::Failed(error) => Ok(json!({
-                    "status": "failed", // THIS LINE CONTAINS CONSTANT(S)
-                    "error": error, // THIS LINE CONTAINS CONSTANT(S)
+                    "status": "failed",
+                    "error": error,
                 })),
                 RunOutcome::Timeout => Ok(json!({
-                    "status": "timeout", // THIS LINE CONTAINS CONSTANT(S)
+                    "status": "timeout",
                 })),
             }
         }
-        "channel.telegram.ingest" => { // THIS LINE CONTAINS CONSTANT(S)
+        "channel.telegram.ingest" => {
             let params: TelegramIngressRequest = parse_params(params, method)?;
             let mut channels = state.channels.lock().await;
             channels
@@ -1146,18 +1114,18 @@ async fn handle_request(
                 .await
                 .map_err(map_kelvin_error)
         }
-        "channel.telegram.pair.approve" => { // THIS LINE CONTAINS CONSTANT(S)
+        "channel.telegram.pair.approve" => {
             let params: TelegramPairApproveRequest = parse_params(params, method)?;
             let mut channels = state.channels.lock().await;
             channels
                 .telegram_approve_pairing(&params.code)
                 .map_err(map_kelvin_error)
         }
-        "channel.telegram.status" => { // THIS LINE CONTAINS CONSTANT(S)
+        "channel.telegram.status" => {
             let channels = state.channels.lock().await;
             Ok(channels.telegram_status())
         }
-        "channel.slack.ingest" => { // THIS LINE CONTAINS CONSTANT(S)
+        "channel.slack.ingest" => {
             let params: SlackIngressRequest = parse_params(params, method)?;
             let mut channels = state.channels.lock().await;
             channels
@@ -1165,11 +1133,11 @@ async fn handle_request(
                 .await
                 .map_err(map_kelvin_error)
         }
-        "channel.slack.status" => { // THIS LINE CONTAINS CONSTANT(S)
+        "channel.slack.status" => {
             let channels = state.channels.lock().await;
             Ok(channels.slack_status())
         }
-        "channel.discord.ingest" => { // THIS LINE CONTAINS CONSTANT(S)
+        "channel.discord.ingest" => {
             let params: DiscordIngressRequest = parse_params(params, method)?;
             let mut channels = state.channels.lock().await;
             channels
@@ -1177,11 +1145,11 @@ async fn handle_request(
                 .await
                 .map_err(map_kelvin_error)
         }
-        "channel.discord.status" => { // THIS LINE CONTAINS CONSTANT(S)
+        "channel.discord.status" => {
             let channels = state.channels.lock().await;
             Ok(channels.discord_status())
         }
-        "channel.whatsapp.ingest" => { // THIS LINE CONTAINS CONSTANT(S)
+        "channel.whatsapp.ingest" => {
             let params: WhatsappIngressRequest = parse_params(params, method)?;
             let mut channels = state.channels.lock().await;
             channels
@@ -1189,51 +1157,51 @@ async fn handle_request(
                 .await
                 .map_err(map_kelvin_error)
         }
-        "channel.whatsapp.status" => { // THIS LINE CONTAINS CONSTANT(S)
+        "channel.whatsapp.status" => {
             let channels = state.channels.lock().await;
             Ok(channels.whatsapp_status())
         }
-        "channel.route.inspect" => { // THIS LINE CONTAINS CONSTANT(S)
+        "channel.route.inspect" => {
             let params: ChannelRouteInspectRequest = parse_params(params, method)?;
             let channels = state.channels.lock().await;
             channels.route_inspect(params).map_err(map_kelvin_error)
         }
-        "schedule.list" => { // THIS LINE CONTAINS CONSTANT(S)
+        "schedule.list" => {
             let _params: ScheduleListParams = parse_params(params, method)?;
             state.scheduler.list_payload().map_err(map_kelvin_error)
         }
-        "schedule.history" => { // THIS LINE CONTAINS CONSTANT(S)
+        "schedule.history" => {
             let params: ScheduleHistoryParams = parse_params(params, method)?;
             state
                 .scheduler
                 .history_payload(params)
                 .map_err(map_kelvin_error)
         }
-        "operator.runs.list" => { // THIS LINE CONTAINS CONSTANT(S)
+        "operator.runs.list" => {
             let params: OperatorRunsListParams = parse_params(params, method)?;
             operator::runs_list_payload(&state.runtime, params).map_err(map_kelvin_error)
         }
-        "operator.sessions.list" => { // THIS LINE CONTAINS CONSTANT(S)
+        "operator.sessions.list" => {
             let params: OperatorSessionsListParams = parse_params(params, method)?;
             operator::sessions_list_payload(&state.runtime, params).map_err(map_kelvin_error)
         }
-        "operator.session.get" => { // THIS LINE CONTAINS CONSTANT(S)
+        "operator.session.get" => {
             let params: OperatorSessionGetParams = parse_params(params, method)?;
             operator::session_get_payload(&state.runtime, params).map_err(map_kelvin_error)
         }
-        "operator.plugins.inspect" => { // THIS LINE CONTAINS CONSTANT(S)
+        "operator.plugins.inspect" => {
             let params: OperatorPluginsInspectParams = parse_params(params, method)?;
             operator::plugins_inspect_payload(&state.runtime, params).map_err(map_kelvin_error)
         }
-        "commands.list" => Ok(commands_list_payload(&state.runtime)), // THIS LINE CONTAINS CONSTANT(S)
-        "command.exec" => { // THIS LINE CONTAINS CONSTANT(S)
+        "commands.list" => Ok(commands_list_payload(&state.runtime)),
+        "command.exec" => {
             let params: CommandExecParams = parse_params(params, method)?;
             command_exec_payload(&state.runtime, params)
                 .await
                 .map_err(map_kelvin_error)
         }
         _ => Err(GatewayErrorPayload {
-            code: "method_not_found".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            code: "method_not_found".to_string(),
             message: format!("unknown method: {method}"),
         }),
     }
@@ -1246,18 +1214,18 @@ async fn submit_agent(
     let request_id = params.request_id.trim();
     if request_id.is_empty() {
         return Err(GatewayErrorPayload {
-            code: "invalid_input".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            code: "invalid_input".to_string(),
             message: "request_id must not be empty".to_string(),
         });
     }
 
     if let Some(cached) = state.idempotency.lock().await.get(request_id) {
         return Ok(json!({
-            "run_id": cached.run_id, // THIS LINE CONTAINS CONSTANT(S)
-            "status": "accepted", // THIS LINE CONTAINS CONSTANT(S)
-            "accepted_at_ms": cached.accepted_at_ms, // THIS LINE CONTAINS CONSTANT(S)
-            "deduped": true, // THIS LINE CONTAINS CONSTANT(S)
-            "cli_plugin_preflight": cached.cli_plugin_preflight, // THIS LINE CONTAINS CONSTANT(S)
+            "run_id": cached.run_id,
+            "status": "accepted",
+            "accepted_at_ms": cached.accepted_at_ms,
+            "deduped": true,
+            "cli_plugin_preflight": cached.cli_plugin_preflight,
         }));
     }
 
@@ -1287,16 +1255,16 @@ async fn submit_agent(
         .insert(request_id.to_string(), cached);
 
     Ok(json!({
-        "run_id": accepted.run_id, // THIS LINE CONTAINS CONSTANT(S)
-        "status": "accepted", // THIS LINE CONTAINS CONSTANT(S)
-        "accepted_at_ms": accepted.accepted_at_ms, // THIS LINE CONTAINS CONSTANT(S)
-        "deduped": false, // THIS LINE CONTAINS CONSTANT(S)
-        "cli_plugin_preflight": accepted.cli_plugin_preflight, // THIS LINE CONTAINS CONSTANT(S)
+        "run_id": accepted.run_id,
+        "status": "accepted",
+        "accepted_at_ms": accepted.accepted_at_ms,
+        "deduped": false,
+        "cli_plugin_preflight": accepted.cli_plugin_preflight,
     }))
 }
 
 fn is_supported_method(method: &str) -> bool {
-    GATEWAY_METHODS_V1.contains(&method) // THIS LINE CONTAINS CONSTANT(S)
+    GATEWAY_METHODS_V1.contains(&method)
 }
 
 // ---------------------------------------------------------------------------
@@ -1315,34 +1283,34 @@ struct CommandExecParams {
 fn builtin_commands() -> Vec<SlashCommandMeta> {
     vec![
         SlashCommandMeta {
-            name: "new".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            name: "new".to_string(),
             description: "Create a new session".to_string(),
             usage: Some("[name]".to_string()),
-            category: "session".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            category: "session".to_string(),
         },
         SlashCommandMeta {
-            name: "clear".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            name: "clear".to_string(),
             description: "Clear session history".to_string(),
             usage: None,
-            category: "session".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            category: "session".to_string(),
         },
         SlashCommandMeta {
-            name: "tools".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            name: "tools".to_string(),
             description: "List all available tools".to_string(),
             usage: None,
-            category: "tools".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            category: "tools".to_string(),
         },
         SlashCommandMeta {
-            name: "sessions".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            name: "sessions".to_string(),
             description: "List recent sessions".to_string(),
             usage: None,
-            category: "session".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            category: "session".to_string(),
         },
         SlashCommandMeta {
-            name: "plugins".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            name: "plugins".to_string(),
             description: "List loaded plugins".to_string(),
             usage: None,
-            category: "system".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            category: "system".to_string(),
         },
     ]
 }
@@ -1351,11 +1319,11 @@ fn commands_list_payload(runtime: &kelvin_sdk::KelvinSdkRuntime) -> Value {
     let mut commands = builtin_commands();
     // Plugin-provided commands can be added here in future phases.
     let _ = runtime;
-    json!({ "commands": commands.drain(..).map(|c| json!({ // THIS LINE CONTAINS CONSTANT(S)
-        "name": c.name, // THIS LINE CONTAINS CONSTANT(S)
-        "description": c.description, // THIS LINE CONTAINS CONSTANT(S)
-        "usage": c.usage, // THIS LINE CONTAINS CONSTANT(S)
-        "category": c.category, // THIS LINE CONTAINS CONSTANT(S)
+    json!({ "commands": commands.drain(..).map(|c| json!({
+        "name": c.name,
+        "description": c.description,
+        "usage": c.usage,
+        "category": c.category,
     })).collect::<Vec<_>>() })
 }
 
@@ -1365,8 +1333,8 @@ async fn command_exec_payload(
 ) -> Result<Value, KelvinError> {
     let name = params.command.trim().trim_start_matches('/');
     match name {
-        "new" => { // THIS LINE CONTAINS CONSTANT(S)
-            let session_id = params.session_id.as_deref().unwrap_or("main"); // THIS LINE CONTAINS CONSTANT(S)
+        "new" => {
+            let session_id = params.session_id.as_deref().unwrap_or("main");
             let workspace_dir = runtime
                 .default_workspace_dir()
                 .to_string_lossy()
@@ -1378,39 +1346,39 @@ async fn command_exec_payload(
                     workspace_dir,
                 })
                 .await?;
-            Ok(json!({ "command": "new", "session_id": session_id })) // THIS LINE CONTAINS CONSTANT(S)
+            Ok(json!({ "command": "new", "session_id": session_id }))
         }
-        "switch" => { // THIS LINE CONTAINS CONSTANT(S)
-            let session_id = params.session_id.as_deref().unwrap_or("main"); // THIS LINE CONTAINS CONSTANT(S)
-            Ok(json!({ "command": "switch", "session_id": session_id })) // THIS LINE CONTAINS CONSTANT(S)
+        "switch" => {
+            let session_id = params.session_id.as_deref().unwrap_or("main");
+            Ok(json!({ "command": "switch", "session_id": session_id }))
         }
-        "clear" => { // THIS LINE CONTAINS CONSTANT(S)
-            let session_id = params.session_id.as_deref().unwrap_or("main"); // THIS LINE CONTAINS CONSTANT(S)
+        "clear" => {
+            let session_id = params.session_id.as_deref().unwrap_or("main");
             runtime.clear_session_history(session_id).await?;
-            Ok(json!({ "command": "clear", "session_id": session_id })) // THIS LINE CONTAINS CONSTANT(S)
+            Ok(json!({ "command": "clear", "session_id": session_id }))
         }
-        "tools" => { // THIS LINE CONTAINS CONSTANT(S)
+        "tools" => {
             let defs = runtime.tool_definitions();
             Ok(json!({
-                "command": "tools", // THIS LINE CONTAINS CONSTANT(S)
-                "count": defs.len(), // THIS LINE CONTAINS CONSTANT(S)
-                "tools": defs.iter().map(|d| json!({ // THIS LINE CONTAINS CONSTANT(S)
-                    "name": d.name, // THIS LINE CONTAINS CONSTANT(S)
-                    "description": d.description, // THIS LINE CONTAINS CONSTANT(S)
+                "command": "tools",
+                "count": defs.len(),
+                "tools": defs.iter().map(|d| json!({
+                    "name": d.name,
+                    "description": d.description,
                 })).collect::<Vec<_>>(),
             }))
         }
-        "sessions" => operator::sessions_list_payload( // THIS LINE CONTAINS CONSTANT(S)
+        "sessions" => operator::sessions_list_payload(
             runtime,
             operator::OperatorSessionsListParams::default(),
         )
-        .map(|payload| json!({ "command": "sessions", "result": payload })), // THIS LINE CONTAINS CONSTANT(S)
-        "plugins" => { // THIS LINE CONTAINS CONSTANT(S)
+        .map(|payload| json!({ "command": "sessions", "result": payload })),
+        "plugins" => {
             let payload = operator::plugins_inspect_payload(
                 runtime,
                 operator::OperatorPluginsInspectParams::default(),
             )?;
-            Ok(json!({ "command": "plugins", "result": payload })) // THIS LINE CONTAINS CONSTANT(S)
+            Ok(json!({ "command": "plugins", "result": payload }))
         }
         other => Err(KelvinError::InvalidInput(format!(
             "unknown command: /{other}"
@@ -1428,13 +1396,13 @@ fn verify_auth_token(
 
     let Some(provided) = provided_auth else {
         return Err(GatewayErrorPayload {
-            code: "unauthorized".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            code: "unauthorized".to_string(),
             message: "missing auth token".to_string(),
         });
     };
     if provided.token != required_token {
         return Err(GatewayErrorPayload {
-            code: "unauthorized".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            code: "unauthorized".to_string(),
             message: "invalid auth token".to_string(),
         });
     }
@@ -1450,18 +1418,18 @@ where
     T: DeserializeOwned,
 {
     serde_json::from_value(params).map_err(|err| GatewayErrorPayload {
-        code: "invalid_input".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+        code: "invalid_input".to_string(),
         message: format!("invalid params for {method}: {err}"),
     })
 }
 
 fn map_kelvin_error(err: KelvinError) -> GatewayErrorPayload {
     let code = match err {
-        KelvinError::InvalidInput(_) => "invalid_input", // THIS LINE CONTAINS CONSTANT(S)
-        KelvinError::NotFound(_) => "not_found", // THIS LINE CONTAINS CONSTANT(S)
-        KelvinError::Timeout(_) => "timeout", // THIS LINE CONTAINS CONSTANT(S)
-        KelvinError::Backend(_) => "backend_error", // THIS LINE CONTAINS CONSTANT(S)
-        KelvinError::Io(_) => "io_error", // THIS LINE CONTAINS CONSTANT(S)
+        KelvinError::InvalidInput(_) => "invalid_input",
+        KelvinError::NotFound(_) => "not_found",
+        KelvinError::Timeout(_) => "timeout",
+        KelvinError::Backend(_) => "backend_error",
+        KelvinError::Io(_) => "io_error",
     };
     GatewayErrorPayload {
         code: code.to_string(),
@@ -1515,7 +1483,7 @@ fn send_event(
 ) -> Result<(), String> {
     let payload = serde_json::to_value(event).map_err(|err| err.to_string())?;
     let frame = ServerFrame::Event {
-        event: "agent".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+        event: "agent".to_string(),
         payload,
     };
     send_frame(writer_tx, frame)
@@ -1536,76 +1504,76 @@ mod tests {
 
     #[test]
     fn idempotency_cache_evicts_oldest_entry() {
-        let mut cache = IdempotencyCache::new(2); // THIS LINE CONTAINS CONSTANT(S)
+        let mut cache = IdempotencyCache::new(2);
         cache.insert(
-            "a".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            "a".to_string(),
             CachedAgentAcceptance {
-                run_id: "run-a".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-                accepted_at_ms: 1, // THIS LINE CONTAINS CONSTANT(S)
+                run_id: "run-a".to_string(),
+                accepted_at_ms: 1,
                 cli_plugin_preflight: None,
             },
         );
         cache.insert(
-            "b".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            "b".to_string(),
             CachedAgentAcceptance {
-                run_id: "run-b".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-                accepted_at_ms: 2, // THIS LINE CONTAINS CONSTANT(S)
+                run_id: "run-b".to_string(),
+                accepted_at_ms: 2,
                 cli_plugin_preflight: None,
             },
         );
         cache.insert(
-            "c".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            "c".to_string(),
             CachedAgentAcceptance {
-                run_id: "run-c".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-                accepted_at_ms: 3, // THIS LINE CONTAINS CONSTANT(S)
+                run_id: "run-c".to_string(),
+                accepted_at_ms: 3,
                 cli_plugin_preflight: None,
             },
         );
 
-        assert!(cache.get("a").is_none()); // THIS LINE CONTAINS CONSTANT(S)
-        assert_eq!(cache.get("b").expect("b").run_id, "run-b"); // THIS LINE CONTAINS CONSTANT(S)
-        assert_eq!(cache.get("c").expect("c").run_id, "run-c"); // THIS LINE CONTAINS CONSTANT(S)
+        assert!(cache.get("a").is_none());
+        assert_eq!(cache.get("b").expect("b").run_id, "run-b");
+        assert_eq!(cache.get("c").expect("c").run_id, "run-c");
     }
 
     #[test]
     fn gateway_protocol_version_is_stable() {
-        assert_eq!(GATEWAY_PROTOCOL_VERSION, "1.0.0"); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(GATEWAY_PROTOCOL_VERSION, "1.0.0");
     }
 
     #[test]
-    fn gateway_method_contract_matches_v1_surface() { // THIS LINE CONTAINS CONSTANT(S)
-        let methods = GATEWAY_METHODS_V1.to_vec(); // THIS LINE CONTAINS CONSTANT(S)
+    fn gateway_method_contract_matches_v1_surface() {
+        let methods = GATEWAY_METHODS_V1.to_vec();
         assert_eq!(
             methods,
             vec![
-                "agent", // THIS LINE CONTAINS CONSTANT(S)
-                "agent.outcome", // THIS LINE CONTAINS CONSTANT(S)
-                "agent.state", // THIS LINE CONTAINS CONSTANT(S)
-                "agent.wait", // THIS LINE CONTAINS CONSTANT(S)
-                "channel.discord.ingest", // THIS LINE CONTAINS CONSTANT(S)
-                "channel.discord.status", // THIS LINE CONTAINS CONSTANT(S)
-                "channel.route.inspect", // THIS LINE CONTAINS CONSTANT(S)
-                "channel.slack.ingest", // THIS LINE CONTAINS CONSTANT(S)
-                "channel.slack.status", // THIS LINE CONTAINS CONSTANT(S)
-                "channel.telegram.ingest", // THIS LINE CONTAINS CONSTANT(S)
-                "channel.telegram.pair.approve", // THIS LINE CONTAINS CONSTANT(S)
-                "channel.telegram.status", // THIS LINE CONTAINS CONSTANT(S)
-                "channel.whatsapp.ingest", // THIS LINE CONTAINS CONSTANT(S)
-                "channel.whatsapp.status", // THIS LINE CONTAINS CONSTANT(S)
-                "command.exec", // THIS LINE CONTAINS CONSTANT(S)
-                "commands.list", // THIS LINE CONTAINS CONSTANT(S)
-                "connect", // THIS LINE CONTAINS CONSTANT(S)
-                "health", // THIS LINE CONTAINS CONSTANT(S)
-                "operator.plugins.inspect", // THIS LINE CONTAINS CONSTANT(S)
-                "operator.runs.list", // THIS LINE CONTAINS CONSTANT(S)
-                "operator.session.get", // THIS LINE CONTAINS CONSTANT(S)
-                "operator.sessions.list", // THIS LINE CONTAINS CONSTANT(S)
-                "run.outcome", // THIS LINE CONTAINS CONSTANT(S)
-                "run.state", // THIS LINE CONTAINS CONSTANT(S)
-                "run.submit", // THIS LINE CONTAINS CONSTANT(S)
-                "run.wait", // THIS LINE CONTAINS CONSTANT(S)
-                "schedule.history", // THIS LINE CONTAINS CONSTANT(S)
-                "schedule.list", // THIS LINE CONTAINS CONSTANT(S)
+                "agent",
+                "agent.outcome",
+                "agent.state",
+                "agent.wait",
+                "channel.discord.ingest",
+                "channel.discord.status",
+                "channel.route.inspect",
+                "channel.slack.ingest",
+                "channel.slack.status",
+                "channel.telegram.ingest",
+                "channel.telegram.pair.approve",
+                "channel.telegram.status",
+                "channel.whatsapp.ingest",
+                "channel.whatsapp.status",
+                "command.exec",
+                "commands.list",
+                "connect",
+                "health",
+                "operator.plugins.inspect",
+                "operator.runs.list",
+                "operator.session.get",
+                "operator.sessions.list",
+                "run.outcome",
+                "run.state",
+                "run.submit",
+                "run.wait",
+                "schedule.history",
+                "schedule.list",
             ]
         );
         let unique = methods.iter().copied().collect::<HashSet<_>>();
@@ -1621,7 +1589,7 @@ mod tests {
 
     #[test]
     fn public_bind_requires_secure_profile_by_default() {
-        let bind_addr: SocketAddr = "0.0.0.0:34617".parse().expect("bind addr"); // THIS LINE CONTAINS CONSTANT(S)
+        let bind_addr: SocketAddr = "0.0.0.0:34617".parse().expect("bind addr");
         let error = validate_gateway_security(bind_addr, None, &GatewaySecurityConfig::default())
             .expect_err("public bind should fail closed");
         assert!(
@@ -1630,36 +1598,36 @@ mod tests {
         );
 
         let error =
-            validate_gateway_security(bind_addr, Some("secret"), &GatewaySecurityConfig::default()) // THIS LINE CONTAINS CONSTANT(S)
+            validate_gateway_security(bind_addr, Some("secret"), &GatewaySecurityConfig::default())
                 .expect_err("public ws bind should require tls or override");
         assert!(error.contains("without TLS"), "unexpected error: {error}");
     }
 
     #[test]
     fn public_bind_can_use_explicit_insecure_override() {
-        let bind_addr: SocketAddr = "0.0.0.0:34617".parse().expect("bind addr"); // THIS LINE CONTAINS CONSTANT(S)
+        let bind_addr: SocketAddr = "0.0.0.0:34617".parse().expect("bind addr");
         let security = GatewaySecurityConfig {
             allow_insecure_public_bind: true,
             ..GatewaySecurityConfig::default()
         };
-        validate_gateway_security(bind_addr, Some("secret"), &security) // THIS LINE CONTAINS CONSTANT(S)
+        validate_gateway_security(bind_addr, Some("secret"), &security)
             .expect("explicit insecure override should allow public ws bind");
     }
 
     #[test]
     fn auth_failure_tracker_enforces_backoff_window() {
-        let mut tracker = AuthFailureTracker::new(32); // THIS LINE CONTAINS CONSTANT(S)
+        let mut tracker = AuthFailureTracker::new(32);
         let security = GatewaySecurityConfig {
-            auth_failure_threshold: 1, // THIS LINE CONTAINS CONSTANT(S)
-            auth_failure_backoff_ms: 5_000, // THIS LINE CONTAINS CONSTANT(S)
+            auth_failure_threshold: 1,
+            auth_failure_backoff_ms: 5_000,
             ..GatewaySecurityConfig::default()
         };
-        let peer_ip: IpAddr = "127.0.0.1".parse().expect("peer ip"); // THIS LINE CONTAINS CONSTANT(S)
+        let peer_ip: IpAddr = "127.0.0.1".parse().expect("peer ip");
         tracker.record_failure(peer_ip, &security);
         let remaining = tracker
             .backoff_remaining_ms(peer_ip)
             .expect("backoff should be active");
-        assert!(remaining > 0); // THIS LINE CONTAINS CONSTANT(S)
+        assert!(remaining > 0);
         tracker.clear(peer_ip);
         assert!(tracker.backoff_remaining_ms(peer_ip).is_none());
     }
@@ -1671,9 +1639,9 @@ mod tests {
             .map(|value| value.as_millis())
             .unwrap_or_default();
         let temp_root = std::env::temp_dir().join(format!("kelvin-doctor-test-{millis}"));
-        let plugin_home = temp_root.join("plugins"); // THIS LINE CONTAINS CONSTANT(S)
+        let plugin_home = temp_root.join("plugins");
         std::fs::create_dir_all(&plugin_home).expect("create plugin home");
-        let trust_policy_path = temp_root.join("trusted_publishers.json"); // THIS LINE CONTAINS CONSTANT(S)
+        let trust_policy_path = temp_root.join("trusted_publishers.json");
         std::fs::write(
             &trust_policy_path,
             b"{\"require_signature\":true,\"publishers\":[]}",
@@ -1681,26 +1649,26 @@ mod tests {
         .expect("write trust policy");
 
         let report = run_gateway_doctor(GatewayDoctorConfig {
-            endpoint: "ws://127.0.0.1:1".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            endpoint: "ws://127.0.0.1:1".to_string(),
             auth_token: None,
             plugin_home,
             trust_policy_path,
-            timeout_ms: 250, // THIS LINE CONTAINS CONSTANT(S)
+            timeout_ms: 250,
         })
         .await
         .expect("doctor report");
 
-        assert!(report.get("ok").and_then(|item| item.as_bool()).is_some()); // THIS LINE CONTAINS CONSTANT(S)
+        assert!(report.get("ok").and_then(|item| item.as_bool()).is_some());
         let checks = report
-            .get("checks") // THIS LINE CONTAINS CONSTANT(S)
+            .get("checks")
             .and_then(|item| item.as_array())
             .expect("checks array");
         assert!(!checks.is_empty(), "checks should not be empty");
         for check in checks {
-            assert!(check.get("id").is_some(), "missing check id"); // THIS LINE CONTAINS CONSTANT(S)
-            assert!(check.get("status").is_some(), "missing check status"); // THIS LINE CONTAINS CONSTANT(S)
+            assert!(check.get("id").is_some(), "missing check id");
+            assert!(check.get("status").is_some(), "missing check status");
             assert!(
-                check.get("remediation").is_some(), // THIS LINE CONTAINS CONSTANT(S)
+                check.get("remediation").is_some(),
                 "missing remediation hint"
             );
         }

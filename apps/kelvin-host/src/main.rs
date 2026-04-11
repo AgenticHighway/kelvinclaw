@@ -8,6 +8,8 @@ use kelvin_sdk::{
     KelvinSdkRunRequest, KelvinSdkRuntime, KelvinSdkRuntimeConfig,
 };
 
+mod consts;
+
 #[derive(Debug, Clone)]
 struct CliConfig {
     prompt: Option<String>,
@@ -15,7 +17,7 @@ struct CliConfig {
     session_id: String,
     workspace_dir: PathBuf,
     memory_mode: KelvinCliMemoryMode,
-    timeout_ms: u64, // THIS LINE CONTAINS CONSTANT(S)
+    timeout_ms: u64,
     system_prompt: Option<String>,
     model_provider_plugin_id: Option<String>,
     state_dir: Option<PathBuf>,
@@ -24,15 +26,15 @@ struct CliConfig {
     compact_to_messages: usize,
 }
 
-fn usage() -> &'static str { // THIS LINE CONTAINS CONSTANT(S)
+fn usage() -> &'static str {
     "Usage: kelvin-host [--prompt <text>] [--interactive] [--session <id>] [--workspace <dir>] [--memory markdown|in-memory|fallback] [--timeout-ms <ms>] [--system <text>] [--model-provider <plugin_id>] [--state-dir <dir>] [--persist-runs true|false] [--max-session-history <n>] [--compact-to <n>]"
 }
 
 fn parse_bool(value: &str, flag: &str) -> Result<bool, String> {
     let normalized = value.trim().to_ascii_lowercase();
     match normalized.as_str() {
-        "1" | "true" | "yes" | "on" => Ok(true), // THIS LINE CONTAINS CONSTANT(S)
-        "0" | "false" | "no" | "off" => Ok(false), // THIS LINE CONTAINS CONSTANT(S)
+        v if consts::BOOL_TRUE_VALUES.contains(&v) => Ok(true),
+        v if consts::BOOL_FALSE_VALUES.contains(&v) => Ok(false),
         _ => Err(format!("invalid boolean value for {flag}: {value}")),
     }
 }
@@ -40,62 +42,62 @@ fn parse_bool(value: &str, flag: &str) -> Result<bool, String> {
 fn parse_args() -> Result<CliConfig, String> {
     let mut prompt: Option<String> = None;
     let mut interactive = false;
-    let mut session_id = "main".to_string(); // THIS LINE CONTAINS CONSTANT(S)
+    let mut session_id = consts::DEFAULT_SESSION_ID.to_string();
     let mut workspace_dir = env::current_dir().map_err(|err| err.to_string())?;
     let mut memory_mode = KelvinCliMemoryMode::Markdown;
-    let mut timeout_ms = 300_000_u64; // THIS LINE CONTAINS CONSTANT(S)
+    let mut timeout_ms = consts::DEFAULT_TIMEOUT_MS;
     let mut system_prompt: Option<String> = None;
     let mut model_provider_plugin_id: Option<String> = None;
     let mut state_dir: Option<PathBuf> = None;
     let mut persist_runs = true;
-    let mut max_session_history_messages = 128_usize; // THIS LINE CONTAINS CONSTANT(S)
-    let mut compact_to_messages = 64_usize; // THIS LINE CONTAINS CONSTANT(S)
+    let mut max_session_history_messages = consts::DEFAULT_MAX_SESSION_HISTORY_MESSAGES;
+    let mut compact_to_messages = consts::DEFAULT_COMPACT_TO_MESSAGES;
 
-    let mut args = env::args().skip(1).peekable(); // THIS LINE CONTAINS CONSTANT(S)
+    let mut args = env::args().skip(1).peekable();
     while let Some(arg) = args.next() {
         match arg.as_str() {
-            "--help" | "-h" => return Err(usage().to_string()), // THIS LINE CONTAINS CONSTANT(S)
-            "--interactive" => { // THIS LINE CONTAINS CONSTANT(S)
+            consts::ARG_HELP_LONG | consts::ARG_HELP_SHORT => return Err(usage().to_string()),
+            consts::ARG_INTERACTIVE => {
                 interactive = true;
             }
-            "--prompt" => { // THIS LINE CONTAINS CONSTANT(S)
+            consts::ARG_PROMPT => {
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --prompt".to_string())?;
                 prompt = Some(value);
             }
-            "--session" => { // THIS LINE CONTAINS CONSTANT(S)
+            consts::ARG_SESSION => {
                 session_id = args
                     .next()
                     .ok_or_else(|| "missing value for --session".to_string())?;
             }
-            "--workspace" => { // THIS LINE CONTAINS CONSTANT(S)
+            consts::ARG_WORKSPACE => {
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --workspace".to_string())?;
                 workspace_dir = PathBuf::from(value);
             }
-            "--memory" => { // THIS LINE CONTAINS CONSTANT(S)
+            consts::ARG_MEMORY => {
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --memory".to_string())?;
                 memory_mode = KelvinCliMemoryMode::parse(&value);
             }
-            "--timeout-ms" => { // THIS LINE CONTAINS CONSTANT(S)
+            consts::ARG_TIMEOUT_MS => {
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --timeout-ms".to_string())?;
                 timeout_ms = value
-                    .parse::<u64>() // THIS LINE CONTAINS CONSTANT(S)
+                    .parse::<u64>()
                     .map_err(|_| "invalid numeric value for --timeout-ms".to_string())?;
             }
-            "--system" => { // THIS LINE CONTAINS CONSTANT(S)
+            consts::ARG_SYSTEM => {
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --system".to_string())?;
                 system_prompt = Some(value);
             }
-            "--model-provider" => { // THIS LINE CONTAINS CONSTANT(S)
+            consts::ARG_MODEL_PROVIDER => {
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --model-provider".to_string())?;
@@ -105,19 +107,19 @@ fn parse_args() -> Result<CliConfig, String> {
                 }
                 model_provider_plugin_id = Some(trimmed.to_string());
             }
-            "--state-dir" => { // THIS LINE CONTAINS CONSTANT(S)
+            consts::ARG_STATE_DIR => {
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --state-dir".to_string())?;
                 state_dir = Some(PathBuf::from(value));
             }
-            "--persist-runs" => { // THIS LINE CONTAINS CONSTANT(S)
+            consts::ARG_PERSIST_RUNS => {
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --persist-runs".to_string())?;
-                persist_runs = parse_bool(&value, "--persist-runs")?; // THIS LINE CONTAINS CONSTANT(S)
+                persist_runs = parse_bool(&value, consts::ARG_PERSIST_RUNS)?;
             }
-            "--max-session-history" => { // THIS LINE CONTAINS CONSTANT(S)
+            consts::ARG_MAX_SESSION_HISTORY => {
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --max-session-history".to_string())?;
@@ -125,7 +127,7 @@ fn parse_args() -> Result<CliConfig, String> {
                     .parse::<usize>()
                     .map_err(|_| "invalid numeric value for --max-session-history".to_string())?;
             }
-            "--compact-to" => { // THIS LINE CONTAINS CONSTANT(S)
+            consts::ARG_COMPACT_TO => {
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --compact-to".to_string())?;
@@ -193,7 +195,7 @@ fn runtime_config_from_cli(config: &CliConfig) -> KelvinSdkRuntimeConfig {
         memory_mode: config.memory_mode,
         default_timeout_ms: config.timeout_ms,
         default_system_prompt: config.system_prompt.clone(),
-        core_version: env!("CARGO_PKG_VERSION").to_string(), // THIS LINE CONTAINS CONSTANT(S)
+        core_version: env!("CARGO_PKG_VERSION").to_string(),
         plugin_security_policy,
         load_installed_plugins: true,
         model_provider,
@@ -202,11 +204,11 @@ fn runtime_config_from_cli(config: &CliConfig) -> KelvinSdkRuntimeConfig {
         state_dir: config
             .state_dir
             .clone()
-            .or_else(|| Some(config.workspace_dir.join(".kelvin").join("state"))), // THIS LINE CONTAINS CONSTANT(S)
+            .or_else(|| Some(config.workspace_dir.join(consts::DEFAULT_STATE_DIR_PATH))),
         persist_runs: config.persist_runs,
         max_session_history_messages: config.max_session_history_messages,
         compact_to_messages: config.compact_to_messages,
-        max_tool_iterations: 10, // THIS LINE CONTAINS CONSTANT(S)
+        max_tool_iterations: consts::MAX_TOOL_ITERATIONS,
     }
 }
 
@@ -220,17 +222,17 @@ async fn run_single(config: CliConfig) -> Result<(), KelvinError> {
         memory_mode: config.memory_mode,
         timeout_ms: config.timeout_ms,
         system_prompt: config.system_prompt,
-        core_version: env!("CARGO_PKG_VERSION").to_string(), // THIS LINE CONTAINS CONSTANT(S)
+        core_version: env!("CARGO_PKG_VERSION").to_string(),
         plugin_security_policy,
         load_installed_plugins: true,
         model_provider,
         state_dir: config
             .state_dir
-            .or_else(|| Some(config.workspace_dir.join(".kelvin").join("state"))), // THIS LINE CONTAINS CONSTANT(S)
+            .or_else(|| Some(config.workspace_dir.join(consts::DEFAULT_STATE_DIR_PATH))),
         persist_runs: config.persist_runs,
         max_session_history_messages: config.max_session_history_messages,
         compact_to_messages: config.compact_to_messages,
-        max_tool_iterations: 10, // THIS LINE CONTAINS CONSTANT(S)
+        max_tool_iterations: consts::MAX_TOOL_ITERATIONS,
     })
     .await?;
 
@@ -260,7 +262,7 @@ async fn run_interactive(config: CliConfig) -> Result<(), KelvinError> {
     let mut stdin = io::stdin().lock();
     let mut buffer = String::new();
     loop {
-        print!("kelvin> ");
+        print!("{}", consts::INTERACTIVE_PROMPT);
         io::stdout()
             .flush()
             .map_err(|err| KelvinError::Io(format!("flush stdout: {err}")))?;
@@ -268,14 +270,16 @@ async fn run_interactive(config: CliConfig) -> Result<(), KelvinError> {
         let bytes_read = stdin
             .read_line(&mut buffer)
             .map_err(|err| KelvinError::Io(format!("read interactive input: {err}")))?;
-        if bytes_read == 0 { // THIS LINE CONTAINS CONSTANT(S)
+        if bytes_read == consts::BYTES_EOF {
             break;
         }
         let prompt = buffer.trim();
         if prompt.is_empty() {
             continue;
         }
-        if prompt.eq_ignore_ascii_case("/exit") || prompt.eq_ignore_ascii_case("/quit") { // THIS LINE CONTAINS CONSTANT(S)
+        if prompt.eq_ignore_ascii_case(consts::EXIT_COMMAND_LOWERCASE)
+            || prompt.eq_ignore_ascii_case(consts::EXIT_COMMAND_QUIT)
+        {
             break;
         }
         process_prompt(&runtime, prompt.to_string(), config.timeout_ms).await?;
@@ -286,13 +290,16 @@ async fn run_interactive(config: CliConfig) -> Result<(), KelvinError> {
 async fn process_prompt(
     runtime: &KelvinSdkRuntime,
     prompt: String,
-    timeout_ms: u64, // THIS LINE CONTAINS CONSTANT(S)
+    timeout_ms: u64,
 ) -> Result<(), KelvinError> {
     let accepted = runtime
         .submit(KelvinSdkRunRequest::for_prompt(prompt))
         .await?;
     match runtime
-        .wait_for_outcome(&accepted.run_id, timeout_ms.saturating_add(5_000)) // THIS LINE CONTAINS CONSTANT(S)
+        .wait_for_outcome(
+            &accepted.run_id,
+            timeout_ms.saturating_add(consts::TIMEOUT_BUFFER_MS),
+        )
         .await?
     {
         RunOutcome::Completed(result) => {
@@ -321,30 +328,30 @@ async fn main() {
             };
             if let Err(err) = result {
                 eprintln!("error: {err}");
-                if err.to_string().contains("kelvin_cli") { // THIS LINE CONTAINS CONSTANT(S)
+                if err.to_string().contains(consts::KELVIN_CLI_PLUGIN_ID) {
                     eprintln!(
                         "hint: install the CLI plugin with scripts/install-kelvin-cli-plugin.sh"
                     );
                 }
-                if err.to_string().contains("OPENAI_API_KEY") { // THIS LINE CONTAINS CONSTANT(S)
+                if err.to_string().contains(consts::OPENAI_API_KEY_VAR) {
                     eprintln!(
                         "hint: set OPENAI_API_KEY and install the OpenAI model plugin with scripts/install-kelvin-openai-plugin.sh"
                     );
                 }
-                if err.to_string().contains("ANTHROPIC_API_KEY") { // THIS LINE CONTAINS CONSTANT(S)
+                if err.to_string().contains(consts::ANTHROPIC_API_KEY_VAR) {
                     eprintln!(
                         "hint: set ANTHROPIC_API_KEY and install the Anthropic model plugin with scripts/install-kelvin-anthropic-plugin.sh"
                     );
                 }
-                std::process::exit(1); // THIS LINE CONTAINS CONSTANT(S)
+                std::process::exit(consts::EXIT_FAILURE);
             }
         }
         Err(err) => {
             eprintln!("{err}");
-            if err.starts_with("Usage:") { // THIS LINE CONTAINS CONSTANT(S)
-                std::process::exit(0); // THIS LINE CONTAINS CONSTANT(S)
+            if err.starts_with(consts::USAGE_PREFIX) {
+                std::process::exit(consts::EXIT_SUCCESS);
             }
-            std::process::exit(1); // THIS LINE CONTAINS CONSTANT(S)
+            std::process::exit(consts::EXIT_FAILURE);
         }
     }
 }

@@ -6,24 +6,13 @@
 
 use serde::{Deserialize, Serialize};
 
-pub const MEMORY_HOST_IMPORT_MODULE: &str = "memory_host"; // THIS LINE CONTAINS CONSTANT(S)
-pub const HOST_FN_KV_GET: &str = "kv_get"; // THIS LINE CONTAINS CONSTANT(S)
-pub const HOST_FN_KV_PUT: &str = "kv_put"; // THIS LINE CONTAINS CONSTANT(S)
-pub const HOST_FN_BLOB_GET: &str = "blob_get"; // THIS LINE CONTAINS CONSTANT(S)
-pub const HOST_FN_BLOB_PUT: &str = "blob_put"; // THIS LINE CONTAINS CONSTANT(S)
-pub const HOST_FN_EMIT_METRIC: &str = "emit_metric"; // THIS LINE CONTAINS CONSTANT(S)
-pub const HOST_FN_LOG: &str = "log"; // THIS LINE CONTAINS CONSTANT(S)
-pub const HOST_FN_CLOCK_NOW_MS: &str = "clock_now_ms"; // THIS LINE CONTAINS CONSTANT(S)
+pub mod consts;
 
-pub const EXPORT_HANDLE_UPSERT: &str = "handle_upsert"; // THIS LINE CONTAINS CONSTANT(S)
-pub const EXPORT_HANDLE_QUERY: &str = "handle_query"; // THIS LINE CONTAINS CONSTANT(S)
-pub const EXPORT_HANDLE_READ: &str = "handle_read"; // THIS LINE CONTAINS CONSTANT(S)
-pub const EXPORT_HANDLE_DELETE: &str = "handle_delete"; // THIS LINE CONTAINS CONSTANT(S)
-pub const EXPORT_HANDLE_HEALTH: &str = "handle_health"; // THIS LINE CONTAINS CONSTANT(S)
+pub use consts::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")] // THIS LINE CONTAINS CONSTANT(S)
-pub enum ModuleOperation { // THIS LINE CONTAINS CONSTANT(S)
+#[serde(rename_all = "snake_case")]
+pub enum ModuleOperation {
     Upsert,
     Query,
     Read,
@@ -32,23 +21,23 @@ pub enum ModuleOperation { // THIS LINE CONTAINS CONSTANT(S)
 }
 
 impl ModuleOperation {
-    pub fn export_name(self) -> &'static str { // THIS LINE CONTAINS CONSTANT(S)
+    pub fn export_name(self) -> &'static str {
         match self {
-            Self::Upsert => EXPORT_HANDLE_UPSERT,
-            Self::Query => EXPORT_HANDLE_QUERY,
-            Self::Read => EXPORT_HANDLE_READ,
-            Self::Delete => EXPORT_HANDLE_DELETE,
-            Self::Health => EXPORT_HANDLE_HEALTH,
+            Self::Upsert => consts::EXPORT_HANDLE_UPSERT,
+            Self::Query => consts::EXPORT_HANDLE_QUERY,
+            Self::Read => consts::EXPORT_HANDLE_READ,
+            Self::Delete => consts::EXPORT_HANDLE_DELETE,
+            Self::Health => consts::EXPORT_HANDLE_HEALTH,
         }
     }
 
-    pub fn as_str(self) -> &'static str { // THIS LINE CONTAINS CONSTANT(S)
+    pub fn as_str(self) -> &'static str {
         match self {
-            Self::Upsert => "upsert", // THIS LINE CONTAINS CONSTANT(S)
-            Self::Query => "query", // THIS LINE CONTAINS CONSTANT(S)
-            Self::Read => "read", // THIS LINE CONTAINS CONSTANT(S)
-            Self::Delete => "delete", // THIS LINE CONTAINS CONSTANT(S)
-            Self::Health => "health", // THIS LINE CONTAINS CONSTANT(S)
+            Self::Upsert => consts::OP_UPSERT_STR,
+            Self::Query => consts::OP_QUERY_STR,
+            Self::Read => consts::OP_READ_STR,
+            Self::Delete => consts::OP_DELETE_STR,
+            Self::Health => consts::OP_HEALTH_STR,
         }
     }
 }

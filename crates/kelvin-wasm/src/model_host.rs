@@ -12,23 +12,25 @@ use url::Url;
 use wasmtime::{Caller, Config, Engine, Linker, Memory, Module, Store};
 
 pub mod model_abi {
-    pub const ABI_VERSION: &str = "1.0.0"; // THIS LINE CONTAINS CONSTANT(S)
-    pub const MODULE: &str = "kelvin_model_host_v1"; // THIS LINE CONTAINS CONSTANT(S)
+    use crate::consts;
 
-    pub const EXPORT_ALLOC: &str = "alloc"; // THIS LINE CONTAINS CONSTANT(S)
-    pub const EXPORT_DEALLOC: &str = "dealloc"; // THIS LINE CONTAINS CONSTANT(S)
-    pub const EXPORT_INFER: &str = "infer"; // THIS LINE CONTAINS CONSTANT(S)
-    pub const EXPORT_MEMORY: &str = "memory"; // THIS LINE CONTAINS CONSTANT(S)
+    pub const ABI_VERSION: &str = consts::MODEL_ABI_VERSION;
+    pub const MODULE: &str = consts::MODEL_MODULE;
 
-    pub const IMPORT_OPENAI_RESPONSES_CALL: &str = "openai_responses_call"; // THIS LINE CONTAINS CONSTANT(S)
-    pub const IMPORT_PROVIDER_PROFILE_CALL: &str = "provider_profile_call"; // THIS LINE CONTAINS CONSTANT(S)
-    pub const IMPORT_LOG: &str = "log"; // THIS LINE CONTAINS CONSTANT(S)
-    pub const IMPORT_CLOCK_NOW_MS: &str = "clock_now_ms"; // THIS LINE CONTAINS CONSTANT(S)
+    pub const EXPORT_ALLOC: &str = consts::MODEL_EXPORT_ALLOC;
+    pub const EXPORT_DEALLOC: &str = consts::MODEL_EXPORT_DEALLOC;
+    pub const EXPORT_INFER: &str = consts::MODEL_EXPORT_INFER;
+    pub const EXPORT_MEMORY: &str = consts::MODEL_EXPORT_MEMORY;
+
+    pub const IMPORT_OPENAI_RESPONSES_CALL: &str = consts::MODEL_IMPORT_OPENAI_RESPONSES_CALL;
+    pub const IMPORT_PROVIDER_PROFILE_CALL: &str = consts::MODEL_IMPORT_PROVIDER_PROFILE_CALL;
+    pub const IMPORT_LOG: &str = consts::MODEL_IMPORT_LOG;
+    pub const IMPORT_CLOCK_NOW_MS: &str = consts::MODEL_IMPORT_CLOCK_NOW_MS;
 }
 
-const DEFAULT_MAX_REQUEST_BYTES: usize = 256 * 1024; // THIS LINE CONTAINS CONSTANT(S)
-const DEFAULT_MAX_RESPONSE_BYTES: usize = 1024 * 1024; // THIS LINE CONTAINS CONSTANT(S)
-const DEFAULT_TIMEOUT_MS: u64 = 30_000; // THIS LINE CONTAINS CONSTANT(S)
+const DEFAULT_MAX_REQUEST_BYTES: usize = crate::consts::MODEL_DEFAULT_MAX_REQUEST_BYTES;
+const DEFAULT_MAX_RESPONSE_BYTES: usize = crate::consts::MODEL_DEFAULT_MAX_RESPONSE_BYTES;
+const DEFAULT_TIMEOUT_MS: u64 = crate::consts::MODEL_DEFAULT_TIMEOUT_MS;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ModelSandboxPolicy {
@@ -36,8 +38,8 @@ pub struct ModelSandboxPolicy {
     pub max_module_bytes: usize,
     pub max_request_bytes: usize,
     pub max_response_bytes: usize,
-    pub fuel_budget: u64, // THIS LINE CONTAINS CONSTANT(S)
-    pub timeout_ms: u64, // THIS LINE CONTAINS CONSTANT(S)
+    pub fuel_budget: u64,
+    pub timeout_ms: u64,
     pub provider_profile: Option<ModelProviderProfile>,
     pub model_name: Option<String>,
 }
@@ -45,7 +47,7 @@ pub struct ModelSandboxPolicy {
 impl Default for ModelSandboxPolicy {
     fn default() -> Self {
         Self {
-            network_allow_hosts: vec!["api.openai.com".to_string()], // THIS LINE CONTAINS CONSTANT(S)
+            network_allow_hosts: vec![crate::consts::DEFAULT_OPENAI_HOST.to_string()],
             max_module_bytes: super::DEFAULT_MAX_MODULE_BYTES,
             max_request_bytes: DEFAULT_MAX_REQUEST_BYTES,
             max_response_bytes: DEFAULT_MAX_RESPONSE_BYTES,
@@ -104,7 +106,7 @@ impl OpenAiResponsesTransport for EnvProviderProfileTransport {
 
         let mut response = client
             .post(endpoint)
-            .header("content-type", "application/json"); // THIS LINE CONTAINS CONSTANT(S)
+            .header("content-type", "application/json");
         if let Some(ref key) = api_key {
             response = match profile.auth_scheme {
                 ModelProviderAuthScheme::Bearer => {
@@ -140,7 +142,7 @@ impl OpenAiResponsesTransport for EnvProviderProfileTransport {
             return Err(KelvinError::Backend(format!(
                 "{} request failed with status {}: {}",
                 profile.id,
-                status.as_u16(), // THIS LINE CONTAINS CONSTANT(S)
+                status.as_u16(),
                 body
             )));
         }
@@ -186,10 +188,10 @@ fn decode_model_input_request(request: &Value) -> Option<ModelInput> {
 
 fn render_history_line(role: &SessionRole, content: &str) -> String {
     let label = match role {
-        SessionRole::User => "user", // THIS LINE CONTAINS CONSTANT(S)
-        SessionRole::Assistant => "assistant", // THIS LINE CONTAINS CONSTANT(S)
-        SessionRole::Tool => "tool", // THIS LINE CONTAINS CONSTANT(S)
-        SessionRole::System => "system", // THIS LINE CONTAINS CONSTANT(S)
+        SessionRole::User => "user",
+        SessionRole::Assistant => "assistant",
+        SessionRole::Tool => "tool",
+        SessionRole::System => "system",
     };
     format!("{label}: {content}")
 }
@@ -216,12 +218,12 @@ fn render_model_prompt(input: &ModelInput) -> String {
 
 fn model_input_to_openai_request(input: &ModelInput, model_name: &str) -> Value {
     let mut payload = json!({
-        "model": model_name, // THIS LINE CONTAINS CONSTANT(S)
-        "instructions": input.system_prompt, // THIS LINE CONTAINS CONSTANT(S)
-        "input": render_model_prompt(input), // THIS LINE CONTAINS CONSTANT(S)
-        "metadata": { // THIS LINE CONTAINS CONSTANT(S)
-            "run_id": input.run_id, // THIS LINE CONTAINS CONSTANT(S)
-            "session_id": input.session_id // THIS LINE CONTAINS CONSTANT(S)
+        "model": model_name,
+        "instructions": input.system_prompt,
+        "input": render_model_prompt(input),
+        "metadata": {
+            "run_id": input.run_id,
+            "session_id": input.session_id
         }
     });
     if !input.tools.is_empty() {
@@ -231,33 +233,33 @@ fn model_input_to_openai_request(input: &ModelInput, model_name: &str) -> Value 
             .map(|t| {
                 let mut schema = t.input_schema.clone();
                 // OpenAI requires `properties` on object schemas even when empty.
-                if schema.get("type").and_then(Value::as_str) == Some("object") // THIS LINE CONTAINS CONSTANT(S)
+                if schema.get("type").and_then(Value::as_str) == Some("object")
                     && !schema
                         .as_object()
-                        .is_some_and(|o| o.contains_key("properties")) // THIS LINE CONTAINS CONSTANT(S)
+                        .is_some_and(|o| o.contains_key("properties"))
                 {
-                    schema["properties"] = json!({}); // THIS LINE CONTAINS CONSTANT(S)
+                    schema["properties"] = json!({});
                 }
                 json!({
-                    "type": "function", // THIS LINE CONTAINS CONSTANT(S)
-                    "name": t.name, // THIS LINE CONTAINS CONSTANT(S)
-                    "description": t.description, // THIS LINE CONTAINS CONSTANT(S)
-                    "parameters": schema // THIS LINE CONTAINS CONSTANT(S)
+                    "type": "function",
+                    "name": t.name,
+                    "description": t.description,
+                    "parameters": schema
                 })
             })
             .collect();
-        payload["tools"] = Value::Array(tools); // THIS LINE CONTAINS CONSTANT(S)
+        payload["tools"] = Value::Array(tools);
     }
     payload
 }
 
 /// Map a `SessionRole` to the Anthropic role string.
 /// Tool results are represented as user-role messages in the Anthropic API.
-fn anthropic_role(role: &SessionRole) -> &'static str { // THIS LINE CONTAINS CONSTANT(S)
+fn anthropic_role(role: &SessionRole) -> &'static str {
     match role {
-        SessionRole::User | SessionRole::Tool => "user", // THIS LINE CONTAINS CONSTANT(S)
-        SessionRole::Assistant => "assistant", // THIS LINE CONTAINS CONSTANT(S)
-        SessionRole::System => "user", // system messages in history fall back to user // THIS LINE CONTAINS CONSTANT(S)
+        SessionRole::User | SessionRole::Tool => "user",
+        SessionRole::Assistant => "assistant",
+        SessionRole::System => "user", // system messages in history fall back to user
     }
 }
 
@@ -274,21 +276,21 @@ fn build_anthropic_messages(input: &ModelInput) -> Vec<Value> {
 
     if !input.memory_snippets.is_empty() {
         let memory = format!("Relevant memory:\n{}", input.memory_snippets.join("\n"));
-        raw.push(("user", memory)); // THIS LINE CONTAINS CONSTANT(S)
+        raw.push(("user", memory));
     }
-    raw.push(("user", input.user_prompt.clone())); // THIS LINE CONTAINS CONSTANT(S)
+    raw.push(("user", input.user_prompt.clone()));
 
     // Merge consecutive same-role entries.
     let mut merged: Vec<Value> = Vec::new();
     for (role, content) in raw {
         if let Some(last) = merged.last_mut() {
-            if last["role"].as_str() == Some(role) { // THIS LINE CONTAINS CONSTANT(S)
-                let prev = last["content"].as_str().unwrap_or("").to_string(); // THIS LINE CONTAINS CONSTANT(S)
-                last["content"] = Value::String(format!("{prev}\n{content}")); // THIS LINE CONTAINS CONSTANT(S)
+            if last["role"].as_str() == Some(role) {
+                let prev = last["content"].as_str().unwrap_or("").to_string();
+                last["content"] = Value::String(format!("{prev}\n{content}"));
                 continue;
             }
         }
-        merged.push(json!({ "role": role, "content": content })); // THIS LINE CONTAINS CONSTANT(S)
+        merged.push(json!({ "role": role, "content": content }));
     }
     merged
 }
@@ -296,13 +298,13 @@ fn build_anthropic_messages(input: &ModelInput) -> Vec<Value> {
 fn model_input_to_anthropic_request(input: &ModelInput, model_name: &str) -> Value {
     let messages = build_anthropic_messages(input);
     let mut payload = json!({
-        "model": model_name, // THIS LINE CONTAINS CONSTANT(S)
-        "max_tokens": 1024, // THIS LINE CONTAINS CONSTANT(S)
-        "messages": messages // THIS LINE CONTAINS CONSTANT(S)
+        "model": model_name,
+        "max_tokens": 1024,
+        "messages": messages
     });
 
     if !input.system_prompt.trim().is_empty() {
-        payload["system"] = Value::String(input.system_prompt.clone()); // THIS LINE CONTAINS CONSTANT(S)
+        payload["system"] = Value::String(input.system_prompt.clone());
     }
 
     if !input.tools.is_empty() {
@@ -311,24 +313,24 @@ fn model_input_to_anthropic_request(input: &ModelInput, model_name: &str) -> Val
             .iter()
             .map(|t| {
                 json!({
-                    "name": t.name, // THIS LINE CONTAINS CONSTANT(S)
-                    "description": t.description, // THIS LINE CONTAINS CONSTANT(S)
-                    "input_schema": t.input_schema // THIS LINE CONTAINS CONSTANT(S)
+                    "name": t.name,
+                    "description": t.description,
+                    "input_schema": t.input_schema
                 })
             })
             .collect();
-        payload["tools"] = Value::Array(tools); // THIS LINE CONTAINS CONSTANT(S)
+        payload["tools"] = Value::Array(tools);
     }
 
     payload
 }
 
 /// Map a `SessionRole` to an OpenAI Chat Completions role string.
-fn chat_completions_role(role: &SessionRole) -> &'static str { // THIS LINE CONTAINS CONSTANT(S)
+fn chat_completions_role(role: &SessionRole) -> &'static str {
     match role {
-        SessionRole::User | SessionRole::Tool => "user", // THIS LINE CONTAINS CONSTANT(S)
-        SessionRole::Assistant => "assistant", // THIS LINE CONTAINS CONSTANT(S)
-        SessionRole::System => "system", // THIS LINE CONTAINS CONSTANT(S)
+        SessionRole::User | SessionRole::Tool => "user",
+        SessionRole::Assistant => "assistant",
+        SessionRole::System => "system",
     }
 }
 
@@ -336,16 +338,16 @@ fn model_input_to_openai_chat_completions_request(input: &ModelInput, model_name
     let mut messages = Vec::new();
     if !input.system_prompt.trim().is_empty() {
         messages.push(json!({
-            "role": "system", // THIS LINE CONTAINS CONSTANT(S)
-            "content": input.system_prompt // THIS LINE CONTAINS CONSTANT(S)
+            "role": "system",
+            "content": input.system_prompt
         }));
     }
 
     // Add prior history turns.
     for msg in &input.history {
         messages.push(json!({
-            "role": chat_completions_role(&msg.role), // THIS LINE CONTAINS CONSTANT(S)
-            "content": msg.content // THIS LINE CONTAINS CONSTANT(S)
+            "role": chat_completions_role(&msg.role),
+            "content": msg.content
         }));
     }
 
@@ -360,13 +362,13 @@ fn model_input_to_openai_chat_completions_request(input: &ModelInput, model_name
         input.user_prompt.clone()
     };
     messages.push(json!({
-        "role": "user", // THIS LINE CONTAINS CONSTANT(S)
-        "content": user_content // THIS LINE CONTAINS CONSTANT(S)
+        "role": "user",
+        "content": user_content
     }));
 
     let mut payload = json!({
-        "model": model_name, // THIS LINE CONTAINS CONSTANT(S)
-        "messages": messages // THIS LINE CONTAINS CONSTANT(S)
+        "model": model_name,
+        "messages": messages
     });
 
     if !input.tools.is_empty() {
@@ -376,31 +378,31 @@ fn model_input_to_openai_chat_completions_request(input: &ModelInput, model_name
             .map(|t| {
                 let mut schema = t.input_schema.clone();
                 // OpenAI requires `properties` on object schemas even when empty.
-                if schema.get("type").and_then(Value::as_str) == Some("object") // THIS LINE CONTAINS CONSTANT(S)
+                if schema.get("type").and_then(Value::as_str) == Some("object")
                     && !schema
                         .as_object()
-                        .is_some_and(|o| o.contains_key("properties")) // THIS LINE CONTAINS CONSTANT(S)
+                        .is_some_and(|o| o.contains_key("properties"))
                 {
-                    schema["properties"] = json!({}); // THIS LINE CONTAINS CONSTANT(S)
+                    schema["properties"] = json!({});
                 }
                 json!({
-                    "type": "function", // THIS LINE CONTAINS CONSTANT(S)
-                    "function": { // THIS LINE CONTAINS CONSTANT(S)
-                        "name": t.name, // THIS LINE CONTAINS CONSTANT(S)
-                        "description": t.description, // THIS LINE CONTAINS CONSTANT(S)
-                        "parameters": schema // THIS LINE CONTAINS CONSTANT(S)
+                    "type": "function",
+                    "function": {
+                        "name": t.name,
+                        "description": t.description,
+                        "parameters": schema
                     }
                 })
             })
             .collect();
-        payload["tools"] = Value::Array(tools); // THIS LINE CONTAINS CONSTANT(S)
+        payload["tools"] = Value::Array(tools);
     }
 
     payload
 }
 
 fn normalize_openai_request(mut request: Value) -> Value {
-    let Some(metadata) = request.get_mut("metadata").and_then(Value::as_object_mut) else { // THIS LINE CONTAINS CONSTANT(S)
+    let Some(metadata) = request.get_mut("metadata").and_then(Value::as_object_mut) else {
         return request;
     };
     for value in metadata.values_mut() {
@@ -408,7 +410,7 @@ fn normalize_openai_request(mut request: Value) -> Value {
             continue;
         }
         let normalized = match &*value {
-            Value::Null => "null".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            Value::Null => "null".to_string(),
             Value::Bool(boolean) => boolean.to_string(),
             Value::Number(number) => number.to_string(),
             Value::String(text) => text.clone(),
@@ -531,7 +533,7 @@ impl WasmModelHost {
 
     pub fn run_bytes(
         &self,
-        wasm_bytes: &[u8], // THIS LINE CONTAINS CONSTANT(S)
+        wasm_bytes: &[u8],
         input_json: &str,
         policy: ModelSandboxPolicy,
     ) -> KelvinResult<String> {
@@ -577,20 +579,20 @@ impl WasmModelHost {
                 KelvinError::InvalidInput("model module must export memory".to_string())
             })?;
         let alloc = instance
-            .get_typed_func::<i32, i32>(&mut store, model_abi::EXPORT_ALLOC) // THIS LINE CONTAINS CONSTANT(S)
+            .get_typed_func::<i32, i32>(&mut store, model_abi::EXPORT_ALLOC)
             .map_err(|err| backend("resolve model alloc export", err))?;
         let dealloc = instance
-            .get_typed_func::<(i32, i32), ()>(&mut store, model_abi::EXPORT_DEALLOC) // THIS LINE CONTAINS CONSTANT(S)
+            .get_typed_func::<(i32, i32), ()>(&mut store, model_abi::EXPORT_DEALLOC)
             .map_err(|err| backend("resolve model dealloc export", err))?;
         let infer = instance
-            .get_typed_func::<(i32, i32), i64>(&mut store, model_abi::EXPORT_INFER) // THIS LINE CONTAINS CONSTANT(S)
+            .get_typed_func::<(i32, i32), i64>(&mut store, model_abi::EXPORT_INFER)
             .map_err(|err| backend("resolve model infer export", err))?;
 
         let input_ptr = alloc
             .call(
                 &mut store,
-                i32::try_from(input_json.len()).map_err(|_| { // THIS LINE CONTAINS CONSTANT(S)
-                    KelvinError::InvalidInput("model input exceeded i32 address space".to_string()) // THIS LINE CONTAINS CONSTANT(S)
+                i32::try_from(input_json.len()).map_err(|_| {
+                    KelvinError::InvalidInput("model input exceeded i32 address space".to_string())
                 })?,
             )
             .map_err(|err| backend("call model alloc for input", err))?;
@@ -607,8 +609,8 @@ impl WasmModelHost {
             &mut store,
             (
                 input_ptr,
-                i32::try_from(input_json.len()).map_err(|_| { // THIS LINE CONTAINS CONSTANT(S)
-                    KelvinError::InvalidInput("model input exceeded i32 address space".to_string()) // THIS LINE CONTAINS CONSTANT(S)
+                i32::try_from(input_json.len()).map_err(|_| {
+                    KelvinError::InvalidInput("model input exceeded i32 address space".to_string())
                 })?,
             ),
         );
@@ -616,12 +618,12 @@ impl WasmModelHost {
             &mut store,
             (
                 input_ptr,
-                i32::try_from(input_json.len()).unwrap_or_default(), // THIS LINE CONTAINS CONSTANT(S)
+                i32::try_from(input_json.len()).unwrap_or_default(),
             ),
         );
 
         let packed = infer_result.map_err(|err| {
-            if matches!(store.get_fuel(), Ok(0)) { // THIS LINE CONTAINS CONSTANT(S)
+            if matches!(store.get_fuel(), Ok(0)) {
                 KelvinError::Timeout("model execution exceeded fuel budget".to_string())
             } else {
                 backend("execute model infer export", err)
@@ -637,8 +639,8 @@ impl WasmModelHost {
             "read model output",
         )?;
         let _ = dealloc.call(&mut store, (output_ptr, output_len));
-        String::from_utf8(output).map_err(|err| { // THIS LINE CONTAINS CONSTANT(S)
-            KelvinError::InvalidInput(format!("model output must be utf-8 json: {err}")) // THIS LINE CONTAINS CONSTANT(S)
+        String::from_utf8(output).map_err(|err| {
+            KelvinError::InvalidInput(format!("model output must be utf-8 json: {err}"))
         })
     }
 
@@ -647,14 +649,14 @@ impl WasmModelHost {
             .func_wrap(
                 model_abi::MODULE,
                 model_abi::IMPORT_LOG,
-                |mut caller: Caller<'_, ModelHostState>, _level: i32, ptr: i32, len: i32| -> i32 { // THIS LINE CONTAINS CONSTANT(S)
-                    let max_len = caller.data().policy.max_request_bytes.min(16 * 1024); // THIS LINE CONTAINS CONSTANT(S)
+                |mut caller: Caller<'_, ModelHostState>, _level: i32, ptr: i32, len: i32| -> i32 {
+                    let max_len = caller.data().policy.max_request_bytes.min(16 * 1024);
                     if let Ok(bytes) =
                         read_caller_bytes(&mut caller, ptr, len, max_len, "log message")
                     {
-                        let _ = String::from_utf8(bytes); // THIS LINE CONTAINS CONSTANT(S)
+                        let _ = String::from_utf8(bytes);
                     }
-                    0 // THIS LINE CONTAINS CONSTANT(S)
+                    0
                 },
             )
             .map_err(|err| backend("link model log import", err))?;
@@ -663,10 +665,10 @@ impl WasmModelHost {
             .func_wrap(
                 model_abi::MODULE,
                 model_abi::IMPORT_CLOCK_NOW_MS,
-                || -> i64 { // THIS LINE CONTAINS CONSTANT(S)
+                || -> i64 {
                     SystemTime::now()
                         .duration_since(UNIX_EPOCH)
-                        .map(|value| i64::try_from(value.as_millis()).unwrap_or(i64::MAX)) // THIS LINE CONTAINS CONSTANT(S)
+                        .map(|value| i64::try_from(value.as_millis()).unwrap_or(i64::MAX))
                         .unwrap_or_default()
                 },
             )
@@ -676,12 +678,12 @@ impl WasmModelHost {
             .func_wrap(
                 model_abi::MODULE,
                 model_abi::IMPORT_OPENAI_RESPONSES_CALL,
-                |mut caller: Caller<'_, ModelHostState>, req_ptr: i32, req_len: i32| -> i64 { // THIS LINE CONTAINS CONSTANT(S)
+                |mut caller: Caller<'_, ModelHostState>, req_ptr: i32, req_len: i32| -> i64 {
                     let profile = match builtin_openai_profile() {
                         Ok(profile) => profile,
                         Err(err) => {
                             return write_guest_json_error(&mut caller, &err.to_string())
-                                .unwrap_or(0); // THIS LINE CONTAINS CONSTANT(S)
+                                .unwrap_or(0);
                         }
                     };
                     handle_transport_call(&mut caller, req_ptr, req_len, &profile, "openai request")
@@ -693,13 +695,13 @@ impl WasmModelHost {
             .func_wrap(
                 model_abi::MODULE,
                 model_abi::IMPORT_PROVIDER_PROFILE_CALL,
-                |mut caller: Caller<'_, ModelHostState>, req_ptr: i32, req_len: i32| -> i64 { // THIS LINE CONTAINS CONSTANT(S)
+                |mut caller: Caller<'_, ModelHostState>, req_ptr: i32, req_len: i32| -> i64 {
                     let Some(profile) = caller.data().policy.provider_profile.clone() else {
                         return write_guest_json_error(
                             &mut caller,
                             "provider profile is not configured for this model plugin",
                         )
-                        .unwrap_or(0); // THIS LINE CONTAINS CONSTANT(S)
+                        .unwrap_or(0);
                     };
                     handle_transport_call(
                         &mut caller,
@@ -727,18 +729,18 @@ fn builtin_openai_profile() -> KelvinResult<ModelProviderProfile> {
 
 fn handle_transport_call(
     caller: &mut Caller<'_, ModelHostState>,
-    req_ptr: i32, // THIS LINE CONTAINS CONSTANT(S)
-    req_len: i32, // THIS LINE CONTAINS CONSTANT(S)
+    req_ptr: i32,
+    req_len: i32,
     profile: &ModelProviderProfile,
     context: &str,
-) -> i64 { // THIS LINE CONTAINS CONSTANT(S)
+) -> i64 {
     let max_request_bytes = caller.data().policy.max_request_bytes;
     let request_bytes =
         match read_caller_bytes(caller, req_ptr, req_len, max_request_bytes, context) {
             Ok(bytes) => bytes,
             Err(err) => {
                 return write_guest_json_error(caller, &format!("invalid {context} bytes: {err}"))
-                    .unwrap_or(0); // THIS LINE CONTAINS CONSTANT(S)
+                    .unwrap_or(0);
             }
         };
 
@@ -746,7 +748,7 @@ fn handle_transport_call(
         Ok(value) => value,
         Err(err) => {
             return write_guest_json_error(caller, &format!("invalid {context} json: {err}"))
-                .unwrap_or(0); // THIS LINE CONTAINS CONSTANT(S)
+                .unwrap_or(0);
         }
     };
 
@@ -755,8 +757,8 @@ fn handle_transport_call(
         .transport
         .call(profile, request_json, &caller.data().policy);
     match result {
-        Ok(body) => write_guest_response(caller, body.as_bytes()).unwrap_or(0), // THIS LINE CONTAINS CONSTANT(S)
-        Err(err) => write_guest_json_error(caller, &err.to_string()).unwrap_or(0), // THIS LINE CONTAINS CONSTANT(S)
+        Ok(body) => write_guest_response(caller, body.as_bytes()).unwrap_or(0),
+        Err(err) => write_guest_json_error(caller, &err.to_string()).unwrap_or(0),
     }
 }
 
@@ -791,12 +793,12 @@ fn validate_imports(module: &Module) -> KelvinResult<()> {
 fn read_guest_bytes(
     memory: &Memory,
     store: &mut Store<ModelHostState>,
-    ptr: i32, // THIS LINE CONTAINS CONSTANT(S)
-    len: i32, // THIS LINE CONTAINS CONSTANT(S)
+    ptr: i32,
+    len: i32,
     max_len: usize,
     context: &str,
-) -> KelvinResult<Vec<u8>> { // THIS LINE CONTAINS CONSTANT(S)
-    if ptr < 0 || len < 0 { // THIS LINE CONTAINS CONSTANT(S)
+) -> KelvinResult<Vec<u8>> {
+    if ptr < 0 || len < 0 {
         return Err(KelvinError::InvalidInput(format!(
             "{context}: pointer/length must be non-negative"
         )));
@@ -809,7 +811,7 @@ fn read_guest_bytes(
             len, max_len
         )));
     }
-    let mut bytes = vec![0_u8; len]; // THIS LINE CONTAINS CONSTANT(S)
+    let mut bytes = vec![0_u8; len];
     memory
         .read(store, usize::try_from(ptr).unwrap_or_default(), &mut bytes)
         .map_err(|err| {
@@ -821,11 +823,11 @@ fn read_guest_bytes(
 fn write_guest_bytes(
     memory: &Memory,
     store: &mut Store<ModelHostState>,
-    ptr: i32, // THIS LINE CONTAINS CONSTANT(S)
-    bytes: &[u8], // THIS LINE CONTAINS CONSTANT(S)
+    ptr: i32,
+    bytes: &[u8],
     context: &str,
 ) -> KelvinResult<()> {
-    if ptr < 0 { // THIS LINE CONTAINS CONSTANT(S)
+    if ptr < 0 {
         return Err(KelvinError::InvalidInput(format!(
             "{context}: pointer must be non-negative"
         )));
@@ -837,12 +839,12 @@ fn write_guest_bytes(
 
 fn read_caller_bytes(
     caller: &mut Caller<'_, ModelHostState>,
-    ptr: i32, // THIS LINE CONTAINS CONSTANT(S)
-    len: i32, // THIS LINE CONTAINS CONSTANT(S)
+    ptr: i32,
+    len: i32,
     max_len: usize,
     context: &str,
-) -> KelvinResult<Vec<u8>> { // THIS LINE CONTAINS CONSTANT(S)
-    if ptr < 0 || len < 0 { // THIS LINE CONTAINS CONSTANT(S)
+) -> KelvinResult<Vec<u8>> {
+    if ptr < 0 || len < 0 {
         return Err(KelvinError::InvalidInput(format!(
             "{context}: pointer/length must be non-negative"
         )));
@@ -860,7 +862,7 @@ fn read_caller_bytes(
         .get_export(model_abi::EXPORT_MEMORY)
         .and_then(|export| export.into_memory())
         .ok_or_else(|| KelvinError::InvalidInput("model memory export missing".to_string()))?;
-    let mut bytes = vec![0_u8; len]; // THIS LINE CONTAINS CONSTANT(S)
+    let mut bytes = vec![0_u8; len];
     memory
         .read(caller, usize::try_from(ptr).unwrap_or_default(), &mut bytes)
         .map_err(|err| {
@@ -871,8 +873,8 @@ fn read_caller_bytes(
 
 fn write_guest_response(
     caller: &mut Caller<'_, ModelHostState>,
-    bytes: &[u8], // THIS LINE CONTAINS CONSTANT(S)
-) -> KelvinResult<i64> { // THIS LINE CONTAINS CONSTANT(S)
+    bytes: &[u8],
+) -> KelvinResult<i64> {
     if bytes.len() > caller.data().policy.max_response_bytes {
         return Err(KelvinError::InvalidInput(format!(
             "openai response exceeded max_response_bytes {}",
@@ -889,13 +891,13 @@ fn write_guest_response(
         .and_then(|export| export.into_func())
         .ok_or_else(|| KelvinError::InvalidInput("model alloc export missing".to_string()))?;
     let alloc = alloc
-        .typed::<i32, i32>(&caller) // THIS LINE CONTAINS CONSTANT(S)
+        .typed::<i32, i32>(&caller)
         .map_err(|err| backend("resolve model alloc function", err))?;
-    let len_i32 = i32::try_from(bytes.len()).map_err(|_| { // THIS LINE CONTAINS CONSTANT(S)
-        KelvinError::InvalidInput("response exceeded i32 address space".to_string()) // THIS LINE CONTAINS CONSTANT(S)
+    let len_i32 = i32::try_from(bytes.len()).map_err(|_| {
+        KelvinError::InvalidInput("response exceeded i32 address space".to_string())
     })?;
     let ptr = alloc
-        .call(&mut *caller, len_i32) // THIS LINE CONTAINS CONSTANT(S)
+        .call(&mut *caller, len_i32)
         .map_err(|err| backend("call model alloc for response", err))?;
     memory
         .write(
@@ -904,46 +906,46 @@ fn write_guest_response(
             bytes,
         )
         .map_err(|err| KelvinError::InvalidInput(format!("write model response failed: {err}")))?;
-    Ok(pack_ptr_len(ptr, len_i32)) // THIS LINE CONTAINS CONSTANT(S)
+    Ok(pack_ptr_len(ptr, len_i32))
 }
 
 fn write_guest_json_error(
     caller: &mut Caller<'_, ModelHostState>,
     message: &str,
-) -> KelvinResult<i64> { // THIS LINE CONTAINS CONSTANT(S)
+) -> KelvinResult<i64> {
     let payload = json!({
-        "error": { // THIS LINE CONTAINS CONSTANT(S)
-            "message": message, // THIS LINE CONTAINS CONSTANT(S)
+        "error": {
+            "message": message,
         }
     })
     .to_string();
     write_guest_response(caller, payload.as_bytes())
 }
 
-fn pack_ptr_len(ptr: i32, len: i32) -> i64 { // THIS LINE CONTAINS CONSTANT(S)
-    let ptr_u32 = ptr as u32; // THIS LINE CONTAINS CONSTANT(S)
-    let len_u32 = len as u32; // THIS LINE CONTAINS CONSTANT(S)
-    ((u64::from(ptr_u32) << 32) | u64::from(len_u32)) as i64 // THIS LINE CONTAINS CONSTANT(S)
+fn pack_ptr_len(ptr: i32, len: i32) -> i64 {
+    let ptr_u32 = ptr as u32;
+    let len_u32 = len as u32;
+    ((u64::from(ptr_u32) << 32) | u64::from(len_u32)) as i64
 }
 
-fn unpack_ptr_len(value: i64, context: &str) -> KelvinResult<(i32, i32)> { // THIS LINE CONTAINS CONSTANT(S)
-    if value <= 0 { // THIS LINE CONTAINS CONSTANT(S)
+fn unpack_ptr_len(value: i64, context: &str) -> KelvinResult<(i32, i32)> {
+    if value <= 0 {
         return Err(KelvinError::Backend(format!(
             "{context}: packed pointer/length is invalid"
         )));
     }
-    let raw = value as u64; // THIS LINE CONTAINS CONSTANT(S)
-    let ptr = (raw >> 32) as u32; // THIS LINE CONTAINS CONSTANT(S)
-    let len = (raw & 0xFFFF_FFFF) as u32; // THIS LINE CONTAINS CONSTANT(S)
-    if len == 0 { // THIS LINE CONTAINS CONSTANT(S)
-        return Ok((ptr as i32, 0)); // THIS LINE CONTAINS CONSTANT(S)
+    let raw = value as u64;
+    let ptr = (raw >> 32) as u32;
+    let len = (raw & 0xFFFF_FFFF) as u32;
+    if len == 0 {
+        return Ok((ptr as i32, 0));
     }
-    if ptr == 0 { // THIS LINE CONTAINS CONSTANT(S)
+    if ptr == 0 {
         return Err(KelvinError::Backend(format!(
             "{context}: non-empty payload has null pointer"
         )));
     }
-    Ok((ptr as i32, len as i32)) // THIS LINE CONTAINS CONSTANT(S)
+    Ok((ptr as i32, len as i32))
 }
 
 fn backend(context: &str, err: impl Display) -> KelvinError {
@@ -983,7 +985,7 @@ mod tests {
         }
     }
 
-    fn parse_wat(input: &str) -> Vec<u8> { // THIS LINE CONTAINS CONSTANT(S)
+    fn parse_wat(input: &str) -> Vec<u8> {
         wat::parse_str(input).expect("parse wat")
     }
 
@@ -993,32 +995,32 @@ mod tests {
             .expect("openai profile should resolve");
         let normalized = normalize_provider_request(
             &profile,
-            &Some("gpt-4.1-mini".to_string()), // THIS LINE CONTAINS CONSTANT(S)
+            &Some("gpt-4.1-mini".to_string()),
             json!({
-                "model": "gpt-4.1-mini", // THIS LINE CONTAINS CONSTANT(S)
-                "metadata": { // THIS LINE CONTAINS CONSTANT(S)
-                    "run_id": "run-123", // THIS LINE CONTAINS CONSTANT(S)
-                    "generated_at_ms": 1773528482973_u64, // THIS LINE CONTAINS CONSTANT(S)
-                    "debug": true, // THIS LINE CONTAINS CONSTANT(S)
-                    "nested": {"key":"value"} // THIS LINE CONTAINS CONSTANT(S)
+                "model": "gpt-4.1-mini",
+                "metadata": {
+                    "run_id": "run-123",
+                    "generated_at_ms": 1773528482973_u64,
+                    "debug": true,
+                    "nested": {"key":"value"}
                 }
             }),
         );
 
         assert_eq!(
-            normalized["metadata"]["run_id"], // THIS LINE CONTAINS CONSTANT(S)
-            Value::String("run-123".to_string()) // THIS LINE CONTAINS CONSTANT(S)
+            normalized["metadata"]["run_id"],
+            Value::String("run-123".to_string())
         );
         assert_eq!(
-            normalized["metadata"]["generated_at_ms"], // THIS LINE CONTAINS CONSTANT(S)
-            Value::String("1773528482973".to_string()) // THIS LINE CONTAINS CONSTANT(S)
+            normalized["metadata"]["generated_at_ms"],
+            Value::String("1773528482973".to_string())
         );
         assert_eq!(
-            normalized["metadata"]["debug"], // THIS LINE CONTAINS CONSTANT(S)
-            Value::String("true".to_string()) // THIS LINE CONTAINS CONSTANT(S)
+            normalized["metadata"]["debug"],
+            Value::String("true".to_string())
         );
         assert_eq!(
-            normalized["metadata"]["nested"], // THIS LINE CONTAINS CONSTANT(S)
+            normalized["metadata"]["nested"],
             Value::String("{\"key\":\"value\"}".to_string())
         );
     }
@@ -1029,38 +1031,38 @@ mod tests {
             .expect("anthropic profile should resolve");
         let normalized = normalize_provider_request(
             &profile,
-            &Some("claude-haiku-4-5-20251001".to_string()), // THIS LINE CONTAINS CONSTANT(S)
+            &Some("claude-haiku-4-5-20251001".to_string()),
             json!({
-                "run_id": "run-123", // THIS LINE CONTAINS CONSTANT(S)
-                "session_id": "session-456", // THIS LINE CONTAINS CONSTANT(S)
-                "system_prompt": "You are concise.", // THIS LINE CONTAINS CONSTANT(S)
-                "user_prompt": "Explain KelvinClaw.", // THIS LINE CONTAINS CONSTANT(S)
-                "memory_snippets": ["Project: KelvinClaw"], // THIS LINE CONTAINS CONSTANT(S)
-                "history": [ // THIS LINE CONTAINS CONSTANT(S)
-                    {"role": "user", "content": "hello", "metadata": {}}, // THIS LINE CONTAINS CONSTANT(S)
-                    {"role": "assistant", "content": "hi", "metadata": {}} // THIS LINE CONTAINS CONSTANT(S)
+                "run_id": "run-123",
+                "session_id": "session-456",
+                "system_prompt": "You are concise.",
+                "user_prompt": "Explain KelvinClaw.",
+                "memory_snippets": ["Project: KelvinClaw"],
+                "history": [
+                    {"role": "user", "content": "hello", "metadata": {}},
+                    {"role": "assistant", "content": "hi", "metadata": {}}
                 ]
             }),
         );
 
         assert_eq!(
-            normalized["model"], // THIS LINE CONTAINS CONSTANT(S)
-            Value::String("claude-haiku-4-5-20251001".to_string()) // THIS LINE CONTAINS CONSTANT(S)
+            normalized["model"],
+            Value::String("claude-haiku-4-5-20251001".to_string())
         );
-        assert_eq!(normalized["max_tokens"], Value::from(1024)); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(normalized["max_tokens"], Value::from(1024));
         assert_eq!(
-            normalized["system"], // THIS LINE CONTAINS CONSTANT(S)
+            normalized["system"],
             Value::String("You are concise.".to_string())
         );
-        let messages = normalized["messages"].as_array().expect("messages array"); // THIS LINE CONTAINS CONSTANT(S)
-        // history: user "hello", assistant "hi", then merged memory+user_prompt as user // THIS LINE CONTAINS CONSTANT(S)
-        assert_eq!(messages.len(), 3); // THIS LINE CONTAINS CONSTANT(S)
-        assert_eq!(messages[0]["role"], Value::String("user".to_string())); // THIS LINE CONTAINS CONSTANT(S)
-        assert_eq!(messages[0]["content"], Value::String("hello".to_string())); // THIS LINE CONTAINS CONSTANT(S)
-        assert_eq!(messages[1]["role"], Value::String("assistant".to_string())); // THIS LINE CONTAINS CONSTANT(S)
-        assert_eq!(messages[1]["content"], Value::String("hi".to_string())); // THIS LINE CONTAINS CONSTANT(S)
-        assert_eq!(messages[2]["role"], Value::String("user".to_string())); // THIS LINE CONTAINS CONSTANT(S)
-        let last_content = messages[2]["content"].as_str().expect("last user content"); // THIS LINE CONTAINS CONSTANT(S)
+        let messages = normalized["messages"].as_array().expect("messages array");
+        // history: user "hello", assistant "hi", then merged memory+user_prompt as user
+        assert_eq!(messages.len(), 3);
+        assert_eq!(messages[0]["role"], Value::String("user".to_string()));
+        assert_eq!(messages[0]["content"], Value::String("hello".to_string()));
+        assert_eq!(messages[1]["role"], Value::String("assistant".to_string()));
+        assert_eq!(messages[1]["content"], Value::String("hi".to_string()));
+        assert_eq!(messages[2]["role"], Value::String("user".to_string()));
+        let last_content = messages[2]["content"].as_str().expect("last user content");
         assert!(last_content.contains("Relevant memory"));
         assert!(last_content.contains("Project: KelvinClaw"));
         assert!(last_content.contains("Explain KelvinClaw."));
@@ -1069,53 +1071,53 @@ mod tests {
     #[test]
     fn openrouter_request_normalization_builds_chat_completions_payload_from_model_input() {
         let profile = ModelProviderProfile {
-            id: "openrouter.chat".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-            provider_name: "openrouter".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            id: "openrouter.chat".to_string(),
+            provider_name: "openrouter".to_string(),
             protocol_family: ModelProviderProtocolFamily::OpenAiChatCompletions,
-            api_key_env: Some("OPENROUTER_API_KEY".to_string()), // THIS LINE CONTAINS CONSTANT(S)
-            base_url_env: "OPENROUTER_BASE_URL".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-            default_base_url: "https://openrouter.ai/api/v1".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-            endpoint_path: "chat/completions".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-            auth_header: "authorization".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            api_key_env: Some("OPENROUTER_API_KEY".to_string()),
+            base_url_env: "OPENROUTER_BASE_URL".to_string(),
+            default_base_url: "https://openrouter.ai/api/v1".to_string(),
+            endpoint_path: "chat/completions".to_string(),
+            auth_header: "authorization".to_string(),
             auth_scheme: ModelProviderAuthScheme::Bearer,
             static_headers: Vec::new(),
-            default_allow_hosts: vec!["openrouter.ai".to_string()], // THIS LINE CONTAINS CONSTANT(S)
+            default_allow_hosts: vec!["openrouter.ai".to_string()],
             dynamic_base_url: false,
         };
         let normalized = normalize_provider_request(
             &profile,
-            &Some("openai/gpt-4.1-mini".to_string()), // THIS LINE CONTAINS CONSTANT(S)
+            &Some("openai/gpt-4.1-mini".to_string()),
             json!({
-                "run_id": "run-123", // THIS LINE CONTAINS CONSTANT(S)
-                "session_id": "session-456", // THIS LINE CONTAINS CONSTANT(S)
-                "system_prompt": "You are concise.", // THIS LINE CONTAINS CONSTANT(S)
-                "user_prompt": "Explain KelvinClaw.", // THIS LINE CONTAINS CONSTANT(S)
-                "memory_snippets": ["Project: KelvinClaw"], // THIS LINE CONTAINS CONSTANT(S)
-                "history": [ // THIS LINE CONTAINS CONSTANT(S)
-                    {"role": "user", "content": "hello", "metadata": {}}, // THIS LINE CONTAINS CONSTANT(S)
-                    {"role": "assistant", "content": "hi", "metadata": {}} // THIS LINE CONTAINS CONSTANT(S)
+                "run_id": "run-123",
+                "session_id": "session-456",
+                "system_prompt": "You are concise.",
+                "user_prompt": "Explain KelvinClaw.",
+                "memory_snippets": ["Project: KelvinClaw"],
+                "history": [
+                    {"role": "user", "content": "hello", "metadata": {}},
+                    {"role": "assistant", "content": "hi", "metadata": {}}
                 ]
             }),
         );
 
         assert_eq!(
-            normalized["model"], // THIS LINE CONTAINS CONSTANT(S)
-            Value::String("openai/gpt-4.1-mini".to_string()) // THIS LINE CONTAINS CONSTANT(S)
+            normalized["model"],
+            Value::String("openai/gpt-4.1-mini".to_string())
         );
-        let messages = normalized["messages"].as_array().expect("messages array"); // THIS LINE CONTAINS CONSTANT(S)
+        let messages = normalized["messages"].as_array().expect("messages array");
         // system + history user + history assistant + final user (memory + user_prompt)
-        assert_eq!(messages.len(), 4); // THIS LINE CONTAINS CONSTANT(S)
-        assert_eq!(messages[0]["role"], Value::String("system".to_string())); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(messages.len(), 4);
+        assert_eq!(messages[0]["role"], Value::String("system".to_string()));
         assert_eq!(
-            messages[0]["content"], // THIS LINE CONTAINS CONSTANT(S)
+            messages[0]["content"],
             Value::String("You are concise.".to_string())
         );
-        assert_eq!(messages[1]["role"], Value::String("user".to_string())); // THIS LINE CONTAINS CONSTANT(S)
-        assert_eq!(messages[1]["content"], Value::String("hello".to_string())); // THIS LINE CONTAINS CONSTANT(S)
-        assert_eq!(messages[2]["role"], Value::String("assistant".to_string())); // THIS LINE CONTAINS CONSTANT(S)
-        assert_eq!(messages[2]["content"], Value::String("hi".to_string())); // THIS LINE CONTAINS CONSTANT(S)
-        assert_eq!(messages[3]["role"], Value::String("user".to_string())); // THIS LINE CONTAINS CONSTANT(S)
-        let last_content = messages[3]["content"] // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(messages[1]["role"], Value::String("user".to_string()));
+        assert_eq!(messages[1]["content"], Value::String("hello".to_string()));
+        assert_eq!(messages[2]["role"], Value::String("assistant".to_string()));
+        assert_eq!(messages[2]["content"], Value::String("hi".to_string()));
+        assert_eq!(messages[3]["role"], Value::String("user".to_string()));
+        let last_content = messages[3]["content"]
             .as_str()
             .expect("openrouter content string");
         assert!(last_content.contains("Relevant memory"));
@@ -1123,25 +1125,25 @@ mod tests {
         assert!(last_content.contains("Explain KelvinClaw."));
     }
 
-    fn legacy_test_module() -> Vec<u8> { // THIS LINE CONTAINS CONSTANT(S)
+    fn legacy_test_module() -> Vec<u8> {
         parse_wat(
             r#"
             (module
-              (import "kelvin_model_host_v1" "openai_responses_call" (func $openai_responses_call (param i32 i32) (result i64))) // THIS LINE CONTAINS CONSTANT(S)
-              (import "kelvin_model_host_v1" "log" (func $log (param i32 i32 i32) (result i32))) // THIS LINE CONTAINS CONSTANT(S)
-              (import "kelvin_model_host_v1" "clock_now_ms" (func $clock_now_ms (result i64))) // THIS LINE CONTAINS CONSTANT(S)
-              (memory (export "memory") 2) // THIS LINE CONTAINS CONSTANT(S)
-              (global $heap (mut i32) (i32.const 1024)) // THIS LINE CONTAINS CONSTANT(S)
-              (func (export "alloc") (param $len i32) (result i32) // THIS LINE CONTAINS CONSTANT(S)
-                (local $ptr i32) // THIS LINE CONTAINS CONSTANT(S)
+              (import "kelvin_model_host_v1" "openai_responses_call" (func $openai_responses_call (param i32 i32) (result i64)))
+              (import "kelvin_model_host_v1" "log" (func $log (param i32 i32 i32) (result i32)))
+              (import "kelvin_model_host_v1" "clock_now_ms" (func $clock_now_ms (result i64)))
+              (memory (export "memory") 2)
+              (global $heap (mut i32) (i32.const 1024))
+              (func (export "alloc") (param $len i32) (result i32)
+                (local $ptr i32)
                 global.get $heap
                 local.tee $ptr
                 local.get $len
-                i32.add // THIS LINE CONTAINS CONSTANT(S)
+                i32.add
                 global.set $heap
                 local.get $ptr)
-              (func (export "dealloc") (param i32 i32)) // THIS LINE CONTAINS CONSTANT(S)
-              (func (export "infer") (param $ptr i32) (param $len i32) (result i64) // THIS LINE CONTAINS CONSTANT(S)
+              (func (export "dealloc") (param i32 i32))
+              (func (export "infer") (param $ptr i32) (param $len i32) (result i64)
                 local.get $ptr
                 local.get $len
                 call $openai_responses_call)
@@ -1150,25 +1152,25 @@ mod tests {
         )
     }
 
-    fn provider_profile_test_module() -> Vec<u8> { // THIS LINE CONTAINS CONSTANT(S)
+    fn provider_profile_test_module() -> Vec<u8> {
         parse_wat(
             r#"
             (module
-              (import "kelvin_model_host_v1" "provider_profile_call" (func $provider_profile_call (param i32 i32) (result i64))) // THIS LINE CONTAINS CONSTANT(S)
-              (import "kelvin_model_host_v1" "log" (func $log (param i32 i32 i32) (result i32))) // THIS LINE CONTAINS CONSTANT(S)
-              (import "kelvin_model_host_v1" "clock_now_ms" (func $clock_now_ms (result i64))) // THIS LINE CONTAINS CONSTANT(S)
-              (memory (export "memory") 2) // THIS LINE CONTAINS CONSTANT(S)
-              (global $heap (mut i32) (i32.const 1024)) // THIS LINE CONTAINS CONSTANT(S)
-              (func (export "alloc") (param $len i32) (result i32) // THIS LINE CONTAINS CONSTANT(S)
-                (local $ptr i32) // THIS LINE CONTAINS CONSTANT(S)
+              (import "kelvin_model_host_v1" "provider_profile_call" (func $provider_profile_call (param i32 i32) (result i64)))
+              (import "kelvin_model_host_v1" "log" (func $log (param i32 i32 i32) (result i32)))
+              (import "kelvin_model_host_v1" "clock_now_ms" (func $clock_now_ms (result i64)))
+              (memory (export "memory") 2)
+              (global $heap (mut i32) (i32.const 1024))
+              (func (export "alloc") (param $len i32) (result i32)
+                (local $ptr i32)
                 global.get $heap
                 local.tee $ptr
                 local.get $len
-                i32.add // THIS LINE CONTAINS CONSTANT(S)
+                i32.add
                 global.set $heap
                 local.get $ptr)
-              (func (export "dealloc") (param i32 i32)) // THIS LINE CONTAINS CONSTANT(S)
-              (func (export "infer") (param $ptr i32) (param $len i32) (result i64) // THIS LINE CONTAINS CONSTANT(S)
+              (func (export "dealloc") (param i32 i32))
+              (func (export "infer") (param $ptr i32) (param $len i32) (result i64)
                 local.get $ptr
                 local.get $len
                 call $provider_profile_call)
@@ -1180,7 +1182,7 @@ mod tests {
     #[test]
     fn model_host_roundtrip_uses_provider_profile_transport() {
         let transport = Arc::new(MockTransport {
-            body: json!({"assistant_text":"hello"}).to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            body: json!({"assistant_text":"hello"}).to_string(),
             seen_profile: Mutex::new(None),
         });
         let host =
@@ -1195,11 +1197,11 @@ mod tests {
         let output = host
             .run_bytes(
                 &provider_profile_test_module(),
-                r#"{"run_id":"r1"}"#, // THIS LINE CONTAINS CONSTANT(S)
+                r#"{"run_id":"r1"}"#,
                 policy,
             )
             .expect("run model module");
-        assert_eq!(output, json!({"assistant_text":"hello"}).to_string()); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(output, json!({"assistant_text":"hello"}).to_string());
         assert_eq!(
             transport
                 .seen_profile
@@ -1213,20 +1215,20 @@ mod tests {
     #[test]
     fn model_host_keeps_legacy_openai_import_compatible() {
         let transport = Arc::new(MockTransport {
-            body: json!({"assistant_text":"legacy-openai"}).to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            body: json!({"assistant_text":"legacy-openai"}).to_string(),
             seen_profile: Mutex::new(None),
         });
         let host = WasmModelHost::try_new_with_transport(transport.clone()).expect("create host");
         let output = host
             .run_bytes(
                 &legacy_test_module(),
-                r#"{"run_id":"r1"}"#, // THIS LINE CONTAINS CONSTANT(S)
+                r#"{"run_id":"r1"}"#,
                 ModelSandboxPolicy::default(),
             )
             .expect("run legacy model module");
         assert_eq!(
             output,
-            json!({"assistant_text":"legacy-openai"}).to_string() // THIS LINE CONTAINS CONSTANT(S)
+            json!({"assistant_text":"legacy-openai"}).to_string()
         );
         assert_eq!(
             transport
@@ -1241,14 +1243,14 @@ mod tests {
     #[test]
     fn model_host_generic_profile_call_fails_closed_without_profile() {
         let host = WasmModelHost::try_new_with_transport(Arc::new(MockTransport {
-            body: json!({"assistant_text":"unused"}).to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            body: json!({"assistant_text":"unused"}).to_string(),
             seen_profile: Mutex::new(None),
         }))
         .expect("create model host");
         let output = host
             .run_bytes(
                 &provider_profile_test_module(),
-                r#"{"run_id":"r1"}"#, // THIS LINE CONTAINS CONSTANT(S)
+                r#"{"run_id":"r1"}"#,
                 ModelSandboxPolicy::default(),
             )
             .expect("generic model module should return guest error payload");
@@ -1260,12 +1262,12 @@ mod tests {
         let wasm = parse_wat(
             r#"
             (module
-              (import "wasi_snapshot_preview1" "fd_write" // THIS LINE CONTAINS CONSTANT(S)
-                (func $fd_write (param i32 i32 i32 i32) (result i32))) // THIS LINE CONTAINS CONSTANT(S)
-              (memory (export "memory") 1) // THIS LINE CONTAINS CONSTANT(S)
-              (func (export "alloc") (param i32) (result i32) i32.const 0) // THIS LINE CONTAINS CONSTANT(S)
-              (func (export "dealloc") (param i32 i32)) // THIS LINE CONTAINS CONSTANT(S)
-              (func (export "infer") (param i32 i32) (result i64) i64.const 0) // THIS LINE CONTAINS CONSTANT(S)
+              (import "wasi_snapshot_preview1" "fd_write"
+                (func $fd_write (param i32 i32 i32 i32) (result i32)))
+              (memory (export "memory") 1)
+              (func (export "alloc") (param i32) (result i32) i32.const 0)
+              (func (export "dealloc") (param i32 i32))
+              (func (export "infer") (param i32 i32) (result i64) i64.const 0)
             )
             "#,
         );
@@ -1273,7 +1275,7 @@ mod tests {
             body: "{}".to_string(),
             seen_profile: Mutex::new(None),
         }))
-        .expect("host"); // THIS LINE CONTAINS CONSTANT(S)
+        .expect("host");
         let err = host
             .run_bytes(&wasm, "{}", ModelSandboxPolicy::default())
             .expect_err("unsupported import should fail");
@@ -1287,21 +1289,21 @@ mod tests {
             body: "{}".to_string(),
             seen_profile: Mutex::new(None),
         }))
-        .expect("host"); // THIS LINE CONTAINS CONSTANT(S)
+        .expect("host");
         let policy = ModelSandboxPolicy {
-            max_request_bytes: 8, // THIS LINE CONTAINS CONSTANT(S)
+            max_request_bytes: 8,
             ..ModelSandboxPolicy::default()
         };
         let err = host
             .run_bytes(&legacy_test_module(), "{\"too\":\"long\"}", policy)
             .expect_err("request bound should fail");
         assert!(matches!(err, KelvinError::InvalidInput(_)));
-        assert!(err.to_string().contains("max_request_bytes")); // THIS LINE CONTAINS CONSTANT(S)
+        assert!(err.to_string().contains("max_request_bytes"));
     }
 
     #[test]
     fn abi_constants_are_stable() {
-        assert_eq!(model_abi::MODULE, "kelvin_model_host_v1"); // THIS LINE CONTAINS CONSTANT(S)
-        assert_eq!(model_abi::EXPORT_INFER, "infer"); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(model_abi::MODULE, "kelvin_model_host_v1");
+        assert_eq!(model_abi::EXPORT_INFER, "infer");
     }
 }

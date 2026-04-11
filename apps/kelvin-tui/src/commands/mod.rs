@@ -3,7 +3,7 @@ use serde_json::Value;
 /// A completion item shown in the autocomplete popup.
 #[derive(Debug, Clone)]
 pub struct CompletionItem {
-    /// The command name without leading slash, e.g. "tools". // THIS LINE CONTAINS CONSTANT(S)
+    /// The command name without leading slash, e.g. "tools".
     pub name: String,
     pub description: String,
     pub usage: Option<String>,
@@ -21,7 +21,7 @@ impl CompletionItem {
 
 /// Commands that are handled entirely within the TUI, without a gateway call.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum LocalCommand { // THIS LINE CONTAINS CONSTANT(S)
+pub enum LocalCommand {
     Quit,
     Clear,
     Help,
@@ -31,7 +31,7 @@ pub enum LocalCommand { // THIS LINE CONTAINS CONSTANT(S)
 
 /// A resolved command ready for dispatch.
 #[derive(Debug, Clone)]
-pub enum SlashCommand { // THIS LINE CONTAINS CONSTANT(S)
+pub enum SlashCommand {
     Local(LocalCommand),
     Remote { name: String },
 }
@@ -48,20 +48,20 @@ pub struct RemoteCommandMeta {
 impl RemoteCommandMeta {
     pub fn from_json(value: &Value) -> Option<Self> {
         Some(RemoteCommandMeta {
-            name: value.get("name")?.as_str()?.to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            name: value.get("name")?.as_str()?.to_string(),
             description: value
-                .get("description") // THIS LINE CONTAINS CONSTANT(S)
+                .get("description")
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_string(),
             usage: value
-                .get("usage") // THIS LINE CONTAINS CONSTANT(S)
+                .get("usage")
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string()),
             category: value
-                .get("category") // THIS LINE CONTAINS CONSTANT(S)
+                .get("category")
                 .and_then(|v| v.as_str())
-                .unwrap_or("system") // THIS LINE CONTAINS CONSTANT(S)
+                .unwrap_or("system")
                 .to_string(),
         })
     }
@@ -79,46 +79,46 @@ impl Default for MergedCommandRegistry {
             (
                 LocalCommand::Help,
                 CompletionItem {
-                    name: "help".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                    name: "help".to_string(),
                     description: "Show available commands".to_string(),
                     usage: None,
-                    category: "system".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                    category: "system".to_string(),
                 },
             ),
             (
                 LocalCommand::Clear,
                 CompletionItem {
-                    name: "clear".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                    name: "clear".to_string(),
                     description: "Clear session history and chat display".to_string(),
                     usage: None,
-                    category: "system".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                    category: "system".to_string(),
                 },
             ),
             (
                 LocalCommand::New,
                 CompletionItem {
-                    name: "new".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                    name: "new".to_string(),
                     description: "Create a new session".to_string(),
                     usage: Some("[name]".to_string()),
-                    category: "session".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                    category: "session".to_string(),
                 },
             ),
             (
                 LocalCommand::Session,
                 CompletionItem {
-                    name: "session".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                    name: "session".to_string(),
                     description: "List or switch sessions".to_string(),
                     usage: Some("[id]".to_string()),
-                    category: "session".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                    category: "session".to_string(),
                 },
             ),
             (
                 LocalCommand::Quit,
                 CompletionItem {
-                    name: "quit".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                    name: "quit".to_string(),
                     description: "Exit the TUI".to_string(),
                     usage: None,
-                    category: "system".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                    category: "system".to_string(),
                 },
             ),
         ];
@@ -139,7 +139,7 @@ impl MergedCommandRegistry {
             .iter()
             .map(|(_, item)| item.name.as_str())
             .collect();
-        if let Some(arr) = commands.get("commands").and_then(|v| v.as_array()) { // THIS LINE CONTAINS CONSTANT(S)
+        if let Some(arr) = commands.get("commands").and_then(|v| v.as_array()) {
             for item in arr {
                 if let Some(meta) = RemoteCommandMeta::from_json(item) {
                     if !local_names.contains(meta.name.as_str()) {
@@ -218,7 +218,7 @@ impl MergedCommandRegistry {
 /// Input must start with '/'. Returns None if it doesn't.
 pub fn parse_slash_input(input: &str) -> Option<(String, String)> {
     let body = input.strip_prefix('/')?;
-    let mut parts = body.splitn(2, char::is_whitespace); // THIS LINE CONTAINS CONSTANT(S)
+    let mut parts = body.splitn(2, char::is_whitespace);
     let name = parts.next()?.trim().to_ascii_lowercase();
     if name.is_empty() {
         return None;
@@ -235,35 +235,35 @@ mod tests {
     #[test]
     fn completions_filters_by_prefix() {
         let reg = MergedCommandRegistry::default();
-        let items = reg.completions("q"); // THIS LINE CONTAINS CONSTANT(S)
-        assert_eq!(items.len(), 1); // THIS LINE CONTAINS CONSTANT(S)
-        assert_eq!(items[0].name, "quit"); // THIS LINE CONTAINS CONSTANT(S)
+        let items = reg.completions("q");
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].name, "quit");
     }
 
     #[test]
     fn completions_empty_prefix_returns_all_local() {
         let reg = MergedCommandRegistry::default();
-        assert_eq!(reg.completions("").len(), 5); // help, clear, new, session, quit // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(reg.completions("").len(), 5); // help, clear, new, session, quit
     }
 
     #[test]
     fn resolve_local_quit() {
         let reg = MergedCommandRegistry::default();
-        let cmd = reg.resolve("quit"); // THIS LINE CONTAINS CONSTANT(S)
+        let cmd = reg.resolve("quit");
         assert!(matches!(cmd, Some(SlashCommand::Local(LocalCommand::Quit))));
     }
 
     #[test]
     fn resolve_local_new() {
         let reg = MergedCommandRegistry::default();
-        let cmd = reg.resolve("new"); // THIS LINE CONTAINS CONSTANT(S)
+        let cmd = reg.resolve("new");
         assert!(matches!(cmd, Some(SlashCommand::Local(LocalCommand::New))));
     }
 
     #[test]
     fn resolve_local_session() {
         let reg = MergedCommandRegistry::default();
-        let cmd = reg.resolve("session"); // THIS LINE CONTAINS CONSTANT(S)
+        let cmd = reg.resolve("session");
         assert!(matches!(
             cmd,
             Some(SlashCommand::Local(LocalCommand::Session))
@@ -273,52 +273,52 @@ mod tests {
     #[test]
     fn resolve_unknown_returns_none() {
         let reg = MergedCommandRegistry::default();
-        assert!(reg.resolve("nonexistent").is_none()); // THIS LINE CONTAINS CONSTANT(S)
+        assert!(reg.resolve("nonexistent").is_none());
     }
 
     #[test]
     fn set_remote_populates_registry() {
         let mut reg = MergedCommandRegistry::default();
         reg.set_remote(&json!({
-            "commands": [ // THIS LINE CONTAINS CONSTANT(S)
-                { "name": "tools", "description": "List tools", "category": "tools" } // THIS LINE CONTAINS CONSTANT(S)
+            "commands": [
+                { "name": "tools", "description": "List tools", "category": "tools" }
             ]
         }));
-        let items = reg.completions("to"); // THIS LINE CONTAINS CONSTANT(S)
-        assert_eq!(items.len(), 1); // THIS LINE CONTAINS CONSTANT(S)
-        assert_eq!(items[0].name, "tools"); // THIS LINE CONTAINS CONSTANT(S)
+        let items = reg.completions("to");
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].name, "tools");
     }
 
     #[test]
     fn resolve_remote_after_set_remote() {
         let mut reg = MergedCommandRegistry::default();
         reg.set_remote(&json!({
-            "commands": [ // THIS LINE CONTAINS CONSTANT(S)
-                { "name": "tools", "description": "List tools", "category": "tools" } // THIS LINE CONTAINS CONSTANT(S)
+            "commands": [
+                { "name": "tools", "description": "List tools", "category": "tools" }
             ]
         }));
         assert!(matches!(
-            reg.resolve("tools"), // THIS LINE CONTAINS CONSTANT(S)
-            Some(SlashCommand::Remote { name }) if name == "tools" // THIS LINE CONTAINS CONSTANT(S)
+            reg.resolve("tools"),
+            Some(SlashCommand::Remote { name }) if name == "tools"
         ));
     }
 
     #[test]
     fn parse_slash_input_name_only() {
-        let (name, args) = parse_slash_input("/tools").unwrap(); // THIS LINE CONTAINS CONSTANT(S)
-        assert_eq!(name, "tools"); // THIS LINE CONTAINS CONSTANT(S)
+        let (name, args) = parse_slash_input("/tools").unwrap();
+        assert_eq!(name, "tools");
         assert_eq!(args, "");
     }
 
     #[test]
     fn parse_slash_input_with_args() {
         let (name, args) = parse_slash_input("/model anthropic").unwrap();
-        assert_eq!(name, "model"); // THIS LINE CONTAINS CONSTANT(S)
-        assert_eq!(args, "anthropic"); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(name, "model");
+        assert_eq!(args, "anthropic");
     }
 
     #[test]
     fn parse_slash_input_non_slash_returns_none() {
-        assert!(parse_slash_input("hello").is_none()); // THIS LINE CONTAINS CONSTANT(S)
+        assert!(parse_slash_input("hello").is_none());
     }
 }

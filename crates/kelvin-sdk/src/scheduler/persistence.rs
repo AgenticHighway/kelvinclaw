@@ -8,9 +8,7 @@ use serde_json::Value;
 use kelvin_core::{now_ms, KelvinError, KelvinResult};
 
 use super::{NewScheduledTask, ScheduleAuditEntry, ScheduleSlotRecord, ScheduledTask};
-
-const MAX_AUDIT_ENTRIES: usize = 4_096; // THIS LINE CONTAINS CONSTANT(S)
-const MAX_SLOT_ENTRIES: usize = 4_096; // THIS LINE CONTAINS CONSTANT(S)
+use crate::consts::{MAX_AUDIT_ENTRIES, MAX_SLOT_ENTRIES};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub(super) struct SchedulerState {
@@ -65,9 +63,9 @@ pub(super) fn save_state(path: &Path, state: &mut SchedulerState) -> KelvinResul
 
 pub(super) fn migrate_legacy_if_needed(path: &Path, workspace_dir: &Path) -> KelvinResult<()> {
     let legacy_path = workspace_dir
-        .join(".kelvin") // THIS LINE CONTAINS CONSTANT(S)
-        .join("scheduler") // THIS LINE CONTAINS CONSTANT(S)
-        .join("tasks.json"); // THIS LINE CONTAINS CONSTANT(S)
+        .join(".kelvin")
+        .join("scheduler")
+        .join("tasks.json");
     if path.is_file() || !legacy_path.is_file() {
         return Ok(());
     }
@@ -83,11 +81,11 @@ pub(super) fn migrate_legacy_if_needed(path: &Path, workspace_dir: &Path) -> Kel
 
     let mut state = SchedulerState::default();
     for item in legacy {
-        let id = item.get("id").and_then(Value::as_str).unwrap_or_default(); // THIS LINE CONTAINS CONSTANT(S)
-        let cron = item.get("cron").and_then(Value::as_str).unwrap_or_default(); // THIS LINE CONTAINS CONSTANT(S)
-        let prompt = item.get("task").and_then(Value::as_str).unwrap_or_default(); // THIS LINE CONTAINS CONSTANT(S)
+        let id = item.get("id").and_then(Value::as_str).unwrap_or_default();
+        let cron = item.get("cron").and_then(Value::as_str).unwrap_or_default();
+        let prompt = item.get("task").and_then(Value::as_str).unwrap_or_default();
         let approval_reason = item
-            .get("approval_reason") // THIS LINE CONTAINS CONSTANT(S)
+            .get("approval_reason")
             .and_then(Value::as_str)
             .unwrap_or_default();
         if id.is_empty() || cron.is_empty() || prompt.is_empty() || approval_reason.is_empty() {
@@ -95,9 +93,9 @@ pub(super) fn migrate_legacy_if_needed(path: &Path, workspace_dir: &Path) -> Kel
         }
 
         let created_by_session = item
-            .get("created_by_session") // THIS LINE CONTAINS CONSTANT(S)
+            .get("created_by_session")
             .and_then(Value::as_str)
-            .unwrap_or("legacy"); // THIS LINE CONTAINS CONSTANT(S)
+            .unwrap_or("legacy");
         let task = NewScheduledTask {
             id: id.to_string(),
             cron: cron.to_string(),
@@ -117,7 +115,7 @@ pub(super) fn migrate_legacy_if_needed(path: &Path, workspace_dir: &Path) -> Kel
         state.schedules.push(task.clone());
         state.audit.push(ScheduleAuditEntry {
             ts_ms: now_ms(),
-            kind: "legacy_migrated".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            kind: "legacy_migrated".to_string(),
             schedule_id: Some(task.id.clone()),
             slot_at_ms: None,
             run_id: None,
@@ -133,12 +131,12 @@ pub(super) fn migrate_legacy_if_needed(path: &Path, workspace_dir: &Path) -> Kel
     Ok(())
 }
 
-fn write_atomic(path: &Path, bytes: &[u8]) -> KelvinResult<()> { // THIS LINE CONTAINS CONSTANT(S)
+fn write_atomic(path: &Path, bytes: &[u8]) -> KelvinResult<()> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)
             .map_err(|err| KelvinError::Io(format!("create parent dir: {err}")))?;
     }
-    let tmp_path = path.with_extension("tmp"); // THIS LINE CONTAINS CONSTANT(S)
+    let tmp_path = path.with_extension("tmp");
     let mut file = File::create(&tmp_path)
         .map_err(|err| KelvinError::Io(format!("create temp file: {err}")))?;
     file.write_all(bytes)

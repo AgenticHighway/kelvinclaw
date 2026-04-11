@@ -12,9 +12,7 @@ use kelvin_core::{
 };
 use kelvin_wasm::{ClawCall, SandboxPolicy, SandboxPreset, WasmSkillHost};
 
-const DEFAULT_MEMORY_APPEND_PATH: &str = "memory/skill-events.md"; // THIS LINE CONTAINS CONSTANT(S)
-pub const WASM_SKILL_PLUGIN_ID: &str = "kelvin.wasm_skill"; // THIS LINE CONTAINS CONSTANT(S)
-pub const WASM_SKILL_PLUGIN_NAME: &str = "Kelvin WASM Skill Tool"; // THIS LINE CONTAINS CONSTANT(S)
+use crate::consts;
 
 /// ### Brief
 ///
@@ -51,7 +49,7 @@ impl WasmSkillTool {
             name: name.into(),
             host,
             default_policy,
-            default_memory_append_path: DEFAULT_MEMORY_APPEND_PATH.to_string(),
+            default_memory_append_path: consts::DEFAULT_MEMORY_APPEND_PATH.to_string(),
         }
     }
 
@@ -204,28 +202,28 @@ impl WasmSkillTool {
 
     /// ### Brief
     ///
-    /// helper for loading an optional u64 value by key from a serde_json `Map` // THIS LINE CONTAINS CONSTANT(S)
+    /// helper for loading an optional u64 value by key from a serde_json `Map`
     ///
     /// ### Arguments
     /// * `args` - value map
-    /// * `key` - which u64 value to retrieve // THIS LINE CONTAINS CONSTANT(S)
+    /// * `key` - which u64 value to retrieve
     ///
     /// ### Returns
-    /// optional value from map as a u64 // THIS LINE CONTAINS CONSTANT(S)
+    /// optional value from map as a u64
     ///
     /// ### Errors
-    /// - JSON parse error if value is not a u64 // THIS LINE CONTAINS CONSTANT(S)
-    fn optional_u64( // THIS LINE CONTAINS CONSTANT(S)
+    /// - JSON parse error if value is not a u64
+    fn optional_u64(
         &self,
         args: &serde_json::Map<String, Value>,
         key: &str,
-    ) -> KelvinResult<Option<u64>> { // THIS LINE CONTAINS CONSTANT(S)
+    ) -> KelvinResult<Option<u64>> {
         match args.get(key) {
             None => Ok(None),
             Some(value) => value
-                .as_u64() // THIS LINE CONTAINS CONSTANT(S)
+                .as_u64()
                 .map(Some)
-                .ok_or_else(|| KelvinError::InvalidInput(format!("'{key}' must be a u64"))), // THIS LINE CONTAINS CONSTANT(S)
+                .ok_or_else(|| KelvinError::InvalidInput(format!("'{key}' must be a u64"))),
         }
     }
 
@@ -250,7 +248,7 @@ impl WasmSkillTool {
         match args.get(key) {
             None => Ok(None),
             Some(value) => {
-                let Some(raw) = value.as_u64() else { // THIS LINE CONTAINS CONSTANT(S)
+                let Some(raw) = value.as_u64() else {
                     return Err(KelvinError::InvalidInput(format!(
                         "'{key}' must be a usize"
                     )));
@@ -288,13 +286,13 @@ impl WasmSkillTool {
     ///
     /// let wasm_skill_tool = WasmSkillTool::default();
     ///
-    /// assert!(wasm_skill_tool.sanitize_rel_path("this/is/good", "test_dir").is_ok()); // THIS LINE CONTAINS CONSTANT(S)
-    /// assert!(wasm_skill_tool.sanitize_rel_path("", "test_dir").is_err()); // THIS LINE CONTAINS CONSTANT(S)
-    /// assert!(wasm_skill_tool.sanitize_rel_path("/home/username/this/is/bad", "test_dir").is_err()); // THIS LINE CONTAINS CONSTANT(S)
-    /// assert!(wasm_skill_tool.sanitize_rel_path("../this/is/bad", "test_dir").is_err()); // THIS LINE CONTAINS CONSTANT(S)
+    /// assert!(wasm_skill_tool.sanitize_rel_path("this/is/good", "test_dir").is_ok());
+    /// assert!(wasm_skill_tool.sanitize_rel_path("", "test_dir").is_err());
+    /// assert!(wasm_skill_tool.sanitize_rel_path("/home/username/this/is/bad", "test_dir").is_err());
+    /// assert!(wasm_skill_tool.sanitize_rel_path("../this/is/bad", "test_dir").is_err());
     /// ```
     fn sanitize_rel_path(&self, raw: &str, field: &str) -> KelvinResult<String> {
-        let normalized = raw.trim().replace('\\', "/"); // THIS LINE CONTAINS CONSTANT(S)
+        let normalized = raw.trim().replace('\\', "/");
         if normalized.is_empty() {
             return Err(KelvinError::InvalidInput(format!(
                 "'{field}' must not be empty"
@@ -331,9 +329,9 @@ impl WasmSkillTool {
     /// - path is not a valid memory location
     /// - path doesnt resolve to a markdown file
     fn validate_memory_path_scope(&self, memory_rel_path: &str) -> KelvinResult<()> {
-        let is_memory_root = memory_rel_path == "MEMORY.md"; // THIS LINE CONTAINS CONSTANT(S)
+        let is_memory_root = memory_rel_path == consts::MEMORY_ROOT_FILE;
         let is_memory_daily =
-            memory_rel_path.starts_with("memory/") && memory_rel_path.ends_with(".md"); // THIS LINE CONTAINS CONSTANT(S)
+            memory_rel_path.starts_with(consts::MEMORY_PREFIX) && memory_rel_path.ends_with(".md");
         if !is_memory_root && !is_memory_daily {
             return Err(KelvinError::InvalidInput(
                 "memory append path must be MEMORY.md or memory/*.md".to_string(),
@@ -348,7 +346,7 @@ impl WasmSkillTool {
     ///
     /// ### Description
     ///
-    /// extracts 5 fields from the args json map: // THIS LINE CONTAINS CONSTANT(S)
+    /// extracts 5 fields from the args json map:
     ///
     /// - `allow_move_servo` - bool for whether to allow moving a servo
     /// - `allow_fs_read` - bool for whether to allow reading files in general
@@ -366,13 +364,15 @@ impl WasmSkillTool {
     /// the resolved sandbox policy
     ///
     /// ### Errors
-    /// - unknown policy_preset in args. valid options are "locked_down", "dev_local", or "hardware_control" // THIS LINE CONTAINS CONSTANT(S)
+    /// - unknown policy_preset in args. valid options are "locked_down", "dev_local", or "hardware_control"
     fn resolve_policy(
         &self,
         args: &serde_json::Map<String, Value>,
         default_policy: SandboxPolicy,
     ) -> KelvinResult<SandboxPolicy> {
-        let mut policy = if let Some(raw) = self.optional_string(args, "policy_preset")? { // THIS LINE CONTAINS CONSTANT(S)
+        let mut policy = if let Some(raw) =
+            self.optional_string(args, consts::FIELD_POLICY_PRESET)?
+        {
             SandboxPreset::parse(&raw)
                 .ok_or_else(|| KelvinError::InvalidInput(format!("unknown policy preset: {raw}")))?
                 .policy()
@@ -380,19 +380,19 @@ impl WasmSkillTool {
             default_policy
         };
 
-        if let Some(value) = self.optional_bool(args, "allow_move_servo")? { // THIS LINE CONTAINS CONSTANT(S)
+        if let Some(value) = self.optional_bool(args, consts::FIELD_ALLOW_MOVE_SERVO)? {
             policy.allow_move_servo = value;
         }
-        if let Some(value) = self.optional_bool(args, "allow_fs_read")? { // THIS LINE CONTAINS CONSTANT(S)
+        if let Some(value) = self.optional_bool(args, consts::FIELD_ALLOW_FS_READ)? {
             policy.allow_fs_read = value;
         }
-        if let Some(hosts) = self.optional_string_array(args, "network_allow_hosts")? { // THIS LINE CONTAINS CONSTANT(S)
+        if let Some(hosts) = self.optional_string_array(args, consts::FIELD_NETWORK_ALLOW_HOSTS)? {
             policy.network_allow_hosts = hosts;
         }
-        if let Some(value) = self.optional_usize(args, "max_module_bytes")? { // THIS LINE CONTAINS CONSTANT(S)
+        if let Some(value) = self.optional_usize(args, consts::FIELD_MAX_MODULE_BYTES)? {
             policy.max_module_bytes = value;
         }
-        if let Some(value) = self.optional_u64(args, "fuel_budget")? { // THIS LINE CONTAINS CONSTANT(S)
+        if let Some(value) = self.optional_u64(args, consts::FIELD_FUEL_BUDGET)? {
             policy.fuel_budget = value;
         }
 
@@ -406,7 +406,7 @@ impl WasmSkillTool {
 impl Default for WasmSkillTool {
     fn default() -> Self {
         Self::new(
-            "wasm_skill", // THIS LINE CONTAINS CONSTANT(S)
+            consts::WASM_SKILL_TOOL_DEFAULT_NAME,
             Arc::new(WasmSkillHost::new()),
             SandboxPolicy::locked_down(),
         )
@@ -452,9 +452,9 @@ impl WasmSkillPlugin {
     /// default plugin manifest as a `PluginManifest`
     pub fn default_manifest() -> PluginManifest {
         PluginManifest {
-            id: WASM_SKILL_PLUGIN_ID.to_string(),
-            name: WASM_SKILL_PLUGIN_NAME.to_string(),
-            version: "0.1.0".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            id: consts::WASM_SKILL_PLUGIN_ID.to_string(),
+            name: consts::WASM_SKILL_PLUGIN_NAME.to_string(),
+            version: consts::WASM_SKILL_PLUGIN_VERSION.to_string(),
             api_version: KELVIN_CORE_API_VERSION.to_string(),
             description: Some(
                 "Sandboxed WebAssembly skill execution with workspace-scoped memory append."
@@ -467,7 +467,7 @@ impl WasmSkillPlugin {
                 PluginCapability::FsWrite,
             ],
             experimental: false,
-            min_core_version: Some("0.1.0".to_string()), // THIS LINE CONTAINS CONSTANT(S)
+            min_core_version: Some(consts::WASM_SKILL_MIN_CORE_VERSION.to_string()),
             max_core_version: None,
         }
     }
@@ -506,8 +506,10 @@ impl Tool for WasmSkillTool {
 
     async fn call(&self, input: ToolCallInput) -> KelvinResult<ToolCallResult> {
         let args = self.require_args_object(&input.arguments)?;
-        let wasm_rel_path =
-            self.sanitize_rel_path(&self.require_string(args, "wasm_path")?, "wasm_path")?; // THIS LINE CONTAINS CONSTANT(S)
+        let wasm_rel_path = self.sanitize_rel_path(
+            &self.require_string(args, consts::FIELD_WASM_PATH)?,
+            consts::FIELD_WASM_PATH,
+        )?;
         let policy = self.resolve_policy(args, self.default_policy.clone())?;
 
         let workspace_dir = PathBuf::from(&input.workspace_dir);
@@ -515,13 +517,14 @@ impl Tool for WasmSkillTool {
         let execution = self.host.run_file(&wasm_path, policy)?;
 
         let memory_rel_path = self
-            .optional_string(args, "memory_append_path")? // THIS LINE CONTAINS CONSTANT(S)
+            .optional_string(args, consts::FIELD_MEMORY_APPEND_PATH)?
             .unwrap_or_else(|| self.default_memory_append_path.clone());
-        let memory_rel_path = self.sanitize_rel_path(&memory_rel_path, "memory_append_path")?; // THIS LINE CONTAINS CONSTANT(S)
+        let memory_rel_path =
+            self.sanitize_rel_path(&memory_rel_path, consts::FIELD_MEMORY_APPEND_PATH)?;
         self.validate_memory_path_scope(&memory_rel_path)?;
 
         let memory_entry = self
-            .optional_string(args, "memory_entry")? // THIS LINE CONTAINS CONSTANT(S)
+            .optional_string(args, consts::FIELD_MEMORY_ENTRY)?
             .unwrap_or_else(|| {
                 format!(
                     "run_id={} exit_code={} calls={}",
@@ -557,10 +560,10 @@ impl Tool for WasmSkillTool {
             calls_json.len()
         );
         let output = json!({
-            "wasm_path": wasm_rel_path, // THIS LINE CONTAINS CONSTANT(S)
-            "memory_path": memory_rel_path, // THIS LINE CONTAINS CONSTANT(S)
-            "exit_code": execution.exit_code, // THIS LINE CONTAINS CONSTANT(S)
-            "calls": calls_json, // THIS LINE CONTAINS CONSTANT(S)
+            consts::JSON_KEY_WASM_PATH: wasm_rel_path,
+            consts::JSON_KEY_MEMORY_PATH: memory_rel_path,
+            consts::JSON_KEY_EXIT_CODE: execution.exit_code,
+            consts::JSON_KEY_CALLS: calls_json,
         });
 
         Ok(ToolCallResult {
@@ -592,29 +595,29 @@ fn claw_call_label(call: &ClawCall) -> String {
 fn claw_call_json(call: &ClawCall) -> Value {
     match call {
         ClawCall::SendMessage { message_code } => json!({
-            "kind": "send_message", // THIS LINE CONTAINS CONSTANT(S)
-            "message_code": message_code, // THIS LINE CONTAINS CONSTANT(S)
+            consts::JSON_KEY_KIND: consts::CLAW_KIND_SEND_MESSAGE,
+            "message_code": message_code,
         }),
         ClawCall::MoveServo { channel, position } => json!({
-            "kind": "move_servo", // THIS LINE CONTAINS CONSTANT(S)
-            "channel": channel, // THIS LINE CONTAINS CONSTANT(S)
-            "position": position, // THIS LINE CONTAINS CONSTANT(S)
+            consts::JSON_KEY_KIND: consts::CLAW_KIND_MOVE_SERVO,
+            "channel": channel,
+            "position": position,
         }),
         ClawCall::FsRead { handle } => json!({
-            "kind": "fs_read", // THIS LINE CONTAINS CONSTANT(S)
-            "handle": handle, // THIS LINE CONTAINS CONSTANT(S)
+            consts::JSON_KEY_KIND: consts::CLAW_KIND_FS_READ,
+            "handle": handle,
         }),
         ClawCall::NetworkSend { packet } => json!({
-            "kind": "network_send", // THIS LINE CONTAINS CONSTANT(S)
-            "packet": packet, // THIS LINE CONTAINS CONSTANT(S)
+            consts::JSON_KEY_KIND: consts::CLAW_KIND_NETWORK_SEND,
+            "packet": packet,
         }),
         ClawCall::HttpCall { url } => json!({
-            "kind": "http_call", // THIS LINE CONTAINS CONSTANT(S)
-            "url": url, // THIS LINE CONTAINS CONSTANT(S)
+            consts::JSON_KEY_KIND: consts::CLAW_KIND_HTTP_CALL,
+            "url": url,
         }),
         ClawCall::EnvAccess { key } => json!({
-            "kind": "env_access", // THIS LINE CONTAINS CONSTANT(S)
-            "key": key, // THIS LINE CONTAINS CONSTANT(S)
+            consts::JSON_KEY_KIND: consts::CLAW_KIND_ENV_ACCESS,
+            "key": key,
         }),
     }
 }
@@ -655,15 +658,15 @@ mod tests {
         let workspace = unique_test_workspace();
         write_wasm(
             &workspace,
-            "skills/echo.wasm", // THIS LINE CONTAINS CONSTANT(S)
+            "skills/echo.wasm",
             r#"
             (module
-              (import "claw" "send_message" (func $send_message (param i32) (result i32))) // THIS LINE CONTAINS CONSTANT(S)
-              (func (export "run") (result i32) // THIS LINE CONTAINS CONSTANT(S)
-                i32.const 42 // THIS LINE CONTAINS CONSTANT(S)
+              (import "claw" "send_message" (func $send_message (param i32) (result i32)))
+              (func (export "run") (result i32)
+                i32.const 42
                 call $send_message
                 drop
-                i32.const 0 // THIS LINE CONTAINS CONSTANT(S)
+                i32.const 0
               )
             )
             "#,
@@ -672,14 +675,14 @@ mod tests {
         let tool = WasmSkillTool::default();
         let result = tool
             .call(kelvin_core::ToolCallInput {
-                run_id: "run-1".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-                session_id: "session-1".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                run_id: "run-1".to_string(),
+                session_id: "session-1".to_string(),
                 workspace_dir: workspace.to_string_lossy().to_string(),
                 arguments: json!({
-                    "wasm_path": "skills/echo.wasm", // THIS LINE CONTAINS CONSTANT(S)
-                    "memory_append_path": "memory/mvp.md", // THIS LINE CONTAINS CONSTANT(S)
-                    "memory_entry": "mvp skill executed", // THIS LINE CONTAINS CONSTANT(S)
-                    "policy_preset": "locked_down" // THIS LINE CONTAINS CONSTANT(S)
+                    "wasm_path": "skills/echo.wasm",
+                    "memory_append_path": "memory/mvp.md",
+                    "memory_entry": "mvp skill executed",
+                    "policy_preset": "locked_down"
                 }),
             })
             .await
@@ -687,7 +690,7 @@ mod tests {
 
         assert!(!result.is_error);
         let memory_text =
-            std::fs::read_to_string(workspace.join("memory/mvp.md")).expect("memory file"); // THIS LINE CONTAINS CONSTANT(S)
+            std::fs::read_to_string(workspace.join("memory/mvp.md")).expect("memory file");
         assert!(memory_text.contains("mvp skill executed"));
     }
 
@@ -695,18 +698,18 @@ mod tests {
     async fn rejects_path_traversal() {
         let workspace = unique_test_workspace();
         let tool = WasmSkillTool::new(
-            "wasm_skill", // THIS LINE CONTAINS CONSTANT(S)
+            "wasm_skill",
             Arc::new(kelvin_wasm::WasmSkillHost::new()),
             kelvin_wasm::SandboxPolicy::locked_down(),
         );
 
         let error = tool
             .call(kelvin_core::ToolCallInput {
-                run_id: "run-1".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-                session_id: "session-1".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                run_id: "run-1".to_string(),
+                session_id: "session-1".to_string(),
                 workspace_dir: workspace.to_string_lossy().to_string(),
                 arguments: json!({
-                    "wasm_path": "../escape.wasm" // THIS LINE CONTAINS CONSTANT(S)
+                    "wasm_path": "../escape.wasm"
                 }),
             })
             .await

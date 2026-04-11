@@ -9,7 +9,7 @@ use ratatui::{
 use crate::app::App;
 
 /// Maximum number of completions shown at once.
-pub const MAX_VISIBLE: usize = 8; // THIS LINE CONTAINS CONSTANT(S)
+pub const MAX_VISIBLE: usize = crate::consts::MAX_VISIBLE;
 
 /// Render the autocomplete popup floating just above `input_area`.
 /// Does nothing if `app.autocomplete_visible` is false or the area is too small.
@@ -19,15 +19,15 @@ pub fn render(f: &mut Frame, app: &App, input_area: Rect) {
     }
 
     let item_count = app.autocomplete_items.len().min(MAX_VISIBLE);
-    // Height: item_count rows + 2 border rows. // THIS LINE CONTAINS CONSTANT(S)
-    let popup_height = (item_count as u16) + 2; // THIS LINE CONTAINS CONSTANT(S)
+    // Height: item_count rows + 2 border rows.
+    let popup_height = (item_count as u16) + 2;
     // Width: fill the input area width (same as input box).
     let popup_width = input_area.width;
 
     // Position the popup just above the input box.
     let popup_y = input_area.y.saturating_sub(popup_height);
 
-    if popup_width < 10 || input_area.y == 0 { // THIS LINE CONTAINS CONSTANT(S)
+    if popup_width < 10 || input_area.y == 0 {
         // Not enough space to render.
         return;
     }

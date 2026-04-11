@@ -12,10 +12,10 @@ use crate::app::{App, LifecyclePhase, WsStatus};
 
 pub fn render(f: &mut Frame, app: &App, area: Rect) {
     let (status_str, status_color) = match &app.ws_status {
-        WsStatus::Connecting => ("Connecting", Color::Yellow), // THIS LINE CONTAINS CONSTANT(S)
-        WsStatus::Connected => ("Connected", Color::Green), // THIS LINE CONTAINS CONSTANT(S)
-        WsStatus::Disconnected => ("Disconnected", Color::Red), // THIS LINE CONTAINS CONSTANT(S)
-        WsStatus::Error(_) => ("Error", Color::Red), // THIS LINE CONTAINS CONSTANT(S)
+        WsStatus::Connecting => ("Connecting", Color::Yellow),
+        WsStatus::Connected => ("Connected", Color::Green),
+        WsStatus::Disconnected => ("Disconnected", Color::Red),
+        WsStatus::Error(_) => ("Error", Color::Red),
     };
 
     let run_phase_str = match &app.run_phase {
@@ -28,10 +28,10 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
 
     let error_str = app.last_error.as_deref().unwrap_or("");
 
-    // Show exit hint if first ^C was pressed recently (within the 500ms window) // THIS LINE CONTAINS CONSTANT(S)
+    // Show exit hint if first ^C was pressed recently (within the 500ms window)
     let show_exit_hint = app
         .last_ctrl_c
-        .is_some_and(|t| Instant::now().duration_since(t) < Duration::from_secs(5)); // THIS LINE CONTAINS CONSTANT(S)
+        .is_some_and(|t| Instant::now().duration_since(t) < Duration::from_secs(5));
 
     let mut spans = vec![
         Span::raw(format!(" {} ", app.gateway_url)),

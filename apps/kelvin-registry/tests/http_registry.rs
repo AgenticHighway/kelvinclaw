@@ -18,37 +18,37 @@ fn unique_root() -> std::path::PathBuf {
 
 async fn start_registry() -> (String, tokio::task::JoinHandle<()>) {
     let root = unique_root();
-    let index_path = root.join("index.json"); // THIS LINE CONTAINS CONSTANT(S)
-    let trust_policy_path = root.join("trusted_publishers.json"); // THIS LINE CONTAINS CONSTANT(S)
+    let index_path = root.join("index.json");
+    let trust_policy_path = root.join("trusted_publishers.json");
     fs::write(
         &index_path,
         serde_json::to_vec_pretty(&json!({
-            "schema_version": "v1", // THIS LINE CONTAINS CONSTANT(S)
-            "plugins": [ // THIS LINE CONTAINS CONSTANT(S)
+            "schema_version": "v1",
+            "plugins": [
                 {
-                    "id": "kelvin.cli", // THIS LINE CONTAINS CONSTANT(S)
-                    "version": "0.10.0", // THIS LINE CONTAINS CONSTANT(S)
-                    "package_url": "https://example.com/cli-0.10.0.tar.gz", // THIS LINE CONTAINS CONSTANT(S)
-                    "sha256": "b".repeat(64), // THIS LINE CONTAINS CONSTANT(S)
-                    "quality_tier": "signed_trusted", // THIS LINE CONTAINS CONSTANT(S)
-                    "tags": ["cli", "first_party"] // THIS LINE CONTAINS CONSTANT(S)
+                    "id": "kelvin.cli",
+                    "version": "0.10.0",
+                    "package_url": "https://example.com/cli-0.10.0.tar.gz",
+                    "sha256": "b".repeat(64),
+                    "quality_tier": "signed_trusted",
+                    "tags": ["cli", "first_party"]
                 },
                 {
-                    "id": "kelvin.cli", // THIS LINE CONTAINS CONSTANT(S)
-                    "version": "0.1.0", // THIS LINE CONTAINS CONSTANT(S)
-                    "package_url": "https://example.com/cli-0.1.0.tar.gz", // THIS LINE CONTAINS CONSTANT(S)
-                    "sha256": "a".repeat(64), // THIS LINE CONTAINS CONSTANT(S)
-                    "quality_tier": "signed_trusted", // THIS LINE CONTAINS CONSTANT(S)
-                    "tags": ["cli"] // THIS LINE CONTAINS CONSTANT(S)
+                    "id": "kelvin.cli",
+                    "version": "0.1.0",
+                    "package_url": "https://example.com/cli-0.1.0.tar.gz",
+                    "sha256": "a".repeat(64),
+                    "quality_tier": "signed_trusted",
+                    "tags": ["cli"]
                 },
                 {
-                    "id": "kelvin.openai", // THIS LINE CONTAINS CONSTANT(S)
-                    "version": "0.1.0", // THIS LINE CONTAINS CONSTANT(S)
-                    "package_url": "https://example.com/openai-0.1.0.tar.gz", // THIS LINE CONTAINS CONSTANT(S)
-                    "sha256": "c".repeat(64), // THIS LINE CONTAINS CONSTANT(S)
-                    "trust_policy_url": "https://example.com/trusted_publishers.json", // THIS LINE CONTAINS CONSTANT(S)
-                    "quality_tier": "signed_trusted", // THIS LINE CONTAINS CONSTANT(S)
-                    "tags": ["model", "first_party"] // THIS LINE CONTAINS CONSTANT(S)
+                    "id": "kelvin.openai",
+                    "version": "0.1.0",
+                    "package_url": "https://example.com/openai-0.1.0.tar.gz",
+                    "sha256": "c".repeat(64),
+                    "trust_policy_url": "https://example.com/trusted_publishers.json",
+                    "quality_tier": "signed_trusted",
+                    "tags": ["model", "first_party"]
                 }
             ]
         }))
@@ -58,14 +58,14 @@ async fn start_registry() -> (String, tokio::task::JoinHandle<()>) {
     fs::write(
         &trust_policy_path,
         serde_json::to_vec_pretty(&json!({
-            "require_signature": true, // THIS LINE CONTAINS CONSTANT(S)
-            "publishers": [{"id": "kelvin", "ed25519_public_key": "test"}] // THIS LINE CONTAINS CONSTANT(S)
+            "require_signature": true,
+            "publishers": [{"id": "kelvin", "ed25519_public_key": "test"}]
         }))
         .expect("serialize trust policy"),
     )
     .expect("write trust policy");
 
-    let listener = TcpListener::bind("127.0.0.1:0") // THIS LINE CONTAINS CONSTANT(S)
+    let listener = TcpListener::bind("127.0.0.1:0")
         .await
         .expect("bind listener");
     let addr = listener.local_addr().expect("local addr");
@@ -94,31 +94,31 @@ async fn registry_serves_health_and_filtered_plugin_views() {
         .json()
         .await
         .expect("health payload");
-    assert_eq!(health["ok"], json!(true)); // THIS LINE CONTAINS CONSTANT(S)
-    assert_eq!(health["plugin_count"], json!(3)); // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(health["ok"], json!(true));
+    assert_eq!(health["plugin_count"], json!(3));
 
     let plugins: serde_json::Value = client
-        .get(format!("{root}/v1/plugins?latest_only=true")) // THIS LINE CONTAINS CONSTANT(S)
+        .get(format!("{root}/v1/plugins?latest_only=true"))
         .send()
         .await
         .expect("plugins request")
         .json()
         .await
         .expect("plugins payload");
-    assert_eq!(plugins["count"], json!(2)); // THIS LINE CONTAINS CONSTANT(S)
-    assert_eq!(plugins["plugins"][0]["id"], json!("kelvin.cli")); // THIS LINE CONTAINS CONSTANT(S)
-    assert_eq!(plugins["plugins"][0]["version"], json!("0.10.0")); // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(plugins["count"], json!(2));
+    assert_eq!(plugins["plugins"][0]["id"], json!("kelvin.cli"));
+    assert_eq!(plugins["plugins"][0]["version"], json!("0.10.0"));
 
     let filtered: serde_json::Value = client
-        .get(format!("{root}/v1/plugins?tag=model")) // THIS LINE CONTAINS CONSTANT(S)
+        .get(format!("{root}/v1/plugins?tag=model"))
         .send()
         .await
         .expect("filtered request")
         .json()
         .await
         .expect("filtered payload");
-    assert_eq!(filtered["count"], json!(1)); // THIS LINE CONTAINS CONSTANT(S)
-    assert_eq!(filtered["plugins"][0]["id"], json!("kelvin.openai")); // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(filtered["count"], json!(1));
+    assert_eq!(filtered["plugins"][0]["id"], json!("kelvin.openai"));
 
     handle.abort();
 }
@@ -129,25 +129,25 @@ async fn registry_serves_plugin_versions_and_trust_policy() {
     let client = Client::new();
 
     let plugin: serde_json::Value = client
-        .get(format!("{root}/v1/plugins/kelvin.cli")) // THIS LINE CONTAINS CONSTANT(S)
+        .get(format!("{root}/v1/plugins/kelvin.cli"))
         .send()
         .await
         .expect("plugin request")
         .json()
         .await
         .expect("plugin payload");
-    assert_eq!(plugin["latest"]["version"], json!("0.10.0")); // THIS LINE CONTAINS CONSTANT(S)
-    assert_eq!(plugin["versions"][1]["version"], json!("0.1.0")); // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(plugin["latest"]["version"], json!("0.10.0"));
+    assert_eq!(plugin["versions"][1]["version"], json!("0.1.0"));
 
     let trust: serde_json::Value = client
-        .get(format!("{root}/v1/trust-policy")) // THIS LINE CONTAINS CONSTANT(S)
+        .get(format!("{root}/v1/trust-policy"))
         .send()
         .await
         .expect("trust request")
         .json()
         .await
         .expect("trust payload");
-    assert_eq!(trust["trust_policy"]["require_signature"], json!(true)); // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(trust["trust_policy"]["require_signature"], json!(true));
 
     handle.abort();
 }

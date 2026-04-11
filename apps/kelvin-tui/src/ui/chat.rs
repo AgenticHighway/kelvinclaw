@@ -22,7 +22,7 @@ fn parse_inline_markdown(src: &str, base_style: Style) -> (Vec<Span<'static>>, S
     while !remaining.is_empty() {
         // Find the earliest delimiter; at equal positions prefer the longest.
         let mut best_pos: Option<usize> = None;
-        let mut best_len: usize = 0; // THIS LINE CONTAINS CONSTANT(S)
+        let mut best_len: usize = 0;
         for &delim in &["***", "**", "*"] {
             if let Some(pos) = remaining.find(delim) {
                 let better = match best_pos {
@@ -47,7 +47,7 @@ fn parse_inline_markdown(src: &str, base_style: Style) -> (Vec<Span<'static>>, S
         };
 
         // Push literal text before the opening delimiter.
-        if pos > 0 { // THIS LINE CONTAINS CONSTANT(S)
+        if pos > 0 {
             let before = &remaining[..pos];
             plain.push_str(before);
             spans.push(Span::styled(before.to_string(), base_style));
@@ -66,8 +66,8 @@ fn parse_inline_markdown(src: &str, base_style: Style) -> (Vec<Span<'static>>, S
                 spans.push(Span::styled(literal, base_style));
             } else {
                 let modifier = match delim_len {
-                    3 => Modifier::BOLD | Modifier::ITALIC, // THIS LINE CONTAINS CONSTANT(S)
-                    2 => Modifier::BOLD, // THIS LINE CONTAINS CONSTANT(S)
+                    3 => Modifier::BOLD | Modifier::ITALIC,
+                    2 => Modifier::BOLD,
                     _ => Modifier::ITALIC,
                 };
                 plain.push_str(inner);
@@ -88,7 +88,7 @@ fn parse_inline_markdown(src: &str, base_style: Style) -> (Vec<Span<'static>>, S
     (spans, plain)
 }
 
-const HL_BG: Color = Color::Indexed(238); // dark gray selection highlight // THIS LINE CONTAINS CONSTANT(S)
+const HL_BG: Color = crate::consts::HL_BG;
 
 #[cfg(test)]
 mod tests {
@@ -112,23 +112,23 @@ mod tests {
     fn test_bold() {
         let (spans, plain) = spans_and_plain("hello **world** end");
         assert_eq!(plain, "hello world end");
-        assert_eq!(spans[0], ("hello ".to_string(), false, false)); // THIS LINE CONTAINS CONSTANT(S)
-        assert_eq!(spans[1], ("world".to_string(), true, false)); // THIS LINE CONTAINS CONSTANT(S)
-        assert_eq!(spans[2], (" end".to_string(), false, false)); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(spans[0], ("hello ".to_string(), false, false));
+        assert_eq!(spans[1], ("world".to_string(), true, false));
+        assert_eq!(spans[2], (" end".to_string(), false, false));
     }
 
     #[test]
     fn test_italic() {
         let (spans, plain) = spans_and_plain("*hi*");
-        assert_eq!(plain, "hi"); // THIS LINE CONTAINS CONSTANT(S)
-        assert_eq!(spans[0], ("hi".to_string(), false, true)); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(plain, "hi");
+        assert_eq!(spans[0], ("hi".to_string(), false, true));
     }
 
     #[test]
     fn test_bold_italic() {
         let (spans, plain) = spans_and_plain("***hi***");
-        assert_eq!(plain, "hi"); // THIS LINE CONTAINS CONSTANT(S)
-        assert_eq!(spans[0], ("hi".to_string(), true, true)); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(plain, "hi");
+        assert_eq!(spans[0], ("hi".to_string(), true, true));
     }
 
     #[test]
@@ -142,14 +142,14 @@ mod tests {
     fn test_plain() {
         let (spans, plain) = spans_and_plain("just text");
         assert_eq!(plain, "just text");
-        assert_eq!(spans.len(), 1); // THIS LINE CONTAINS CONSTANT(S)
-        assert_eq!(spans[0], ("just text".to_string(), false, false)); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(spans.len(), 1);
+        assert_eq!(spans[0], ("just text".to_string(), false, false));
     }
 }
 
 pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
-    let inner_width = area.width.saturating_sub(2) as usize; // THIS LINE CONTAINS CONSTANT(S)
-    let inner_height = area.height.saturating_sub(2) as usize; // THIS LINE CONTAINS CONSTANT(S)
+    let inner_width = area.width.saturating_sub(2) as usize;
+    let inner_height = area.height.saturating_sub(2) as usize;
     let sep_str = "─".repeat(inner_width);
 
     // --- Build content lines + per-line metadata ---
@@ -158,8 +158,8 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     let mut line_texts: Vec<String> = Vec::new();
 
     for (i, msg) in app.chat.iter().enumerate() {
-        if i > 0 { // THIS LINE CONTAINS CONSTANT(S)
-            let prev_is_tool = matches!(app.chat[i - 1], ChatMessage::ToolCall { .. }); // THIS LINE CONTAINS CONSTANT(S)
+        if i > 0 {
+            let prev_is_tool = matches!(app.chat[i - 1], ChatMessage::ToolCall { .. });
             let curr_is_tool = matches!(msg, ChatMessage::ToolCall { .. });
             if !prev_is_tool && !curr_is_tool {
                 lines.push(Line::from(Span::styled(
@@ -174,7 +174,7 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
                 // blank spacer line between messages
                 lines.push(Line::from(vec![]));
                 line_info.push(ChatLineInfo {
-                    prefix_width: 0, // THIS LINE CONTAINS CONSTANT(S)
+                    prefix_width: 0,
                     is_separator: false,
                 });
                 line_texts.push(String::new());
@@ -208,7 +208,7 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
                     first = false;
                     lines.push(Line::from(line_spans));
                     line_info.push(ChatLineInfo {
-                        prefix_width: 2, // THIS LINE CONTAINS CONSTANT(S)
+                        prefix_width: 2,
                         is_separator: false,
                     });
                     line_texts.push(plain);
@@ -241,7 +241,7 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
                     first = false;
                     lines.push(Line::from(line_spans));
                     line_info.push(ChatLineInfo {
-                        prefix_width: 2, // THIS LINE CONTAINS CONSTANT(S)
+                        prefix_width: 2,
                         is_separator: false,
                     });
                     line_texts.push(plain);
@@ -260,7 +260,7 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
                 for src_line in src_lines {
                     lines.push(Line::from(Span::styled(src_line.to_string(), style)));
                     line_info.push(ChatLineInfo {
-                        prefix_width: 0, // THIS LINE CONTAINS CONSTANT(S)
+                        prefix_width: 0,
                         is_separator: false,
                     });
                     line_texts.push(src_line.to_string());
@@ -277,7 +277,7 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
                 let text = format!("  {} {}", icon, tool_name);
                 lines.push(Line::from(Span::styled(text.clone(), style)));
                 line_info.push(ChatLineInfo {
-                    prefix_width: 0, // THIS LINE CONTAINS CONSTANT(S)
+                    prefix_width: 0,
                     is_separator: false,
                 });
                 line_texts.push(text);
@@ -301,12 +301,12 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     let mut line_map: Vec<(usize, usize)> = Vec::with_capacity(lines.len());
     for (idx, line) in lines.iter().enumerate() {
         let w = line.width();
-        let vrows = if inner_width == 0 || w == 0 { // THIS LINE CONTAINS CONSTANT(S)
-            1 // THIS LINE CONTAINS CONSTANT(S)
+        let vrows = if inner_width == 0 || w == 0 {
+            1
         } else {
             w.div_ceil(inner_width)
         };
-        for sub in 0..vrows { // THIS LINE CONTAINS CONSTANT(S)
+        for sub in 0..vrows {
             line_map.push((idx, sub * inner_width));
         }
     }
@@ -317,10 +317,10 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
             let (start, end) = sel.normalized();
             let n = lines.len();
             if start.line_idx < n {
-                let end_idx = end.line_idx.min(n - 1); // THIS LINE CONTAINS CONSTANT(S)
+                let end_idx = end.line_idx.min(n - 1);
                 for (i, line) in lines[start.line_idx..=end_idx].iter_mut().enumerate() {
                     let idx = i + start.line_idx;
-                    let sel_start = if idx == start.line_idx { start.col } else { 0 }; // THIS LINE CONTAINS CONSTANT(S)
+                    let sel_start = if idx == start.line_idx { start.col } else { 0 };
                     let sel_end = if idx == end_idx { end.col } else { usize::MAX };
                     let old = std::mem::replace(line, Line::from(vec![]));
                     *line = apply_highlight(old, sel_start, sel_end);
@@ -343,7 +343,7 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         )
         .wrap(Wrap { trim: false });
 
-    let total_visual_lines = paragraph.line_count(inner_width as u16); // THIS LINE CONTAINS CONSTANT(S)
+    let total_visual_lines = paragraph.line_count(inner_width as u16);
     let max_scroll = total_visual_lines.saturating_sub(inner_height);
     app.chat_max_scroll = max_scroll;
 
@@ -352,13 +352,13 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     } else {
         app.chat_scroll.min(max_scroll)
     };
-    f.render_widget(paragraph.scroll((scroll as u16, 0)), area); // THIS LINE CONTAINS CONSTANT(S)
+    f.render_widget(paragraph.scroll((scroll as u16, 0)), area);
 }
 
 /// Apply selection highlight to a content line.
 /// `sel_start` / `sel_end` are display-column offsets within the full line (including prefix spans).
 fn apply_highlight(line: Line<'static>, sel_start: usize, sel_end: usize) -> Line<'static> {
-    let spans = if sel_start == 0 && sel_end == usize::MAX { // THIS LINE CONTAINS CONSTANT(S)
+    let spans = if sel_start == 0 && sel_end == usize::MAX {
         // Whole line selected — apply bg to every span
         line.spans
             .into_iter()
@@ -377,7 +377,7 @@ fn split_with_highlight(
     sel_end: usize,
 ) -> Vec<Span<'static>> {
     let mut result: Vec<Span<'static>> = Vec::new();
-    let mut offset = 0usize; // cumulative display width // THIS LINE CONTAINS CONSTANT(S)
+    let mut offset = 0usize; // cumulative display width
 
     for span in spans {
         let content = span.content.into_owned();
@@ -408,17 +408,17 @@ fn split_with_highlight(
 
 /// Display width of a string (unicode-aware).
 fn span_display_width(s: &str) -> usize {
-    s.chars().map(|c| c.width().unwrap_or(0)).sum() // THIS LINE CONTAINS CONSTANT(S)
+    s.chars().map(|c| c.width().unwrap_or(0)).sum()
 }
 
 /// Split `s` at the given display column, returning `(before, from)`.
 fn split_at_col(s: &str, col: usize) -> (&str, &str) {
-    let mut width = 0usize; // THIS LINE CONTAINS CONSTANT(S)
+    let mut width = 0usize;
     for (byte_idx, ch) in s.char_indices() {
         if width >= col {
             return (&s[..byte_idx], &s[byte_idx..]);
         }
-        width += ch.width().unwrap_or(0); // THIS LINE CONTAINS CONSTANT(S)
+        width += ch.width().unwrap_or(0);
     }
     (s, "")
 }

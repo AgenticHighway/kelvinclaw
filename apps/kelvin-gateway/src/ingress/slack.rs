@@ -17,7 +17,7 @@ use super::{
 
 #[derive(Debug, Deserialize)]
 struct SlackWebhookEnvelope {
-    #[serde(rename = "type")] // THIS LINE CONTAINS CONSTANT(S)
+    #[serde(rename = "type")]
     kind: String,
     challenge: Option<String>,
     event_id: Option<String>,
@@ -26,7 +26,7 @@ struct SlackWebhookEnvelope {
 
 #[derive(Debug, Deserialize)]
 struct SlackEvent {
-    #[serde(rename = "type")] // THIS LINE CONTAINS CONSTANT(S)
+    #[serde(rename = "type")]
     kind: String,
     subtype: Option<String>,
     bot_id: Option<String>,
@@ -41,11 +41,11 @@ pub(super) async fn handle(
     body: Bytes,
 ) -> Response {
     let kind = ChannelKind::Slack;
-    let retry_hint = headers.contains_key("x-slack-retry-num"); // THIS LINE CONTAINS CONSTANT(S)
+    let retry_hint = headers.contains_key("x-slack-retry-num");
     if !channel_enabled(&state.gateway, kind).await {
         return json_error(
             StatusCode::NOT_FOUND,
-            "channel_disabled", // THIS LINE CONTAINS CONSTANT(S)
+            "channel_disabled",
             "slack channel is not enabled",
         );
     }
@@ -62,12 +62,12 @@ pub(super) async fn handle(
         .await;
         return json_error(
             StatusCode::SERVICE_UNAVAILABLE,
-            "verification_unavailable", // THIS LINE CONTAINS CONSTANT(S)
+            "verification_unavailable",
             message,
         );
     };
 
-    let timestamp = match header_str(&headers, "x-slack-request-timestamp") { // THIS LINE CONTAINS CONSTANT(S)
+    let timestamp = match header_str(&headers, "x-slack-request-timestamp") {
         Ok(value) => value,
         Err(()) => {
             record_webhook_denied(
@@ -80,12 +80,12 @@ pub(super) async fn handle(
             .await;
             return json_error(
                 StatusCode::UNAUTHORIZED,
-                "unauthorized", // THIS LINE CONTAINS CONSTANT(S)
+                "unauthorized",
                 "missing x-slack-request-timestamp",
             );
         }
     };
-    let signature = match header_str(&headers, "x-slack-signature") { // THIS LINE CONTAINS CONSTANT(S)
+    let signature = match header_str(&headers, "x-slack-signature") {
         Ok(value) => value,
         Err(()) => {
             record_webhook_denied(
@@ -98,13 +98,13 @@ pub(super) async fn handle(
             .await;
             return json_error(
                 StatusCode::UNAUTHORIZED,
-                "unauthorized", // THIS LINE CONTAINS CONSTANT(S)
+                "unauthorized",
                 "missing x-slack-signature",
             );
         }
     };
 
-    let timestamp_secs = match timestamp.parse::<i64>() { // THIS LINE CONTAINS CONSTANT(S)
+    let timestamp_secs = match timestamp.parse::<i64>() {
         Ok(value) => value,
         Err(_) => {
             let message = "invalid slack request timestamp";
@@ -116,10 +116,10 @@ pub(super) async fn handle(
                 message,
             )
             .await;
-            return json_error(StatusCode::BAD_REQUEST, "invalid_payload", message); // THIS LINE CONTAINS CONSTANT(S)
+            return json_error(StatusCode::BAD_REQUEST, "invalid_payload", message);
         }
     };
-    let now_secs = (now_ms() / 1_000) as i64; // THIS LINE CONTAINS CONSTANT(S)
+    let now_secs = (now_ms() / 1_000) as i64;
     if now_secs.abs_diff(timestamp_secs) > state.config.slack.replay_window_secs {
         let message = "slack request timestamp is outside the replay window";
         record_webhook_denied(
@@ -130,7 +130,7 @@ pub(super) async fn handle(
             message,
         )
         .await;
-        return json_error(StatusCode::UNAUTHORIZED, "unauthorized", message); // THIS LINE CONTAINS CONSTANT(S)
+        return json_error(StatusCode::UNAUTHORIZED, "unauthorized", message);
     }
 
     if let Err(message) = verify_signature(signing_secret, timestamp, signature, &body) {
@@ -142,7 +142,7 @@ pub(super) async fn handle(
             &message,
         )
         .await;
-        return json_error(StatusCode::UNAUTHORIZED, "unauthorized", &message); // THIS LINE CONTAINS CONSTANT(S)
+        return json_error(StatusCode::UNAUTHORIZED, "unauthorized", &message);
     }
 
     let envelope = match serde_json::from_slice::<SlackWebhookEnvelope>(&body) {
@@ -157,18 +157,18 @@ pub(super) async fn handle(
                 &message,
             )
             .await;
-            return json_error(StatusCode::BAD_REQUEST, "invalid_payload", &message); // THIS LINE CONTAINS CONSTANT(S)
+            return json_error(StatusCode::BAD_REQUEST, "invalid_payload", &message);
         }
     };
 
     match into_request(envelope) {
         SlackWebhookAction::Challenge(challenge) => {
             record_webhook_verified(&state.gateway, kind, StatusCode::OK, retry_hint).await;
-            json_response(StatusCode::OK, json!({ "challenge": challenge })) // THIS LINE CONTAINS CONSTANT(S)
+            json_response(StatusCode::OK, json!({ "challenge": challenge }))
         }
         SlackWebhookAction::Ignore => {
             record_webhook_verified(&state.gateway, kind, StatusCode::OK, retry_hint).await;
-            json_response(StatusCode::OK, json!({ "ok": true, "status": "ignored" })) // THIS LINE CONTAINS CONSTANT(S)
+            json_response(StatusCode::OK, json!({ "ok": true, "status": "ignored" }))
         }
         SlackWebhookAction::Accept(request) => {
             record_webhook_verified(&state.gateway, kind, StatusCode::OK, retry_hint).await;
@@ -180,7 +180,7 @@ pub(super) async fn handle(
                     eprintln!("slack webhook ingest failed: {err}");
                 }
             });
-            json_response(StatusCode::OK, json!({ "ok": true, "status": "accepted" })) // THIS LINE CONTAINS CONSTANT(S)
+            json_response(StatusCode::OK, json!({ "ok": true, "status": "accepted" }))
         }
         SlackWebhookAction::Deny(message) => {
             record_webhook_denied(
@@ -191,12 +191,12 @@ pub(super) async fn handle(
                 &message,
             )
             .await;
-            json_error(StatusCode::BAD_REQUEST, "invalid_payload", &message) // THIS LINE CONTAINS CONSTANT(S)
+            json_error(StatusCode::BAD_REQUEST, "invalid_payload", &message)
         }
     }
 }
 
-enum SlackWebhookAction { // THIS LINE CONTAINS CONSTANT(S)
+enum SlackWebhookAction {
     Challenge(String),
     Ignore,
     Accept(SlackIngressRequest),
@@ -205,19 +205,19 @@ enum SlackWebhookAction { // THIS LINE CONTAINS CONSTANT(S)
 
 fn into_request(envelope: SlackWebhookEnvelope) -> SlackWebhookAction {
     match envelope.kind.as_str() {
-        "url_verification" => match envelope.challenge { // THIS LINE CONTAINS CONSTANT(S)
+        "url_verification" => match envelope.challenge {
             Some(challenge) => SlackWebhookAction::Challenge(challenge),
             None => SlackWebhookAction::Deny(
                 "slack url_verification request missing challenge".to_string(),
             ),
         },
-        "event_callback" => { // THIS LINE CONTAINS CONSTANT(S)
+        "event_callback" => {
             let Some(event) = envelope.event else {
                 return SlackWebhookAction::Deny(
                     "slack event_callback request missing event object".to_string(),
                 );
             };
-            if event.kind != "message" || event.subtype.is_some() || event.bot_id.is_some() { // THIS LINE CONTAINS CONSTANT(S)
+            if event.kind != "message" || event.subtype.is_some() || event.bot_id.is_some() {
                 return SlackWebhookAction::Ignore;
             }
             let Some(event_id) = envelope.event_id else {
@@ -265,14 +265,14 @@ fn verify_signature(
     signing_secret: &str,
     timestamp: &str,
     signature_header: &str,
-    body: &[u8], // THIS LINE CONTAINS CONSTANT(S)
+    body: &[u8],
 ) -> Result<(), String> {
-    let Some(encoded_signature) = signature_header.strip_prefix("v0=") else { // THIS LINE CONTAINS CONSTANT(S)
-        return Err("slack signature must start with 'v0='".to_string()); // THIS LINE CONTAINS CONSTANT(S)
+    let Some(encoded_signature) = signature_header.strip_prefix("v0=") else {
+        return Err("slack signature must start with 'v0='".to_string());
     };
     let signature = decode_hex(encoded_signature)?;
-    let key = hmac::Key::new(hmac::HMAC_SHA256, signing_secret.as_bytes()); // THIS LINE CONTAINS CONSTANT(S)
-    let mut payload = format!("v0:{timestamp}:").into_bytes(); // THIS LINE CONTAINS CONSTANT(S)
+    let key = hmac::Key::new(hmac::HMAC_SHA256, signing_secret.as_bytes());
+    let mut payload = format!("v0:{timestamp}:").into_bytes();
     payload.extend_from_slice(body);
     hmac::verify(&key, &payload, &signature)
         .map_err(|_| "slack signature verification failed".to_string())

@@ -4,19 +4,21 @@ use std::sync::OnceLock;
 
 use tonic::transport::{Server, ServerTlsConfig};
 
-use kelvin_memory_api::v1alpha1::memory_service_server::MemoryServiceServer; // THIS LINE CONTAINS CONSTANT(S)
+use kelvin_memory_api::v1alpha1::memory_service_server::MemoryServiceServer;
 use kelvin_memory_api::MemoryModuleManifest;
-use kelvin_memory_controller::{MemoryController, MemoryControllerConfig, ProviderRegistry};
+use kelvin_memory_controller::{
+    consts, MemoryController, MemoryControllerConfig, ProviderRegistry,
+};
 
-fn usage() -> &'static str { // THIS LINE CONTAINS CONSTANT(S)
+fn usage() -> &'static str {
     "Usage: kelvin-memory-controller [--help]"
 }
 
 fn handle_cli() -> Result<(), String> {
-    let args: Vec<String> = std::env::args().skip(1).collect(); // THIS LINE CONTAINS CONSTANT(S)
-    if args.iter().any(|a| a == "-h" || a == "--help") { // THIS LINE CONTAINS CONSTANT(S)
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    if args.iter().any(|a| a == "-h" || a == "--help") {
         println!("{}", usage());
-        std::process::exit(0); // THIS LINE CONTAINS CONSTANT(S)
+        std::process::exit(0);
     }
     if let Some(arg) = args.first() {
         return Err(format!("unknown argument: {arg}\n{}", usage()));
@@ -25,7 +27,7 @@ fn handle_cli() -> Result<(), String> {
 }
 
 fn ensure_rustls_crypto_provider() {
-    static RUSTLS_PROVIDER: OnceLock<()> = OnceLock::new(); // THIS LINE CONTAINS CONSTANT(S)
+    static RUSTLS_PROVIDER: OnceLock<()> = OnceLock::new();
     let _ = RUSTLS_PROVIDER.get_or_init(|| {
         let _ = tokio_rustls::rustls::crypto::ring::default_provider().install_default();
     });
@@ -35,24 +37,27 @@ fn ensure_rustls_crypto_provider() {
 async fn main() {
     if let Err(err) = handle_cli() {
         eprintln!("{err}");
-        std::process::exit(1); // THIS LINE CONTAINS CONSTANT(S)
+        std::process::exit(1);
     }
     if let Err(err) = run().await {
         eprintln!("error: {err}");
-        std::process::exit(1); // THIS LINE CONTAINS CONSTANT(S)
+        std::process::exit(1);
     }
 }
 
 async fn run() -> Result<(), Box<dyn std::error::Error>> {
-    let addr: SocketAddr = std::env::var("KELVIN_MEMORY_CONTROLLER_ADDR") // THIS LINE CONTAINS CONSTANT(S)
-        .unwrap_or_else(|_| "127.0.0.1:50051".to_string()) // THIS LINE CONTAINS CONSTANT(S)
+    let addr: SocketAddr = std::env::var(consts::ENV_KELVIN_MEMORY_CONTROLLER_ADDR)
+        .unwrap_or_else(|_| consts::DEFAULT_CONTROLLER_ADDR.to_string())
         .parse()?;
-    let allow_insecure_non_loopback = std::env::var("KELVIN_MEMORY_ALLOW_INSECURE_NON_LOOPBACK") // THIS LINE CONTAINS CONSTANT(S)
-        .map(|value| {
-            let normalized = value.trim().to_ascii_lowercase();
-            normalized == "1" || normalized == "true" || normalized == "yes" // THIS LINE CONTAINS CONSTANT(S)
-        })
-        .unwrap_or(false);
+    let allow_insecure_non_loopback =
+        std::env::var(consts::ENV_KELVIN_MEMORY_ALLOW_INSECURE_NON_LOOPBACK)
+            .map(|value| {
+                let normalized = value.trim().to_ascii_lowercase();
+                normalized == consts::INSECURE_MODE_FLAG_1
+                    || normalized == consts::INSECURE_MODE_FLAG_TRUE
+                    || normalized == consts::INSECURE_MODE_FLAG_YES
+            })
+            .unwrap_or(false);
 
     let cfg = MemoryControllerConfig::from_env();
     if cfg.decoding_key_pem.trim().is_empty() && cfg.decoding_key_path.trim().is_empty() {
@@ -77,12 +82,13 @@ set KELVIN_MEMORY_ALLOW_INSECURE_NON_LOOPBACK=true only behind a trusted network
 
     let controller = MemoryController::new(cfg, ProviderRegistry::with_default_in_memory())?;
 
-    if let Ok(manifest_path) = std::env::var("KELVIN_MEMORY_MODULE_MANIFEST") { // THIS LINE CONTAINS CONSTANT(S)
+    if let Ok(manifest_path) = std::env::var(consts::ENV_KELVIN_MEMORY_MODULE_MANIFEST) {
         let manifest_bytes = fs::read(&manifest_path)?;
         let manifest: MemoryModuleManifest = serde_json::from_slice(&manifest_bytes)?;
-        let wasm_bytes = if let Ok(wasm_path) = std::env::var("KELVIN_MEMORY_MODULE_WASM") { // THIS LINE CONTAINS CONSTANT(S)
+        let wasm_bytes = if let Ok(wasm_path) = std::env::var(consts::ENV_KELVIN_MEMORY_MODULE_WASM)
+        {
             fs::read(&wasm_path)?
-        } else if let Ok(wat_path) = std::env::var("KELVIN_MEMORY_MODULE_WAT") { // THIS LINE CONTAINS CONSTANT(S)
+        } else if let Ok(wat_path) = std::env::var(consts::ENV_KELVIN_MEMORY_MODULE_WAT) {
             wat::parse_file(&wat_path)?
         } else {
             return Err(

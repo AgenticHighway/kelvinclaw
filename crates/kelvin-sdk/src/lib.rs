@@ -8,7 +8,7 @@ use async_trait::async_trait;
 use chrono::Local;
 use semver::Version;
 use serde_json::json;
-use sha2::{Digest, Sha256}; // THIS LINE CONTAINS CONSTANT(S)
+use sha2::{Digest, Sha256};
 use tokio::sync::{broadcast, RwLock};
 use tokio::time::{sleep, Duration};
 use uuid::Uuid;
@@ -20,13 +20,14 @@ use kelvin_core::{
     PluginSecurityPolicy, RunOutcome, RunState, SessionDescriptor, SessionMessage, SessionRole,
     SessionStore, Tool, ToolCallInput, ToolCallResult, ToolRegistry,
 };
-#[cfg(any(not(feature = "memory_rpc"), feature = "memory_legacy_fallback"))] // THIS LINE CONTAINS CONSTANT(S)
+#[cfg(any(not(feature = "memory_rpc"), feature = "memory_legacy_fallback"))]
 use kelvin_memory::MemoryBackendKind;
-#[cfg(any(not(feature = "memory_rpc"), feature = "memory_legacy_fallback"))] // THIS LINE CONTAINS CONSTANT(S)
+#[cfg(any(not(feature = "memory_rpc"), feature = "memory_legacy_fallback"))]
 use kelvin_memory::MemoryFactory;
-#[cfg(feature = "memory_rpc")] // THIS LINE CONTAINS CONSTANT(S)
+#[cfg(feature = "memory_rpc")]
 use kelvin_memory_client::{MemoryClientConfig, RpcMemoryManager};
 
+pub mod consts;
 pub mod scheduler;
 mod toolpack;
 
@@ -36,9 +37,7 @@ pub use scheduler::{
     SchedulerStore,
 };
 
-const MIN_DEFAULT_TIMEOUT_MS: u64 = 100; // THIS LINE CONTAINS CONSTANT(S)
-const MAX_DEFAULT_TIMEOUT_MS: u64 = 300_000; // THIS LINE CONTAINS CONSTANT(S)
-const MAX_CONFIG_ID_LEN: usize = 128; // THIS LINE CONTAINS CONSTANT(S)
+use crate::consts::{MAX_CONFIG_ID_LEN, MAX_DEFAULT_TIMEOUT_MS, MIN_DEFAULT_TIMEOUT_MS};
 
 /// ### Brief
 ///
@@ -49,7 +48,7 @@ const MAX_CONFIG_ID_LEN: usize = 128; // THIS LINE CONTAINS CONSTANT(S)
 /// * `InMemory` - in-memory vector store
 /// * `Fallback` - in-memory vector store with markdown fallback
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum KelvinCliMemoryMode { // THIS LINE CONTAINS CONSTANT(S)
+pub enum KelvinCliMemoryMode {
     Markdown,
     InMemory,
     Fallback,
@@ -62,16 +61,16 @@ impl KelvinCliMemoryMode {
     /// parse a memory mode string, defaulting to `Markdown` on unrecognized input
     ///
     /// ### Arguments
-    /// * `input` - string to parse; accepts "markdown", "md", "in-memory", "memory", "inmemory", "fallback", "with-fallback" // THIS LINE CONTAINS CONSTANT(S)
+    /// * `input` - string to parse; accepts "markdown", "md", "in-memory", "memory", "inmemory", "fallback", "with-fallback"
     ///
     /// ### Returns
     /// parsed `KelvinCliMemoryMode`; unrecognized values fall back to `Markdown`
     pub fn parse(input: &str) -> Self {
         let normalized = input.trim().to_lowercase();
         match normalized.as_str() {
-            "markdown" | "md" => Self::Markdown, // THIS LINE CONTAINS CONSTANT(S)
-            "in-memory" | "in_memory" | "memory" | "inmemory" => Self::InMemory, // THIS LINE CONTAINS CONSTANT(S)
-            "fallback" | "with-fallback" => Self::Fallback, // THIS LINE CONTAINS CONSTANT(S)
+            "markdown" | "md" => Self::Markdown,
+            "in-memory" | "in_memory" | "memory" | "inmemory" => Self::InMemory,
+            "fallback" | "with-fallback" => Self::Fallback,
             _ => Self::Markdown,
         }
     }
@@ -82,7 +81,7 @@ impl KelvinCliMemoryMode {
     ///
     /// ### Returns
     /// `MemoryBackendKind` variant matching this mode
-    #[cfg(any(not(feature = "memory_rpc"), feature = "memory_legacy_fallback"))] // THIS LINE CONTAINS CONSTANT(S)
+    #[cfg(any(not(feature = "memory_rpc"), feature = "memory_legacy_fallback"))]
     fn as_backend_kind(self) -> MemoryBackendKind {
         match self {
             Self::Markdown => MemoryBackendKind::Markdown,
@@ -123,7 +122,7 @@ pub struct KelvinSdkConfig {
     pub session_id: String,
     pub workspace_dir: PathBuf,
     pub memory_mode: KelvinCliMemoryMode,
-    pub timeout_ms: u64, // THIS LINE CONTAINS CONSTANT(S)
+    pub timeout_ms: u64,
     pub system_prompt: Option<String>,
     pub core_version: String,
     pub plugin_security_policy: PluginSecurityPolicy,
@@ -157,8 +156,8 @@ impl KelvinSdkConfig {
             ));
         }
         validate_config_identifier("session id", &self.session_id)?;
-        validate_workspace_dir(&self.workspace_dir, "workspace_dir")?; // THIS LINE CONTAINS CONSTANT(S)
-        validate_timeout_ms(self.timeout_ms, "timeout_ms")?; // THIS LINE CONTAINS CONSTANT(S)
+        validate_workspace_dir(&self.workspace_dir, "workspace_dir")?;
+        validate_timeout_ms(self.timeout_ms, "timeout_ms")?;
         validate_core_version(&self.core_version)?;
         validate_model_selection(&self.model_provider, self.load_installed_plugins)?;
         validate_persistence_policy(self.max_session_history_messages, self.compact_to_messages)?;
@@ -180,20 +179,20 @@ impl KelvinSdkConfig {
     pub fn for_prompt(prompt: impl Into<String>) -> Self {
         Self {
             prompt: prompt.into(),
-            session_id: "main".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-            workspace_dir: std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")), // THIS LINE CONTAINS CONSTANT(S)
+            session_id: "main".to_string(),
+            workspace_dir: std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")),
             memory_mode: KelvinCliMemoryMode::Markdown,
-            timeout_ms: 300_000, // THIS LINE CONTAINS CONSTANT(S)
+            timeout_ms: 300_000,
             system_prompt: None,
-            core_version: "0.1.0".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            core_version: "0.1.0".to_string(),
             plugin_security_policy: PluginSecurityPolicy::default(),
             load_installed_plugins: true,
             model_provider: KelvinSdkModelSelection::Echo,
             state_dir: None,
             persist_runs: true,
-            max_session_history_messages: 128, // THIS LINE CONTAINS CONSTANT(S)
-            compact_to_messages: 64, // THIS LINE CONTAINS CONSTANT(S)
-            max_tool_iterations: 10, // THIS LINE CONTAINS CONSTANT(S)
+            max_session_history_messages: 128,
+            compact_to_messages: 64,
+            max_tool_iterations: 10,
         }
     }
 }
@@ -207,15 +206,15 @@ impl KelvinSdkConfig {
 /// * `InstalledPlugin` - use a specific installed model plugin by id
 /// * `InstalledPluginFailover` - failover across multiple plugins with retries and backoff
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum KelvinSdkModelSelection { // THIS LINE CONTAINS CONSTANT(S)
+pub enum KelvinSdkModelSelection {
     Echo,
     InstalledPlugin {
         plugin_id: String,
     },
     InstalledPluginFailover {
         plugin_ids: Vec<String>,
-        max_retries_per_provider: u8, // THIS LINE CONTAINS CONSTANT(S)
-        retry_backoff_ms: u64, // THIS LINE CONTAINS CONSTANT(S)
+        max_retries_per_provider: u8,
+        retry_backoff_ms: u64,
     },
 }
 
@@ -232,10 +231,10 @@ pub enum KelvinSdkModelSelection { // THIS LINE CONTAINS CONSTANT(S)
 #[derive(Debug, Clone)]
 pub struct KelvinRunSummary {
     pub run_id: String,
-    pub accepted_at_ms: u128, // THIS LINE CONTAINS CONSTANT(S)
+    pub accepted_at_ms: u128,
     pub provider: String,
     pub model: String,
-    pub duration_ms: u128, // THIS LINE CONTAINS CONSTANT(S)
+    pub duration_ms: u128,
     pub payloads: Vec<String>,
     pub loaded_installed_plugins: usize,
     pub cli_plugin_preflight: String,
@@ -271,7 +270,7 @@ pub struct KelvinSdkRuntimeConfig {
     pub workspace_dir: PathBuf,
     pub default_session_id: String,
     pub memory_mode: KelvinCliMemoryMode,
-    pub default_timeout_ms: u64, // THIS LINE CONTAINS CONSTANT(S)
+    pub default_timeout_ms: u64,
     pub default_system_prompt: Option<String>,
     pub core_version: String,
     pub plugin_security_policy: PluginSecurityPolicy,
@@ -298,8 +297,8 @@ impl KelvinSdkRuntimeConfig {
     /// - model selection invalid
     pub fn validate(&self) -> KelvinResult<()> {
         validate_config_identifier("default session id", &self.default_session_id)?;
-        validate_workspace_dir(&self.workspace_dir, "workspace_dir")?; // THIS LINE CONTAINS CONSTANT(S)
-        validate_timeout_ms(self.default_timeout_ms, "default_timeout_ms")?; // THIS LINE CONTAINS CONSTANT(S)
+        validate_workspace_dir(&self.workspace_dir, "workspace_dir")?;
+        validate_timeout_ms(self.default_timeout_ms, "default_timeout_ms")?;
         validate_core_version(&self.core_version)?;
         validate_model_selection(&self.model_provider, self.load_installed_plugins)?;
         validate_persistence_policy(self.max_session_history_messages, self.compact_to_messages)?;
@@ -328,7 +327,7 @@ impl KelvinSdkRuntimeConfig {
             state_dir: config
                 .state_dir
                 .clone()
-                .or_else(|| Some(config.workspace_dir.join(".kelvin").join("state"))), // THIS LINE CONTAINS CONSTANT(S)
+                .or_else(|| Some(config.workspace_dir.join(".kelvin").join("state"))),
             persist_runs: config.persist_runs,
             max_session_history_messages: config.max_session_history_messages,
             compact_to_messages: config.compact_to_messages,
@@ -354,7 +353,7 @@ pub struct KelvinSdkRunRequest {
     pub prompt: String,
     pub session_id: Option<String>,
     pub workspace_dir: Option<PathBuf>,
-    pub timeout_ms: Option<u64>, // THIS LINE CONTAINS CONSTANT(S)
+    pub timeout_ms: Option<u64>,
     pub system_prompt: Option<String>,
     pub memory_query: Option<String>,
     pub run_id: Option<String>,
@@ -389,7 +388,7 @@ impl KelvinSdkRunRequest {
 #[derive(Debug, Clone)]
 pub struct KelvinSdkAcceptedRun {
     pub run_id: String,
-    pub accepted_at_ms: u128, // THIS LINE CONTAINS CONSTANT(S)
+    pub accepted_at_ms: u128,
     pub cli_plugin_preflight: Option<String>,
 }
 
@@ -436,7 +435,7 @@ fn validate_workspace_dir(path: &Path, label: &str) -> KelvinResult<()> {
 ///
 /// ### Errors
 /// - value is below `MIN_DEFAULT_TIMEOUT_MS` or above `MAX_DEFAULT_TIMEOUT_MS`
-fn validate_timeout_ms(value: u64, label: &str) -> KelvinResult<()> { // THIS LINE CONTAINS CONSTANT(S)
+fn validate_timeout_ms(value: u64, label: &str) -> KelvinResult<()> {
     if !(MIN_DEFAULT_TIMEOUT_MS..=MAX_DEFAULT_TIMEOUT_MS).contains(&value) {
         return Err(KelvinError::InvalidInput(format!(
             "{label} must be between {MIN_DEFAULT_TIMEOUT_MS} and {MAX_DEFAULT_TIMEOUT_MS} milliseconds"
@@ -454,21 +453,21 @@ fn validate_timeout_ms(value: u64, label: &str) -> KelvinResult<()> { // THIS LI
 /// * `compact_to_messages` - number of messages to retain after compaction
 ///
 /// ### Errors
-/// - `max_session_history_messages` is less than 4 // THIS LINE CONTAINS CONSTANT(S)
-/// - `compact_to_messages` is less than 2 // THIS LINE CONTAINS CONSTANT(S)
+/// - `max_session_history_messages` is less than 4
+/// - `compact_to_messages` is less than 2
 /// - `compact_to_messages` is not strictly less than `max_session_history_messages`
 fn validate_persistence_policy(
     max_session_history_messages: usize,
     compact_to_messages: usize,
 ) -> KelvinResult<()> {
-    if max_session_history_messages < 4 { // THIS LINE CONTAINS CONSTANT(S)
+    if max_session_history_messages < 4 {
         return Err(KelvinError::InvalidInput(
-            "max_session_history_messages must be >= 4".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            "max_session_history_messages must be >= 4".to_string(),
         ));
     }
-    if compact_to_messages < 2 { // THIS LINE CONTAINS CONSTANT(S)
+    if compact_to_messages < 2 {
         return Err(KelvinError::InvalidInput(
-            "compact_to_messages must be >= 2".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            "compact_to_messages must be >= 2".to_string(),
         ));
     }
     if compact_to_messages >= max_session_history_messages {
@@ -611,9 +610,9 @@ fn validate_model_selection(
                     )));
                 }
             }
-            if *retry_backoff_ms == 0 { // THIS LINE CONTAINS CONSTANT(S)
+            if *retry_backoff_ms == 0 {
                 return Err(KelvinError::InvalidInput(
-                    "retry_backoff_ms must be >= 1".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                    "retry_backoff_ms must be >= 1".to_string(),
                 ));
             }
             Ok(())
@@ -687,14 +686,14 @@ impl RuntimePersistence {
     ///
     /// return the sessions subdirectory path, or `None` if no state directory is configured
     fn sessions_dir(&self) -> Option<PathBuf> {
-        self.state_dir.as_ref().map(|root| root.join("sessions")) // THIS LINE CONTAINS CONSTANT(S)
+        self.state_dir.as_ref().map(|root| root.join("sessions"))
     }
 
     /// ### Brief
     ///
     /// return the runs subdirectory path, or `None` if no state directory is configured
     fn runs_dir(&self) -> Option<PathBuf> {
-        self.state_dir.as_ref().map(|root| root.join("runs")) // THIS LINE CONTAINS CONSTANT(S)
+        self.state_dir.as_ref().map(|root| root.join("runs"))
     }
 
     /// ### Brief
@@ -702,9 +701,9 @@ impl RuntimePersistence {
     /// ensure the sessions and runs subdirectories exist
     fn ensure_layout(&self) -> KelvinResult<()> {
         if let Some(root) = &self.state_dir {
-            fs::create_dir_all(root.join("sessions")) // THIS LINE CONTAINS CONSTANT(S)
+            fs::create_dir_all(root.join("sessions"))
                 .map_err(|err| KelvinError::Io(format!("create sessions dir: {err}")))?;
-            fs::create_dir_all(root.join("runs")) // THIS LINE CONTAINS CONSTANT(S)
+            fs::create_dir_all(root.join("runs"))
                 .map_err(|err| KelvinError::Io(format!("create runs dir: {err}")))?;
         }
         Ok(())
@@ -712,14 +711,14 @@ impl RuntimePersistence {
 
     /// ### Brief
     ///
-    /// hash a string to a hex-encoded SHA256 digest for use as a safe filename // THIS LINE CONTAINS CONSTANT(S)
+    /// hash a string to a hex-encoded SHA256 digest for use as a safe filename
     fn key_hex(value: &str) -> String {
-        let mut hasher = Sha256::new(); // THIS LINE CONTAINS CONSTANT(S)
+        let mut hasher = Sha256::new();
         hasher.update(value.as_bytes());
         let digest = hasher.finalize();
-        let mut out = String::with_capacity(digest.len() * 2); // THIS LINE CONTAINS CONSTANT(S)
+        let mut out = String::with_capacity(digest.len() * 2);
         for byte in digest {
-            out.push_str(&format!("{byte:02x}")); // THIS LINE CONTAINS CONSTANT(S)
+            out.push_str(&format!("{byte:02x}"));
         }
         out
     }
@@ -783,7 +782,7 @@ impl RuntimePersistence {
             if !is_dir {
                 continue;
             }
-            let descriptor_path = entry.path().join("descriptor.json"); // THIS LINE CONTAINS CONSTANT(S)
+            let descriptor_path = entry.path().join("descriptor.json");
             if !descriptor_path.is_file() {
                 continue;
             }
@@ -808,7 +807,7 @@ impl RuntimePersistence {
                 }
             };
 
-            let messages_path = entry.path().join("messages.jsonl"); // THIS LINE CONTAINS CONSTANT(S)
+            let messages_path = entry.path().join("messages.jsonl");
             let session_messages = if messages_path.is_file() {
                 self.read_messages_file(&messages_path)
             } else {
@@ -849,7 +848,7 @@ impl RuntimePersistence {
                         path,
                         &format!(
                             "failed to read messages line {}: {err}",
-                            line_number.saturating_add(1) // THIS LINE CONTAINS CONSTANT(S)
+                            line_number.saturating_add(1)
                         ),
                     );
                     return Vec::new();
@@ -865,7 +864,7 @@ impl RuntimePersistence {
                         path,
                         &format!(
                             "invalid messages line {} json: {err}",
-                            line_number.saturating_add(1) // THIS LINE CONTAINS CONSTANT(S)
+                            line_number.saturating_add(1)
                         ),
                     );
                     return Vec::new();
@@ -888,7 +887,7 @@ impl RuntimePersistence {
         };
         fs::create_dir_all(&session_dir)
             .map_err(|err| KelvinError::Io(format!("create session dir: {err}")))?;
-        let descriptor_path = session_dir.join("descriptor.json"); // THIS LINE CONTAINS CONSTANT(S)
+        let descriptor_path = session_dir.join("descriptor.json");
         let bytes = serde_json::to_vec_pretty(session)
             .map_err(|err| KelvinError::Io(format!("serialize descriptor: {err}")))?;
         write_atomic(&descriptor_path, &bytes)
@@ -918,7 +917,7 @@ impl RuntimePersistence {
             bytes.extend_from_slice(&line);
             bytes.push(b'\n');
         }
-        write_atomic(&session_dir.join("messages.jsonl"), &bytes) // THIS LINE CONTAINS CONSTANT(S)
+        write_atomic(&session_dir.join("messages.jsonl"), &bytes)
     }
 
     /// ### Brief
@@ -948,8 +947,8 @@ impl RuntimePersistence {
             merged = json!({});
         }
         if let Some(object) = merged.as_object_mut() {
-            object.insert("run_id".to_string(), json!(run_id)); // THIS LINE CONTAINS CONSTANT(S)
-            object.insert("updated_at_ms".to_string(), json!(now_ms())); // THIS LINE CONTAINS CONSTANT(S)
+            object.insert("run_id".to_string(), json!(run_id));
+            object.insert("updated_at_ms".to_string(), json!(now_ms()));
             if let Some(incoming) = record.as_object() {
                 for (key, value) in incoming {
                     object.insert(key.clone(), value.clone());
@@ -975,8 +974,8 @@ impl RuntimePersistence {
 /// - temporary file creation/write fails
 /// - file sync fails
 /// - rename fails
-fn write_atomic(path: &PathBuf, bytes: &[u8]) -> KelvinResult<()> { // THIS LINE CONTAINS CONSTANT(S)
-    let tmp_path = path.with_extension("tmp"); // THIS LINE CONTAINS CONSTANT(S)
+fn write_atomic(path: &PathBuf, bytes: &[u8]) -> KelvinResult<()> {
+    let tmp_path = path.with_extension("tmp");
     let mut file = File::create(&tmp_path)
         .map_err(|err| KelvinError::Io(format!("create temp file: {err}")))?;
     file.write_all(bytes)
@@ -1069,12 +1068,12 @@ impl FileBackedSessionStore {
         let mut role_counts = HashMap::<String, usize>::new();
         for message in dropped_slice {
             let role = match message.role {
-                SessionRole::User => "user", // THIS LINE CONTAINS CONSTANT(S)
-                SessionRole::Assistant => "assistant", // THIS LINE CONTAINS CONSTANT(S)
-                SessionRole::Tool => "tool", // THIS LINE CONTAINS CONSTANT(S)
-                SessionRole::System => "system", // THIS LINE CONTAINS CONSTANT(S)
+                SessionRole::User => "user",
+                SessionRole::Assistant => "assistant",
+                SessionRole::Tool => "tool",
+                SessionRole::System => "system",
             };
-            *role_counts.entry(role.to_string()).or_default() += 1; // THIS LINE CONTAINS CONSTANT(S)
+            *role_counts.entry(role.to_string()).or_default() += 1;
         }
 
         let mut role_parts = role_counts
@@ -1089,11 +1088,11 @@ impl FileBackedSessionStore {
                 role_parts.join(",")
             ),
             metadata: json!({
-                "compacted": true, // THIS LINE CONTAINS CONSTANT(S)
-                "dropped_messages": drop_count, // THIS LINE CONTAINS CONSTANT(S)
-                "policy": { // THIS LINE CONTAINS CONSTANT(S)
-                    "max_session_history_messages": self.persistence.max_session_history_messages, // THIS LINE CONTAINS CONSTANT(S)
-                    "compact_to_messages": self.persistence.compact_to_messages // THIS LINE CONTAINS CONSTANT(S)
+                "compacted": true,
+                "dropped_messages": drop_count,
+                "policy": {
+                    "max_session_history_messages": self.persistence.max_session_history_messages,
+                    "compact_to_messages": self.persistence.compact_to_messages
                 }
             }),
         };
@@ -1298,16 +1297,16 @@ struct TimeTool;
 #[async_trait]
 impl Tool for TimeTool {
     fn name(&self) -> &str {
-        "time" // THIS LINE CONTAINS CONSTANT(S)
+        "time"
     }
 
     async fn call(&self, _input: ToolCallInput) -> KelvinResult<ToolCallResult> {
         let now = Local::now();
-        let formatted = now.format("%Y-%m-%d %H:%M:%S%.3f %Z").to_string(); // THIS LINE CONTAINS CONSTANT(S)
-        let iso8601 = now.to_rfc3339(); // THIS LINE CONTAINS CONSTANT(S)
+        let formatted = now.format("%Y-%m-%d %H:%M:%S%.3f %Z").to_string();
+        let iso8601 = now.to_rfc3339();
         let output = json!({
-            "human": formatted.clone(), // THIS LINE CONTAINS CONSTANT(S)
-            "iso8601": iso8601, // THIS LINE CONTAINS CONSTANT(S)
+            "human": formatted.clone(),
+            "iso8601": iso8601,
         });
         Ok(ToolCallResult {
             summary: "timestamp generated".to_string(),
@@ -1324,14 +1323,14 @@ impl Tool for TimeTool {
 ///
 /// ### Fields
 /// * `name` - tool name exposed to the agent
-/// * `text` - static text returned on every call // THIS LINE CONTAINS CONSTANT(S)
+/// * `text` - static text returned on every call
 #[derive(Debug, Clone)]
 struct StaticTextTool {
     name: String,
     text: String,
 }
 
-/// static text tool construction // THIS LINE CONTAINS CONSTANT(S)
+/// static text tool construction
 impl StaticTextTool {
     fn new(name: &str, text: &str) -> Self {
         Self {
@@ -1341,7 +1340,7 @@ impl StaticTextTool {
     }
 }
 
-/// `Tool` implementation for the static text tool // THIS LINE CONTAINS CONSTANT(S)
+/// `Tool` implementation for the static text tool
 #[async_trait]
 impl Tool for StaticTextTool {
     fn name(&self) -> &str {
@@ -1350,7 +1349,7 @@ impl Tool for StaticTextTool {
 
     async fn call(&self, _input: ToolCallInput) -> KelvinResult<ToolCallResult> {
         Ok(ToolCallResult {
-            summary: format!("{} returned static text", self.name), // THIS LINE CONTAINS CONSTANT(S)
+            summary: format!("{} returned static text", self.name),
             output: Some(self.text.clone()),
             visible_text: Some(self.text.clone()),
             is_error: false,
@@ -1377,8 +1376,8 @@ impl Tool for StaticTextTool {
 struct FailoverModelProvider {
     providers: Vec<Arc<dyn ModelProvider>>,
     chain_label: String,
-    max_retries_per_provider: u8, // THIS LINE CONTAINS CONSTANT(S)
-    retry_backoff_ms: u64, // THIS LINE CONTAINS CONSTANT(S)
+    max_retries_per_provider: u8,
+    retry_backoff_ms: u64,
 }
 
 /// retryability check for the failover provider
@@ -1395,7 +1394,7 @@ impl FailoverModelProvider {
 #[async_trait]
 impl ModelProvider for FailoverModelProvider {
     fn provider_name(&self) -> &str {
-        "kelvin.failover" // THIS LINE CONTAINS CONSTANT(S)
+        "kelvin.failover"
     }
 
     fn model_name(&self) -> &str {
@@ -1407,18 +1406,18 @@ impl ModelProvider for FailoverModelProvider {
 
         for provider in &self.providers {
             let provider_label = format!("{}/{}", provider.provider_name(), provider.model_name());
-            for attempt in 0..=self.max_retries_per_provider { // THIS LINE CONTAINS CONSTANT(S)
+            for attempt in 0..=self.max_retries_per_provider {
                 match provider.infer(input.clone()).await {
                     Ok(output) => return Ok(output),
                     Err(err) => {
                         if !Self::is_retryable(&err) {
                             return Err(err);
                         }
-                        let attempt_number = attempt.saturating_add(1); // THIS LINE CONTAINS CONSTANT(S)
+                        let attempt_number = attempt.saturating_add(1);
                         failure_chain
                             .push(format!("{provider_label} attempt {attempt_number}: {err}"));
                         if attempt < self.max_retries_per_provider {
-                            sleep(Duration::from_millis(self.retry_backoff_ms.max(1))).await; // THIS LINE CONTAINS CONSTANT(S)
+                            sleep(Duration::from_millis(self.retry_backoff_ms.max(1))).await;
                         }
                     }
                 }
@@ -1460,7 +1459,7 @@ pub struct KelvinSdkRuntime {
     runtime: CoreRuntime,
     default_workspace_dir: PathBuf,
     default_session_id: String,
-    default_timeout_ms: u64, // THIS LINE CONTAINS CONSTANT(S)
+    default_timeout_ms: u64,
     default_system_prompt: Option<String>,
     cli_plugin_tool: Option<Arc<dyn Tool>>,
     loaded_installed_plugins: usize,
@@ -1505,7 +1504,7 @@ impl KelvinSdkRuntime {
             &config.workspace_dir,
         )?);
         let session_store = Arc::new(FileBackedSessionStore::load(persistence.clone())?);
-        let (event_tx, _) = broadcast::channel(1_024); // THIS LINE CONTAINS CONSTANT(S)
+        let (event_tx, _) = broadcast::channel(1_024);
         let event_sink: Arc<dyn EventSink> = if config.emit_stdout_events {
             Arc::new(StdoutEventSink)
         } else {
@@ -1515,7 +1514,7 @@ impl KelvinSdkRuntime {
         let builtin_tools = Arc::new(HashMapToolRegistry::default());
         builtin_tools.register(TimeTool);
         builtin_tools.register(StaticTextTool::new(
-            "hello_tool", // THIS LINE CONTAINS CONSTANT(S)
+            "hello_tool",
             "Hello from Kelvin SDK built-in tools.",
         ));
         let (toolpack_tools, toolpack_count) =
@@ -1538,18 +1537,18 @@ impl KelvinSdkRuntime {
                 }
                 (loaded.tool_registry, models, loaded.loaded_plugins.len())
             } else {
-                (Arc::new(HashMapToolRegistry::default()), Vec::new(), 0) // THIS LINE CONTAINS CONSTANT(S)
+                (Arc::new(HashMapToolRegistry::default()), Vec::new(), 0)
             };
 
         let cli_plugin_tool = if config.require_cli_plugin_tool {
-            Some(installed_tools.get("kelvin_cli").ok_or_else(|| { // THIS LINE CONTAINS CONSTANT(S)
+            Some(installed_tools.get("kelvin_cli").ok_or_else(|| {
                 KelvinError::NotFound(
                     "required plugin tool 'kelvin_cli' not found; install it with scripts/install-kelvin-cli-plugin.sh"
                         .to_string(),
                 )
             })?)
         } else {
-            installed_tools.get("kelvin_cli") // THIS LINE CONTAINS CONSTANT(S)
+            installed_tools.get("kelvin_cli")
         };
 
         let tools: Arc<dyn ToolRegistry> = Arc::new(CombinedToolRegistry::new(vec![
@@ -1558,7 +1557,7 @@ impl KelvinSdkRuntime {
             builtin_tools,
         ]));
 
-        #[cfg(feature = "memory_rpc")] // THIS LINE CONTAINS CONSTANT(S)
+        #[cfg(feature = "memory_rpc")]
         let memory: Arc<dyn MemorySearchManager> = {
             let mut rpc_cfg = MemoryClientConfig::from_env();
             rpc_cfg.workspace_id = config.workspace_dir.to_string_lossy().to_string();
@@ -1569,7 +1568,7 @@ impl KelvinSdkRuntime {
                     Arc::new(manager)
                 }
                 Err(err) => {
-                    #[cfg(feature = "memory_legacy_fallback")] // THIS LINE CONTAINS CONSTANT(S)
+                    #[cfg(feature = "memory_legacy_fallback")]
                     {
                         eprintln!(
                             "warning: rpc memory unavailable, falling back to legacy in-proc memory: {err}"
@@ -1579,7 +1578,7 @@ impl KelvinSdkRuntime {
                             config.memory_mode.as_backend_kind(),
                         )
                     }
-                    #[cfg(not(feature = "memory_legacy_fallback"))] // THIS LINE CONTAINS CONSTANT(S)
+                    #[cfg(not(feature = "memory_legacy_fallback"))]
                     {
                         return Err(KelvinError::Backend(format!(
                             "memory controller unavailable and legacy fallback disabled: {err}"
@@ -1589,7 +1588,7 @@ impl KelvinSdkRuntime {
             }
         };
 
-        #[cfg(not(feature = "memory_rpc"))] // THIS LINE CONTAINS CONSTANT(S)
+        #[cfg(not(feature = "memory_rpc"))]
         let memory: Arc<dyn MemorySearchManager> =
             MemoryFactory::build(&config.workspace_dir, config.memory_mode.as_backend_kind());
 
@@ -1715,7 +1714,7 @@ impl KelvinSdkRuntime {
         }
         let run_id = request
             .run_id
-            .unwrap_or_else(|| format!("run-{}", Uuid::new_v4())); // THIS LINE CONTAINS CONSTANT(S)
+            .unwrap_or_else(|| format!("run-{}", Uuid::new_v4()));
         let session_id = request
             .session_id
             .unwrap_or_else(|| self.default_session_id.clone());
@@ -1734,7 +1733,7 @@ impl KelvinSdkRuntime {
                         run_id: run_id.clone(),
                         session_id: session_id.clone(),
                         workspace_dir: workspace_dir.to_string_lossy().to_string(),
-                        arguments: json!({"prompt": prompt}), // THIS LINE CONTAINS CONSTANT(S)
+                        arguments: json!({"prompt": prompt}),
                     })
                     .await?
                     .summary,
@@ -1764,10 +1763,10 @@ impl KelvinSdkRuntime {
         self.persistence.persist_run_record(
             &accepted.run_id,
             json!({
-                "accepted_at_ms": accepted.accepted_at_ms, // THIS LINE CONTAINS CONSTANT(S)
-                "session_id": session_id_for_record, // THIS LINE CONTAINS CONSTANT(S)
-                "workspace_dir": workspace_dir_for_record.to_string_lossy().to_string(), // THIS LINE CONTAINS CONSTANT(S)
-                "prompt_length": prompt_length, // THIS LINE CONTAINS CONSTANT(S)
+                "accepted_at_ms": accepted.accepted_at_ms,
+                "session_id": session_id_for_record,
+                "workspace_dir": workspace_dir_for_record.to_string_lossy().to_string(),
+                "prompt_length": prompt_length,
             }),
         )?;
 
@@ -1790,7 +1789,7 @@ impl KelvinSdkRuntime {
     pub async fn state(&self, run_id: &str) -> KelvinResult<RunState> {
         let state = self.runtime.state(run_id).await?;
         self.persistence
-            .persist_run_record(run_id, json!({ "last_state": state }))?; // THIS LINE CONTAINS CONSTANT(S)
+            .persist_run_record(run_id, json!({ "last_state": state }))?;
         Ok(state)
     }
 
@@ -1804,10 +1803,10 @@ impl KelvinSdkRuntime {
     ///
     /// ### Returns
     /// wait result from the core runtime
-    pub async fn wait(&self, run_id: &str, timeout_ms: u64) -> KelvinResult<AgentWaitResult> { // THIS LINE CONTAINS CONSTANT(S)
+    pub async fn wait(&self, run_id: &str, timeout_ms: u64) -> KelvinResult<AgentWaitResult> {
         let wait = self.runtime.wait(run_id, timeout_ms).await?;
         self.persistence
-            .persist_run_record(run_id, json!({ "last_wait": wait }))?; // THIS LINE CONTAINS CONSTANT(S)
+            .persist_run_record(run_id, json!({ "last_wait": wait }))?;
         Ok(wait)
     }
 
@@ -1828,24 +1827,24 @@ impl KelvinSdkRuntime {
     pub async fn wait_for_outcome(
         &self,
         run_id: &str,
-        timeout_ms: u64, // THIS LINE CONTAINS CONSTANT(S)
+        timeout_ms: u64,
     ) -> KelvinResult<RunOutcome> {
         let outcome = self.runtime.wait_for_outcome(run_id, timeout_ms).await?;
         let persisted_outcome = match &outcome {
             RunOutcome::Completed(result) => json!({
-                "status": "completed", // THIS LINE CONTAINS CONSTANT(S)
-                "result": result, // THIS LINE CONTAINS CONSTANT(S)
+                "status": "completed",
+                "result": result,
             }),
             RunOutcome::Failed(error) => json!({
-                "status": "failed", // THIS LINE CONTAINS CONSTANT(S)
-                "error": error, // THIS LINE CONTAINS CONSTANT(S)
+                "status": "failed",
+                "error": error,
             }),
             RunOutcome::Timeout => json!({
-                "status": "timeout", // THIS LINE CONTAINS CONSTANT(S)
+                "status": "timeout",
             }),
         };
         self.persistence
-            .persist_run_record(run_id, json!({ "last_outcome": persisted_outcome }))?; // THIS LINE CONTAINS CONSTANT(S)
+            .persist_run_record(run_id, json!({ "last_outcome": persisted_outcome }))?;
         Ok(outcome)
     }
 }
@@ -1901,7 +1900,7 @@ fn resolve_model_provider(
     };
 
     match selection {
-        KelvinSdkModelSelection::Echo => Ok(Arc::new(EchoModelProvider::new("kelvin", "echo-v1"))), // THIS LINE CONTAINS CONSTANT(S)
+        KelvinSdkModelSelection::Echo => Ok(Arc::new(EchoModelProvider::new("kelvin", "echo-v1"))),
         KelvinSdkModelSelection::InstalledPlugin { plugin_id } => resolve_installed(plugin_id),
         KelvinSdkModelSelection::InstalledPluginFailover {
             plugin_ids,
@@ -1930,7 +1929,7 @@ fn resolve_model_provider(
                 providers,
                 chain_label: chain_names.join(" -> "),
                 max_retries_per_provider: *max_retries_per_provider,
-                retry_backoff_ms: (*retry_backoff_ms).max(1), // THIS LINE CONTAINS CONSTANT(S)
+                retry_backoff_ms: (*retry_backoff_ms).max(1),
             }))
         }
     }
@@ -1977,7 +1976,7 @@ pub async fn run_with_sdk(config: KelvinSdkConfig) -> KelvinResult<KelvinRunSumm
     );
 
     match runtime
-        .wait_for_outcome(&accepted.run_id, config.timeout_ms.saturating_add(5_000)) // THIS LINE CONTAINS CONSTANT(S)
+        .wait_for_outcome(&accepted.run_id, config.timeout_ms.saturating_add(5_000))
         .await?
     {
         RunOutcome::Completed(result) => Ok(KelvinRunSummary {
@@ -2008,21 +2007,21 @@ mod tests {
     use std::time::{SystemTime, UNIX_EPOCH};
 
     use async_trait::async_trait;
-    use base64::Engine as _; // THIS LINE CONTAINS CONSTANT(S)
-    use ed25519_dalek::{Signer, SigningKey}; // THIS LINE CONTAINS CONSTANT(S)
+    use base64::Engine as _;
+    use ed25519_dalek::{Signer, SigningKey};
     use kelvin_core::{
         KelvinError, ModelInput, ModelOutput, ModelProvider, ModelProviderAuthScheme,
         ModelProviderProfile, ModelProviderProtocolFamily, RunOutcome,
     };
     use mockito::Server;
     use serde_json::json;
-    use sha2::{Digest, Sha256}; // THIS LINE CONTAINS CONSTANT(S)
+    use sha2::{Digest, Sha256};
 
     use super::{run_with_sdk, KelvinCliMemoryMode, KelvinSdkConfig, KelvinSdkModelSelection};
 
-    static ENV_LOCK: Mutex<()> = Mutex::new(()); // THIS LINE CONTAINS CONSTANT(S)
-    const TEST_PUBLISHER_ID: &str = "kelvin_sdk_test"; // THIS LINE CONTAINS CONSTANT(S)
-    const TEST_SIGNING_KEY_BYTES: [u8; 32] = [31_u8; 32]; // THIS LINE CONTAINS CONSTANT(S)
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
+    const TEST_PUBLISHER_ID: &str = "kelvin_sdk_test";
+    const TEST_SIGNING_KEY_BYTES: [u8; 32] = [31_u8; 32];
 
     #[derive(Clone)]
     struct StubModelProvider {
@@ -2046,7 +2045,7 @@ mod tests {
                 provider: provider.to_string(),
                 model: model.to_string(),
                 remaining_failures: Arc::new(AtomicUsize::new(failures)),
-                calls: Arc::new(AtomicUsize::new(0)), // THIS LINE CONTAINS CONSTANT(S)
+                calls: Arc::new(AtomicUsize::new(0)),
                 failure,
                 response_text: response_text.to_string(),
             }
@@ -2068,14 +2067,14 @@ mod tests {
         }
 
         async fn infer(&self, _input: ModelInput) -> kelvin_core::KelvinResult<ModelOutput> {
-            self.calls.fetch_add(1, Ordering::SeqCst); // THIS LINE CONTAINS CONSTANT(S)
+            self.calls.fetch_add(1, Ordering::SeqCst);
             if self
                 .remaining_failures
                 .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |value| {
-                    if value == 0 { // THIS LINE CONTAINS CONSTANT(S)
+                    if value == 0 {
                         None
                     } else {
-                        Some(value.saturating_sub(1)) // THIS LINE CONTAINS CONSTANT(S)
+                        Some(value.saturating_sub(1))
                     }
                 })
                 .is_ok()
@@ -2085,7 +2084,7 @@ mod tests {
 
             Ok(ModelOutput {
                 assistant_text: self.response_text.clone(),
-                stop_reason: Some("completed".to_string()), // THIS LINE CONTAINS CONSTANT(S)
+                stop_reason: Some("completed".to_string()),
                 tool_calls: Vec::new(),
                 usage: None,
             })
@@ -2107,25 +2106,25 @@ mod tests {
         let workspace = unique_workspace();
         let cfg = super::KelvinSdkRuntimeConfig {
             workspace_dir: workspace,
-            default_session_id: "main".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            default_session_id: "main".to_string(),
             memory_mode: KelvinCliMemoryMode::Markdown,
-            default_timeout_ms: 1_000, // THIS LINE CONTAINS CONSTANT(S)
+            default_timeout_ms: 1_000,
             default_system_prompt: None,
-            core_version: "0.1.0".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            core_version: "0.1.0".to_string(),
             plugin_security_policy: Default::default(),
             load_installed_plugins: true,
             model_provider: KelvinSdkModelSelection::InstalledPluginFailover {
-                plugin_ids: vec!["dup.plugin".to_string(), "dup.plugin".to_string()], // THIS LINE CONTAINS CONSTANT(S)
-                max_retries_per_provider: 1, // THIS LINE CONTAINS CONSTANT(S)
-                retry_backoff_ms: 100, // THIS LINE CONTAINS CONSTANT(S)
+                plugin_ids: vec!["dup.plugin".to_string(), "dup.plugin".to_string()],
+                max_retries_per_provider: 1,
+                retry_backoff_ms: 100,
             },
             require_cli_plugin_tool: false,
             emit_stdout_events: false,
             state_dir: None,
             persist_runs: false,
-            max_session_history_messages: 128, // THIS LINE CONTAINS CONSTANT(S)
-            compact_to_messages: 64, // THIS LINE CONTAINS CONSTANT(S)
-            max_tool_iterations: 10, // THIS LINE CONTAINS CONSTANT(S)
+            max_session_history_messages: 128,
+            compact_to_messages: 64,
+            max_tool_iterations: 10,
         };
         let err = cfg.validate().expect_err("duplicate ids should fail");
         assert!(err
@@ -2135,7 +2134,7 @@ mod tests {
 
     #[test]
     fn sdk_config_validate_rejects_missing_workspace() {
-        let mut cfg = KelvinSdkConfig::for_prompt("hello"); // THIS LINE CONTAINS CONSTANT(S)
+        let mut cfg = KelvinSdkConfig::for_prompt("hello");
         let millis = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map(|value| value.as_millis())
@@ -2151,9 +2150,9 @@ mod tests {
 
     #[test]
     fn sdk_config_validate_rejects_non_semver_core_version() {
-        let mut cfg = KelvinSdkConfig::for_prompt("hello"); // THIS LINE CONTAINS CONSTANT(S)
+        let mut cfg = KelvinSdkConfig::for_prompt("hello");
         cfg.workspace_dir = unique_workspace();
-        cfg.core_version = "not-semver".to_string(); // THIS LINE CONTAINS CONSTANT(S)
+        cfg.core_version = "not-semver".to_string();
         let err = cfg
             .validate()
             .expect_err("non-semver core version should fail");
@@ -2162,53 +2161,53 @@ mod tests {
             .contains("core_version must be valid semver"));
     }
 
-    fn sha256_hex(bytes: &[u8]) -> String { // THIS LINE CONTAINS CONSTANT(S)
-        let digest = Sha256::digest(bytes); // THIS LINE CONTAINS CONSTANT(S)
-        let mut out = String::with_capacity(digest.len() * 2); // THIS LINE CONTAINS CONSTANT(S)
+    fn sha256_hex(bytes: &[u8]) -> String {
+        let digest = Sha256::digest(bytes);
+        let mut out = String::with_capacity(digest.len() * 2);
         for byte in digest {
-            out.push_str(&format!("{byte:02x}")); // THIS LINE CONTAINS CONSTANT(S)
+            out.push_str(&format!("{byte:02x}"));
         }
         out
     }
 
-    fn parse_wat(input: &str) -> Vec<u8> { // THIS LINE CONTAINS CONSTANT(S)
+    fn parse_wat(input: &str) -> Vec<u8> {
         wat::parse_str(input).expect("parse wat")
     }
 
-    fn cli_test_wasm() -> Vec<u8> { // THIS LINE CONTAINS CONSTANT(S)
+    fn cli_test_wasm() -> Vec<u8> {
         parse_wat(
             r#"
             (module
-              (import "claw" "send_message" (func $send_message (param i32) (result i32))) // THIS LINE CONTAINS CONSTANT(S)
-              (func (export "run") (result i32) // THIS LINE CONTAINS CONSTANT(S)
-                i32.const 7 // THIS LINE CONTAINS CONSTANT(S)
+              (import "claw" "send_message" (func $send_message (param i32) (result i32)))
+              (func (export "run") (result i32)
+                i32.const 7
                 call $send_message
                 drop
-                i32.const 0) // THIS LINE CONTAINS CONSTANT(S)
+                i32.const 0)
             )
             "#,
         )
     }
 
-    fn model_test_wasm(import_name: &str) -> Vec<u8> { // THIS LINE CONTAINS CONSTANT(S)
+    fn model_test_wasm(import_name: &str) -> Vec<u8> {
         parse_wat(&format!(
             r#"
             (module
-              (import "kelvin_model_host_v1" "{import_name}" (func $provider_call (param i32 i32) (result i64))) // THIS LINE CONTAINS CONSTANT(S)
-              (import "kelvin_model_host_v1" "log" (func $log (param i32 i32 i32) (result i32))) // THIS LINE CONTAINS CONSTANT(S)
-              (import "kelvin_model_host_v1" "clock_now_ms" (func $clock_now_ms (result i64))) // THIS LINE CONTAINS CONSTANT(S)
-              (memory (export "memory") 2) // THIS LINE CONTAINS CONSTANT(S)
-              (global $heap (mut i32) (i32.const 1024)) // THIS LINE CONTAINS CONSTANT(S)
-              (func (export "alloc") (param $len i32) (result i32) // THIS LINE CONTAINS CONSTANT(S)
-                (local $ptr i32) // THIS LINE CONTAINS CONSTANT(S)
+              (import "kelvin_model_host_v1" "{import_name}" (func $provider_call (param i32 i32) (result i64)))
+              (import "kelvin_model_host_v1" "log" (func $log (param i32 i32 i32) (result i32)))
+              (import "kelvin_model_host_v1" "clock_now_ms" (func $clock_now_ms (result i64)))
+              (memory (export "memory") 2)
+              (global $heap (mut i32) (i32.const 1024))
+              (func (export "alloc") (param $len i32) (result i32)
+                (local $ptr i32)
                 global.get $heap
                 local.tee $ptr
                 local.get $len
-                i32.add // THIS LINE CONTAINS CONSTANT(S)
+                i32.add
                 global.set $heap
                 local.get $ptr)
-              (func (export "dealloc") (param i32 i32)) // THIS LINE CONTAINS CONSTANT(S)
-              (func (export "infer") (param $ptr i32) (param $len i32) (result i64) // THIS LINE CONTAINS CONSTANT(S)
+              (func (export "dealloc") (param i32 i32))
+              (func (export "infer") (param $ptr i32) (param $len i32) (result i64)
                 local.get $ptr
                 local.get $len
                 call $provider_call)
@@ -2225,14 +2224,14 @@ mod tests {
         if let Some(parent) = trust_policy_path.parent() {
             std::fs::create_dir_all(parent).expect("create trust policy parent");
         }
-        let public_key = base64::engine::general_purpose::STANDARD // THIS LINE CONTAINS CONSTANT(S)
+        let public_key = base64::engine::general_purpose::STANDARD
             .encode(signing_key.verifying_key().to_bytes());
         let trust_policy = json!({
-            "require_signature": true, // THIS LINE CONTAINS CONSTANT(S)
-            "publishers": [ // THIS LINE CONTAINS CONSTANT(S)
+            "require_signature": true,
+            "publishers": [
                 {
-                    "id": TEST_PUBLISHER_ID, // THIS LINE CONTAINS CONSTANT(S)
-                    "ed25519_public_key": public_key, // THIS LINE CONTAINS CONSTANT(S)
+                    "id": TEST_PUBLISHER_ID,
+                    "ed25519_public_key": public_key,
                 }
             ]
         });
@@ -2248,59 +2247,59 @@ mod tests {
         plugin_id: &str,
         version: &str,
         entrypoint: &str,
-        wasm_bytes: &[u8], // THIS LINE CONTAINS CONSTANT(S)
+        wasm_bytes: &[u8],
         mut manifest: serde_json::Value,
         signing_key: &SigningKey,
     ) {
         let version_dir = plugin_home.join(plugin_id).join(version);
-        let payload_dir = version_dir.join("payload"); // THIS LINE CONTAINS CONSTANT(S)
+        let payload_dir = version_dir.join("payload");
         std::fs::create_dir_all(&payload_dir).expect("create payload dir");
 
         std::fs::write(payload_dir.join(entrypoint), wasm_bytes).expect("write wasm payload");
-        manifest["entrypoint_sha256"] = json!(sha256_hex(wasm_bytes)); // THIS LINE CONTAINS CONSTANT(S)
+        manifest["entrypoint_sha256"] = json!(sha256_hex(wasm_bytes));
         let manifest_bytes = serde_json::to_vec_pretty(&manifest).expect("manifest bytes");
-        std::fs::write(version_dir.join("plugin.json"), &manifest_bytes).expect("write manifest"); // THIS LINE CONTAINS CONSTANT(S)
+        std::fs::write(version_dir.join("plugin.json"), &manifest_bytes).expect("write manifest");
 
         let signature = signing_key.sign(&manifest_bytes);
-        let signature_base64 = // THIS LINE CONTAINS CONSTANT(S)
-            base64::engine::general_purpose::STANDARD.encode(signature.to_bytes()); // THIS LINE CONTAINS CONSTANT(S)
-        std::fs::write(version_dir.join("plugin.sig"), signature_base64).expect("write signature"); // THIS LINE CONTAINS CONSTANT(S)
+        let signature_base64 =
+            base64::engine::general_purpose::STANDARD.encode(signature.to_bytes());
+        std::fs::write(version_dir.join("plugin.sig"), signature_base64).expect("write signature");
     }
 
     fn seed_cli_plugin_for_tests(plugin_home: &Path, trust_policy_path: &Path) {
         let signing_key = test_signing_key();
         write_signed_plugin(
             plugin_home,
-            "kelvin.cli", // THIS LINE CONTAINS CONSTANT(S)
-            "0.1.0", // THIS LINE CONTAINS CONSTANT(S)
-            "kelvin_cli.wasm", // THIS LINE CONTAINS CONSTANT(S)
+            "kelvin.cli",
+            "0.1.0",
+            "kelvin_cli.wasm",
             &cli_test_wasm(),
             json!({
-                "id": "kelvin.cli", // THIS LINE CONTAINS CONSTANT(S)
-                "name": "Kelvin CLI Plugin (Test)", // THIS LINE CONTAINS CONSTANT(S)
-                "version": "0.1.0", // THIS LINE CONTAINS CONSTANT(S)
-                "api_version": "1.0.0", // THIS LINE CONTAINS CONSTANT(S)
-                "description": "test cli plugin", // THIS LINE CONTAINS CONSTANT(S)
-                "homepage": "https://example.com/kelvin-cli-test-plugin", // THIS LINE CONTAINS CONSTANT(S)
-                "capabilities": ["tool_provider"], // THIS LINE CONTAINS CONSTANT(S)
-                "experimental": false, // THIS LINE CONTAINS CONSTANT(S)
-                "min_core_version": "0.1.0", // THIS LINE CONTAINS CONSTANT(S)
-                "max_core_version": null, // THIS LINE CONTAINS CONSTANT(S)
-                "runtime": "wasm_tool_v1", // THIS LINE CONTAINS CONSTANT(S)
-                "tool_name": "kelvin_cli", // THIS LINE CONTAINS CONSTANT(S)
-                "entrypoint": "kelvin_cli.wasm", // THIS LINE CONTAINS CONSTANT(S)
-                "entrypoint_sha256": null, // THIS LINE CONTAINS CONSTANT(S)
-                "publisher": TEST_PUBLISHER_ID, // THIS LINE CONTAINS CONSTANT(S)
-                "capability_scopes": { // THIS LINE CONTAINS CONSTANT(S)
-                    "fs_read_paths": [], // THIS LINE CONTAINS CONSTANT(S)
-                    "network_allow_hosts": [] // THIS LINE CONTAINS CONSTANT(S)
+                "id": "kelvin.cli",
+                "name": "Kelvin CLI Plugin (Test)",
+                "version": "0.1.0",
+                "api_version": "1.0.0",
+                "description": "test cli plugin",
+                "homepage": "https://example.com/kelvin-cli-test-plugin",
+                "capabilities": ["tool_provider"],
+                "experimental": false,
+                "min_core_version": "0.1.0",
+                "max_core_version": null,
+                "runtime": "wasm_tool_v1",
+                "tool_name": "kelvin_cli",
+                "entrypoint": "kelvin_cli.wasm",
+                "entrypoint_sha256": null,
+                "publisher": TEST_PUBLISHER_ID,
+                "capability_scopes": {
+                    "fs_read_paths": [],
+                    "network_allow_hosts": []
                 },
-                "operational_controls": { // THIS LINE CONTAINS CONSTANT(S)
-                    "timeout_ms": 2000, // THIS LINE CONTAINS CONSTANT(S)
-                    "max_retries": 0, // THIS LINE CONTAINS CONSTANT(S)
-                    "max_calls_per_minute": 120, // THIS LINE CONTAINS CONSTANT(S)
-                    "circuit_breaker_failures": 3, // THIS LINE CONTAINS CONSTANT(S)
-                    "circuit_breaker_cooldown_ms": 30000 // THIS LINE CONTAINS CONSTANT(S)
+                "operational_controls": {
+                    "timeout_ms": 2000,
+                    "max_retries": 0,
+                    "max_calls_per_minute": 120,
+                    "circuit_breaker_failures": 3,
+                    "circuit_breaker_cooldown_ms": 30000
                 }
             }),
             &signing_key,
@@ -2321,41 +2320,41 @@ mod tests {
         entrypoint: &str,
     ) {
         let signing_key = test_signing_key();
-        let wasm_bytes = model_test_wasm("provider_profile_call"); // THIS LINE CONTAINS CONSTANT(S)
+        let wasm_bytes = model_test_wasm("provider_profile_call");
         write_signed_plugin(
             plugin_home,
             plugin_id,
-            "0.1.0", // THIS LINE CONTAINS CONSTANT(S)
+            "0.1.0",
             entrypoint,
             &wasm_bytes,
             json!({
-                "id": plugin_id, // THIS LINE CONTAINS CONSTANT(S)
-                "name": plugin_name, // THIS LINE CONTAINS CONSTANT(S)
-                "version": "0.1.0", // THIS LINE CONTAINS CONSTANT(S)
-                "api_version": "1.0.0", // THIS LINE CONTAINS CONSTANT(S)
-                "description": format!("test {provider_name} model plugin"), // THIS LINE CONTAINS CONSTANT(S)
-                "homepage": format!("https://example.com/{provider_name}-plugin"), // THIS LINE CONTAINS CONSTANT(S)
-                "capabilities": ["model_provider"], // THIS LINE CONTAINS CONSTANT(S)
-                "experimental": false, // THIS LINE CONTAINS CONSTANT(S)
-                "min_core_version": "0.1.0", // THIS LINE CONTAINS CONSTANT(S)
-                "max_core_version": null, // THIS LINE CONTAINS CONSTANT(S)
-                "runtime": "wasm_model_v1", // THIS LINE CONTAINS CONSTANT(S)
-                "provider_name": provider_name, // THIS LINE CONTAINS CONSTANT(S)
-                "provider_profile": provider_profile, // THIS LINE CONTAINS CONSTANT(S)
-                "model_name": model_name, // THIS LINE CONTAINS CONSTANT(S)
-                "entrypoint": entrypoint, // THIS LINE CONTAINS CONSTANT(S)
-                "entrypoint_sha256": null, // THIS LINE CONTAINS CONSTANT(S)
-                "publisher": TEST_PUBLISHER_ID, // THIS LINE CONTAINS CONSTANT(S)
-                "capability_scopes": { // THIS LINE CONTAINS CONSTANT(S)
-                    "fs_read_paths": [], // THIS LINE CONTAINS CONSTANT(S)
-                    "network_allow_hosts": [allow_host] // THIS LINE CONTAINS CONSTANT(S)
+                "id": plugin_id,
+                "name": plugin_name,
+                "version": "0.1.0",
+                "api_version": "1.0.0",
+                "description": format!("test {provider_name} model plugin"),
+                "homepage": format!("https://example.com/{provider_name}-plugin"),
+                "capabilities": ["model_provider"],
+                "experimental": false,
+                "min_core_version": "0.1.0",
+                "max_core_version": null,
+                "runtime": "wasm_model_v1",
+                "provider_name": provider_name,
+                "provider_profile": provider_profile,
+                "model_name": model_name,
+                "entrypoint": entrypoint,
+                "entrypoint_sha256": null,
+                "publisher": TEST_PUBLISHER_ID,
+                "capability_scopes": {
+                    "fs_read_paths": [],
+                    "network_allow_hosts": [allow_host]
                 },
-                "operational_controls": { // THIS LINE CONTAINS CONSTANT(S)
-                    "timeout_ms": 30000, // THIS LINE CONTAINS CONSTANT(S)
-                    "max_retries": 0, // THIS LINE CONTAINS CONSTANT(S)
-                    "max_calls_per_minute": 120, // THIS LINE CONTAINS CONSTANT(S)
-                    "circuit_breaker_failures": 3, // THIS LINE CONTAINS CONSTANT(S)
-                    "circuit_breaker_cooldown_ms": 1000 // THIS LINE CONTAINS CONSTANT(S)
+                "operational_controls": {
+                    "timeout_ms": 30000,
+                    "max_retries": 0,
+                    "max_calls_per_minute": 120,
+                    "circuit_breaker_failures": 3,
+                    "circuit_breaker_cooldown_ms": 1000
                 }
             }),
             &signing_key,
@@ -2371,13 +2370,13 @@ mod tests {
         seed_model_plugin_for_mock_host(
             plugin_home,
             trust_policy_path,
-            "acme.openai", // THIS LINE CONTAINS CONSTANT(S)
+            "acme.openai",
             "Acme OpenAI Plugin",
-            "openai", // THIS LINE CONTAINS CONSTANT(S)
-            ModelProviderProfile::builtin("openai.responses").expect("openai builtin profile"), // THIS LINE CONTAINS CONSTANT(S)
-            "gpt-4.1-mini", // THIS LINE CONTAINS CONSTANT(S)
+            "openai",
+            ModelProviderProfile::builtin("openai.responses").expect("openai builtin profile"),
+            "gpt-4.1-mini",
             allow_host,
-            "kelvin_openai.wasm", // THIS LINE CONTAINS CONSTANT(S)
+            "kelvin_openai.wasm",
         );
     }
 
@@ -2389,13 +2388,13 @@ mod tests {
         seed_model_plugin_for_mock_host(
             plugin_home,
             trust_policy_path,
-            "acme.anthropic", // THIS LINE CONTAINS CONSTANT(S)
+            "acme.anthropic",
             "Acme Anthropic Plugin",
-            "anthropic", // THIS LINE CONTAINS CONSTANT(S)
-            ModelProviderProfile::builtin("anthropic.messages").expect("anthropic builtin profile"), // THIS LINE CONTAINS CONSTANT(S)
-            "claude-haiku-4-5-20251001", // THIS LINE CONTAINS CONSTANT(S)
+            "anthropic",
+            ModelProviderProfile::builtin("anthropic.messages").expect("anthropic builtin profile"),
+            "claude-haiku-4-5-20251001",
             allow_host,
-            "kelvin_anthropic.wasm", // THIS LINE CONTAINS CONSTANT(S)
+            "kelvin_anthropic.wasm",
         );
     }
 
@@ -2407,26 +2406,26 @@ mod tests {
         seed_model_plugin_for_mock_host(
             plugin_home,
             trust_policy_path,
-            "acme.openrouter", // THIS LINE CONTAINS CONSTANT(S)
+            "acme.openrouter",
             "Acme OpenRouter Plugin",
-            "openrouter", // THIS LINE CONTAINS CONSTANT(S)
+            "openrouter",
             ModelProviderProfile {
-                id: "openrouter.chat".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-                provider_name: "openrouter".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                id: "openrouter.chat".to_string(),
+                provider_name: "openrouter".to_string(),
                 protocol_family: ModelProviderProtocolFamily::OpenAiChatCompletions,
-                api_key_env: Some("OPENROUTER_API_KEY".to_string()), // THIS LINE CONTAINS CONSTANT(S)
-                base_url_env: "OPENROUTER_BASE_URL".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-                default_base_url: "https://openrouter.ai/api/v1".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-                endpoint_path: "chat/completions".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-                auth_header: "authorization".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                api_key_env: Some("OPENROUTER_API_KEY".to_string()),
+                base_url_env: "OPENROUTER_BASE_URL".to_string(),
+                default_base_url: "https://openrouter.ai/api/v1".to_string(),
+                endpoint_path: "chat/completions".to_string(),
+                auth_header: "authorization".to_string(),
                 auth_scheme: ModelProviderAuthScheme::Bearer,
                 static_headers: Vec::new(),
-                default_allow_hosts: vec!["openrouter.ai".to_string()], // THIS LINE CONTAINS CONSTANT(S)
+                default_allow_hosts: vec!["openrouter.ai".to_string()],
                 dynamic_base_url: false,
             },
-            "openai/gpt-4.1-mini", // THIS LINE CONTAINS CONSTANT(S)
+            "openai/gpt-4.1-mini",
             allow_host,
-            "kelvin_openrouter.wasm", // THIS LINE CONTAINS CONSTANT(S)
+            "kelvin_openrouter.wasm",
         );
     }
 
@@ -2436,8 +2435,8 @@ mod tests {
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
         let fixture_root = unique_workspace();
-        let plugin_home = fixture_root.join("plugins"); // THIS LINE CONTAINS CONSTANT(S)
-        let trust_policy = fixture_root.join("trusted_publishers.json"); // THIS LINE CONTAINS CONSTANT(S)
+        let plugin_home = fixture_root.join("plugins");
+        let trust_policy = fixture_root.join("trusted_publishers.json");
         seed_cli_plugin_for_tests(&plugin_home, &trust_policy);
         assert!(
             trust_policy.is_file(),
@@ -2445,27 +2444,27 @@ mod tests {
             trust_policy.to_string_lossy()
         );
 
-        let previous_plugin_home = std::env::var("KELVIN_PLUGIN_HOME").ok(); // THIS LINE CONTAINS CONSTANT(S)
-        let previous_trust_policy = std::env::var("KELVIN_TRUST_POLICY_PATH").ok(); // THIS LINE CONTAINS CONSTANT(S)
-        std::env::set_var("KELVIN_PLUGIN_HOME", plugin_home.as_os_str()); // THIS LINE CONTAINS CONSTANT(S)
-        std::env::set_var("KELVIN_TRUST_POLICY_PATH", trust_policy.as_os_str()); // THIS LINE CONTAINS CONSTANT(S)
+        let previous_plugin_home = std::env::var("KELVIN_PLUGIN_HOME").ok();
+        let previous_trust_policy = std::env::var("KELVIN_TRUST_POLICY_PATH").ok();
+        std::env::set_var("KELVIN_PLUGIN_HOME", plugin_home.as_os_str());
+        std::env::set_var("KELVIN_TRUST_POLICY_PATH", trust_policy.as_os_str());
 
         let workspace = unique_workspace();
         let mut config = KelvinSdkConfig::for_prompt("hello sdk");
         config.workspace_dir = workspace;
-        config.timeout_ms = 5_000; // THIS LINE CONTAINS CONSTANT(S)
+        config.timeout_ms = 5_000;
         config.memory_mode = KelvinCliMemoryMode::Fallback;
         config.load_installed_plugins = true;
 
         let result = run_with_sdk(config).await.expect("run with sdk");
 
         match previous_plugin_home {
-            Some(value) => std::env::set_var("KELVIN_PLUGIN_HOME", value), // THIS LINE CONTAINS CONSTANT(S)
-            None => std::env::remove_var("KELVIN_PLUGIN_HOME"), // THIS LINE CONTAINS CONSTANT(S)
+            Some(value) => std::env::set_var("KELVIN_PLUGIN_HOME", value),
+            None => std::env::remove_var("KELVIN_PLUGIN_HOME"),
         }
         match previous_trust_policy {
-            Some(value) => std::env::set_var("KELVIN_TRUST_POLICY_PATH", value), // THIS LINE CONTAINS CONSTANT(S)
-            None => std::env::remove_var("KELVIN_TRUST_POLICY_PATH"), // THIS LINE CONTAINS CONSTANT(S)
+            Some(value) => std::env::set_var("KELVIN_TRUST_POLICY_PATH", value),
+            None => std::env::remove_var("KELVIN_TRUST_POLICY_PATH"),
         }
 
         assert!(result.cli_plugin_preflight.contains("kelvin_cli executed"));
@@ -2481,77 +2480,77 @@ mod tests {
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
         let workspace = unique_workspace();
-        let plugin_home = workspace.join("plugins"); // THIS LINE CONTAINS CONSTANT(S)
-        let trust_policy = workspace.join("trusted_publishers.json"); // THIS LINE CONTAINS CONSTANT(S)
+        let plugin_home = workspace.join("plugins");
+        let trust_policy = workspace.join("trusted_publishers.json");
         seed_cli_plugin_for_tests(&plugin_home, &trust_policy);
 
         let mut server = Server::new_async().await;
         let response_body = json!({
-            "assistant_text": "mock-openai-ok", // THIS LINE CONTAINS CONSTANT(S)
-            "stop_reason": "completed", // THIS LINE CONTAINS CONSTANT(S)
-            "tool_calls": [], // THIS LINE CONTAINS CONSTANT(S)
-            "usage": { // THIS LINE CONTAINS CONSTANT(S)
-                "input_tokens": 10, // THIS LINE CONTAINS CONSTANT(S)
-                "output_tokens": 4, // THIS LINE CONTAINS CONSTANT(S)
-                "total_tokens": 14 // THIS LINE CONTAINS CONSTANT(S)
+            "assistant_text": "mock-openai-ok",
+            "stop_reason": "completed",
+            "tool_calls": [],
+            "usage": {
+                "input_tokens": 10,
+                "output_tokens": 4,
+                "total_tokens": 14
             }
         })
         .to_string();
         let mock = server
-            .mock("POST", "/v1/responses") // THIS LINE CONTAINS CONSTANT(S)
-            .with_status(200) // THIS LINE CONTAINS CONSTANT(S)
-            .with_header("content-type", "application/json") // THIS LINE CONTAINS CONSTANT(S)
+            .mock("POST", "/v1/responses")
+            .with_status(200)
+            .with_header("content-type", "application/json")
             .with_body(response_body)
             .create_async()
             .await;
         let base_url = server.url();
-        let allow_host = "127.0.0.1".to_string(); // THIS LINE CONTAINS CONSTANT(S)
+        let allow_host = "127.0.0.1".to_string();
         seed_openai_plugin_for_mock_host(&plugin_home, &trust_policy, &allow_host);
 
-        let previous_plugin_home = std::env::var("KELVIN_PLUGIN_HOME").ok(); // THIS LINE CONTAINS CONSTANT(S)
-        let previous_trust_policy = std::env::var("KELVIN_TRUST_POLICY_PATH").ok(); // THIS LINE CONTAINS CONSTANT(S)
-        let previous_openai_key = std::env::var("OPENAI_API_KEY").ok(); // THIS LINE CONTAINS CONSTANT(S)
-        let previous_openai_base = std::env::var("OPENAI_BASE_URL").ok(); // THIS LINE CONTAINS CONSTANT(S)
-        std::env::set_var("KELVIN_PLUGIN_HOME", plugin_home.as_os_str()); // THIS LINE CONTAINS CONSTANT(S)
-        std::env::set_var("KELVIN_TRUST_POLICY_PATH", trust_policy.as_os_str()); // THIS LINE CONTAINS CONSTANT(S)
-        std::env::set_var("OPENAI_API_KEY", "test-key"); // THIS LINE CONTAINS CONSTANT(S)
-        std::env::set_var("OPENAI_BASE_URL", &base_url); // THIS LINE CONTAINS CONSTANT(S)
+        let previous_plugin_home = std::env::var("KELVIN_PLUGIN_HOME").ok();
+        let previous_trust_policy = std::env::var("KELVIN_TRUST_POLICY_PATH").ok();
+        let previous_openai_key = std::env::var("OPENAI_API_KEY").ok();
+        let previous_openai_base = std::env::var("OPENAI_BASE_URL").ok();
+        std::env::set_var("KELVIN_PLUGIN_HOME", plugin_home.as_os_str());
+        std::env::set_var("KELVIN_TRUST_POLICY_PATH", trust_policy.as_os_str());
+        std::env::set_var("OPENAI_API_KEY", "test-key");
+        std::env::set_var("OPENAI_BASE_URL", &base_url);
 
         let mut config = KelvinSdkConfig::for_prompt("hello openai");
         config.workspace_dir = workspace.clone();
-        config.timeout_ms = 5_000; // THIS LINE CONTAINS CONSTANT(S)
+        config.timeout_ms = 5_000;
         config.memory_mode = KelvinCliMemoryMode::Fallback;
         config.load_installed_plugins = true;
         config.model_provider = KelvinSdkModelSelection::InstalledPlugin {
-            plugin_id: "acme.openai".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            plugin_id: "acme.openai".to_string(),
         };
 
         let result = run_with_sdk(config).await.expect("run with openai plugin");
         mock.assert_async().await;
 
         match previous_plugin_home {
-            Some(value) => std::env::set_var("KELVIN_PLUGIN_HOME", value), // THIS LINE CONTAINS CONSTANT(S)
-            None => std::env::remove_var("KELVIN_PLUGIN_HOME"), // THIS LINE CONTAINS CONSTANT(S)
+            Some(value) => std::env::set_var("KELVIN_PLUGIN_HOME", value),
+            None => std::env::remove_var("KELVIN_PLUGIN_HOME"),
         }
         match previous_trust_policy {
-            Some(value) => std::env::set_var("KELVIN_TRUST_POLICY_PATH", value), // THIS LINE CONTAINS CONSTANT(S)
-            None => std::env::remove_var("KELVIN_TRUST_POLICY_PATH"), // THIS LINE CONTAINS CONSTANT(S)
+            Some(value) => std::env::set_var("KELVIN_TRUST_POLICY_PATH", value),
+            None => std::env::remove_var("KELVIN_TRUST_POLICY_PATH"),
         }
         match previous_openai_key {
-            Some(value) => std::env::set_var("OPENAI_API_KEY", value), // THIS LINE CONTAINS CONSTANT(S)
-            None => std::env::remove_var("OPENAI_API_KEY"), // THIS LINE CONTAINS CONSTANT(S)
+            Some(value) => std::env::set_var("OPENAI_API_KEY", value),
+            None => std::env::remove_var("OPENAI_API_KEY"),
         }
         match previous_openai_base {
-            Some(value) => std::env::set_var("OPENAI_BASE_URL", value), // THIS LINE CONTAINS CONSTANT(S)
-            None => std::env::remove_var("OPENAI_BASE_URL"), // THIS LINE CONTAINS CONSTANT(S)
+            Some(value) => std::env::set_var("OPENAI_BASE_URL", value),
+            None => std::env::remove_var("OPENAI_BASE_URL"),
         }
 
-        assert_eq!(result.provider, "openai"); // THIS LINE CONTAINS CONSTANT(S)
-        assert_eq!(result.model, "gpt-4.1-mini"); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(result.provider, "openai");
+        assert_eq!(result.model, "gpt-4.1-mini");
         assert!(result
             .payloads
             .iter()
-            .any(|payload| payload.contains("mock-openai-ok"))); // THIS LINE CONTAINS CONSTANT(S)
+            .any(|payload| payload.contains("mock-openai-ok")));
     }
 
     #[tokio::test]
@@ -2560,49 +2559,49 @@ mod tests {
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
         let workspace = unique_workspace();
-        let plugin_home = workspace.join("plugins"); // THIS LINE CONTAINS CONSTANT(S)
-        let trust_policy = workspace.join("trusted_publishers.json"); // THIS LINE CONTAINS CONSTANT(S)
+        let plugin_home = workspace.join("plugins");
+        let trust_policy = workspace.join("trusted_publishers.json");
         seed_cli_plugin_for_tests(&plugin_home, &trust_policy);
 
         let mut server = Server::new_async().await;
         let response_body = json!({
-            "assistant_text": "mock-anthropic-ok", // THIS LINE CONTAINS CONSTANT(S)
-            "stop_reason": "completed", // THIS LINE CONTAINS CONSTANT(S)
-            "tool_calls": [], // THIS LINE CONTAINS CONSTANT(S)
-            "usage": { // THIS LINE CONTAINS CONSTANT(S)
-                "input_tokens": 12, // THIS LINE CONTAINS CONSTANT(S)
-                "output_tokens": 5, // THIS LINE CONTAINS CONSTANT(S)
-                "total_tokens": 17 // THIS LINE CONTAINS CONSTANT(S)
+            "assistant_text": "mock-anthropic-ok",
+            "stop_reason": "completed",
+            "tool_calls": [],
+            "usage": {
+                "input_tokens": 12,
+                "output_tokens": 5,
+                "total_tokens": 17
             }
         })
         .to_string();
         let mock = server
-            .mock("POST", "/v1/messages") // THIS LINE CONTAINS CONSTANT(S)
-            .with_status(200) // THIS LINE CONTAINS CONSTANT(S)
-            .with_header("content-type", "application/json") // THIS LINE CONTAINS CONSTANT(S)
+            .mock("POST", "/v1/messages")
+            .with_status(200)
+            .with_header("content-type", "application/json")
             .with_body(response_body)
             .create_async()
             .await;
         let base_url = server.url();
-        let allow_host = "127.0.0.1".to_string(); // THIS LINE CONTAINS CONSTANT(S)
+        let allow_host = "127.0.0.1".to_string();
         seed_anthropic_plugin_for_mock_host(&plugin_home, &trust_policy, &allow_host);
 
-        let previous_plugin_home = std::env::var("KELVIN_PLUGIN_HOME").ok(); // THIS LINE CONTAINS CONSTANT(S)
-        let previous_trust_policy = std::env::var("KELVIN_TRUST_POLICY_PATH").ok(); // THIS LINE CONTAINS CONSTANT(S)
-        let previous_anthropic_key = std::env::var("ANTHROPIC_API_KEY").ok(); // THIS LINE CONTAINS CONSTANT(S)
-        let previous_anthropic_base = std::env::var("ANTHROPIC_BASE_URL").ok(); // THIS LINE CONTAINS CONSTANT(S)
-        std::env::set_var("KELVIN_PLUGIN_HOME", plugin_home.as_os_str()); // THIS LINE CONTAINS CONSTANT(S)
-        std::env::set_var("KELVIN_TRUST_POLICY_PATH", trust_policy.as_os_str()); // THIS LINE CONTAINS CONSTANT(S)
-        std::env::set_var("ANTHROPIC_API_KEY", "test-anthropic-key"); // THIS LINE CONTAINS CONSTANT(S)
-        std::env::set_var("ANTHROPIC_BASE_URL", &base_url); // THIS LINE CONTAINS CONSTANT(S)
+        let previous_plugin_home = std::env::var("KELVIN_PLUGIN_HOME").ok();
+        let previous_trust_policy = std::env::var("KELVIN_TRUST_POLICY_PATH").ok();
+        let previous_anthropic_key = std::env::var("ANTHROPIC_API_KEY").ok();
+        let previous_anthropic_base = std::env::var("ANTHROPIC_BASE_URL").ok();
+        std::env::set_var("KELVIN_PLUGIN_HOME", plugin_home.as_os_str());
+        std::env::set_var("KELVIN_TRUST_POLICY_PATH", trust_policy.as_os_str());
+        std::env::set_var("ANTHROPIC_API_KEY", "test-anthropic-key");
+        std::env::set_var("ANTHROPIC_BASE_URL", &base_url);
 
         let mut config = KelvinSdkConfig::for_prompt("hello anthropic");
         config.workspace_dir = workspace.clone();
-        config.timeout_ms = 5_000; // THIS LINE CONTAINS CONSTANT(S)
+        config.timeout_ms = 5_000;
         config.memory_mode = KelvinCliMemoryMode::Fallback;
         config.load_installed_plugins = true;
         config.model_provider = KelvinSdkModelSelection::InstalledPlugin {
-            plugin_id: "acme.anthropic".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            plugin_id: "acme.anthropic".to_string(),
         };
 
         let result = run_with_sdk(config)
@@ -2611,28 +2610,28 @@ mod tests {
         mock.assert_async().await;
 
         match previous_plugin_home {
-            Some(value) => std::env::set_var("KELVIN_PLUGIN_HOME", value), // THIS LINE CONTAINS CONSTANT(S)
-            None => std::env::remove_var("KELVIN_PLUGIN_HOME"), // THIS LINE CONTAINS CONSTANT(S)
+            Some(value) => std::env::set_var("KELVIN_PLUGIN_HOME", value),
+            None => std::env::remove_var("KELVIN_PLUGIN_HOME"),
         }
         match previous_trust_policy {
-            Some(value) => std::env::set_var("KELVIN_TRUST_POLICY_PATH", value), // THIS LINE CONTAINS CONSTANT(S)
-            None => std::env::remove_var("KELVIN_TRUST_POLICY_PATH"), // THIS LINE CONTAINS CONSTANT(S)
+            Some(value) => std::env::set_var("KELVIN_TRUST_POLICY_PATH", value),
+            None => std::env::remove_var("KELVIN_TRUST_POLICY_PATH"),
         }
         match previous_anthropic_key {
-            Some(value) => std::env::set_var("ANTHROPIC_API_KEY", value), // THIS LINE CONTAINS CONSTANT(S)
-            None => std::env::remove_var("ANTHROPIC_API_KEY"), // THIS LINE CONTAINS CONSTANT(S)
+            Some(value) => std::env::set_var("ANTHROPIC_API_KEY", value),
+            None => std::env::remove_var("ANTHROPIC_API_KEY"),
         }
         match previous_anthropic_base {
-            Some(value) => std::env::set_var("ANTHROPIC_BASE_URL", value), // THIS LINE CONTAINS CONSTANT(S)
-            None => std::env::remove_var("ANTHROPIC_BASE_URL"), // THIS LINE CONTAINS CONSTANT(S)
+            Some(value) => std::env::set_var("ANTHROPIC_BASE_URL", value),
+            None => std::env::remove_var("ANTHROPIC_BASE_URL"),
         }
 
-        assert_eq!(result.provider, "anthropic"); // THIS LINE CONTAINS CONSTANT(S)
-        assert_eq!(result.model, "claude-haiku-4-5-20251001"); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(result.provider, "anthropic");
+        assert_eq!(result.model, "claude-haiku-4-5-20251001");
         assert!(result
             .payloads
             .iter()
-            .any(|payload| payload.contains("mock-anthropic-ok"))); // THIS LINE CONTAINS CONSTANT(S)
+            .any(|payload| payload.contains("mock-anthropic-ok")));
     }
 
     #[tokio::test]
@@ -2641,57 +2640,57 @@ mod tests {
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
         let workspace = unique_workspace();
-        let plugin_home = workspace.join("plugins"); // THIS LINE CONTAINS CONSTANT(S)
-        let trust_policy = workspace.join("trusted_publishers.json"); // THIS LINE CONTAINS CONSTANT(S)
+        let plugin_home = workspace.join("plugins");
+        let trust_policy = workspace.join("trusted_publishers.json");
         seed_cli_plugin_for_tests(&plugin_home, &trust_policy);
 
         let mut server = Server::new_async().await;
         let response_body = json!({
-            "id": "chatcmpl-test", // THIS LINE CONTAINS CONSTANT(S)
-            "choices": [ // THIS LINE CONTAINS CONSTANT(S)
+            "id": "chatcmpl-test",
+            "choices": [
                 {
-                    "index": 0, // THIS LINE CONTAINS CONSTANT(S)
-                    "message": { // THIS LINE CONTAINS CONSTANT(S)
-                        "role": "assistant", // THIS LINE CONTAINS CONSTANT(S)
-                        "content": "mock-openrouter-ok" // THIS LINE CONTAINS CONSTANT(S)
+                    "index": 0,
+                    "message": {
+                        "role": "assistant",
+                        "content": "mock-openrouter-ok"
                     },
-                    "finish_reason": "stop" // THIS LINE CONTAINS CONSTANT(S)
+                    "finish_reason": "stop"
                 }
             ],
-            "usage": { // THIS LINE CONTAINS CONSTANT(S)
-                "prompt_tokens": 10, // THIS LINE CONTAINS CONSTANT(S)
-                "completion_tokens": 4, // THIS LINE CONTAINS CONSTANT(S)
-                "total_tokens": 14 // THIS LINE CONTAINS CONSTANT(S)
+            "usage": {
+                "prompt_tokens": 10,
+                "completion_tokens": 4,
+                "total_tokens": 14
             }
         })
         .to_string();
         let mock = server
-            .mock("POST", "/api/v1/chat/completions") // THIS LINE CONTAINS CONSTANT(S)
-            .with_status(200) // THIS LINE CONTAINS CONSTANT(S)
-            .with_header("content-type", "application/json") // THIS LINE CONTAINS CONSTANT(S)
+            .mock("POST", "/api/v1/chat/completions")
+            .with_status(200)
+            .with_header("content-type", "application/json")
             .with_body(response_body)
             .create_async()
             .await;
-        let base_url = format!("{}/api/v1", server.url()); // THIS LINE CONTAINS CONSTANT(S)
-        let allow_host = "127.0.0.1".to_string(); // THIS LINE CONTAINS CONSTANT(S)
+        let base_url = format!("{}/api/v1", server.url());
+        let allow_host = "127.0.0.1".to_string();
         seed_openrouter_plugin_for_mock_host(&plugin_home, &trust_policy, &allow_host);
 
-        let previous_plugin_home = std::env::var("KELVIN_PLUGIN_HOME").ok(); // THIS LINE CONTAINS CONSTANT(S)
-        let previous_trust_policy = std::env::var("KELVIN_TRUST_POLICY_PATH").ok(); // THIS LINE CONTAINS CONSTANT(S)
-        let previous_key = std::env::var("OPENROUTER_API_KEY").ok(); // THIS LINE CONTAINS CONSTANT(S)
-        let previous_base = std::env::var("OPENROUTER_BASE_URL").ok(); // THIS LINE CONTAINS CONSTANT(S)
-        std::env::set_var("KELVIN_PLUGIN_HOME", plugin_home.as_os_str()); // THIS LINE CONTAINS CONSTANT(S)
-        std::env::set_var("KELVIN_TRUST_POLICY_PATH", trust_policy.as_os_str()); // THIS LINE CONTAINS CONSTANT(S)
-        std::env::set_var("OPENROUTER_API_KEY", "test-openrouter-key"); // THIS LINE CONTAINS CONSTANT(S)
-        std::env::set_var("OPENROUTER_BASE_URL", &base_url); // THIS LINE CONTAINS CONSTANT(S)
+        let previous_plugin_home = std::env::var("KELVIN_PLUGIN_HOME").ok();
+        let previous_trust_policy = std::env::var("KELVIN_TRUST_POLICY_PATH").ok();
+        let previous_key = std::env::var("OPENROUTER_API_KEY").ok();
+        let previous_base = std::env::var("OPENROUTER_BASE_URL").ok();
+        std::env::set_var("KELVIN_PLUGIN_HOME", plugin_home.as_os_str());
+        std::env::set_var("KELVIN_TRUST_POLICY_PATH", trust_policy.as_os_str());
+        std::env::set_var("OPENROUTER_API_KEY", "test-openrouter-key");
+        std::env::set_var("OPENROUTER_BASE_URL", &base_url);
 
         let mut config = KelvinSdkConfig::for_prompt("hello openrouter");
         config.workspace_dir = workspace.clone();
-        config.timeout_ms = 5_000; // THIS LINE CONTAINS CONSTANT(S)
+        config.timeout_ms = 5_000;
         config.memory_mode = KelvinCliMemoryMode::Fallback;
         config.load_installed_plugins = true;
         config.model_provider = KelvinSdkModelSelection::InstalledPlugin {
-            plugin_id: "acme.openrouter".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            plugin_id: "acme.openrouter".to_string(),
         };
 
         let result = run_with_sdk(config)
@@ -2700,28 +2699,28 @@ mod tests {
         mock.assert_async().await;
 
         match previous_plugin_home {
-            Some(value) => std::env::set_var("KELVIN_PLUGIN_HOME", value), // THIS LINE CONTAINS CONSTANT(S)
-            None => std::env::remove_var("KELVIN_PLUGIN_HOME"), // THIS LINE CONTAINS CONSTANT(S)
+            Some(value) => std::env::set_var("KELVIN_PLUGIN_HOME", value),
+            None => std::env::remove_var("KELVIN_PLUGIN_HOME"),
         }
         match previous_trust_policy {
-            Some(value) => std::env::set_var("KELVIN_TRUST_POLICY_PATH", value), // THIS LINE CONTAINS CONSTANT(S)
-            None => std::env::remove_var("KELVIN_TRUST_POLICY_PATH"), // THIS LINE CONTAINS CONSTANT(S)
+            Some(value) => std::env::set_var("KELVIN_TRUST_POLICY_PATH", value),
+            None => std::env::remove_var("KELVIN_TRUST_POLICY_PATH"),
         }
         match previous_key {
-            Some(value) => std::env::set_var("OPENROUTER_API_KEY", value), // THIS LINE CONTAINS CONSTANT(S)
-            None => std::env::remove_var("OPENROUTER_API_KEY"), // THIS LINE CONTAINS CONSTANT(S)
+            Some(value) => std::env::set_var("OPENROUTER_API_KEY", value),
+            None => std::env::remove_var("OPENROUTER_API_KEY"),
         }
         match previous_base {
-            Some(value) => std::env::set_var("OPENROUTER_BASE_URL", value), // THIS LINE CONTAINS CONSTANT(S)
-            None => std::env::remove_var("OPENROUTER_BASE_URL"), // THIS LINE CONTAINS CONSTANT(S)
+            Some(value) => std::env::set_var("OPENROUTER_BASE_URL", value),
+            None => std::env::remove_var("OPENROUTER_BASE_URL"),
         }
 
-        assert_eq!(result.provider, "openrouter"); // THIS LINE CONTAINS CONSTANT(S)
-        assert_eq!(result.model, "openai/gpt-4.1-mini"); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(result.provider, "openrouter");
+        assert_eq!(result.model, "openai/gpt-4.1-mini");
         assert!(result
             .payloads
             .iter()
-            .any(|payload| payload.contains("mock-openrouter-ok"))); // THIS LINE CONTAINS CONSTANT(S)
+            .any(|payload| payload.contains("mock-openrouter-ok")));
     }
 
     #[tokio::test]
@@ -2730,62 +2729,62 @@ mod tests {
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
         let workspace = unique_workspace();
-        let plugin_home = workspace.join("plugins"); // THIS LINE CONTAINS CONSTANT(S)
-        let trust_policy = workspace.join("trusted_publishers.json"); // THIS LINE CONTAINS CONSTANT(S)
+        let plugin_home = workspace.join("plugins");
+        let trust_policy = workspace.join("trusted_publishers.json");
         seed_cli_plugin_for_tests(&plugin_home, &trust_policy);
 
         let mut openai_server = Server::new_async().await;
         let openai_mock = openai_server
-            .mock("POST", "/v1/responses") // THIS LINE CONTAINS CONSTANT(S)
-            .with_status(503) // THIS LINE CONTAINS CONSTANT(S)
+            .mock("POST", "/v1/responses")
+            .with_status(503)
             .with_body("upstream unavailable")
             .create_async()
             .await;
         let mut anthropic_server = Server::new_async().await;
         let anthropic_response = json!({
-            "assistant_text": "mock-failover-anthropic-ok", // THIS LINE CONTAINS CONSTANT(S)
-            "stop_reason": "completed", // THIS LINE CONTAINS CONSTANT(S)
-            "tool_calls": [], // THIS LINE CONTAINS CONSTANT(S)
-            "usage": { // THIS LINE CONTAINS CONSTANT(S)
-                "input_tokens": 7, // THIS LINE CONTAINS CONSTANT(S)
-                "output_tokens": 6, // THIS LINE CONTAINS CONSTANT(S)
-                "total_tokens": 13 // THIS LINE CONTAINS CONSTANT(S)
+            "assistant_text": "mock-failover-anthropic-ok",
+            "stop_reason": "completed",
+            "tool_calls": [],
+            "usage": {
+                "input_tokens": 7,
+                "output_tokens": 6,
+                "total_tokens": 13
             }
         })
         .to_string();
         let anthropic_mock = anthropic_server
-            .mock("POST", "/v1/messages") // THIS LINE CONTAINS CONSTANT(S)
-            .with_status(200) // THIS LINE CONTAINS CONSTANT(S)
-            .with_header("content-type", "application/json") // THIS LINE CONTAINS CONSTANT(S)
+            .mock("POST", "/v1/messages")
+            .with_status(200)
+            .with_header("content-type", "application/json")
             .with_body(anthropic_response)
             .create_async()
             .await;
-        let allow_host = "127.0.0.1".to_string(); // THIS LINE CONTAINS CONSTANT(S)
+        let allow_host = "127.0.0.1".to_string();
         seed_openai_plugin_for_mock_host(&plugin_home, &trust_policy, &allow_host);
         seed_anthropic_plugin_for_mock_host(&plugin_home, &trust_policy, &allow_host);
 
-        let previous_plugin_home = std::env::var("KELVIN_PLUGIN_HOME").ok(); // THIS LINE CONTAINS CONSTANT(S)
-        let previous_trust_policy = std::env::var("KELVIN_TRUST_POLICY_PATH").ok(); // THIS LINE CONTAINS CONSTANT(S)
-        let previous_openai_key = std::env::var("OPENAI_API_KEY").ok(); // THIS LINE CONTAINS CONSTANT(S)
-        let previous_openai_base = std::env::var("OPENAI_BASE_URL").ok(); // THIS LINE CONTAINS CONSTANT(S)
-        let previous_anthropic_key = std::env::var("ANTHROPIC_API_KEY").ok(); // THIS LINE CONTAINS CONSTANT(S)
-        let previous_anthropic_base = std::env::var("ANTHROPIC_BASE_URL").ok(); // THIS LINE CONTAINS CONSTANT(S)
-        std::env::set_var("KELVIN_PLUGIN_HOME", plugin_home.as_os_str()); // THIS LINE CONTAINS CONSTANT(S)
-        std::env::set_var("KELVIN_TRUST_POLICY_PATH", trust_policy.as_os_str()); // THIS LINE CONTAINS CONSTANT(S)
-        std::env::set_var("OPENAI_API_KEY", "test-openai-key"); // THIS LINE CONTAINS CONSTANT(S)
-        std::env::set_var("OPENAI_BASE_URL", openai_server.url()); // THIS LINE CONTAINS CONSTANT(S)
-        std::env::set_var("ANTHROPIC_API_KEY", "test-anthropic-key"); // THIS LINE CONTAINS CONSTANT(S)
-        std::env::set_var("ANTHROPIC_BASE_URL", anthropic_server.url()); // THIS LINE CONTAINS CONSTANT(S)
+        let previous_plugin_home = std::env::var("KELVIN_PLUGIN_HOME").ok();
+        let previous_trust_policy = std::env::var("KELVIN_TRUST_POLICY_PATH").ok();
+        let previous_openai_key = std::env::var("OPENAI_API_KEY").ok();
+        let previous_openai_base = std::env::var("OPENAI_BASE_URL").ok();
+        let previous_anthropic_key = std::env::var("ANTHROPIC_API_KEY").ok();
+        let previous_anthropic_base = std::env::var("ANTHROPIC_BASE_URL").ok();
+        std::env::set_var("KELVIN_PLUGIN_HOME", plugin_home.as_os_str());
+        std::env::set_var("KELVIN_TRUST_POLICY_PATH", trust_policy.as_os_str());
+        std::env::set_var("OPENAI_API_KEY", "test-openai-key");
+        std::env::set_var("OPENAI_BASE_URL", openai_server.url());
+        std::env::set_var("ANTHROPIC_API_KEY", "test-anthropic-key");
+        std::env::set_var("ANTHROPIC_BASE_URL", anthropic_server.url());
 
         let mut config = KelvinSdkConfig::for_prompt("hello failover");
         config.workspace_dir = workspace.clone();
-        config.timeout_ms = 5_000; // THIS LINE CONTAINS CONSTANT(S)
+        config.timeout_ms = 5_000;
         config.memory_mode = KelvinCliMemoryMode::Fallback;
         config.load_installed_plugins = true;
         config.model_provider = KelvinSdkModelSelection::InstalledPluginFailover {
-            plugin_ids: vec!["acme.openai".to_string(), "acme.anthropic".to_string()], // THIS LINE CONTAINS CONSTANT(S)
-            max_retries_per_provider: 0, // THIS LINE CONTAINS CONSTANT(S)
-            retry_backoff_ms: 1, // THIS LINE CONTAINS CONSTANT(S)
+            plugin_ids: vec!["acme.openai".to_string(), "acme.anthropic".to_string()],
+            max_retries_per_provider: 0,
+            retry_backoff_ms: 1,
         };
 
         let result = run_with_sdk(config).await.expect("run with model failover");
@@ -2793,37 +2792,37 @@ mod tests {
         anthropic_mock.assert_async().await;
 
         match previous_plugin_home {
-            Some(value) => std::env::set_var("KELVIN_PLUGIN_HOME", value), // THIS LINE CONTAINS CONSTANT(S)
-            None => std::env::remove_var("KELVIN_PLUGIN_HOME"), // THIS LINE CONTAINS CONSTANT(S)
+            Some(value) => std::env::set_var("KELVIN_PLUGIN_HOME", value),
+            None => std::env::remove_var("KELVIN_PLUGIN_HOME"),
         }
         match previous_trust_policy {
-            Some(value) => std::env::set_var("KELVIN_TRUST_POLICY_PATH", value), // THIS LINE CONTAINS CONSTANT(S)
-            None => std::env::remove_var("KELVIN_TRUST_POLICY_PATH"), // THIS LINE CONTAINS CONSTANT(S)
+            Some(value) => std::env::set_var("KELVIN_TRUST_POLICY_PATH", value),
+            None => std::env::remove_var("KELVIN_TRUST_POLICY_PATH"),
         }
         match previous_openai_key {
-            Some(value) => std::env::set_var("OPENAI_API_KEY", value), // THIS LINE CONTAINS CONSTANT(S)
-            None => std::env::remove_var("OPENAI_API_KEY"), // THIS LINE CONTAINS CONSTANT(S)
+            Some(value) => std::env::set_var("OPENAI_API_KEY", value),
+            None => std::env::remove_var("OPENAI_API_KEY"),
         }
         match previous_openai_base {
-            Some(value) => std::env::set_var("OPENAI_BASE_URL", value), // THIS LINE CONTAINS CONSTANT(S)
-            None => std::env::remove_var("OPENAI_BASE_URL"), // THIS LINE CONTAINS CONSTANT(S)
+            Some(value) => std::env::set_var("OPENAI_BASE_URL", value),
+            None => std::env::remove_var("OPENAI_BASE_URL"),
         }
         match previous_anthropic_key {
-            Some(value) => std::env::set_var("ANTHROPIC_API_KEY", value), // THIS LINE CONTAINS CONSTANT(S)
-            None => std::env::remove_var("ANTHROPIC_API_KEY"), // THIS LINE CONTAINS CONSTANT(S)
+            Some(value) => std::env::set_var("ANTHROPIC_API_KEY", value),
+            None => std::env::remove_var("ANTHROPIC_API_KEY"),
         }
         match previous_anthropic_base {
-            Some(value) => std::env::set_var("ANTHROPIC_BASE_URL", value), // THIS LINE CONTAINS CONSTANT(S)
-            None => std::env::remove_var("ANTHROPIC_BASE_URL"), // THIS LINE CONTAINS CONSTANT(S)
+            Some(value) => std::env::set_var("ANTHROPIC_BASE_URL", value),
+            None => std::env::remove_var("ANTHROPIC_BASE_URL"),
         }
 
-        assert_eq!(result.provider, "kelvin.failover"); // THIS LINE CONTAINS CONSTANT(S)
-        assert!(result.model.contains("openai/gpt-4.1-mini")); // THIS LINE CONTAINS CONSTANT(S)
-        assert!(result.model.contains("anthropic/claude-haiku-4-5-20251001")); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(result.provider, "kelvin.failover");
+        assert!(result.model.contains("openai/gpt-4.1-mini"));
+        assert!(result.model.contains("anthropic/claude-haiku-4-5-20251001"));
         assert!(result
             .payloads
             .iter()
-            .any(|payload| payload.contains("mock-failover-anthropic-ok"))); // THIS LINE CONTAINS CONSTANT(S)
+            .any(|payload| payload.contains("mock-failover-anthropic-ok")));
     }
 
     #[tokio::test]
@@ -2832,23 +2831,23 @@ mod tests {
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
         let fixture_root = unique_workspace();
-        let plugin_home = fixture_root.join("plugins"); // THIS LINE CONTAINS CONSTANT(S)
-        let trust_policy = fixture_root.join("trusted_publishers.json"); // THIS LINE CONTAINS CONSTANT(S)
+        let plugin_home = fixture_root.join("plugins");
+        let trust_policy = fixture_root.join("trusted_publishers.json");
         seed_cli_plugin_for_tests(&plugin_home, &trust_policy);
 
-        let previous_plugin_home = std::env::var("KELVIN_PLUGIN_HOME").ok(); // THIS LINE CONTAINS CONSTANT(S)
-        let previous_trust_policy = std::env::var("KELVIN_TRUST_POLICY_PATH").ok(); // THIS LINE CONTAINS CONSTANT(S)
-        std::env::set_var("KELVIN_PLUGIN_HOME", plugin_home.as_os_str()); // THIS LINE CONTAINS CONSTANT(S)
-        std::env::set_var("KELVIN_TRUST_POLICY_PATH", trust_policy.as_os_str()); // THIS LINE CONTAINS CONSTANT(S)
+        let previous_plugin_home = std::env::var("KELVIN_PLUGIN_HOME").ok();
+        let previous_trust_policy = std::env::var("KELVIN_TRUST_POLICY_PATH").ok();
+        std::env::set_var("KELVIN_PLUGIN_HOME", plugin_home.as_os_str());
+        std::env::set_var("KELVIN_TRUST_POLICY_PATH", trust_policy.as_os_str());
 
         let workspace = unique_workspace();
         let mut config = KelvinSdkConfig::for_prompt("hello sdk");
         config.workspace_dir = workspace;
-        config.timeout_ms = 5_000; // THIS LINE CONTAINS CONSTANT(S)
+        config.timeout_ms = 5_000;
         config.memory_mode = KelvinCliMemoryMode::Fallback;
         config.load_installed_plugins = true;
         config.model_provider = KelvinSdkModelSelection::InstalledPlugin {
-            plugin_id: "missing.model".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            plugin_id: "missing.model".to_string(),
         };
 
         let err = run_with_sdk(config)
@@ -2856,12 +2855,12 @@ mod tests {
             .expect_err("missing plugin should fail");
 
         match previous_plugin_home {
-            Some(value) => std::env::set_var("KELVIN_PLUGIN_HOME", value), // THIS LINE CONTAINS CONSTANT(S)
-            None => std::env::remove_var("KELVIN_PLUGIN_HOME"), // THIS LINE CONTAINS CONSTANT(S)
+            Some(value) => std::env::set_var("KELVIN_PLUGIN_HOME", value),
+            None => std::env::remove_var("KELVIN_PLUGIN_HOME"),
         }
         match previous_trust_policy {
-            Some(value) => std::env::set_var("KELVIN_TRUST_POLICY_PATH", value), // THIS LINE CONTAINS CONSTANT(S)
-            None => std::env::remove_var("KELVIN_TRUST_POLICY_PATH"), // THIS LINE CONTAINS CONSTANT(S)
+            Some(value) => std::env::set_var("KELVIN_TRUST_POLICY_PATH", value),
+            None => std::env::remove_var("KELVIN_TRUST_POLICY_PATH"),
         }
 
         assert!(err.to_string().contains("configured model provider plugin"));
@@ -2873,30 +2872,30 @@ mod tests {
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
         let workspace = unique_workspace();
-        let plugin_home = workspace.join("plugins"); // THIS LINE CONTAINS CONSTANT(S)
-        let trust_policy = workspace.join("trusted_publishers.json"); // THIS LINE CONTAINS CONSTANT(S)
+        let plugin_home = workspace.join("plugins");
+        let trust_policy = workspace.join("trusted_publishers.json");
         seed_cli_plugin_for_tests(&plugin_home, &trust_policy);
 
-        let base_url = "http://127.0.0.1:18080".to_string(); // THIS LINE CONTAINS CONSTANT(S)
-        let allow_host = "127.0.0.1".to_string(); // THIS LINE CONTAINS CONSTANT(S)
+        let base_url = "http://127.0.0.1:18080".to_string();
+        let allow_host = "127.0.0.1".to_string();
         seed_openai_plugin_for_mock_host(&plugin_home, &trust_policy, &allow_host);
 
-        let previous_plugin_home = std::env::var("KELVIN_PLUGIN_HOME").ok(); // THIS LINE CONTAINS CONSTANT(S)
-        let previous_trust_policy = std::env::var("KELVIN_TRUST_POLICY_PATH").ok(); // THIS LINE CONTAINS CONSTANT(S)
-        let previous_openai_key = std::env::var("OPENAI_API_KEY").ok(); // THIS LINE CONTAINS CONSTANT(S)
-        let previous_openai_base = std::env::var("OPENAI_BASE_URL").ok(); // THIS LINE CONTAINS CONSTANT(S)
-        std::env::set_var("KELVIN_PLUGIN_HOME", plugin_home.as_os_str()); // THIS LINE CONTAINS CONSTANT(S)
-        std::env::set_var("KELVIN_TRUST_POLICY_PATH", trust_policy.as_os_str()); // THIS LINE CONTAINS CONSTANT(S)
-        std::env::remove_var("OPENAI_API_KEY"); // THIS LINE CONTAINS CONSTANT(S)
-        std::env::set_var("OPENAI_BASE_URL", &base_url); // THIS LINE CONTAINS CONSTANT(S)
+        let previous_plugin_home = std::env::var("KELVIN_PLUGIN_HOME").ok();
+        let previous_trust_policy = std::env::var("KELVIN_TRUST_POLICY_PATH").ok();
+        let previous_openai_key = std::env::var("OPENAI_API_KEY").ok();
+        let previous_openai_base = std::env::var("OPENAI_BASE_URL").ok();
+        std::env::set_var("KELVIN_PLUGIN_HOME", plugin_home.as_os_str());
+        std::env::set_var("KELVIN_TRUST_POLICY_PATH", trust_policy.as_os_str());
+        std::env::remove_var("OPENAI_API_KEY");
+        std::env::set_var("OPENAI_BASE_URL", &base_url);
 
         let mut config = KelvinSdkConfig::for_prompt("hello openai");
         config.workspace_dir = workspace.clone();
-        config.timeout_ms = 5_000; // THIS LINE CONTAINS CONSTANT(S)
+        config.timeout_ms = 5_000;
         config.memory_mode = KelvinCliMemoryMode::Fallback;
         config.load_installed_plugins = true;
         config.model_provider = KelvinSdkModelSelection::InstalledPlugin {
-            plugin_id: "acme.openai".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            plugin_id: "acme.openai".to_string(),
         };
 
         let err = run_with_sdk(config)
@@ -2904,54 +2903,54 @@ mod tests {
             .expect_err("missing OPENAI_API_KEY should fail");
 
         match previous_plugin_home {
-            Some(value) => std::env::set_var("KELVIN_PLUGIN_HOME", value), // THIS LINE CONTAINS CONSTANT(S)
-            None => std::env::remove_var("KELVIN_PLUGIN_HOME"), // THIS LINE CONTAINS CONSTANT(S)
+            Some(value) => std::env::set_var("KELVIN_PLUGIN_HOME", value),
+            None => std::env::remove_var("KELVIN_PLUGIN_HOME"),
         }
         match previous_trust_policy {
-            Some(value) => std::env::set_var("KELVIN_TRUST_POLICY_PATH", value), // THIS LINE CONTAINS CONSTANT(S)
-            None => std::env::remove_var("KELVIN_TRUST_POLICY_PATH"), // THIS LINE CONTAINS CONSTANT(S)
+            Some(value) => std::env::set_var("KELVIN_TRUST_POLICY_PATH", value),
+            None => std::env::remove_var("KELVIN_TRUST_POLICY_PATH"),
         }
         match previous_openai_key {
-            Some(value) => std::env::set_var("OPENAI_API_KEY", value), // THIS LINE CONTAINS CONSTANT(S)
-            None => std::env::remove_var("OPENAI_API_KEY"), // THIS LINE CONTAINS CONSTANT(S)
+            Some(value) => std::env::set_var("OPENAI_API_KEY", value),
+            None => std::env::remove_var("OPENAI_API_KEY"),
         }
         match previous_openai_base {
-            Some(value) => std::env::set_var("OPENAI_BASE_URL", value), // THIS LINE CONTAINS CONSTANT(S)
-            None => std::env::remove_var("OPENAI_BASE_URL"), // THIS LINE CONTAINS CONSTANT(S)
+            Some(value) => std::env::set_var("OPENAI_BASE_URL", value),
+            None => std::env::remove_var("OPENAI_BASE_URL"),
         }
 
-        assert!(err.to_string().contains("OPENAI_API_KEY")); // THIS LINE CONTAINS CONSTANT(S)
+        assert!(err.to_string().contains("OPENAI_API_KEY"));
     }
 
     #[tokio::test]
     async fn failover_provider_retries_then_falls_back() {
         let primary = StubModelProvider::new(
-            "primary", // THIS LINE CONTAINS CONSTANT(S)
-            "model-a", // THIS LINE CONTAINS CONSTANT(S)
-            2, // THIS LINE CONTAINS CONSTANT(S)
+            "primary",
+            "model-a",
+            2,
             KelvinError::Backend("primary unavailable".to_string()),
             "primary response",
         );
         let secondary = StubModelProvider::new(
-            "secondary", // THIS LINE CONTAINS CONSTANT(S)
-            "model-b", // THIS LINE CONTAINS CONSTANT(S)
-            0, // THIS LINE CONTAINS CONSTANT(S)
-            KelvinError::Backend("unused".to_string()), // THIS LINE CONTAINS CONSTANT(S)
+            "secondary",
+            "model-b",
+            0,
+            KelvinError::Backend("unused".to_string()),
             "secondary response",
         );
         let failover = super::FailoverModelProvider {
             providers: vec![Arc::new(primary.clone()), Arc::new(secondary.clone())],
             chain_label: "primary/model-a -> secondary/model-b".to_string(),
-            max_retries_per_provider: 1, // THIS LINE CONTAINS CONSTANT(S)
-            retry_backoff_ms: 1, // THIS LINE CONTAINS CONSTANT(S)
+            max_retries_per_provider: 1,
+            retry_backoff_ms: 1,
         };
 
         let output = failover
             .infer(ModelInput {
-                run_id: "run-1".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-                session_id: "session-1".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-                system_prompt: "sys".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-                user_prompt: "hello".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                run_id: "run-1".to_string(),
+                session_id: "session-1".to_string(),
+                system_prompt: "sys".to_string(),
+                user_prompt: "hello".to_string(),
                 memory_snippets: Vec::new(),
                 history: Vec::new(),
                 tools: Vec::new(),
@@ -2959,39 +2958,39 @@ mod tests {
             .await
             .expect("failover output");
         assert_eq!(output.assistant_text, "secondary response");
-        assert_eq!(primary.calls(), 2); // THIS LINE CONTAINS CONSTANT(S)
-        assert_eq!(secondary.calls(), 1); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(primary.calls(), 2);
+        assert_eq!(secondary.calls(), 1);
     }
 
     #[tokio::test]
     async fn failover_provider_does_not_fallback_on_invalid_input() {
         let primary = StubModelProvider::new(
-            "primary", // THIS LINE CONTAINS CONSTANT(S)
-            "model-a", // THIS LINE CONTAINS CONSTANT(S)
-            1, // THIS LINE CONTAINS CONSTANT(S)
+            "primary",
+            "model-a",
+            1,
             KelvinError::InvalidInput("bad request".to_string()),
             "primary response",
         );
         let secondary = StubModelProvider::new(
-            "secondary", // THIS LINE CONTAINS CONSTANT(S)
-            "model-b", // THIS LINE CONTAINS CONSTANT(S)
-            0, // THIS LINE CONTAINS CONSTANT(S)
-            KelvinError::Backend("unused".to_string()), // THIS LINE CONTAINS CONSTANT(S)
+            "secondary",
+            "model-b",
+            0,
+            KelvinError::Backend("unused".to_string()),
             "secondary response",
         );
         let failover = super::FailoverModelProvider {
             providers: vec![Arc::new(primary.clone()), Arc::new(secondary.clone())],
             chain_label: "primary/model-a -> secondary/model-b".to_string(),
-            max_retries_per_provider: 2, // THIS LINE CONTAINS CONSTANT(S)
-            retry_backoff_ms: 1, // THIS LINE CONTAINS CONSTANT(S)
+            max_retries_per_provider: 2,
+            retry_backoff_ms: 1,
         };
 
         let err = failover
             .infer(ModelInput {
-                run_id: "run-2".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-                session_id: "session-2".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-                system_prompt: "sys".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-                user_prompt: "hello".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                run_id: "run-2".to_string(),
+                session_id: "session-2".to_string(),
+                system_prompt: "sys".to_string(),
+                user_prompt: "hello".to_string(),
                 memory_snippets: Vec::new(),
                 history: Vec::new(),
                 tools: Vec::new(),
@@ -2999,19 +2998,19 @@ mod tests {
             .await
             .expect_err("invalid input should fail closed");
         assert!(matches!(err, KelvinError::InvalidInput(_)));
-        assert_eq!(primary.calls(), 1); // THIS LINE CONTAINS CONSTANT(S)
-        assert_eq!(secondary.calls(), 0); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(primary.calls(), 1);
+        assert_eq!(secondary.calls(), 0);
     }
 
     fn find_first_messages_file(state_dir: &Path) -> Option<PathBuf> {
-        let sessions_dir = state_dir.join("sessions"); // THIS LINE CONTAINS CONSTANT(S)
+        let sessions_dir = state_dir.join("sessions");
         if !sessions_dir.is_dir() {
             return None;
         }
         let entries = fs::read_dir(sessions_dir).ok()?;
         for entry in entries {
             let entry = entry.ok()?;
-            let path = entry.path().join("messages.jsonl"); // THIS LINE CONTAINS CONSTANT(S)
+            let path = entry.path().join("messages.jsonl");
             if path.is_file() {
                 return Some(path);
             }
@@ -3020,7 +3019,7 @@ mod tests {
     }
 
     fn find_run_record(state_dir: &Path, run_id: &str) -> Option<serde_json::Value> {
-        let runs_dir = state_dir.join("runs"); // THIS LINE CONTAINS CONSTANT(S)
+        let runs_dir = state_dir.join("runs");
         if !runs_dir.is_dir() {
             return None;
         }
@@ -3032,7 +3031,7 @@ mod tests {
             }
             let bytes = fs::read(entry.path()).ok()?;
             let value: serde_json::Value = serde_json::from_slice(&bytes).ok()?;
-            if value.get("run_id") == Some(&json!(run_id)) { // THIS LINE CONTAINS CONSTANT(S)
+            if value.get("run_id") == Some(&json!(run_id)) {
                 return Some(value);
             }
         }
@@ -3042,14 +3041,14 @@ mod tests {
     #[tokio::test]
     async fn sdk_runtime_persists_run_records_and_outcomes() {
         let runtime_workspace = unique_workspace();
-        let state_dir = runtime_workspace.join(".kelvin").join("state"); // THIS LINE CONTAINS CONSTANT(S)
+        let state_dir = runtime_workspace.join(".kelvin").join("state");
         let runtime = super::KelvinSdkRuntime::initialize(super::KelvinSdkRuntimeConfig {
             workspace_dir: runtime_workspace.clone(),
-            default_session_id: "persist-session".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            default_session_id: "persist-session".to_string(),
             memory_mode: super::KelvinCliMemoryMode::Fallback,
-            default_timeout_ms: 3_000, // THIS LINE CONTAINS CONSTANT(S)
+            default_timeout_ms: 3_000,
             default_system_prompt: None,
-            core_version: "0.1.0".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            core_version: "0.1.0".to_string(),
             plugin_security_policy: Default::default(),
             load_installed_plugins: false,
             model_provider: super::KelvinSdkModelSelection::Echo,
@@ -3057,9 +3056,9 @@ mod tests {
             emit_stdout_events: false,
             state_dir: Some(state_dir.clone()),
             persist_runs: true,
-            max_session_history_messages: 128, // THIS LINE CONTAINS CONSTANT(S)
-            compact_to_messages: 64, // THIS LINE CONTAINS CONSTANT(S)
-            max_tool_iterations: 10, // THIS LINE CONTAINS CONSTANT(S)
+            max_session_history_messages: 128,
+            compact_to_messages: 64,
+            max_tool_iterations: 10,
         })
         .await
         .expect("initialize runtime");
@@ -3067,38 +3066,38 @@ mod tests {
         let accepted = runtime
             .submit(super::KelvinSdkRunRequest {
                 prompt: "persist me".to_string(),
-                session_id: Some("persist-session".to_string()), // THIS LINE CONTAINS CONSTANT(S)
+                session_id: Some("persist-session".to_string()),
                 workspace_dir: Some(runtime_workspace),
-                timeout_ms: Some(3_000), // THIS LINE CONTAINS CONSTANT(S)
+                timeout_ms: Some(3_000),
                 system_prompt: None,
                 memory_query: None,
                 run_id: None,
             })
             .await
-            .expect("submit"); // THIS LINE CONTAINS CONSTANT(S)
+            .expect("submit");
         let outcome = runtime
-            .wait_for_outcome(&accepted.run_id, 5_000) // THIS LINE CONTAINS CONSTANT(S)
+            .wait_for_outcome(&accepted.run_id, 5_000)
             .await
             .expect("wait outcome");
         assert!(matches!(outcome, RunOutcome::Completed(_)));
 
         let run_record =
             find_run_record(&state_dir, &accepted.run_id).expect("run record should exist");
-        assert_eq!(run_record["run_id"], json!(accepted.run_id)); // THIS LINE CONTAINS CONSTANT(S)
-        assert_eq!(run_record["last_outcome"]["status"], json!("completed")); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(run_record["run_id"], json!(accepted.run_id));
+        assert_eq!(run_record["last_outcome"]["status"], json!("completed"));
     }
 
     #[tokio::test]
     async fn sdk_runtime_compacts_session_history_by_policy() {
         let runtime_workspace = unique_workspace();
-        let state_dir = runtime_workspace.join(".kelvin").join("state"); // THIS LINE CONTAINS CONSTANT(S)
+        let state_dir = runtime_workspace.join(".kelvin").join("state");
         let runtime = super::KelvinSdkRuntime::initialize(super::KelvinSdkRuntimeConfig {
             workspace_dir: runtime_workspace.clone(),
-            default_session_id: "compact-session".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            default_session_id: "compact-session".to_string(),
             memory_mode: super::KelvinCliMemoryMode::Fallback,
-            default_timeout_ms: 3_000, // THIS LINE CONTAINS CONSTANT(S)
+            default_timeout_ms: 3_000,
             default_system_prompt: None,
-            core_version: "0.1.0".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            core_version: "0.1.0".to_string(),
             plugin_security_policy: Default::default(),
             load_installed_plugins: false,
             model_provider: super::KelvinSdkModelSelection::Echo,
@@ -3106,28 +3105,28 @@ mod tests {
             emit_stdout_events: false,
             state_dir: Some(state_dir.clone()),
             persist_runs: false,
-            max_session_history_messages: 6, // THIS LINE CONTAINS CONSTANT(S)
-            compact_to_messages: 3, // THIS LINE CONTAINS CONSTANT(S)
-            max_tool_iterations: 10, // THIS LINE CONTAINS CONSTANT(S)
+            max_session_history_messages: 6,
+            compact_to_messages: 3,
+            max_tool_iterations: 10,
         })
         .await
         .expect("initialize runtime");
 
-        for idx in 0..6 { // THIS LINE CONTAINS CONSTANT(S)
+        for idx in 0..6 {
             let accepted = runtime
                 .submit(super::KelvinSdkRunRequest {
                     prompt: format!("compaction message {idx}"),
-                    session_id: Some("compact-session".to_string()), // THIS LINE CONTAINS CONSTANT(S)
+                    session_id: Some("compact-session".to_string()),
                     workspace_dir: Some(runtime_workspace.clone()),
-                    timeout_ms: Some(3_000), // THIS LINE CONTAINS CONSTANT(S)
+                    timeout_ms: Some(3_000),
                     system_prompt: None,
                     memory_query: None,
                     run_id: None,
                 })
                 .await
-                .expect("submit"); // THIS LINE CONTAINS CONSTANT(S)
+                .expect("submit");
             let _ = runtime
-                .wait_for_outcome(&accepted.run_id, 5_000) // THIS LINE CONTAINS CONSTANT(S)
+                .wait_for_outcome(&accepted.run_id, 5_000)
                 .await
                 .expect("wait outcome");
         }
@@ -3138,26 +3137,26 @@ mod tests {
             .lines()
             .filter(|line| !line.trim().is_empty())
             .collect::<Vec<_>>();
-        assert!(lines.len() <= 6); // THIS LINE CONTAINS CONSTANT(S)
+        assert!(lines.len() <= 6);
     }
 
     #[tokio::test]
     async fn sdk_runtime_initialization_recovers_from_corrupt_descriptor() {
         let runtime_workspace = unique_workspace();
-        let state_dir = runtime_workspace.join(".kelvin").join("state"); // THIS LINE CONTAINS CONSTANT(S)
+        let state_dir = runtime_workspace.join(".kelvin").join("state");
         let session_dir = state_dir
-            .join("sessions") // THIS LINE CONTAINS CONSTANT(S)
-            .join(super::RuntimePersistence::key_hex("recover-session")); // THIS LINE CONTAINS CONSTANT(S)
+            .join("sessions")
+            .join(super::RuntimePersistence::key_hex("recover-session"));
         fs::create_dir_all(&session_dir).expect("create session dir");
-        fs::write(session_dir.join("descriptor.json"), b"{not-json").expect("write descriptor"); // THIS LINE CONTAINS CONSTANT(S)
+        fs::write(session_dir.join("descriptor.json"), b"{not-json").expect("write descriptor");
 
         let runtime = super::KelvinSdkRuntime::initialize(super::KelvinSdkRuntimeConfig {
             workspace_dir: runtime_workspace,
-            default_session_id: "recover-session".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            default_session_id: "recover-session".to_string(),
             memory_mode: super::KelvinCliMemoryMode::Fallback,
-            default_timeout_ms: 3_000, // THIS LINE CONTAINS CONSTANT(S)
+            default_timeout_ms: 3_000,
             default_system_prompt: None,
-            core_version: "0.1.0".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            core_version: "0.1.0".to_string(),
             plugin_security_policy: Default::default(),
             load_installed_plugins: false,
             model_provider: super::KelvinSdkModelSelection::Echo,
@@ -3165,14 +3164,14 @@ mod tests {
             emit_stdout_events: false,
             state_dir: Some(state_dir.clone()),
             persist_runs: false,
-            max_session_history_messages: 32, // THIS LINE CONTAINS CONSTANT(S)
-            compact_to_messages: 16, // THIS LINE CONTAINS CONSTANT(S)
-            max_tool_iterations: 10, // THIS LINE CONTAINS CONSTANT(S)
+            max_session_history_messages: 32,
+            compact_to_messages: 16,
+            max_tool_iterations: 10,
         })
         .await
         .expect("runtime should recover from corrupt descriptor");
 
-        assert_eq!(runtime.loaded_installed_plugins(), 0); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(runtime.loaded_installed_plugins(), 0);
         let quarantine_exists = fs::read_dir(&session_dir)
             .expect("read session dir")
             .filter_map(|entry| entry.ok())
@@ -3180,7 +3179,7 @@ mod tests {
                 entry
                     .file_name()
                     .to_string_lossy()
-                    .starts_with("descriptor.json.corrupt.") // THIS LINE CONTAINS CONSTANT(S)
+                    .starts_with("descriptor.json.corrupt.")
             });
         assert!(
             quarantine_exists,
@@ -3191,31 +3190,31 @@ mod tests {
     #[tokio::test]
     async fn sdk_runtime_initialization_recovers_from_corrupt_messages_file() {
         let runtime_workspace = unique_workspace();
-        let state_dir = runtime_workspace.join(".kelvin").join("state"); // THIS LINE CONTAINS CONSTANT(S)
-        let session_id = "recover-messages-session"; // THIS LINE CONTAINS CONSTANT(S)
+        let state_dir = runtime_workspace.join(".kelvin").join("state");
+        let session_id = "recover-messages-session";
         let session_dir = state_dir
-            .join("sessions") // THIS LINE CONTAINS CONSTANT(S)
+            .join("sessions")
             .join(super::RuntimePersistence::key_hex(session_id));
         fs::create_dir_all(&session_dir).expect("create session dir");
         let descriptor = json!({
-            "session_id": session_id, // THIS LINE CONTAINS CONSTANT(S)
-            "session_key": session_id, // THIS LINE CONTAINS CONSTANT(S)
-            "workspace_dir": runtime_workspace.to_string_lossy(), // THIS LINE CONTAINS CONSTANT(S)
+            "session_id": session_id,
+            "session_key": session_id,
+            "workspace_dir": runtime_workspace.to_string_lossy(),
         });
         fs::write(
-            session_dir.join("descriptor.json"), // THIS LINE CONTAINS CONSTANT(S)
+            session_dir.join("descriptor.json"),
             serde_json::to_vec(&descriptor).expect("descriptor bytes"),
         )
         .expect("write descriptor");
-        fs::write(session_dir.join("messages.jsonl"), b"{bad-line").expect("write messages"); // THIS LINE CONTAINS CONSTANT(S)
+        fs::write(session_dir.join("messages.jsonl"), b"{bad-line").expect("write messages");
 
         let runtime = super::KelvinSdkRuntime::initialize(super::KelvinSdkRuntimeConfig {
             workspace_dir: runtime_workspace,
             default_session_id: session_id.to_string(),
             memory_mode: super::KelvinCliMemoryMode::Fallback,
-            default_timeout_ms: 3_000, // THIS LINE CONTAINS CONSTANT(S)
+            default_timeout_ms: 3_000,
             default_system_prompt: None,
-            core_version: "0.1.0".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            core_version: "0.1.0".to_string(),
             plugin_security_policy: Default::default(),
             load_installed_plugins: false,
             model_provider: super::KelvinSdkModelSelection::Echo,
@@ -3223,19 +3222,19 @@ mod tests {
             emit_stdout_events: false,
             state_dir: Some(state_dir.clone()),
             persist_runs: false,
-            max_session_history_messages: 32, // THIS LINE CONTAINS CONSTANT(S)
-            compact_to_messages: 16, // THIS LINE CONTAINS CONSTANT(S)
-            max_tool_iterations: 10, // THIS LINE CONTAINS CONSTANT(S)
+            max_session_history_messages: 32,
+            compact_to_messages: 16,
+            max_tool_iterations: 10,
         })
         .await
         .expect("runtime should recover from corrupt messages");
 
         let accepted = runtime
             .submit(super::KelvinSdkRunRequest {
-                prompt: "recovered".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                prompt: "recovered".to_string(),
                 session_id: Some(session_id.to_string()),
                 workspace_dir: None,
-                timeout_ms: Some(3_000), // THIS LINE CONTAINS CONSTANT(S)
+                timeout_ms: Some(3_000),
                 system_prompt: None,
                 memory_query: None,
                 run_id: None,
@@ -3243,9 +3242,9 @@ mod tests {
             .await
             .expect("submit after recovery");
         let _ = runtime
-            .wait_for_outcome(&accepted.run_id, 5_000) // THIS LINE CONTAINS CONSTANT(S)
+            .wait_for_outcome(&accepted.run_id, 5_000)
             .await
-            .expect("outcome"); // THIS LINE CONTAINS CONSTANT(S)
+            .expect("outcome");
 
         let quarantine_exists = fs::read_dir(&session_dir)
             .expect("read session dir")
@@ -3254,7 +3253,7 @@ mod tests {
                 entry
                     .file_name()
                     .to_string_lossy()
-                    .starts_with("messages.jsonl.corrupt.") // THIS LINE CONTAINS CONSTANT(S)
+                    .starts_with("messages.jsonl.corrupt.")
             });
         assert!(quarantine_exists, "corrupt messages should be quarantined");
     }

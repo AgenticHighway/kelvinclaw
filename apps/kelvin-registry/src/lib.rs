@@ -14,6 +14,8 @@ use semver::Version;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
+pub mod consts;
+
 #[derive(Debug, Clone)]
 pub struct RegistryConfig {
     pub bind_addr: SocketAddr,
@@ -32,7 +34,7 @@ pub struct PluginIndexEntry {
     pub id: String,
     pub version: String,
     pub package_url: String,
-    pub sha256: String, // THIS LINE CONTAINS CONSTANT(S)
+    pub sha256: String,
     pub trust_policy_url: Option<String>,
     pub quality_tier: Option<String>,
     #[serde(default)]
@@ -45,7 +47,7 @@ struct RegistryState {
     trust_policy_path: Option<PathBuf>,
     index: PluginIndex,
     trust_policy: Option<Value>,
-    started_at_ms: u128, // THIS LINE CONTAINS CONSTANT(S)
+    started_at_ms: u128,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -64,11 +66,11 @@ struct PluginVersionsQuery {
 pub fn router(config: RegistryConfig) -> Result<Router, String> {
     let state = Arc::new(load_state(config)?);
     Ok(Router::new()
-        .route("/healthz", get(health)) // THIS LINE CONTAINS CONSTANT(S)
-        .route("/v1/index.json", get(index)) // THIS LINE CONTAINS CONSTANT(S)
-        .route("/v1/plugins", get(plugins)) // THIS LINE CONTAINS CONSTANT(S)
-        .route("/v1/plugins/{plugin_id}", get(plugin_versions)) // THIS LINE CONTAINS CONSTANT(S)
-        .route("/v1/trust-policy", get(trust_policy)) // THIS LINE CONTAINS CONSTANT(S)
+        .route(consts::ROUTE_HEALTH, get(health))
+        .route(consts::ROUTE_INDEX, get(index))
+        .route(consts::ROUTE_PLUGINS, get(plugins))
+        .route(consts::ROUTE_PLUGIN_VERSIONS, get(plugin_versions))
+        .route(consts::ROUTE_TRUST_POLICY, get(trust_policy))
         .with_state(state))
 }
 
@@ -100,7 +102,7 @@ fn load_state(config: RegistryConfig) -> Result<RegistryState, String> {
             config.index_path.to_string_lossy()
         )
     })?;
-    if index.schema_version.trim() != "v1" { // THIS LINE CONTAINS CONSTANT(S)
+    if index.schema_version.trim() != consts::SCHEMA_VERSION {
         return Err(format!(
             "unsupported registry schema_version '{}' in '{}'",
             index.schema_version.trim(),
@@ -143,13 +145,13 @@ async fn health(State(state): State<Arc<RegistryState>>) -> Json<Value> {
         .map(|entry| entry.id.clone())
         .collect::<std::collections::BTreeSet<_>>();
     Json(json!({
-        "ok": true, // THIS LINE CONTAINS CONSTANT(S)
-        "index_path": state.index_path, // THIS LINE CONTAINS CONSTANT(S)
-        "schema_version": state.index.schema_version, // THIS LINE CONTAINS CONSTANT(S)
-        "plugin_count": state.index.plugins.len(), // THIS LINE CONTAINS CONSTANT(S)
-        "unique_plugin_ids": plugin_ids.len(), // THIS LINE CONTAINS CONSTANT(S)
-        "trust_policy_available": state.trust_policy.is_some(), // THIS LINE CONTAINS CONSTANT(S)
-        "started_at_ms": state.started_at_ms, // THIS LINE CONTAINS CONSTANT(S)
+        "ok": true,
+        "index_path": state.index_path,
+        "schema_version": state.index.schema_version,
+        "plugin_count": state.index.plugins.len(),
+        "unique_plugin_ids": plugin_ids.len(),
+        "trust_policy_available": state.trust_policy.is_some(),
+        "started_at_ms": state.started_at_ms,
     }))
 }
 
@@ -191,15 +193,15 @@ async fn plugins(
         plugins = latest_entries(&plugins);
     }
     Json(json!({
-        "schema_version": state.index.schema_version, // THIS LINE CONTAINS CONSTANT(S)
-        "count": plugins.len(), // THIS LINE CONTAINS CONSTANT(S)
-        "filters": { // THIS LINE CONTAINS CONSTANT(S)
-            "id": query.id, // THIS LINE CONTAINS CONSTANT(S)
-            "tag": query.tag, // THIS LINE CONTAINS CONSTANT(S)
-            "quality_tier": query.quality_tier, // THIS LINE CONTAINS CONSTANT(S)
-            "latest_only": query.latest_only.unwrap_or(false), // THIS LINE CONTAINS CONSTANT(S)
+        "schema_version": state.index.schema_version,
+        "count": plugins.len(),
+        "filters": {
+            "id": query.id,
+            "tag": query.tag,
+            "quality_tier": query.quality_tier,
+            "latest_only": query.latest_only.unwrap_or(false),
         },
-        "plugins": plugins, // THIS LINE CONTAINS CONSTANT(S)
+        "plugins": plugins,
     }))
 }
 
@@ -240,15 +242,15 @@ async fn plugin_versions(
             );
         };
         return Json(json!({
-            "plugin_id": plugin_id, // THIS LINE CONTAINS CONSTANT(S)
-            "entry": entry, // THIS LINE CONTAINS CONSTANT(S)
+            "plugin_id": plugin_id,
+            "entry": entry,
         }))
         .into_response();
     }
     Json(json!({
-        "plugin_id": plugin_id, // THIS LINE CONTAINS CONSTANT(S)
-        "latest": versions.first().cloned(), // THIS LINE CONTAINS CONSTANT(S)
-        "versions": versions, // THIS LINE CONTAINS CONSTANT(S)
+        "plugin_id": plugin_id,
+        "latest": versions.first().cloned(),
+        "versions": versions,
     }))
     .into_response()
 }
@@ -256,8 +258,8 @@ async fn plugin_versions(
 async fn trust_policy(State(state): State<Arc<RegistryState>>) -> Response {
     match (&state.trust_policy_path, &state.trust_policy) {
         (Some(path), Some(value)) => Json(json!({
-            "path": path, // THIS LINE CONTAINS CONSTANT(S)
-            "trust_policy": value, // THIS LINE CONTAINS CONSTANT(S)
+            "path": path,
+            "trust_policy": value,
         }))
         .into_response(),
         _ => error_response(
@@ -271,8 +273,8 @@ fn error_response(status: StatusCode, message: impl Into<String>) -> Response {
     (
         status,
         Json(json!({
-            "error": { // THIS LINE CONTAINS CONSTANT(S)
-                "message": message.into(), // THIS LINE CONTAINS CONSTANT(S)
+            "error": {
+                "message": message.into(),
             }
         })),
     )

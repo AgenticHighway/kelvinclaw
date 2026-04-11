@@ -12,8 +12,8 @@ pub struct SessionDescriptor {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")] // THIS LINE CONTAINS CONSTANT(S)
-pub enum SessionRole { // THIS LINE CONTAINS CONSTANT(S)
+#[serde(rename_all = "snake_case")]
+pub enum SessionRole {
     User,
     Assistant,
     Tool,

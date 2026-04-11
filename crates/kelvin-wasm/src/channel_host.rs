@@ -7,27 +7,29 @@ use serde_json::Value;
 use wasmtime::{Caller, Config, Engine, Linker, Memory, Module, Store};
 
 pub mod channel_abi {
-    pub const ABI_VERSION: &str = "1.0.0"; // THIS LINE CONTAINS CONSTANT(S)
-    pub const MODULE: &str = "kelvin_channel_host_v1"; // THIS LINE CONTAINS CONSTANT(S)
+    use crate::consts;
 
-    pub const EXPORT_ALLOC: &str = "alloc"; // THIS LINE CONTAINS CONSTANT(S)
-    pub const EXPORT_DEALLOC: &str = "dealloc"; // THIS LINE CONTAINS CONSTANT(S)
-    pub const EXPORT_HANDLE_INGEST: &str = "handle_ingest"; // THIS LINE CONTAINS CONSTANT(S)
-    pub const EXPORT_MEMORY: &str = "memory"; // THIS LINE CONTAINS CONSTANT(S)
+    pub const ABI_VERSION: &str = consts::CHANNEL_ABI_VERSION;
+    pub const MODULE: &str = consts::CHANNEL_MODULE;
 
-    pub const IMPORT_LOG: &str = "log"; // THIS LINE CONTAINS CONSTANT(S)
-    pub const IMPORT_CLOCK_NOW_MS: &str = "clock_now_ms"; // THIS LINE CONTAINS CONSTANT(S)
+    pub const EXPORT_ALLOC: &str = consts::CHANNEL_EXPORT_ALLOC;
+    pub const EXPORT_DEALLOC: &str = consts::CHANNEL_EXPORT_DEALLOC;
+    pub const EXPORT_HANDLE_INGEST: &str = consts::CHANNEL_EXPORT_HANDLE_INGEST;
+    pub const EXPORT_MEMORY: &str = consts::CHANNEL_EXPORT_MEMORY;
+
+    pub const IMPORT_LOG: &str = consts::CHANNEL_IMPORT_LOG;
+    pub const IMPORT_CLOCK_NOW_MS: &str = consts::CHANNEL_IMPORT_CLOCK_NOW_MS;
 }
 
-const DEFAULT_MAX_REQUEST_BYTES: usize = 256 * 1024; // THIS LINE CONTAINS CONSTANT(S)
-const DEFAULT_MAX_RESPONSE_BYTES: usize = 256 * 1024; // THIS LINE CONTAINS CONSTANT(S)
+const DEFAULT_MAX_REQUEST_BYTES: usize = crate::consts::CHANNEL_DEFAULT_MAX_REQUEST_BYTES;
+const DEFAULT_MAX_RESPONSE_BYTES: usize = crate::consts::CHANNEL_DEFAULT_MAX_RESPONSE_BYTES;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChannelSandboxPolicy {
     pub max_module_bytes: usize,
     pub max_request_bytes: usize,
     pub max_response_bytes: usize,
-    pub fuel_budget: u64, // THIS LINE CONTAINS CONSTANT(S)
+    pub fuel_budget: u64,
 }
 
 impl Default for ChannelSandboxPolicy {
@@ -81,7 +83,7 @@ impl WasmChannelHost {
 
     pub fn run_bytes(
         &self,
-        wasm_bytes: &[u8], // THIS LINE CONTAINS CONSTANT(S)
+        wasm_bytes: &[u8],
         input_json: &str,
         policy: ChannelSandboxPolicy,
     ) -> KelvinResult<String> {
@@ -126,21 +128,21 @@ impl WasmChannelHost {
                 KelvinError::InvalidInput("channel module must export memory".to_string())
             })?;
         let alloc = instance
-            .get_typed_func::<i32, i32>(&mut store, channel_abi::EXPORT_ALLOC) // THIS LINE CONTAINS CONSTANT(S)
+            .get_typed_func::<i32, i32>(&mut store, channel_abi::EXPORT_ALLOC)
             .map_err(|err| backend("resolve channel alloc export", err))?;
         let dealloc = instance
-            .get_typed_func::<(i32, i32), ()>(&mut store, channel_abi::EXPORT_DEALLOC) // THIS LINE CONTAINS CONSTANT(S)
+            .get_typed_func::<(i32, i32), ()>(&mut store, channel_abi::EXPORT_DEALLOC)
             .map_err(|err| backend("resolve channel dealloc export", err))?;
         let handle_ingest = instance
-            .get_typed_func::<(i32, i32), i64>(&mut store, channel_abi::EXPORT_HANDLE_INGEST) // THIS LINE CONTAINS CONSTANT(S)
+            .get_typed_func::<(i32, i32), i64>(&mut store, channel_abi::EXPORT_HANDLE_INGEST)
             .map_err(|err| backend("resolve channel handle_ingest export", err))?;
 
         let input_ptr = alloc
             .call(
                 &mut store,
-                i32::try_from(input_json.len()).map_err(|_| { // THIS LINE CONTAINS CONSTANT(S)
+                i32::try_from(input_json.len()).map_err(|_| {
                     KelvinError::InvalidInput(
-                        "channel input exceeded i32 address space".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                        "channel input exceeded i32 address space".to_string(),
                     )
                 })?,
             )
@@ -157,9 +159,9 @@ impl WasmChannelHost {
             &mut store,
             (
                 input_ptr,
-                i32::try_from(input_json.len()).map_err(|_| { // THIS LINE CONTAINS CONSTANT(S)
+                i32::try_from(input_json.len()).map_err(|_| {
                     KelvinError::InvalidInput(
-                        "channel input exceeded i32 address space".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                        "channel input exceeded i32 address space".to_string(),
                     )
                 })?,
             ),
@@ -168,12 +170,12 @@ impl WasmChannelHost {
             &mut store,
             (
                 input_ptr,
-                i32::try_from(input_json.len()).unwrap_or_default(), // THIS LINE CONTAINS CONSTANT(S)
+                i32::try_from(input_json.len()).unwrap_or_default(),
             ),
         );
 
         let packed = ingest_result.map_err(|err| {
-            if matches!(store.get_fuel(), Ok(0)) { // THIS LINE CONTAINS CONSTANT(S)
+            if matches!(store.get_fuel(), Ok(0)) {
                 KelvinError::Timeout("channel execution exceeded fuel budget".to_string())
             } else {
                 backend("execute channel handle_ingest export", err)
@@ -189,8 +191,8 @@ impl WasmChannelHost {
             "read channel output",
         )?;
         let _ = dealloc.call(&mut store, (output_ptr, output_len));
-        let text = String::from_utf8(output).map_err(|err| { // THIS LINE CONTAINS CONSTANT(S)
-            KelvinError::InvalidInput(format!("channel output must be utf-8 json: {err}")) // THIS LINE CONTAINS CONSTANT(S)
+        let text = String::from_utf8(output).map_err(|err| {
+            KelvinError::InvalidInput(format!("channel output must be utf-8 json: {err}"))
         })?;
         serde_json::from_str::<Value>(&text).map_err(|err| {
             KelvinError::InvalidInput(format!("channel output must be json: {err}"))
@@ -204,17 +206,17 @@ impl WasmChannelHost {
                 channel_abi::MODULE,
                 channel_abi::IMPORT_LOG,
                 |mut caller: Caller<'_, ChannelHostState>,
-                 _level: i32, // THIS LINE CONTAINS CONSTANT(S)
-                 ptr: i32, // THIS LINE CONTAINS CONSTANT(S)
-                 len: i32| // THIS LINE CONTAINS CONSTANT(S)
-                 -> i32 { // THIS LINE CONTAINS CONSTANT(S)
-                    let max_len = caller.data().policy.max_request_bytes.min(16 * 1024); // THIS LINE CONTAINS CONSTANT(S)
+                 _level: i32,
+                 ptr: i32,
+                 len: i32|
+                 -> i32 {
+                    let max_len = caller.data().policy.max_request_bytes.min(16 * 1024);
                     if let Ok(bytes) =
                         read_caller_bytes(&mut caller, ptr, len, max_len, "channel log message")
                     {
-                        let _ = String::from_utf8(bytes); // THIS LINE CONTAINS CONSTANT(S)
+                        let _ = String::from_utf8(bytes);
                     }
-                    0 // THIS LINE CONTAINS CONSTANT(S)
+                    0
                 },
             )
             .map_err(|err| backend("link channel log import", err))?;
@@ -223,10 +225,10 @@ impl WasmChannelHost {
             .func_wrap(
                 channel_abi::MODULE,
                 channel_abi::IMPORT_CLOCK_NOW_MS,
-                || -> i64 { // THIS LINE CONTAINS CONSTANT(S)
+                || -> i64 {
                     SystemTime::now()
                         .duration_since(UNIX_EPOCH)
-                        .map(|value| i64::try_from(value.as_millis()).unwrap_or(i64::MAX)) // THIS LINE CONTAINS CONSTANT(S)
+                        .map(|value| i64::try_from(value.as_millis()).unwrap_or(i64::MAX))
                         .unwrap_or_default()
                 },
             )
@@ -264,12 +266,12 @@ fn validate_imports(module: &Module) -> KelvinResult<()> {
 fn read_guest_bytes(
     memory: &Memory,
     store: &mut Store<ChannelHostState>,
-    ptr: i32, // THIS LINE CONTAINS CONSTANT(S)
-    len: i32, // THIS LINE CONTAINS CONSTANT(S)
+    ptr: i32,
+    len: i32,
     max_len: usize,
     context: &str,
-) -> KelvinResult<Vec<u8>> { // THIS LINE CONTAINS CONSTANT(S)
-    if ptr < 0 || len < 0 { // THIS LINE CONTAINS CONSTANT(S)
+) -> KelvinResult<Vec<u8>> {
+    if ptr < 0 || len < 0 {
         return Err(KelvinError::InvalidInput(format!(
             "{context}: pointer/length must be non-negative"
         )));
@@ -282,7 +284,7 @@ fn read_guest_bytes(
             len, max_len
         )));
     }
-    let mut bytes = vec![0_u8; len]; // THIS LINE CONTAINS CONSTANT(S)
+    let mut bytes = vec![0_u8; len];
     memory
         .read(store, usize::try_from(ptr).unwrap_or_default(), &mut bytes)
         .map_err(|err| {
@@ -294,11 +296,11 @@ fn read_guest_bytes(
 fn write_guest_bytes(
     memory: &Memory,
     store: &mut Store<ChannelHostState>,
-    ptr: i32, // THIS LINE CONTAINS CONSTANT(S)
-    bytes: &[u8], // THIS LINE CONTAINS CONSTANT(S)
+    ptr: i32,
+    bytes: &[u8],
     context: &str,
 ) -> KelvinResult<()> {
-    if ptr < 0 { // THIS LINE CONTAINS CONSTANT(S)
+    if ptr < 0 {
         return Err(KelvinError::InvalidInput(format!(
             "{context}: pointer must be non-negative"
         )));
@@ -310,12 +312,12 @@ fn write_guest_bytes(
 
 fn read_caller_bytes(
     caller: &mut Caller<'_, ChannelHostState>,
-    ptr: i32, // THIS LINE CONTAINS CONSTANT(S)
-    len: i32, // THIS LINE CONTAINS CONSTANT(S)
+    ptr: i32,
+    len: i32,
     max_len: usize,
     context: &str,
-) -> KelvinResult<Vec<u8>> { // THIS LINE CONTAINS CONSTANT(S)
-    if ptr < 0 || len < 0 { // THIS LINE CONTAINS CONSTANT(S)
+) -> KelvinResult<Vec<u8>> {
+    if ptr < 0 || len < 0 {
         return Err(KelvinError::InvalidInput(format!(
             "{context}: pointer/length must be non-negative"
         )));
@@ -333,7 +335,7 @@ fn read_caller_bytes(
         .get_export(channel_abi::EXPORT_MEMORY)
         .and_then(|export| export.into_memory())
         .ok_or_else(|| KelvinError::InvalidInput("channel memory export missing".to_string()))?;
-    let mut bytes = vec![0_u8; len]; // THIS LINE CONTAINS CONSTANT(S)
+    let mut bytes = vec![0_u8; len];
     memory
         .read(caller, usize::try_from(ptr).unwrap_or_default(), &mut bytes)
         .map_err(|err| {
@@ -342,24 +344,24 @@ fn read_caller_bytes(
     Ok(bytes)
 }
 
-fn unpack_ptr_len(value: i64, context: &str) -> KelvinResult<(i32, i32)> { // THIS LINE CONTAINS CONSTANT(S)
-    if value <= 0 { // THIS LINE CONTAINS CONSTANT(S)
+fn unpack_ptr_len(value: i64, context: &str) -> KelvinResult<(i32, i32)> {
+    if value <= 0 {
         return Err(KelvinError::Backend(format!(
             "{context}: packed pointer/length is invalid"
         )));
     }
-    let raw = value as u64; // THIS LINE CONTAINS CONSTANT(S)
-    let ptr = (raw >> 32) as u32; // THIS LINE CONTAINS CONSTANT(S)
-    let len = (raw & 0xFFFF_FFFF) as u32; // THIS LINE CONTAINS CONSTANT(S)
-    if len == 0 { // THIS LINE CONTAINS CONSTANT(S)
-        return Ok((ptr as i32, 0)); // THIS LINE CONTAINS CONSTANT(S)
+    let raw = value as u64;
+    let ptr = (raw >> 32) as u32;
+    let len = (raw & 0xFFFF_FFFF) as u32;
+    if len == 0 {
+        return Ok((ptr as i32, 0));
     }
-    if ptr == 0 { // THIS LINE CONTAINS CONSTANT(S)
+    if ptr == 0 {
         return Err(KelvinError::Backend(format!(
             "{context}: non-empty payload has null pointer"
         )));
     }
-    Ok((ptr as i32, len as i32)) // THIS LINE CONTAINS CONSTANT(S)
+    Ok((ptr as i32, len as i32))
 }
 
 fn backend(context: &str, err: impl Display) -> KelvinError {
@@ -371,41 +373,41 @@ mod tests {
     use super::{channel_abi, ChannelSandboxPolicy, WasmChannelHost};
     use kelvin_core::KelvinError;
 
-    fn parse_wat(input: &str) -> Vec<u8> { // THIS LINE CONTAINS CONSTANT(S)
+    fn parse_wat(input: &str) -> Vec<u8> {
         wat::parse_str(input).expect("parse wat")
     }
 
-    fn test_module() -> Vec<u8> { // THIS LINE CONTAINS CONSTANT(S)
+    fn test_module() -> Vec<u8> {
         parse_wat(
             r#"
             (module
-              (import "kelvin_channel_host_v1" "log" (func $log (param i32 i32 i32) (result i32))) // THIS LINE CONTAINS CONSTANT(S)
-              (import "kelvin_channel_host_v1" "clock_now_ms" (func $clock_now_ms (result i64))) // THIS LINE CONTAINS CONSTANT(S)
-              (memory (export "memory") 2) // THIS LINE CONTAINS CONSTANT(S)
-              (global $heap (mut i32) (i32.const 1024)) // THIS LINE CONTAINS CONSTANT(S)
-              (func (export "alloc") (param $len i32) (result i32) // THIS LINE CONTAINS CONSTANT(S)
-                (local $ptr i32) // THIS LINE CONTAINS CONSTANT(S)
+              (import "kelvin_channel_host_v1" "log" (func $log (param i32 i32 i32) (result i32)))
+              (import "kelvin_channel_host_v1" "clock_now_ms" (func $clock_now_ms (result i64)))
+              (memory (export "memory") 2)
+              (global $heap (mut i32) (i32.const 1024))
+              (func (export "alloc") (param $len i32) (result i32)
+                (local $ptr i32)
                 global.get $heap
                 local.tee $ptr
                 local.get $len
-                i32.add // THIS LINE CONTAINS CONSTANT(S)
+                i32.add
                 global.set $heap
                 local.get $ptr)
-              (func (export "dealloc") (param i32 i32)) // THIS LINE CONTAINS CONSTANT(S)
-              (data (i32.const 2048) "{\"allow\":true,\"reason\":\"ok\"}") // THIS LINE CONTAINS CONSTANT(S)
-              (func (export "handle_ingest") (param i32 i32) (result i64) // THIS LINE CONTAINS CONSTANT(S)
-                i32.const 1 // THIS LINE CONTAINS CONSTANT(S)
-                i32.const 2048 // THIS LINE CONTAINS CONSTANT(S)
-                i32.const 6 // THIS LINE CONTAINS CONSTANT(S)
+              (func (export "dealloc") (param i32 i32))
+              (data (i32.const 2048) "{\"allow\":true,\"reason\":\"ok\"}")
+              (func (export "handle_ingest") (param i32 i32) (result i64)
+                i32.const 1
+                i32.const 2048
+                i32.const 6
                 call $log
                 drop
-                i32.const 2048 // THIS LINE CONTAINS CONSTANT(S)
-                i64.extend_i32_u // THIS LINE CONTAINS CONSTANT(S)
-                i64.const 32 // THIS LINE CONTAINS CONSTANT(S)
-                i64.shl // THIS LINE CONTAINS CONSTANT(S)
-                i32.const 28 // THIS LINE CONTAINS CONSTANT(S)
-                i64.extend_i32_u // THIS LINE CONTAINS CONSTANT(S)
-                i64.or) // THIS LINE CONTAINS CONSTANT(S)
+                i32.const 2048
+                i64.extend_i32_u
+                i64.const 32
+                i64.shl
+                i32.const 28
+                i64.extend_i32_u
+                i64.or)
             )
             "#,
         )
@@ -417,11 +419,11 @@ mod tests {
         let output = host
             .run_bytes(
                 &test_module(),
-                r#"{"channel":"telegram","sender_id":"7"}"#, // THIS LINE CONTAINS CONSTANT(S)
+                r#"{"channel":"telegram","sender_id":"7"}"#,
                 ChannelSandboxPolicy::default(),
             )
             .expect("run channel module");
-        assert_eq!(output, r#"{"allow":true,"reason":"ok"}"#); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(output, r#"{"allow":true,"reason":"ok"}"#);
     }
 
     #[test]
@@ -429,16 +431,16 @@ mod tests {
         let wasm = parse_wat(
             r#"
             (module
-              (import "wasi_snapshot_preview1" "fd_write" // THIS LINE CONTAINS CONSTANT(S)
-                (func $fd_write (param i32 i32 i32 i32) (result i32))) // THIS LINE CONTAINS CONSTANT(S)
-              (memory (export "memory") 1) // THIS LINE CONTAINS CONSTANT(S)
-              (func (export "alloc") (param i32) (result i32) i32.const 0) // THIS LINE CONTAINS CONSTANT(S)
-              (func (export "dealloc") (param i32 i32)) // THIS LINE CONTAINS CONSTANT(S)
-              (func (export "handle_ingest") (param i32 i32) (result i64) i64.const 0) // THIS LINE CONTAINS CONSTANT(S)
+              (import "wasi_snapshot_preview1" "fd_write"
+                (func $fd_write (param i32 i32 i32 i32) (result i32)))
+              (memory (export "memory") 1)
+              (func (export "alloc") (param i32) (result i32) i32.const 0)
+              (func (export "dealloc") (param i32 i32))
+              (func (export "handle_ingest") (param i32 i32) (result i64) i64.const 0)
             )
             "#,
         );
-        let host = WasmChannelHost::try_new().expect("host"); // THIS LINE CONTAINS CONSTANT(S)
+        let host = WasmChannelHost::try_new().expect("host");
         let err = host
             .run_bytes(&wasm, "{}", ChannelSandboxPolicy::default())
             .expect_err("unsupported import should fail");
@@ -450,21 +452,21 @@ mod tests {
 
     #[test]
     fn channel_host_enforces_request_bounds() {
-        let host = WasmChannelHost::try_new().expect("host"); // THIS LINE CONTAINS CONSTANT(S)
+        let host = WasmChannelHost::try_new().expect("host");
         let policy = ChannelSandboxPolicy {
-            max_request_bytes: 8, // THIS LINE CONTAINS CONSTANT(S)
+            max_request_bytes: 8,
             ..ChannelSandboxPolicy::default()
         };
         let err = host
             .run_bytes(&test_module(), "{\"too\":\"long\"}", policy)
             .expect_err("request bound should fail");
         assert!(matches!(err, KelvinError::InvalidInput(_)));
-        assert!(err.to_string().contains("max_request_bytes")); // THIS LINE CONTAINS CONSTANT(S)
+        assert!(err.to_string().contains("max_request_bytes"));
     }
 
     #[test]
     fn abi_constants_are_stable() {
-        assert_eq!(channel_abi::MODULE, "kelvin_channel_host_v1"); // THIS LINE CONTAINS CONSTANT(S)
-        assert_eq!(channel_abi::EXPORT_HANDLE_INGEST, "handle_ingest"); // THIS LINE CONTAINS CONSTANT(S)
+        assert_eq!(channel_abi::MODULE, "kelvin_channel_host_v1");
+        assert_eq!(channel_abi::EXPORT_HANDLE_INGEST, "handle_ingest");
     }
 }

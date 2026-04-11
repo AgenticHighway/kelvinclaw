@@ -21,9 +21,9 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
         .enumerate()
         .map(|(idx, entry)| {
             let (phase_str, phase_color) = match entry.phase {
-                ToolPhase::Start => ("running", Color::Yellow), // THIS LINE CONTAINS CONSTANT(S)
-                ToolPhase::End => ("done", Color::Green), // THIS LINE CONTAINS CONSTANT(S)
-                ToolPhase::Error => ("error", Color::Red), // THIS LINE CONTAINS CONSTANT(S)
+                ToolPhase::Start => ("running", Color::Yellow),
+                ToolPhase::End => ("done", Color::Green),
+                ToolPhase::Error => ("error", Color::Red),
             };
 
             let duration = match entry.ended_ms {
@@ -44,15 +44,15 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
             ]);
 
             if selected_row == Some(idx) {
-                row.style(Style::default().bg(Color::Indexed(238))) // THIS LINE CONTAINS CONSTANT(S)
+                row.style(Style::default().bg(Color::Indexed(238)))
             } else {
                 row
             }
         })
         .collect();
 
-    // 2 borders + 1 header row // THIS LINE CONTAINS CONSTANT(S)
-    let inner_height = area.height.saturating_sub(3) as usize; // THIS LINE CONTAINS CONSTANT(S)
+    // 2 borders + 1 header row
+    let inner_height = area.height.saturating_sub(3) as usize;
     app.tools_max_scroll = app.tools.len().saturating_sub(inner_height);
 
     let offset = if app.tools_pinned {
@@ -64,14 +64,14 @@ pub fn render(f: &mut Frame, app: &mut App, area: Rect) {
     let table = Table::new(
         rows,
         [
-            Constraint::Percentage(30), // THIS LINE CONTAINS CONSTANT(S)
-            Constraint::Percentage(10), // THIS LINE CONTAINS CONSTANT(S)
-            Constraint::Percentage(45), // THIS LINE CONTAINS CONSTANT(S)
-            Constraint::Percentage(15), // THIS LINE CONTAINS CONSTANT(S)
+            Constraint::Percentage(30),
+            Constraint::Percentage(10),
+            Constraint::Percentage(45),
+            Constraint::Percentage(15),
         ],
     )
     .header(
-        Row::new(vec!["Tool", "Phase", "Summary", "Duration"]) // THIS LINE CONTAINS CONSTANT(S)
+        Row::new(vec!["Tool", "Phase", "Summary", "Duration"])
             .style(Style::default().add_modifier(Modifier::UNDERLINED)),
     )
     .block(

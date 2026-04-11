@@ -12,6 +12,8 @@ use kelvin_core::{
     MemorySyncParams,
 };
 
+use crate::consts;
+
 #[derive(Debug)]
 pub struct MarkdownMemoryManager {
     workspace_dir: PathBuf,
@@ -23,15 +25,15 @@ impl MarkdownMemoryManager {
         Self {
             workspace_dir: workspace_dir.into(),
             status: RwLock::new(MemoryProviderStatus {
-                backend: "builtin".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-                provider: "markdown".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                backend: consts::BACKEND_BUILTIN.to_string(),
+                provider: consts::PROVIDER_MARKDOWN.to_string(),
                 model: None,
-                requested_provider: Some("markdown".to_string()), // THIS LINE CONTAINS CONSTANT(S)
-                files: Some(0), // THIS LINE CONTAINS CONSTANT(S)
-                chunks: Some(0), // THIS LINE CONTAINS CONSTANT(S)
+                requested_provider: Some(consts::PROVIDER_MARKDOWN.to_string()),
+                files: Some(0),
+                chunks: Some(0),
                 dirty: true,
                 fallback: None,
-                custom: json!({"source_of_truth": "workspace_markdown"}), // THIS LINE CONTAINS CONSTANT(S)
+                custom: json!({consts::JSON_KEY_SOURCE_OF_TRUTH: consts::JSON_VALUE_WORKSPACE_MARKDOWN}),
             }),
         }
     }
@@ -39,12 +41,12 @@ impl MarkdownMemoryManager {
     fn collect_memory_files(&self) -> Vec<PathBuf> {
         let mut files = Vec::new();
 
-        let long_term = self.workspace_dir.join("MEMORY.md"); // THIS LINE CONTAINS CONSTANT(S)
+        let long_term = self.workspace_dir.join(consts::MEMORY_FILE);
         if long_term.is_file() {
             files.push(long_term);
         }
 
-        let daily_dir = self.workspace_dir.join("memory"); // THIS LINE CONTAINS CONSTANT(S)
+        let daily_dir = self.workspace_dir.join(consts::MEMORY_DIR);
         if daily_dir.is_dir() {
             for entry in WalkDir::new(daily_dir)
                 .follow_links(false)
@@ -57,7 +59,7 @@ impl MarkdownMemoryManager {
                 let path = entry.path();
                 if path
                     .extension()
-                    .map(|ext| ext.eq_ignore_ascii_case("md")) // THIS LINE CONTAINS CONSTANT(S)
+                    .map(|ext| ext.eq_ignore_ascii_case(consts::MARKDOWN_EXTENSION))
                     .unwrap_or(false)
                 {
                     files.push(path.to_path_buf());
@@ -72,7 +74,7 @@ impl MarkdownMemoryManager {
         abs.strip_prefix(&self.workspace_dir)
             .unwrap_or(abs)
             .to_string_lossy()
-            .replace('\\', "/") // THIS LINE CONTAINS CONSTANT(S)
+            .replace('\\', "/")
     }
 
     fn tokenize(input: &str) -> Vec<String> {
@@ -96,10 +98,14 @@ impl MarkdownMemoryManager {
     }
 
     fn build_snippet(lines: &[&str], idx: usize) -> (usize, usize, String) {
-        let start = idx.saturating_sub(1); // THIS LINE CONTAINS CONSTANT(S)
-        let end = (idx + 1).min(lines.len().saturating_sub(1)); // THIS LINE CONTAINS CONSTANT(S)
+        let start = idx.saturating_sub(consts::SEARCH_SNIPPET_CONTEXT_LINE_DELTA);
+        let end = (idx + consts::SEARCH_SNIPPET_CONTEXT_LINE_DELTA).min(
+            lines
+                .len()
+                .saturating_sub(consts::SEARCH_SNIPPET_CONTEXT_LINE_DELTA),
+        );
         let snippet = lines[start..=end].join("\n");
-        (start + 1, end + 1, snippet) // THIS LINE CONTAINS CONSTANT(S)
+        (start + 1, end + 1, snippet)
     }
 
     fn validate_rel_path(rel_path: &str) -> KelvinResult<()> {
@@ -108,14 +114,14 @@ impl MarkdownMemoryManager {
                 "memory_get path must not be empty".to_string(),
             ));
         }
-        if rel_path.contains("..") { // THIS LINE CONTAINS CONSTANT(S)
+        if rel_path.contains(consts::PATH_TRAVERSAL_PATTERN) {
             return Err(KelvinError::InvalidInput(
                 "memory_get path traversal is not allowed".to_string(),
             ));
         }
-        let normalized = rel_path.replace('\\', "/"); // THIS LINE CONTAINS CONSTANT(S)
-        let is_memory_root = normalized == "MEMORY.md"; // THIS LINE CONTAINS CONSTANT(S)
-        let is_daily = normalized.starts_with("memory/"); // THIS LINE CONTAINS CONSTANT(S)
+        let normalized = rel_path.replace('\\', "/");
+        let is_memory_root = normalized == consts::MEMORY_FILE;
+        let is_daily = normalized.starts_with(&format!("{}/", consts::MEMORY_DIR));
         if !is_memory_root && !is_daily {
             return Err(KelvinError::InvalidInput(format!(
                 "memory_get path is out of scope: {normalized}"
@@ -134,7 +140,9 @@ impl MarkdownMemoryManager {
         if raw_lines.is_empty() {
             return String::new();
         }
-        let start = from.unwrap_or(1).saturating_sub(1); // THIS LINE CONTAINS CONSTANT(S)
+        let start = from
+            .unwrap_or(1)
+            .saturating_sub(consts::SEARCH_SNIPPET_CONTEXT_LINE_DELTA);
         if start >= raw_lines.len() {
             return String::new();
         }
@@ -160,8 +168,8 @@ impl MemorySearchManager for MarkdownMemoryManager {
             return Ok(Vec::new());
         }
 
-        let mut files_seen = 0usize; // THIS LINE CONTAINS CONSTANT(S)
-        let mut chunks_seen = 0usize; // THIS LINE CONTAINS CONSTANT(S)
+        let mut files_seen = 0usize;
+        let mut chunks_seen = 0usize;
         let mut results = Vec::new();
 
         for file in self.collect_memory_files() {
@@ -169,18 +177,18 @@ impl MemorySearchManager for MarkdownMemoryManager {
                 Ok(value) => value,
                 Err(_) => continue,
             };
-            files_seen += 1; // THIS LINE CONTAINS CONSTANT(S)
+            files_seen += 1;
 
             let lines: Vec<&str> = text.lines().collect();
             chunks_seen += lines.len();
 
             for (idx, line) in lines.iter().enumerate() {
                 let matched = Self::score_line(line, &tokens);
-                if matched == 0 { // THIS LINE CONTAINS CONSTANT(S)
+                if matched == 0 {
                     continue;
                 }
-                let score = (matched as f32) / (tokens.len() as f32); // THIS LINE CONTAINS CONSTANT(S)
-                if (score * 1000.0) < opts.min_score_milli as f32 { // THIS LINE CONTAINS CONSTANT(S)
+                let score = (matched as f32) / (tokens.len() as f32);
+                if (score * 1000.0) < opts.min_score_milli as f32 {
                     continue;
                 }
                 let (start_line, end_line, snippet) = Self::build_snippet(&lines, idx);
@@ -205,7 +213,7 @@ impl MemorySearchManager for MarkdownMemoryManager {
                 .then_with(|| a.start_line.cmp(&b.start_line))
                 .then_with(|| a.end_line.cmp(&b.end_line))
         });
-        results.truncate(opts.max_results.max(1)); // THIS LINE CONTAINS CONSTANT(S)
+        results.truncate(opts.max_results.max(1));
 
         {
             let mut status = self
@@ -221,7 +229,7 @@ impl MemorySearchManager for MarkdownMemoryManager {
     }
 
     async fn read_file(&self, params: MemoryReadParams) -> KelvinResult<MemoryReadResult> {
-        let rel = params.rel_path.trim().replace('\\', "/"); // THIS LINE CONTAINS CONSTANT(S)
+        let rel = params.rel_path.trim().replace('\\', "/");
         Self::validate_rel_path(&rel)?;
 
         let target = self.workspace_dir.join(&rel);

@@ -9,8 +9,8 @@ use ratatui::{
 use crate::app::{App, PasteMarker};
 
 pub fn render(f: &mut Frame, app: &App, area: Rect) {
-    let inner_width = area.width.saturating_sub(2) as usize; // THIS LINE CONTAINS CONSTANT(S)
-    let prefix: usize = 2; // "> " // THIS LINE CONTAINS CONSTANT(S)
+    let inner_width = area.width.saturating_sub(crate::consts::INPUT_BORDER_WIDTH) as usize;
+    let prefix: usize = crate::consts::INPUT_PREFIX_WIDTH;
     let first_cap = inner_width.saturating_sub(prefix);
 
     let display = app.display_input();
@@ -18,16 +18,16 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
 
     let mut lines: Vec<Line> = Vec::new();
 
-    if inner_width == 0 || first_cap == 0 { // THIS LINE CONTAINS CONSTANT(S)
+    if inner_width == 0 || first_cap == 0 {
         lines.push(Line::from(vec![
             Span::styled("> ", Style::default().fg(Color::Yellow)),
-            render_display_spans(&display, &app.paste_markers, 0, display.len()), // THIS LINE CONTAINS CONSTANT(S)
+            render_display_spans(&display, &app.paste_markers, 0, display.len()),
         ]));
     } else {
-        let end1 = display.len().min(first_cap); // THIS LINE CONTAINS CONSTANT(S)
+        let end1 = display.len().min(first_cap);
         lines.push(Line::from(vec![
             Span::styled("> ", Style::default().fg(Color::Yellow)),
-            render_display_spans(&display, &app.paste_markers, 0, end1), // THIS LINE CONTAINS CONSTANT(S)
+            render_display_spans(&display, &app.paste_markers, 0, end1),
         ]));
 
         let mut offset = first_cap;
@@ -46,26 +46,30 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
     let paragraph = Paragraph::new(Text::from(lines)).block(
         Block::default()
             .borders(Borders::ALL)
-            .border_style(Style::default().fg(Color::Rgb(255, 165, 0))) // THIS LINE CONTAINS CONSTANT(S)
+            .border_style(Style::default().fg(Color::Rgb(
+                crate::consts::RGB_ORANGE.0,
+                crate::consts::RGB_ORANGE.1,
+                crate::consts::RGB_ORANGE.2,
+            )))
             .title(" Input (Enter=submit, ^T=tools, ^C^C=quit) "),
     );
 
     f.render_widget(paragraph, area);
 
     let pos = display_cursor;
-    let (cx, cy) = if inner_width == 0 { // THIS LINE CONTAINS CONSTANT(S)
-        (area.x + 1, area.y + 1) // THIS LINE CONTAINS CONSTANT(S)
+    let (cx, cy) = if inner_width == 0 {
+        (area.x + 1, area.y + 1)
     } else if pos <= first_cap {
-        (area.x + 1 + prefix as u16 + pos as u16, area.y + 1) // THIS LINE CONTAINS CONSTANT(S)
+        (area.x + 1 + prefix as u16 + pos as u16, area.y + 1)
     } else {
         let rest = pos - first_cap;
         let row = rest / inner_width;
         let col = rest % inner_width;
-        (area.x + 1 + col as u16, area.y + 2 + row as u16) // THIS LINE CONTAINS CONSTANT(S)
+        (area.x + 1 + col as u16, area.y + 2 + row as u16)
     };
 
-    let cx = cx.min(area.x + area.width.saturating_sub(2)); // THIS LINE CONTAINS CONSTANT(S)
-    let cy = cy.min(area.y + area.height.saturating_sub(2)); // THIS LINE CONTAINS CONSTANT(S)
+    let cx = cx.min(area.x + area.width.saturating_sub(2));
+    let cy = cy.min(area.y + area.height.saturating_sub(2));
     f.set_cursor_position((cx, cy));
 }
 
@@ -76,8 +80,8 @@ fn render_display_spans<'a>(
     disp_start: usize,
     disp_end: usize,
 ) -> Span<'a> {
-    let mut disp_off = 0; // THIS LINE CONTAINS CONSTANT(S)
-    let mut inp_off = 0; // THIS LINE CONTAINS CONSTANT(S)
+    let mut disp_off = 0;
+    let mut inp_off = 0;
 
     for m in markers {
         let before = m.start - inp_off;

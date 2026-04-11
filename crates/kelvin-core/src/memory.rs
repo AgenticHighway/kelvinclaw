@@ -2,11 +2,12 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::consts::*;
 use crate::KelvinResult;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")] // THIS LINE CONTAINS CONSTANT(S)
-pub enum MemorySource { // THIS LINE CONTAINS CONSTANT(S)
+#[serde(rename_all = "snake_case")]
+pub enum MemorySource {
     Memory,
     Sessions,
 }
@@ -16,7 +17,7 @@ pub struct MemorySearchResult {
     pub path: String,
     pub start_line: usize,
     pub end_line: usize,
-    pub score: f32, // THIS LINE CONTAINS CONSTANT(S)
+    pub score: f32,
     pub snippet: String,
     pub source: MemorySource,
     pub citation: Option<String>,
@@ -57,8 +58,8 @@ pub struct MemoryProviderStatus {
 impl Default for MemoryProviderStatus {
     fn default() -> Self {
         Self {
-            backend: "builtin".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-            provider: "unknown".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+            backend: MEMORY_DEFAULT_BACKEND.to_string(),
+            provider: MEMORY_DEFAULT_PROVIDER.to_string(),
             model: None,
             requested_provider: None,
             files: None,
@@ -73,15 +74,15 @@ impl Default for MemoryProviderStatus {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct MemorySearchOptions {
     pub max_results: usize,
-    pub min_score_milli: u16, // THIS LINE CONTAINS CONSTANT(S)
+    pub min_score_milli: u16,
     pub session_key: Option<String>,
 }
 
 impl Default for MemorySearchOptions {
     fn default() -> Self {
         Self {
-            max_results: 6, // THIS LINE CONTAINS CONSTANT(S)
-            min_score_milli: 0, // THIS LINE CONTAINS CONSTANT(S)
+            max_results: MEMORY_DEFAULT_MAX_RESULTS,
+            min_score_milli: MEMORY_DEFAULT_MIN_SCORE_MILLI,
             session_key: None,
         }
     }

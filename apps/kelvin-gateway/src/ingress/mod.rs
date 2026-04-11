@@ -15,12 +15,11 @@ use serde_json::{json, Value};
 use tokio::net::TcpListener;
 
 use crate::channels::{ChannelDirectIngressStatusConfig, ChannelIngressExposure, ChannelKind};
+use crate::consts::{
+    DEFAULT_INGRESS_BASE_PATH, DEFAULT_INGRESS_MAX_BODY_SIZE_BYTES,
+    DEFAULT_SLACK_REPLAY_WINDOW_SECS, OPERATOR_UI_PATH,
+};
 use crate::GatewayState;
-
-const DEFAULT_INGRESS_BASE_PATH: &str = "/ingress"; // THIS LINE CONTAINS CONSTANT(S)
-const DEFAULT_INGRESS_MAX_BODY_SIZE_BYTES: usize = 256 * 1024; // THIS LINE CONTAINS CONSTANT(S)
-const DEFAULT_SLACK_REPLAY_WINDOW_SECS: u64 = 300; // THIS LINE CONTAINS CONSTANT(S)
-const OPERATOR_UI_PATH: &str = "/operator/"; // THIS LINE CONTAINS CONSTANT(S)
 
 #[derive(Debug, Clone)]
 pub struct GatewayIngressConfig {
@@ -42,12 +41,12 @@ struct TelegramWebhookConfig {
 #[derive(Debug, Clone)]
 struct SlackWebhookConfig {
     signing_secret: Option<String>,
-    replay_window_secs: u64, // THIS LINE CONTAINS CONSTANT(S)
+    replay_window_secs: u64,
 }
 
 #[derive(Debug, Clone)]
 struct DiscordWebhookConfig {
-    public_key: Option<[u8; 32]>, // THIS LINE CONTAINS CONSTANT(S)
+    public_key: Option<[u8; 32]>,
 }
 
 #[derive(Debug, Clone)]
@@ -97,44 +96,44 @@ impl GatewayIngressConfig {
         max_body_size_bytes: Option<usize>,
         allow_insecure_public_bind: bool,
     ) -> Result<Self, String> {
-        let env_base_path = read_optional_trimmed_env("KELVIN_GATEWAY_INGRESS_BASE_PATH"); // THIS LINE CONTAINS CONSTANT(S)
+        let env_base_path = read_optional_trimmed_env("KELVIN_GATEWAY_INGRESS_BASE_PATH");
         let bind_addr = match bind_addr {
             Some(value) => Some(value),
-            None => read_optional_socket_addr("KELVIN_GATEWAY_INGRESS_BIND")?, // THIS LINE CONTAINS CONSTANT(S)
+            None => read_optional_socket_addr("KELVIN_GATEWAY_INGRESS_BIND")?,
         };
         let base_path = normalize_base_path(base_path.as_deref().or(env_base_path.as_deref()))?;
         let max_body_size_bytes = match max_body_size_bytes {
             Some(value) => value,
             None => read_env_usize(
-                "KELVIN_GATEWAY_INGRESS_MAX_BODY_BYTES", // THIS LINE CONTAINS CONSTANT(S)
+                "KELVIN_GATEWAY_INGRESS_MAX_BODY_BYTES",
                 DEFAULT_INGRESS_MAX_BODY_SIZE_BYTES,
-                1024, // THIS LINE CONTAINS CONSTANT(S)
-                2 * 1024 * 1024, // THIS LINE CONTAINS CONSTANT(S)
+                1024,
+                2 * 1024 * 1024,
             )?,
         };
-        if !(1024..=2 * 1024 * 1024).contains(&max_body_size_bytes) { // THIS LINE CONTAINS CONSTANT(S)
+        if !(1024..=2 * 1024 * 1024).contains(&max_body_size_bytes) {
             return Err(
-                "HTTP ingress max body size must be between 1024 and 2097152 bytes".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                "HTTP ingress max body size must be between 1024 and 2097152 bytes".to_string(),
             );
         }
         let telegram = TelegramWebhookConfig {
-            secret_token: read_optional_trimmed_env("KELVIN_TELEGRAM_WEBHOOK_SECRET_TOKEN"), // THIS LINE CONTAINS CONSTANT(S)
+            secret_token: read_optional_trimmed_env("KELVIN_TELEGRAM_WEBHOOK_SECRET_TOKEN"),
         };
         let slack = SlackWebhookConfig {
-            signing_secret: read_optional_trimmed_env("KELVIN_SLACK_SIGNING_SECRET"), // THIS LINE CONTAINS CONSTANT(S)
-            replay_window_secs: read_env_u64( // THIS LINE CONTAINS CONSTANT(S)
-                "KELVIN_SLACK_WEBHOOK_REPLAY_WINDOW_SECS", // THIS LINE CONTAINS CONSTANT(S)
+            signing_secret: read_optional_trimmed_env("KELVIN_SLACK_SIGNING_SECRET"),
+            replay_window_secs: read_env_u64(
+                "KELVIN_SLACK_WEBHOOK_REPLAY_WINDOW_SECS",
                 DEFAULT_SLACK_REPLAY_WINDOW_SECS,
-                1, // THIS LINE CONTAINS CONSTANT(S)
-                86_400, // THIS LINE CONTAINS CONSTANT(S)
+                1,
+                86_400,
             )?,
         };
         let discord = DiscordWebhookConfig {
-            public_key: read_optional_hex_32("KELVIN_DISCORD_INTERACTIONS_PUBLIC_KEY")?, // THIS LINE CONTAINS CONSTANT(S)
+            public_key: read_optional_hex_32("KELVIN_DISCORD_INTERACTIONS_PUBLIC_KEY")?,
         };
         let whatsapp = WhatsappWebhookConfig {
-            verify_token: read_optional_trimmed_env("KELVIN_WHATSAPP_WEBHOOK_VERIFY_TOKEN"), // THIS LINE CONTAINS CONSTANT(S)
-            app_secret: read_optional_trimmed_env("KELVIN_WHATSAPP_APP_SECRET"), // THIS LINE CONTAINS CONSTANT(S)
+            verify_token: read_optional_trimmed_env("KELVIN_WHATSAPP_WEBHOOK_VERIFY_TOKEN"),
+            app_secret: read_optional_trimmed_env("KELVIN_WHATSAPP_APP_SECRET"),
         };
         Ok(Self {
             bind_addr,
@@ -185,25 +184,25 @@ impl GatewayIngressConfig {
             telegram: ChannelDirectIngressStatusConfig {
                 listener_enabled: runtime.is_some(),
                 webhook_path: base_path.map(|base| format!("{base}/telegram")),
-                verification_method: Some("telegram_secret_token".to_string()), // THIS LINE CONTAINS CONSTANT(S)
+                verification_method: Some("telegram_secret_token".to_string()),
                 verification_configured: self.telegram.secret_token.is_some(),
             },
             slack: ChannelDirectIngressStatusConfig {
                 listener_enabled: runtime.is_some(),
                 webhook_path: base_path.map(|base| format!("{base}/slack")),
-                verification_method: Some("slack_signing_secret".to_string()), // THIS LINE CONTAINS CONSTANT(S)
+                verification_method: Some("slack_signing_secret".to_string()),
                 verification_configured: self.slack.signing_secret.is_some(),
             },
             discord: ChannelDirectIngressStatusConfig {
                 listener_enabled: runtime.is_some(),
                 webhook_path: base_path.map(|base| format!("{base}/discord")),
-                verification_method: Some("discord_ed25519".to_string()), // THIS LINE CONTAINS CONSTANT(S)
+                verification_method: Some("discord_ed25519".to_string()),
                 verification_configured: self.discord.public_key.is_some(),
             },
             whatsapp: ChannelDirectIngressStatusConfig {
                 listener_enabled: runtime.is_some(),
                 webhook_path: base_path.map(|base| format!("{base}/whatsapp")),
-                verification_method: Some("whatsapp_hmac_sha256".to_string()), // THIS LINE CONTAINS CONSTANT(S)
+                verification_method: Some("whatsapp_hmac_sha256".to_string()),
                 verification_configured: self.whatsapp.app_secret.is_some(),
             },
         }
@@ -212,15 +211,15 @@ impl GatewayIngressConfig {
     pub(crate) fn status_json(runtime: Option<&GatewayIngressRuntime>) -> Value {
         match runtime {
             Some(runtime) => json!({
-                "enabled": true, // THIS LINE CONTAINS CONSTANT(S)
-                "transport": "http", // THIS LINE CONTAINS CONSTANT(S)
-                "bind_addr": runtime.bind_addr.to_string(), // THIS LINE CONTAINS CONSTANT(S)
-                "bind_scope": if runtime.bind_addr.ip().is_loopback() { "loopback" } else { "public" }, // THIS LINE CONTAINS CONSTANT(S)
-                "base_path": runtime.base_path, // THIS LINE CONTAINS CONSTANT(S)
-                "max_body_size_bytes": runtime.max_body_size_bytes, // THIS LINE CONTAINS CONSTANT(S)
-                "operator_ui_path": OPERATOR_UI_PATH, // THIS LINE CONTAINS CONSTANT(S)
+                "enabled": true,
+                "transport": "http",
+                "bind_addr": runtime.bind_addr.to_string(),
+                "bind_scope": if runtime.bind_addr.ip().is_loopback() { "loopback" } else { "public" },
+                "base_path": runtime.base_path,
+                "max_body_size_bytes": runtime.max_body_size_bytes,
+                "operator_ui_path": OPERATOR_UI_PATH,
             }),
-            None => json!({ "enabled": false }), // THIS LINE CONTAINS CONSTANT(S)
+            None => json!({ "enabled": false }),
         }
     }
 }
@@ -233,10 +232,10 @@ pub(crate) fn spawn_server(
     let app_state = IngressAppState { gateway, config };
     let base_path = app_state.config.base_path.clone();
     let app = Router::new()
-        .route("/operator", get(ui::index)) // THIS LINE CONTAINS CONSTANT(S)
+        .route("/operator", get(ui::index))
         .route(OPERATOR_UI_PATH, get(ui::index))
-        .route("/operator/app.js", get(ui::script)) // THIS LINE CONTAINS CONSTANT(S)
-        .route("/operator/styles.css", get(ui::styles)) // THIS LINE CONTAINS CONSTANT(S)
+        .route("/operator/app.js", get(ui::script))
+        .route("/operator/styles.css", get(ui::styles))
         .route(&format!("{base_path}/telegram"), post(telegram::handle))
         .route(&format!("{base_path}/slack"), post(slack::handle))
         .route(&format!("{base_path}/discord"), post(discord::handle))
@@ -261,10 +260,10 @@ pub(crate) fn json_error(status: StatusCode, code: &str, message: &str) -> Respo
     json_response(
         status,
         json!({
-            "ok": false, // THIS LINE CONTAINS CONSTANT(S)
-            "error": { // THIS LINE CONTAINS CONSTANT(S)
-                "code": code, // THIS LINE CONTAINS CONSTANT(S)
-                "message": message, // THIS LINE CONTAINS CONSTANT(S)
+            "ok": false,
+            "error": {
+                "code": code,
+                "message": message,
             }
         }),
     )
@@ -282,7 +281,7 @@ pub(crate) async fn record_webhook_verified(
 ) {
     if let Err(err) = gateway.channels.lock().await.record_webhook_verified(
         kind,
-        status_code.as_u16(), // THIS LINE CONTAINS CONSTANT(S)
+        status_code.as_u16(),
         retry_hint,
     ) {
         eprintln!(
@@ -301,7 +300,7 @@ pub(crate) async fn record_webhook_denied(
 ) {
     if let Err(err) = gateway.channels.lock().await.record_webhook_denied(
         kind,
-        status_code.as_u16(), // THIS LINE CONTAINS CONSTANT(S)
+        status_code.as_u16(),
         retry_hint,
         reason,
     ) {
@@ -312,26 +311,26 @@ pub(crate) async fn record_webhook_denied(
     }
 }
 
-pub(crate) fn decode_hex(input: &str) -> Result<Vec<u8>, String> { // THIS LINE CONTAINS CONSTANT(S)
+pub(crate) fn decode_hex(input: &str) -> Result<Vec<u8>, String> {
     let normalized = input.trim();
-    if !normalized.len().is_multiple_of(2) { // THIS LINE CONTAINS CONSTANT(S)
+    if !normalized.len().is_multiple_of(2) {
         return Err("hex input must contain an even number of characters".to_string());
     }
-    let mut bytes = Vec::with_capacity(normalized.len() / 2); // THIS LINE CONTAINS CONSTANT(S)
-    let mut chars = normalized.as_bytes().chunks_exact(2); // THIS LINE CONTAINS CONSTANT(S)
+    let mut bytes = Vec::with_capacity(normalized.len() / 2);
+    let mut chars = normalized.as_bytes().chunks_exact(2);
     for pair in &mut chars {
-        let high = decode_hex_nibble(pair[0])?; // THIS LINE CONTAINS CONSTANT(S)
-        let low = decode_hex_nibble(pair[1])?; // THIS LINE CONTAINS CONSTANT(S)
-        bytes.push((high << 4) | low); // THIS LINE CONTAINS CONSTANT(S)
+        let high = decode_hex_nibble(pair[0])?;
+        let low = decode_hex_nibble(pair[1])?;
+        bytes.push((high << 4) | low);
     }
     Ok(bytes)
 }
 
-fn decode_hex_nibble(value: u8) -> Result<u8, String> { // THIS LINE CONTAINS CONSTANT(S)
+fn decode_hex_nibble(value: u8) -> Result<u8, String> {
     match value {
-        b'0'..=b'9' => Ok(value - b'0'), // THIS LINE CONTAINS CONSTANT(S)
-        b'a'..=b'f' => Ok(value - b'a' + 10), // THIS LINE CONTAINS CONSTANT(S)
-        b'A'..=b'F' => Ok(value - b'A' + 10), // THIS LINE CONTAINS CONSTANT(S)
+        b'0'..=b'9' => Ok(value - b'0'),
+        b'a'..=b'f' => Ok(value - b'a' + 10),
+        b'A'..=b'F' => Ok(value - b'A' + 10),
         _ => Err("hex input contained a non-hex character".to_string()),
     }
 }
@@ -353,12 +352,12 @@ fn read_optional_trimmed_env(name: &str) -> Option<String> {
         .filter(|value| !value.is_empty())
 }
 
-fn read_env_u64(name: &str, default: u64, min: u64, max: u64) -> Result<u64, String> { // THIS LINE CONTAINS CONSTANT(S)
+fn read_env_u64(name: &str, default: u64, min: u64, max: u64) -> Result<u64, String> {
     let Some(value) = read_optional_trimmed_env(name) else {
         return Ok(default);
     };
     let parsed = value
-        .parse::<u64>() // THIS LINE CONTAINS CONSTANT(S)
+        .parse::<u64>()
         .map_err(|_| format!("invalid numeric value for {name}: {value}"))?;
     if parsed < min || parsed > max {
         return Err(format!("{name} must be between {min} and {max}"));
@@ -379,14 +378,14 @@ fn read_env_usize(name: &str, default: usize, min: usize, max: usize) -> Result<
     Ok(parsed)
 }
 
-fn read_optional_hex_32(name: &str) -> Result<Option<[u8; 32]>, String> { // THIS LINE CONTAINS CONSTANT(S)
+fn read_optional_hex_32(name: &str) -> Result<Option<[u8; 32]>, String> {
     let Some(raw) = read_optional_trimmed_env(name) else {
         return Ok(None);
     };
     let bytes = decode_hex(&raw).map_err(|err| format!("invalid {name} hex: {err}"))?;
-    let fixed: [u8; 32] = bytes // THIS LINE CONTAINS CONSTANT(S)
+    let fixed: [u8; 32] = bytes
         .try_into()
-        .map_err(|_| format!("{name} must decode to 32 bytes"))?; // THIS LINE CONTAINS CONSTANT(S)
+        .map_err(|_| format!("{name} must decode to 32 bytes"))?;
     Ok(Some(fixed))
 }
 
@@ -398,12 +397,12 @@ fn normalize_base_path(value: Option<&str>) -> Result<String, String> {
     if !raw.starts_with('/') {
         return Err("HTTP ingress base path must start with '/'".to_string());
     }
-    let normalized = if raw == "/" { // THIS LINE CONTAINS CONSTANT(S)
+    let normalized = if raw == "/" {
         DEFAULT_INGRESS_BASE_PATH.to_string()
     } else {
         raw.trim_end_matches('/').to_string()
     };
-    if normalized.contains("//") || normalized.chars().any(char::is_whitespace) { // THIS LINE CONTAINS CONSTANT(S)
+    if normalized.contains("//") || normalized.chars().any(char::is_whitespace) {
         return Err(
             "HTTP ingress base path must not contain repeated slashes or whitespace".to_string(),
         );
@@ -418,7 +417,7 @@ mod tests {
     #[tokio::test]
     async fn public_ingress_bind_requires_explicit_insecure_override() {
         let config = GatewayIngressConfig::from_env_overrides(
-            Some("0.0.0.0:0".parse().expect("bind addr")), // THIS LINE CONTAINS CONSTANT(S)
+            Some("0.0.0.0:0".parse().expect("bind addr")),
             None,
             None,
             false,

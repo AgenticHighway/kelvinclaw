@@ -1,16 +1,16 @@
 use thiserror::Error;
 
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
-pub enum KelvinError { // THIS LINE CONTAINS CONSTANT(S)
-    #[error("invalid input: {0}")] // THIS LINE CONTAINS CONSTANT(S)
+pub enum KelvinError {
+    #[error("invalid input: {0}")]
     InvalidInput(String),
-    #[error("not found: {0}")] // THIS LINE CONTAINS CONSTANT(S)
+    #[error("not found: {0}")]
     NotFound(String),
-    #[error("timeout: {0}")] // THIS LINE CONTAINS CONSTANT(S)
+    #[error("timeout: {0}")]
     Timeout(String),
-    #[error("backend failure: {0}")] // THIS LINE CONTAINS CONSTANT(S)
+    #[error("backend failure: {0}")]
     Backend(String),
-    #[error("io failure: {0}")] // THIS LINE CONTAINS CONSTANT(S)
+    #[error("io failure: {0}")]
     Io(String),
 }
 

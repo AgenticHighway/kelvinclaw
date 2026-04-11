@@ -13,8 +13,8 @@ use uuid::Uuid;
 use crate::app::{AgentEvent, TuiEvent, WsStatus};
 
 #[derive(Debug, Serialize)]
-#[serde(tag = "type", rename_all = "snake_case")] // THIS LINE CONTAINS CONSTANT(S)
-enum ClientFrame { // THIS LINE CONTAINS CONSTANT(S)
+#[serde(tag = "type", rename_all = "snake_case")]
+enum ClientFrame {
     Req {
         id: String,
         method: String,
@@ -23,8 +23,8 @@ enum ClientFrame { // THIS LINE CONTAINS CONSTANT(S)
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(tag = "type", rename_all = "snake_case")] // THIS LINE CONTAINS CONSTANT(S)
-enum ServerFrame { // THIS LINE CONTAINS CONSTANT(S)
+#[serde(tag = "type", rename_all = "snake_case")]
+enum ServerFrame {
     Res {
         id: String,
         ok: bool,
@@ -51,14 +51,14 @@ impl WsClient {
         auth_token: Option<String>,
         tui_tx: mpsc::Sender<TuiEvent>,
     ) -> Result<Self, String> {
-        let (ws_stream, _) = timeout(Duration::from_secs(10), connect_async(url)) // THIS LINE CONTAINS CONSTANT(S)
+        let (ws_stream, _) = timeout(Duration::from_secs(10), connect_async(url))
             .await
             .map_err(|_| "WebSocket connect timed out".to_string())?
             .map_err(|e| format!("WebSocket connect failed: {e}"))?;
 
         let (mut ws_write, mut ws_read) = ws_stream.split();
 
-        let (frame_tx, mut frame_rx) = mpsc::channel::<String>(128); // THIS LINE CONTAINS CONSTANT(S)
+        let (frame_tx, mut frame_rx) = mpsc::channel::<String>(128);
         let pending: PendingMap = Arc::new(Mutex::new(HashMap::new()));
         let pending_clone = pending.clone();
         let tui_tx_clone = tui_tx.clone();
@@ -90,7 +90,7 @@ impl WsClient {
                             } else {
                                 Err(error
                                     .and_then(|e| {
-                                        e.get("message") // THIS LINE CONTAINS CONSTANT(S)
+                                        e.get("message")
                                             .and_then(|m| m.as_str())
                                             .map(|s| s.to_string())
                                     })
@@ -102,7 +102,7 @@ impl WsClient {
                             }
                         }
                         Ok(ServerFrame::Event { event, payload }) => {
-                            if event == "agent" { // THIS LINE CONTAINS CONSTANT(S)
+                            if event == "agent" {
                                 match serde_json::from_value::<AgentEvent>(payload) {
                                     Ok(ev) => {
                                         let _ = tui_tx_clone.send(TuiEvent::Agent(ev)).await;
@@ -142,17 +142,17 @@ impl WsClient {
         };
 
         let connect_params = if let Some(token) = auth_token {
-            json!({ "auth": { "token": token }, "client_id": "kelvin-tui" }) // THIS LINE CONTAINS CONSTANT(S)
+            json!({ "auth": { "token": token }, "client_id": "kelvin-tui" })
         } else {
-            json!({ "client_id": "kelvin-tui" }) // THIS LINE CONTAINS CONSTANT(S)
+            json!({ "client_id": "kelvin-tui" })
         };
 
-        client.call("connect", connect_params).await?; // THIS LINE CONTAINS CONSTANT(S)
+        client.call("connect", connect_params).await?;
         Ok(client)
     }
 
     async fn call(&self, method: &str, params: Value) -> Result<Value, String> {
-        let id = Uuid::new_v4().to_string(); // THIS LINE CONTAINS CONSTANT(S)
+        let id = Uuid::new_v4().to_string();
         let frame = ClientFrame::Req {
             id: id.clone(),
             method: method.to_string(),
@@ -172,7 +172,7 @@ impl WsClient {
             .await
             .map_err(|_| "sender closed".to_string())?;
 
-        match timeout(Duration::from_secs(30), rx).await { // THIS LINE CONTAINS CONSTANT(S)
+        match timeout(Duration::from_secs(30), rx).await {
             Ok(result) => result.map_err(|_| "response channel closed".to_string())?,
             Err(_) => {
                 self.pending.lock().await.remove(&id_for_cleanup);
@@ -182,22 +182,22 @@ impl WsClient {
     }
 
     pub async fn submit_prompt(&self, prompt: &str, session_id: &str) -> Result<String, String> {
-        let request_id = Uuid::new_v4().to_string(); // THIS LINE CONTAINS CONSTANT(S)
+        let request_id = Uuid::new_v4().to_string();
         let params = json!({
-            "request_id": request_id, // THIS LINE CONTAINS CONSTANT(S)
-            "prompt": prompt, // THIS LINE CONTAINS CONSTANT(S)
-            "session_id": session_id, // THIS LINE CONTAINS CONSTANT(S)
+            "request_id": request_id,
+            "prompt": prompt,
+            "session_id": session_id,
         });
-        let result = self.call("run.submit", params).await?; // THIS LINE CONTAINS CONSTANT(S)
+        let result = self.call("run.submit", params).await?;
         result
-            .get("run_id") // THIS LINE CONTAINS CONSTANT(S)
+            .get("run_id")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string())
             .ok_or_else(|| "missing run_id in response".to_string())
     }
 
     pub async fn list_commands(&self) -> Result<Value, String> {
-        self.call("commands.list", json!({})).await // THIS LINE CONTAINS CONSTANT(S)
+        self.call("commands.list", json!({})).await
     }
 
     pub async fn exec_command(
@@ -207,11 +207,11 @@ impl WsClient {
         session_id: &str,
     ) -> Result<Value, String> {
         self.call(
-            "command.exec", // THIS LINE CONTAINS CONSTANT(S)
+            "command.exec",
             json!({
-                "command": command, // THIS LINE CONTAINS CONSTANT(S)
-                "args": args, // THIS LINE CONTAINS CONSTANT(S)
-                "session_id": session_id, // THIS LINE CONTAINS CONSTANT(S)
+                "command": command,
+                "args": args,
+                "session_id": session_id,
             }),
         )
         .await
@@ -219,6 +219,6 @@ impl WsClient {
 
     #[allow(dead_code)]
     pub async fn health(&self) -> Result<Value, String> {
-        self.call("health", json!({})).await // THIS LINE CONTAINS CONSTANT(S)
+        self.call("health", json!({})).await
     }
 }

@@ -13,6 +13,8 @@ use kelvin_core::{
     MemorySyncParams,
 };
 
+use crate::consts;
+
 #[derive(Debug, Clone)]
 pub struct InMemoryDocument {
     pub path: String,
@@ -33,15 +35,15 @@ impl InMemoryVectorMemoryManager {
         Self {
             docs: Arc::new(RwLock::new(docs)),
             status: Arc::new(RwLock::new(MemoryProviderStatus {
-                backend: "builtin".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-                provider: "in_memory_vector".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-                model: Some("token-overlap-v1".to_string()), // THIS LINE CONTAINS CONSTANT(S)
-                requested_provider: Some("in_memory_vector".to_string()), // THIS LINE CONTAINS CONSTANT(S)
+                backend: consts::BACKEND_BUILTIN.to_string(),
+                provider: consts::PROVIDER_IN_MEMORY_VECTOR.to_string(),
+                model: Some(consts::MODEL_TOKEN_OVERLAP_V1.to_string()),
+                requested_provider: Some(consts::PROVIDER_IN_MEMORY_VECTOR.to_string()),
                 files: Some(files),
                 chunks: Some(chunks),
                 dirty: false,
                 fallback: None,
-                custom: json!({"index": "volatile"}), // THIS LINE CONTAINS CONSTANT(S)
+                custom: json!({consts::JSON_KEY_INDEX: consts::JSON_VALUE_VOLATILE}),
             })),
         }
     }
@@ -50,16 +52,16 @@ impl InMemoryVectorMemoryManager {
         let workspace_dir = workspace_dir.as_ref();
         let mut docs = Vec::new();
 
-        let memory_root = workspace_dir.join("MEMORY.md"); // THIS LINE CONTAINS CONSTANT(S)
+        let memory_root = workspace_dir.join(consts::MEMORY_FILE);
         if let Ok(text) = fs::read_to_string(memory_root) {
             docs.push(InMemoryDocument {
-                path: "MEMORY.md".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+                path: consts::MEMORY_FILE.to_string(),
                 text,
                 source: MemorySource::Memory,
             });
         }
 
-        let daily_dir = workspace_dir.join("memory"); // THIS LINE CONTAINS CONSTANT(S)
+        let daily_dir = workspace_dir.join(consts::MEMORY_DIR);
         if daily_dir.is_dir() {
             for entry in WalkDir::new(daily_dir)
                 .follow_links(false)
@@ -72,7 +74,7 @@ impl InMemoryVectorMemoryManager {
                 let file_path = entry.path();
                 if !file_path
                     .extension()
-                    .map(|ext| ext.eq_ignore_ascii_case("md")) // THIS LINE CONTAINS CONSTANT(S)
+                    .map(|ext| ext.eq_ignore_ascii_case(consts::MARKDOWN_EXTENSION))
                     .unwrap_or(false)
                 {
                     continue;
@@ -84,7 +86,7 @@ impl InMemoryVectorMemoryManager {
                     .strip_prefix(workspace_dir)
                     .unwrap_or(file_path)
                     .to_string_lossy()
-                    .replace('\\', "/"); // THIS LINE CONTAINS CONSTANT(S)
+                    .replace('\\', "/");
                 docs.push(InMemoryDocument {
                     path: rel,
                     text,
@@ -116,21 +118,21 @@ impl InMemoryVectorMemoryManager {
             .collect()
     }
 
-    fn compute_similarity(query_tokens: &HashSet<String>, text_tokens: &HashSet<String>) -> f32 { // THIS LINE CONTAINS CONSTANT(S)
+    fn compute_similarity(query_tokens: &HashSet<String>, text_tokens: &HashSet<String>) -> f32 {
         if query_tokens.is_empty() || text_tokens.is_empty() {
-            return 0.0; // THIS LINE CONTAINS CONSTANT(S)
+            return 0.0;
         }
         let overlap = query_tokens
             .iter()
             .filter(|token| text_tokens.contains(*token))
             .count();
-        overlap as f32 / query_tokens.len().max(1) as f32 // THIS LINE CONTAINS CONSTANT(S)
+        overlap as f32 / query_tokens.len().max(1) as f32
     }
 
     fn build_snippet(text: &str, query_tokens: &HashSet<String>) -> (usize, usize, String) {
         let lines: Vec<&str> = text.lines().collect();
         if lines.is_empty() {
-            return (1, 1, String::new()); // THIS LINE CONTAINS CONSTANT(S)
+            return (1, 1, String::new());
         }
 
         let mut first_hit: Option<usize> = None;
@@ -145,10 +147,14 @@ impl InMemoryVectorMemoryManager {
             }
         }
 
-        let idx = first_hit.unwrap_or(0); // THIS LINE CONTAINS CONSTANT(S)
-        let start = idx.saturating_sub(1); // THIS LINE CONTAINS CONSTANT(S)
-        let end = (idx + 1).min(lines.len().saturating_sub(1)); // THIS LINE CONTAINS CONSTANT(S)
-        (start + 1, end + 1, lines[start..=end].join("\n")) // THIS LINE CONTAINS CONSTANT(S)
+        let idx = first_hit.unwrap_or(0);
+        let start = idx.saturating_sub(consts::SEARCH_SNIPPET_CONTEXT_LINE_DELTA);
+        let end = (idx + consts::SEARCH_SNIPPET_CONTEXT_LINE_DELTA).min(
+            lines
+                .len()
+                .saturating_sub(consts::SEARCH_SNIPPET_CONTEXT_LINE_DELTA),
+        );
+        (start + 1, end + 1, lines[start..=end].join("\n"))
     }
 
     fn build_doc_map(docs: &[InMemoryDocument]) -> HashMap<&str, &InMemoryDocument> {
@@ -182,10 +188,10 @@ impl MemorySearchManager for InMemoryVectorMemoryManager {
         for doc in docs {
             let text_tokens = Self::tokenize(&doc.text);
             let score = Self::compute_similarity(&query_tokens, &text_tokens);
-            if score <= 0.0 { // THIS LINE CONTAINS CONSTANT(S)
+            if score <= 0.0 {
                 continue;
             }
-            if (score * 1000.0) < opts.min_score_milli as f32 { // THIS LINE CONTAINS CONSTANT(S)
+            if (score * 1000.0) < opts.min_score_milli as f32 {
                 continue;
             }
             let (start_line, end_line, snippet) = Self::build_snippet(&doc.text, &query_tokens);
@@ -208,13 +214,13 @@ impl MemorySearchManager for InMemoryVectorMemoryManager {
                 .then_with(|| a.start_line.cmp(&b.start_line))
                 .then_with(|| a.end_line.cmp(&b.end_line))
         });
-        results.truncate(opts.max_results.max(1)); // THIS LINE CONTAINS CONSTANT(S)
+        results.truncate(opts.max_results.max(1));
 
         Ok(results)
     }
 
     async fn read_file(&self, params: MemoryReadParams) -> KelvinResult<MemoryReadResult> {
-        let rel = params.rel_path.trim().replace('\\', "/"); // THIS LINE CONTAINS CONSTANT(S)
+        let rel = params.rel_path.trim().replace('\\', "/");
         let docs_guard = self
             .docs
             .read()
@@ -236,7 +242,10 @@ impl MemorySearchManager for InMemoryVectorMemoryManager {
             });
         }
 
-        let start = params.from.unwrap_or(1).saturating_sub(1); // THIS LINE CONTAINS CONSTANT(S)
+        let start = params
+            .from
+            .unwrap_or(1)
+            .saturating_sub(consts::SEARCH_SNIPPET_CONTEXT_LINE_DELTA);
         if start >= raw_lines.len() {
             return Ok(MemoryReadResult {
                 text: String::new(),

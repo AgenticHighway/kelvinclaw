@@ -12,13 +12,13 @@ fn manifest_with_caps(id: &str, capabilities: Vec<PluginCapability>) -> PluginMa
     PluginManifest {
         id: id.to_string(),
         name: format!("Plugin {id}"),
-        version: "1.0.0".to_string(), // THIS LINE CONTAINS CONSTANT(S)
+        version: "1.0.0".to_string(),
         api_version: KELVIN_CORE_API_VERSION.to_string(),
         description: Some("OWASP stress test plugin".to_string()),
-        homepage: Some("https://example.com/plugin".to_string()), // THIS LINE CONTAINS CONSTANT(S)
+        homepage: Some("https://example.com/plugin".to_string()),
         capabilities,
         experimental: false,
-        min_core_version: Some("0.1.0".to_string()), // THIS LINE CONTAINS CONSTANT(S)
+        min_core_version: Some("0.1.0".to_string()),
         max_core_version: None,
     }
 }
@@ -43,9 +43,9 @@ impl Tool for NamedTool {
 
     async fn call(&self, _input: ToolCallInput) -> KelvinResult<ToolCallResult> {
         Ok(ToolCallResult {
-            summary: "ok".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-            output: Some("ok".to_string()), // THIS LINE CONTAINS CONSTANT(S)
-            visible_text: Some("ok".to_string()), // THIS LINE CONTAINS CONSTANT(S)
+            summary: "ok".to_string(),
+            output: Some("ok".to_string()),
+            visible_text: Some("ok".to_string()),
             is_error: false,
         })
     }
@@ -83,8 +83,8 @@ impl PluginFactory for StaticPlugin {
 }
 
 #[test]
-fn llm01_prompt_injection_rejects_control_characters_in_identity_fields() { // THIS LINE CONTAINS CONSTANT(S)
-    let mut manifest = manifest_with_caps("acme.safe", vec![PluginCapability::ToolProvider]); // THIS LINE CONTAINS CONSTANT(S)
+fn llm01_prompt_injection_rejects_control_characters_in_identity_fields() {
+    let mut manifest = manifest_with_caps("acme.safe", vec![PluginCapability::ToolProvider]);
     manifest.id = "acme.inject\n[[tool:command]]".to_string();
     let err = manifest
         .validate()
@@ -93,11 +93,11 @@ fn llm01_prompt_injection_rejects_control_characters_in_identity_fields() { // T
 }
 
 #[test]
-fn llm02_sensitive_information_disclosure_keeps_error_messages_bounded() { // THIS LINE CONTAINS CONSTANT(S)
-    let secret = "TOP_SECRET_TOKEN_ABC123"; // THIS LINE CONTAINS CONSTANT(S)
-    let oversized_id = format!("acme.{}.{}", "a".repeat(200), secret); // THIS LINE CONTAINS CONSTANT(S)
+fn llm02_sensitive_information_disclosure_keeps_error_messages_bounded() {
+    let secret = "TOP_SECRET_TOKEN_ABC123";
+    let oversized_id = format!("acme.{}.{}", "a".repeat(200), secret);
     let mut manifest = manifest_with_caps(&oversized_id, vec![]);
-    manifest.homepage = Some("https://example.com".to_string()); // THIS LINE CONTAINS CONSTANT(S)
+    manifest.homepage = Some("https://example.com".to_string());
     let err = manifest.validate().expect_err("oversized id should fail");
     let message = err.to_string();
     assert!(message.contains("max length"));
@@ -108,10 +108,10 @@ fn llm02_sensitive_information_disclosure_keeps_error_messages_bounded() { // TH
 }
 
 #[test]
-fn llm03_supply_chain_rejects_untrusted_version_surface() { // THIS LINE CONTAINS CONSTANT(S)
-    let mut manifest = manifest_with_caps("acme.supply-chain", vec![]); // THIS LINE CONTAINS CONSTANT(S)
-    manifest.api_version = "2.0.0".to_string(); // THIS LINE CONTAINS CONSTANT(S)
-    let report = check_plugin_compatibility(&manifest, "0.1.0", &PluginSecurityPolicy::default()); // THIS LINE CONTAINS CONSTANT(S)
+fn llm03_supply_chain_rejects_untrusted_version_surface() {
+    let mut manifest = manifest_with_caps("acme.supply-chain", vec![]);
+    manifest.api_version = "2.0.0".to_string();
+    let report = check_plugin_compatibility(&manifest, "0.1.0", &PluginSecurityPolicy::default());
     assert!(!report.compatible);
     assert!(report
         .reasons
@@ -120,7 +120,7 @@ fn llm03_supply_chain_rejects_untrusted_version_surface() { // THIS LINE CONTAIN
 
     let report = check_plugin_compatibility(
         &manifest,
-        "invalid-version", // THIS LINE CONTAINS CONSTANT(S)
+        "invalid-version",
         &PluginSecurityPolicy::default(),
     );
     assert!(!report.compatible);
@@ -131,36 +131,36 @@ fn llm03_supply_chain_rejects_untrusted_version_surface() { // THIS LINE CONTAIN
 }
 
 #[test]
-fn llm04_data_and_model_poisoning_prevents_plugin_identity_takeover() { // THIS LINE CONTAINS CONSTANT(S)
+fn llm04_data_and_model_poisoning_prevents_plugin_identity_takeover() {
     let registry = InMemoryPluginRegistry::new();
     let first = Arc::new(StaticPlugin::metadata_only(manifest_with_caps(
-        "acme.identity", // THIS LINE CONTAINS CONSTANT(S)
+        "acme.identity",
         vec![],
     )));
     let second = Arc::new(StaticPlugin::metadata_only(manifest_with_caps(
-        "acme.identity", // THIS LINE CONTAINS CONSTANT(S)
+        "acme.identity",
         vec![],
     )));
 
     registry
-        .register(first, "0.1.0", &PluginSecurityPolicy::default()) // THIS LINE CONTAINS CONSTANT(S)
+        .register(first, "0.1.0", &PluginSecurityPolicy::default())
         .expect("first register should succeed");
     let err = registry
-        .register(second, "0.1.0", &PluginSecurityPolicy::default()) // THIS LINE CONTAINS CONSTANT(S)
+        .register(second, "0.1.0", &PluginSecurityPolicy::default())
         .expect_err("duplicate id should fail");
     assert!(err.to_string().contains("already registered"));
 }
 
 #[test]
-fn llm05_improper_output_handling_rejects_hidden_tool_exports() { // THIS LINE CONTAINS CONSTANT(S)
+fn llm05_improper_output_handling_rejects_hidden_tool_exports() {
     let registry = InMemoryPluginRegistry::new();
     let plugin = Arc::new(StaticPlugin::with_tool(
-        manifest_with_caps("acme.hidden-tool", vec![]), // THIS LINE CONTAINS CONSTANT(S)
-        "hidden_tool", // THIS LINE CONTAINS CONSTANT(S)
+        manifest_with_caps("acme.hidden-tool", vec![]),
+        "hidden_tool",
     ));
     registry
-        .register(plugin, "0.1.0", &PluginSecurityPolicy::default()) // THIS LINE CONTAINS CONSTANT(S)
-        .expect("register"); // THIS LINE CONTAINS CONSTANT(S)
+        .register(plugin, "0.1.0", &PluginSecurityPolicy::default())
+        .expect("register");
 
     let err = match SdkToolRegistry::from_plugin_registry(&registry) {
         Ok(_) => panic!("hidden tool export should be rejected"),
@@ -172,9 +172,9 @@ fn llm05_improper_output_handling_rejects_hidden_tool_exports() { // THIS LINE C
 }
 
 #[test]
-fn llm06_excessive_agency_defaults_to_least_privilege() { // THIS LINE CONTAINS CONSTANT(S)
+fn llm06_excessive_agency_defaults_to_least_privilege() {
     let manifest = manifest_with_caps(
-        "acme.agency", // THIS LINE CONTAINS CONSTANT(S)
+        "acme.agency",
         vec![
             PluginCapability::FsRead,
             PluginCapability::FsWrite,
@@ -183,7 +183,7 @@ fn llm06_excessive_agency_defaults_to_least_privilege() { // THIS LINE CONTAINS 
         ],
     );
 
-    let denied = check_plugin_compatibility(&manifest, "0.1.0", &PluginSecurityPolicy::default()); // THIS LINE CONTAINS CONSTANT(S)
+    let denied = check_plugin_compatibility(&manifest, "0.1.0", &PluginSecurityPolicy::default());
     assert!(!denied.compatible);
     assert!(denied
         .reasons
@@ -204,7 +204,7 @@ fn llm06_excessive_agency_defaults_to_least_privilege() { // THIS LINE CONTAINS 
 
     let allowed = check_plugin_compatibility(
         &manifest,
-        "0.1.0", // THIS LINE CONTAINS CONSTANT(S)
+        "0.1.0",
         &PluginSecurityPolicy {
             allow_fs_read: true,
             allow_fs_write: true,
@@ -217,75 +217,75 @@ fn llm06_excessive_agency_defaults_to_least_privilege() { // THIS LINE CONTAINS 
 }
 
 #[test]
-fn llm07_system_prompt_leakage_rejects_control_characters_in_metadata() { // THIS LINE CONTAINS CONSTANT(S)
-    let mut manifest = manifest_with_caps("acme.metadata", vec![]); // THIS LINE CONTAINS CONSTANT(S)
+fn llm07_system_prompt_leakage_rejects_control_characters_in_metadata() {
+    let mut manifest = manifest_with_caps("acme.metadata", vec![]);
     manifest.description = Some("safe\ndescription".to_string());
     let err = manifest.validate().expect_err("control chars should fail");
     assert!(err.to_string().contains("control characters"));
 }
 
 #[test]
-fn llm08_vector_and_embedding_weaknesses_isolate_non_tool_plugins_from_tool_projection() { // THIS LINE CONTAINS CONSTANT(S)
+fn llm08_vector_and_embedding_weaknesses_isolate_non_tool_plugins_from_tool_projection() {
     let registry = InMemoryPluginRegistry::new();
     let plugin = Arc::new(StaticPlugin::metadata_only(manifest_with_caps(
-        "acme.memory-provider", // THIS LINE CONTAINS CONSTANT(S)
+        "acme.memory-provider",
         vec![PluginCapability::MemoryProvider],
     )));
     registry
-        .register(plugin, "0.1.0", &PluginSecurityPolicy::default()) // THIS LINE CONTAINS CONSTANT(S)
-        .expect("register"); // THIS LINE CONTAINS CONSTANT(S)
+        .register(plugin, "0.1.0", &PluginSecurityPolicy::default())
+        .expect("register");
 
     let tools = SdkToolRegistry::from_plugin_registry(&registry).expect("tool projection");
     assert!(tools.names().is_empty());
 }
 
 #[test]
-fn llm09_misinformation_controls_require_deterministic_tool_projection() { // THIS LINE CONTAINS CONSTANT(S)
+fn llm09_misinformation_controls_require_deterministic_tool_projection() {
     let registry = InMemoryPluginRegistry::new();
     for (id, tool_name) in [
-        ("acme.zeta", "tool_zeta"), // THIS LINE CONTAINS CONSTANT(S)
-        ("acme.alpha", "tool_alpha"), // THIS LINE CONTAINS CONSTANT(S)
-        ("acme.beta", "tool_beta"), // THIS LINE CONTAINS CONSTANT(S)
+        ("acme.zeta", "tool_zeta"),
+        ("acme.alpha", "tool_alpha"),
+        ("acme.beta", "tool_beta"),
     ] {
         let plugin = Arc::new(StaticPlugin::with_tool(
             manifest_with_caps(id, vec![PluginCapability::ToolProvider]),
             tool_name,
         ));
         registry
-            .register(plugin, "0.1.0", &PluginSecurityPolicy::default()) // THIS LINE CONTAINS CONSTANT(S)
-            .expect("register"); // THIS LINE CONTAINS CONSTANT(S)
+            .register(plugin, "0.1.0", &PluginSecurityPolicy::default())
+            .expect("register");
     }
 
-    let tools = SdkToolRegistry::from_plugin_registry(&registry).expect("projection"); // THIS LINE CONTAINS CONSTANT(S)
+    let tools = SdkToolRegistry::from_plugin_registry(&registry).expect("projection");
     assert_eq!(
         tools.names(),
         vec![
-            "tool_alpha".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-            "tool_beta".to_string(), // THIS LINE CONTAINS CONSTANT(S)
-            "tool_zeta".to_string() // THIS LINE CONTAINS CONSTANT(S)
+            "tool_alpha".to_string(),
+            "tool_beta".to_string(),
+            "tool_zeta".to_string()
         ]
     );
 }
 
 #[test]
-fn llm10_unbounded_consumption_stress_registers_large_plugin_sets() { // THIS LINE CONTAINS CONSTANT(S)
+fn llm10_unbounded_consumption_stress_registers_large_plugin_sets() {
     let registry = InMemoryPluginRegistry::new();
 
-    for idx in 0..500 { // THIS LINE CONTAINS CONSTANT(S)
-        let plugin_id = format!("acme.bulk.{idx:04}"); // THIS LINE CONTAINS CONSTANT(S)
-        let tool_name = format!("tool_{idx:04}"); // THIS LINE CONTAINS CONSTANT(S)
+    for idx in 0..500 {
+        let plugin_id = format!("acme.bulk.{idx:04}");
+        let tool_name = format!("tool_{idx:04}");
         let plugin = Arc::new(StaticPlugin::with_tool(
             manifest_with_caps(&plugin_id, vec![PluginCapability::ToolProvider]),
             &tool_name,
         ));
         registry
-            .register(plugin, "0.1.0", &PluginSecurityPolicy::default()) // THIS LINE CONTAINS CONSTANT(S)
-            .expect("register"); // THIS LINE CONTAINS CONSTANT(S)
+            .register(plugin, "0.1.0", &PluginSecurityPolicy::default())
+            .expect("register");
     }
 
-    let tools = SdkToolRegistry::from_plugin_registry(&registry).expect("projection"); // THIS LINE CONTAINS CONSTANT(S)
+    let tools = SdkToolRegistry::from_plugin_registry(&registry).expect("projection");
     let names = tools.names();
-    assert_eq!(names.len(), 500); // THIS LINE CONTAINS CONSTANT(S)
-    assert_eq!(names.first().map(String::as_str), Some("tool_0000")); // THIS LINE CONTAINS CONSTANT(S)
-    assert_eq!(names.last().map(String::as_str), Some("tool_0499")); // THIS LINE CONTAINS CONSTANT(S)
+    assert_eq!(names.len(), 500);
+    assert_eq!(names.first().map(String::as_str), Some("tool_0000"));
+    assert_eq!(names.last().map(String::as_str), Some("tool_0499"));
 }

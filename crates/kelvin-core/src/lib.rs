@@ -1,4 +1,5 @@
 pub mod brain;
+pub mod consts;
 pub mod error;
 pub mod events;
 pub mod memory;
