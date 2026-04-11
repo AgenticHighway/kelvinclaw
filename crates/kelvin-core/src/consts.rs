@@ -9,6 +9,9 @@ pub const MAX_PLUGIN_DESCRIPTION_LEN: usize = 4_096;
 pub const MAX_PLUGIN_HOMEPAGE_LEN: usize = 2_048;
 pub const MAX_PLUGIN_CAPABILITIES: usize = 32;
 
+// --- Display Limits ---
+pub const DISPLAY_PREVIEW_MAX_LEN: usize = 64;
+
 // --- Model Provider Profiles ---
 pub const OPENAI_RESPONSES_PROFILE_ID: &str = "openai.responses";
 pub const ANTHROPIC_MESSAGES_PROFILE_ID: &str = "anthropic.messages";

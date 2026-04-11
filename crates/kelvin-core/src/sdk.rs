@@ -7,8 +7,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::{
-    EventSink, KelvinError, KelvinResult, MemorySearchManager, ModelProvider, SessionStore, Tool,
-    ToolRegistry,
+    consts, EventSink, KelvinError, KelvinResult, MemorySearchManager, ModelProvider, SessionStore,
+    Tool, ToolRegistry,
 };
 
 pub use crate::consts::{
@@ -342,7 +342,7 @@ fn validate_semver(label: &str, value: &str) -> KelvinResult<()> {
         )));
     }
     Version::parse(value).map_err(|err| {
-        let shown = preview(value, 64);
+        let shown = preview(value, consts::DISPLAY_PREVIEW_MAX_LEN);
         KelvinError::InvalidInput(format!(
             "{label} must be valid semver, got '{shown}': {err}"
         ))
@@ -379,7 +379,7 @@ fn validate_plugin_id(value: &str) -> KelvinResult<()> {
         .chars()
         .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '_' | '-' | '.'))
     {
-        let shown = preview(cleaned, 64);
+        let shown = preview(cleaned, consts::DISPLAY_PREVIEW_MAX_LEN);
         return Err(KelvinError::InvalidInput(format!(
             "plugin id has invalid characters: {shown}"
         )));
