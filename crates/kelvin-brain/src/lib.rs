@@ -2,6 +2,7 @@ pub mod consts;
 pub mod installed_plugins;
 pub mod kelvin_brain;
 pub mod providers;
+pub mod system_prompt;
 pub mod tool_loop_detector;
 pub mod wasm_skill_tool;
 

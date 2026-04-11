@@ -15,7 +15,7 @@ use kelvin_core::{
     ToolCallInput, ToolPhase, ToolRegistry,
 };
 
-use crate::tool_loop_detector::{LoopDetectionResult, ToolLoopDetector};
+use crate::{system_prompt, tool_loop_detector::{LoopDetectionResult, ToolLoopDetector}};
 
 #[derive(Clone)]
 pub struct KelvinBrain {
@@ -335,10 +335,11 @@ impl KelvinBrain {
             })
             .collect::<Vec<_>>();
 
-        let system_prompt = req
-            .extra_system_prompt
-            .clone()
-            .unwrap_or_else(|| "KelvinClaw-style Kelvin brain".to_string());
+        let system_prompt = system_prompt::build(system_prompt::SystemPromptParams {
+            workspace_dir: &req.workspace_dir,
+            tools: &self.tools.definitions(),
+            extra_system_prompt: req.extra_system_prompt.as_deref(),
+        });
 
         let max_iter = req.max_tool_iterations.unwrap_or(self.max_tool_iterations);
         let mut iteration = 0usize;
