@@ -9,8 +9,6 @@ pub const MAX_CONFIG_ID_LEN: usize = 128;
 pub const DEFAULT_READ_MAX_BYTES: usize = 64 * 1024;
 pub const DEFAULT_FETCH_MAX_BYTES: usize = 128 * 1024;
 pub const DEFAULT_FETCH_TIMEOUT_MS: u64 = 3_000;
-pub const DEFAULT_WEB_ALLOW_HOSTS: &str =
-    "docs.rs,crates.io,raw.githubusercontent.com,api.openai.com";
 
 // --- Environment Variables ---
 pub const ENV_TOOLPACK_ENABLE_FS_WRITE: &str = "KELVIN_TOOLPACK_ENABLE_FS_WRITE";
@@ -20,6 +18,9 @@ pub const ENV_TOOLPACK_ENABLE_SESSION_CLEAR: &str = "KELVIN_TOOLPACK_ENABLE_SESS
 pub const ENV_TOOLPACK_WEB_ALLOW_HOSTS: &str = "KELVIN_TOOLPACK_WEB_ALLOW_HOSTS";
 
 // --- Scheduler ---
+pub const SCHEDULER_SLOT_ERROR_TRUNCATE: usize = 512;
+pub const SCHEDULER_SLOT_PREVIEW_TRUNCATE: usize = 512;
+pub const MAX_SCHEDULE_ID_BYTES: usize = 128;
 pub const MAX_CRON_SCAN_MINUTES: usize = 1_051_200;
 pub const MAX_AUDIT_ENTRIES: usize = 4_096;
 pub const MAX_SLOT_ENTRIES: usize = 4_096;
@@ -33,6 +34,18 @@ pub const KELVIN_DIR_NAME: &str = ".kelvin";
 pub const STATE_SESSIONS_SUBDIR: &str = "sessions";
 pub const STATE_RUNS_SUBDIR: &str = "runs";
 pub const TEMP_FILE_EXTENSION: &str = "tmp";
+
+// --- Sensitive Paths and Directories ---
+// NOTE probably make more sense to regex these
+pub const SENSITIVE_PATHS_COMPARE: &[&str] = &[".env"];
+pub const SENSITIVE_PATHS_PREFIX: &[&str] =
+    &[".env.", ".git/", ".kelvin/plugins", ".kelvinclaw/plugins"];
+
+// --- Default Tool Scopes
+// why tf is this a comma-sep string
+pub const DEFAULT_WEB_ALLOW_HOSTS: &str =
+    "docs.rs,crates.io,raw.githubusercontent.com,api.openai.com";
+pub const DEFAULT_FS_WRITE_SCOPE: &[&str] = &["sandbox/", "memory/", "notes/"];
 
 // --- Session Defaults ---
 pub const DEFAULT_SESSION_ID: &str = "main";

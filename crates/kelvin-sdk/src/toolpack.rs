@@ -17,10 +17,11 @@ use kelvin_core::{
 };
 
 use crate::consts::{
-    DEFAULT_FETCH_MAX_BYTES, DEFAULT_FETCH_TIMEOUT_MS, DEFAULT_READ_MAX_BYTES,
-    DEFAULT_WEB_ALLOW_HOSTS, ENV_TOOLPACK_ENABLE_FS_WRITE, ENV_TOOLPACK_ENABLE_SCHEDULER_WRITE,
-    ENV_TOOLPACK_ENABLE_SESSION_CLEAR, ENV_TOOLPACK_ENABLE_WEB_FETCH, ENV_TOOLPACK_WEB_ALLOW_HOSTS,
-    MAX_APPROVAL_REASON_LEN,
+    DEFAULT_FETCH_MAX_BYTES, DEFAULT_FETCH_TIMEOUT_MS, DEFAULT_FS_WRITE_SCOPE,
+    DEFAULT_READ_MAX_BYTES, DEFAULT_WEB_ALLOW_HOSTS, ENV_TOOLPACK_ENABLE_FS_WRITE,
+    ENV_TOOLPACK_ENABLE_SCHEDULER_WRITE, ENV_TOOLPACK_ENABLE_SESSION_CLEAR,
+    ENV_TOOLPACK_ENABLE_WEB_FETCH, ENV_TOOLPACK_WEB_ALLOW_HOSTS, MAX_APPROVAL_REASON_LEN,
+    SENSITIVE_PATHS_COMPARE, SENSITIVE_PATHS_PREFIX,
 };
 use crate::{NewScheduledTask, ScheduleReplyTarget, SchedulerStore};
 
@@ -298,10 +299,8 @@ fn normalize_workspace_relative_path(path: &str, field_name: &str) -> KelvinResu
 /// true if path is sensitive
 fn deny_sensitive_read_path(path: &str) -> bool {
     let lower = path.to_ascii_lowercase();
-    lower == ".env"
-        || lower.starts_with(".env.")
-        || lower.starts_with(".git/")
-        || lower.starts_with(".kelvin/plugins/")
+    SENSITIVE_PATHS_COMPARE.iter().any(|&p| p == lower)
+        || SENSITIVE_PATHS_PREFIX.iter().any(|&p| lower.starts_with(p))
 }
 
 /// ### Brief
@@ -549,9 +548,7 @@ struct SafeFsWriteTool {
 /// implement flag function for checking allowed write paths
 impl SafeFsWriteTool {
     fn write_scope_allowed(path: &str) -> bool {
-        path.starts_with(".kelvin/sandbox/")
-            || path.starts_with("memory/")
-            || path.starts_with("notes/")
+        DEFAULT_FS_WRITE_SCOPE.iter().any(|&p| path.starts_with(p))
     }
 }
 
@@ -563,7 +560,7 @@ impl Tool for SafeFsWriteTool {
     }
 
     fn description(&self) -> &str {
-        "Write content to a file in the workspace. Only .kelvin/sandbox/, memory/, and notes/ roots are permitted. Requires sensitive approval."
+        "Write content to a file in the workspace. Only sandbox/, memory/, and notes/ roots are permitted. Requires sensitive approval."
     }
 
     fn input_schema(&self) -> serde_json::Value {
@@ -1402,7 +1399,22 @@ mod tests {
 
     use crate::SchedulerStore;
 
-    use super::load_default_toolpack_plugins;
+    use super::{deny_sensitive_read_path, load_default_toolpack_plugins};
+
+    #[test]
+    fn deny_sensitive_read_path_allows_normal_file() {
+        assert!(!deny_sensitive_read_path("notes/meeting.md"));
+    }
+
+    #[test]
+    fn deny_sensitive_read_path_blocks_env_file() {
+        assert!(deny_sensitive_read_path(".env"));
+    }
+
+    #[test]
+    fn deny_sensitive_read_path_blocks_kelvin_plugins_dir() {
+        assert!(deny_sensitive_read_path(".kelvin/plugins/my-plugin.wasm"));
+    }
 
     fn unique_workspace() -> std::path::PathBuf {
         let millis = SystemTime::now()

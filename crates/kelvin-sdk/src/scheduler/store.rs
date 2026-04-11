@@ -5,6 +5,8 @@ use serde_json::json;
 
 use kelvin_core::{now_ms, KelvinError, KelvinResult};
 
+use crate::consts;
+
 use super::cron::CronSchedule;
 use super::persistence::{load_state, migrate_legacy_if_needed, save_state, SchedulerState};
 use super::{
@@ -250,7 +252,7 @@ impl SchedulerStore {
         self.update_slot(schedule_id, slot_at_ms, |slot, audit| {
             slot.phase = ScheduleSlotPhase::SubmitFailed;
             slot.finished_at_ms = Some(now_ms());
-            slot.error = Some(truncate(error, 512));
+            slot.error = Some(truncate(error, consts::SCHEDULER_SLOT_ERROR_TRUNCATE));
             audit.push(ScheduleAuditEntry {
                 ts_ms: now_ms(),
                 kind: "slot_submit_failed".to_string(),
@@ -259,7 +261,7 @@ impl SchedulerStore {
                 run_id: None,
                 actor_session_id: None,
                 message: format!("schedule '{}' submit failed", schedule_id),
-                detail: json!({ "error": truncate(error, 512) }),
+                detail: json!({ "error": truncate(error, consts::SCHEDULER_SLOT_ERROR_TRUNCATE) }),
             });
         })
     }
@@ -277,8 +279,12 @@ impl SchedulerStore {
             slot.phase = phase.clone();
             slot.run_id = Some(run_id.to_string());
             slot.finished_at_ms = Some(now_ms());
-            slot.response_preview = response_preview.clone().map(|value| truncate(&value, 512));
-            slot.error = error.clone().map(|value| truncate(&value, 512));
+            slot.response_preview = response_preview
+                .clone()
+                .map(|value| truncate(&value, consts::SCHEDULER_SLOT_PREVIEW_TRUNCATE));
+            slot.error = error
+                .clone()
+                .map(|value| truncate(&value, consts::SCHEDULER_SLOT_ERROR_TRUNCATE));
             audit.push(ScheduleAuditEntry {
                 ts_ms: now_ms(),
                 kind: format!("slot_{:?}", phase).to_ascii_lowercase(),
@@ -306,7 +312,7 @@ impl SchedulerStore {
             slot.reply = Some(ScheduleReplyDelivery {
                 delivered,
                 attempted_at_ms: now_ms(),
-                error: error.map(|value| truncate(value, 512)),
+                error: error.map(|value| truncate(value, consts::SCHEDULER_SLOT_ERROR_TRUNCATE)),
             });
             audit.push(ScheduleAuditEntry {
                 ts_ms: now_ms(),
@@ -324,7 +330,7 @@ impl SchedulerStore {
                 } else {
                     format!("reply delivery failed for schedule '{}'", schedule_id)
                 },
-                detail: json!({ "error": error.map(|value| truncate(value, 512)) }),
+                detail: json!({ "error": error.map(|value| truncate(value, consts::SCHEDULER_SLOT_ERROR_TRUNCATE)) }),
             });
         })
     }

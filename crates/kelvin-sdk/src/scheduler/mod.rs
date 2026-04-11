@@ -8,6 +8,8 @@ use kelvin_core::{now_ms, KelvinError, KelvinResult};
 
 pub use store::{SchedulerStatus, SchedulerStore};
 
+use crate::consts;
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ScheduleReplyTarget {
     pub channel: String,
@@ -76,7 +78,7 @@ pub struct NewScheduledTask {
 
 impl NewScheduledTask {
     pub fn into_task(self) -> KelvinResult<ScheduledTask> {
-        validate_identifier("schedule id", &self.id, 128)?;
+        validate_identifier("schedule id", &self.id, consts::MAX_SCHEDULE_ID_BYTES)?;
         let prompt = self.prompt.trim().to_string();
         if prompt.is_empty() {
             return Err(KelvinError::InvalidInput(
