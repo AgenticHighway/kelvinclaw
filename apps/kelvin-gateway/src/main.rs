@@ -492,6 +492,7 @@ fn selection_requires_network(_policy: &KelvinSdkModelSelection) -> bool {
 
 #[tokio::main]
 async fn main() {
+    let _ = rustls::crypto::ring::default_provider().install_default();
     match parse_args() {
         Ok(config) => {
             if let Some(code) = config.approve_pairing_code {

@@ -16,16 +16,16 @@ use tokio::net::TcpListener;
 
 use crate::channels::{ChannelDirectIngressStatusConfig, ChannelIngressExposure, ChannelKind};
 use crate::consts::{
-    DEFAULT_INGRESS_BASE_PATH, DEFAULT_INGRESS_MAX_BODY_SIZE_BYTES,
+    DEFAULT_DISCORD_GATEWAY_INTENTS, DEFAULT_INGRESS_BASE_PATH, DEFAULT_INGRESS_MAX_BODY_SIZE_BYTES,
     DEFAULT_SLACK_REPLAY_WINDOW_SECS, DEFAULT_TELEGRAM_POLLING_TIMEOUT_SECS,
-    ENV_DISCORD_INTERACTIONS_PUBLIC_KEY, ENV_GATEWAY_INGRESS_BASE_PATH, ENV_GATEWAY_INGRESS_BIND,
-    ENV_GATEWAY_INGRESS_MAX_BODY_BYTES, ENV_SLACK_SIGNING_SECRET,
-    ENV_SLACK_WEBHOOK_REPLAY_WINDOW_SECS, ENV_TELEGRAM_POLLING_TIMEOUT_SECS,
-    ENV_TELEGRAM_WEBHOOK_SECRET_TOKEN, ENV_WHATSAPP_APP_SECRET, ENV_WHATSAPP_WEBHOOK_VERIFY_TOKEN,
-    MAX_INGRESS_MAX_BODY_SIZE_BYTES,
+    ENV_DISCORD_GATEWAY_INTENTS, ENV_DISCORD_INTERACTIONS_PUBLIC_KEY,
+    ENV_GATEWAY_INGRESS_BASE_PATH, ENV_GATEWAY_INGRESS_BIND, ENV_GATEWAY_INGRESS_MAX_BODY_BYTES,
+    ENV_SLACK_SIGNING_SECRET, ENV_SLACK_WEBHOOK_REPLAY_WINDOW_SECS,
+    ENV_TELEGRAM_POLLING_TIMEOUT_SECS, ENV_TELEGRAM_WEBHOOK_SECRET_TOKEN, ENV_WHATSAPP_APP_SECRET,
+    ENV_WHATSAPP_WEBHOOK_VERIFY_TOKEN, MAX_INGRESS_MAX_BODY_SIZE_BYTES,
     MIN_INGRESS_MAX_BODY_SIZE_BYTES, OPERATOR_UI_PATH, SECONDS_PER_DAY,
-    VERIFICATION_METHOD_DISCORD, VERIFICATION_METHOD_SLACK, VERIFICATION_METHOD_TELEGRAM,
-    VERIFICATION_METHOD_TELEGRAM_POLLING, VERIFICATION_METHOD_WHATSAPP,
+    VERIFICATION_METHOD_DISCORD, VERIFICATION_METHOD_DISCORD_GATEWAY, VERIFICATION_METHOD_SLACK,
+    VERIFICATION_METHOD_TELEGRAM, VERIFICATION_METHOD_TELEGRAM_POLLING, VERIFICATION_METHOD_WHATSAPP,
 };
 use crate::GatewayState;
 
@@ -39,6 +39,7 @@ pub struct GatewayIngressConfig {
     pub(crate) telegram_polling: TelegramPollingConfig,
     slack: SlackWebhookConfig,
     discord: DiscordWebhookConfig,
+    pub(crate) discord_gateway: DiscordGatewayConfig,
     pub(crate) whatsapp: WhatsappWebhookConfig,
 }
 
@@ -63,6 +64,13 @@ struct SlackWebhookConfig {
 #[derive(Debug, Clone)]
 struct DiscordWebhookConfig {
     public_key: Option<[u8; 32]>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct DiscordGatewayConfig {
+    pub(crate) enabled: bool,
+    pub(crate) bot_token: Option<String>,
+    pub(crate) intents: u64,
 }
 
 #[derive(Debug, Clone)]
@@ -102,6 +110,11 @@ impl Default for GatewayIngressConfig {
                 replay_window_secs: DEFAULT_SLACK_REPLAY_WINDOW_SECS,
             },
             discord: DiscordWebhookConfig { public_key: None },
+            discord_gateway: DiscordGatewayConfig {
+                enabled: true,
+                bot_token: None,
+                intents: DEFAULT_DISCORD_GATEWAY_INTENTS,
+            },
             whatsapp: WhatsappWebhookConfig {
                 verify_token: None,
                 app_secret: None,
@@ -164,6 +177,16 @@ impl GatewayIngressConfig {
         let discord = DiscordWebhookConfig {
             public_key: read_optional_hex_32(ENV_DISCORD_INTERACTIONS_PUBLIC_KEY)?,
         };
+        let discord_gateway = DiscordGatewayConfig {
+            enabled: discord.public_key.is_none(),
+            bot_token: read_optional_trimmed_env("KELVIN_DISCORD_BOT_TOKEN"),
+            intents: read_env_u64(
+                ENV_DISCORD_GATEWAY_INTENTS,
+                DEFAULT_DISCORD_GATEWAY_INTENTS,
+                1,
+                u64::MAX,
+            )?,
+        };
         let whatsapp = WhatsappWebhookConfig {
             verify_token: read_optional_trimmed_env(ENV_WHATSAPP_WEBHOOK_VERIFY_TOKEN),
             app_secret: read_optional_trimmed_env(ENV_WHATSAPP_APP_SECRET),
@@ -177,6 +200,7 @@ impl GatewayIngressConfig {
             telegram_polling,
             slack,
             discord,
+            discord_gateway,
             whatsapp,
         })
     }
@@ -237,10 +261,19 @@ impl GatewayIngressConfig {
                 verification_configured: self.slack.signing_secret.is_some(),
             },
             discord: ChannelDirectIngressStatusConfig {
-                listener_enabled: runtime.is_some(),
-                webhook_path: base_path.map(|base| format!("{base}/discord")),
-                verification_method: Some(VERIFICATION_METHOD_DISCORD.to_string()),
-                verification_configured: self.discord.public_key.is_some(),
+                listener_enabled: self.discord_gateway.enabled || runtime.is_some(),
+                webhook_path: if self.discord_gateway.enabled {
+                    None
+                } else {
+                    base_path.map(|base| format!("{base}/discord"))
+                },
+                verification_method: Some(if self.discord_gateway.enabled {
+                    VERIFICATION_METHOD_DISCORD_GATEWAY.to_string()
+                } else {
+                    VERIFICATION_METHOD_DISCORD.to_string()
+                }),
+                verification_configured: self.discord_gateway.enabled
+                    || self.discord.public_key.is_some(),
             },
             whatsapp: ChannelDirectIngressStatusConfig {
                 listener_enabled: runtime.is_some(),
@@ -297,6 +330,10 @@ pub(crate) fn spawn_server(
 
 pub(crate) fn spawn_telegram_poller(gateway: GatewayState, config: TelegramPollingConfig) {
     telegram::spawn_poller(gateway, config);
+}
+
+pub(crate) fn spawn_discord_gateway(gateway: GatewayState, config: DiscordGatewayConfig) {
+    discord::spawn_gateway(gateway, config);
 }
 
 pub(crate) fn json_response(status: StatusCode, payload: Value) -> Response {

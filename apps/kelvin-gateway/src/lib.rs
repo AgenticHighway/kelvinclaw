@@ -752,11 +752,15 @@ pub async fn run_gateway_with_listener_secure_and_ingress(
         connection_semaphore: Arc::new(Semaphore::new(security.max_connections)),
     };
     let telegram_polling = ingress.telegram_polling.clone();
+    let discord_gateway = ingress.discord_gateway.clone();
     if let Some(listener) = ingress_listener {
         ingress::spawn_server(listener, state.clone(), ingress);
     }
     if telegram_polling.enabled {
         ingress::spawn_telegram_poller(state.clone(), telegram_polling);
+    }
+    if discord_gateway.enabled {
+        ingress::spawn_discord_gateway(state.clone(), discord_gateway);
     }
 
     loop {

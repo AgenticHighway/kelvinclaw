@@ -1,10 +1,16 @@
+use std::sync::Arc;
+use std::time::Duration;
+
 use axum::body::Bytes;
 use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::Response;
 use ed25519_dalek::{Signature, Verifier, VerifyingKey};
+use futures_util::{SinkExt, StreamExt};
 use serde::Deserialize;
 use serde_json::{json, Value};
+use tokio::sync::Mutex;
+use tokio_tungstenite::{connect_async, tungstenite::Message};
 
 use crate::channels::{ChannelKind, DiscordIngressRequest};
 use crate::consts::{
@@ -12,10 +18,11 @@ use crate::consts::{
     API_CODE_VERIFICATION_UNAVAILABLE, DISCORD_MESSAGE_FLAGS, DISCORD_MESSAGE_TYPE,
     DISCORD_PING_TYPE, DISCORD_SIGNATURE_HEADER, DISCORD_SIGNATURE_TIMESTAMP_HEADER,
 };
+use crate::GatewayState;
 
 use super::{
     channel_enabled, decode_hex, json_error, json_response, record_webhook_denied,
-    record_webhook_verified, IngressAppState,
+    record_webhook_verified, DiscordGatewayConfig, IngressAppState,
 };
 
 #[derive(Debug, Deserialize)]
@@ -294,4 +301,349 @@ fn verify_signature(
     verifying_key
         .verify(&payload, &signature)
         .map_err(|_| "discord signature verification failed".to_string())
+}
+
+// ── Discord Gateway (WebSocket polling) ───────────────────────────────────────
+
+#[derive(Debug, Deserialize)]
+struct GatewayPayload {
+    op: u8,
+    d: Option<Value>,
+    s: Option<i64>,
+    t: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct HelloData {
+    heartbeat_interval: u64,
+}
+
+#[derive(Debug, Deserialize)]
+struct ReadyEvent {
+    session_id: String,
+    resume_gateway_url: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct MessageCreateEvent {
+    id: String,
+    channel_id: String,
+    author: GatewayMessageAuthor,
+    #[serde(default)]
+    content: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct GatewayMessageAuthor {
+    id: String,
+    #[serde(default)]
+    bot: bool,
+}
+
+pub(super) fn spawn_gateway(gateway: GatewayState, config: DiscordGatewayConfig) {
+    tokio::spawn(run_gateway(gateway, config));
+}
+
+async fn run_gateway(gateway: GatewayState, config: DiscordGatewayConfig) {
+    let bot_token = match config.bot_token {
+        Some(ref t) => t.clone(),
+        None => {
+            eprintln!("discord gateway enabled but no bot token configured; gateway disabled");
+            return;
+        }
+    };
+
+    let mut session_id: Option<String> = None;
+    let mut resume_gateway_url: Option<String> = None;
+    let mut seq: Option<i64> = None;
+    let mut resume = false;
+    let mut session_established = false;
+
+    loop {
+        let url = if resume {
+            resume_gateway_url
+                .as_deref()
+                .unwrap_or("wss://gateway.discord.gg")
+                .to_string()
+                + "/?v=10&encoding=json"
+        } else {
+            "wss://gateway.discord.gg/?v=10&encoding=json".to_string()
+        };
+
+        let (socket, _) = match connect_async(&url).await {
+            Ok(pair) => pair,
+            Err(err) => {
+                eprintln!("discord gateway: connection failed: {err}");
+                tokio::time::sleep(Duration::from_secs(5)).await;
+                resume = false;
+                continue;
+            }
+        };
+
+        let (sink, mut stream) = socket.split();
+        let sink = Arc::new(Mutex::new(sink));
+
+        // Wait for HELLO (op=10)
+        let heartbeat_interval = loop {
+            match stream.next().await {
+                Some(Ok(Message::Text(text))) => {
+                    match serde_json::from_str::<GatewayPayload>(&text) {
+                        Ok(payload) if payload.op == 10 => {
+                            match payload.d.and_then(|d| serde_json::from_value::<HelloData>(d).ok()) {
+                                Some(hello) => break hello.heartbeat_interval,
+                                None => {
+                                    eprintln!("discord gateway: malformed HELLO payload");
+                                    break 41250;
+                                }
+                            }
+                        }
+                        _ => continue,
+                    }
+                }
+                Some(Err(err)) => {
+                    eprintln!("discord gateway: error waiting for HELLO: {err}");
+                    tokio::time::sleep(Duration::from_secs(5)).await;
+                    resume = false;
+                    break 0;
+                }
+                _ => {
+                    tokio::time::sleep(Duration::from_secs(5)).await;
+                    resume = false;
+                    break 0;
+                }
+            }
+        };
+
+        if heartbeat_interval == 0 {
+            continue;
+        }
+
+        // Spawn heartbeat task
+        let heartbeat_sink = sink.clone();
+        let heartbeat_seq = Arc::new(Mutex::new(seq));
+        let heartbeat_seq_writer = heartbeat_seq.clone();
+        tokio::spawn(async move {
+            let mut interval =
+                tokio::time::interval(Duration::from_millis(heartbeat_interval));
+            interval.tick().await; // skip immediate first tick
+            loop {
+                interval.tick().await;
+                let s = *heartbeat_seq_writer.lock().await;
+                let payload = json!({ "op": 1, "d": s }).to_string();
+                let mut sink = heartbeat_sink.lock().await;
+                if sink.send(Message::Text(payload)).await.is_err() {
+                    break;
+                }
+            }
+        });
+
+        // IDENTIFY or RESUME
+        {
+            let mut sink = sink.lock().await;
+            let payload = if resume {
+                if let (Some(sid), Some(s)) = (session_id.as_ref(), seq) {
+                    json!({
+                        "op": 6,
+                        "d": {
+                            "token": bot_token,
+                            "session_id": sid,
+                            "seq": s
+                        }
+                    })
+                } else {
+                    resume = false;
+                    json!({
+                        "op": 2,
+                        "d": {
+                            "token": bot_token,
+                            "intents": config.intents,
+                            "properties": {
+                                "os": "linux",
+                                "browser": "kelvin-gateway",
+                                "device": "kelvin-gateway"
+                            }
+                        }
+                    })
+                }
+            } else {
+                json!({
+                    "op": 2,
+                    "d": {
+                        "token": bot_token,
+                        "intents": config.intents,
+                        "properties": {
+                            "os": "linux",
+                            "browser": "kelvin-gateway",
+                            "device": "kelvin-gateway"
+                        }
+                    }
+                })
+            };
+            if sink.send(Message::Text(payload.to_string())).await.is_err() {
+                continue;
+            }
+        }
+
+        // Main receive loop
+        let mut should_resume = false;
+        loop {
+            let msg = stream.next().await;
+            match msg {
+                Some(Ok(Message::Text(text))) => {
+                    let payload = match serde_json::from_str::<GatewayPayload>(&text) {
+                        Ok(p) => p,
+                        Err(err) => {
+                            eprintln!("discord gateway: failed to parse payload: {err}");
+                            continue;
+                        }
+                    };
+
+                    if let Some(s) = payload.s {
+                        seq = Some(s);
+                        *heartbeat_seq.lock().await = Some(s);
+                    }
+
+                    match payload.op {
+                        0 => {
+                            // DISPATCH
+                            match payload.t.as_deref() {
+                                Some("READY") => {
+                                    if let Some(d) = payload.d {
+                                        if let Ok(ready) =
+                                            serde_json::from_value::<ReadyEvent>(d)
+                                        {
+                                            eprintln!("discord gateway: ready");
+                                            session_id = Some(ready.session_id);
+                                            resume_gateway_url = Some(ready.resume_gateway_url);
+                                            session_established = true;
+                                        }
+                                    }
+                                }
+                                Some("MESSAGE_CREATE") => {
+                                    if let Some(d) = payload.d {
+                                        if let Ok(msg) =
+                                            serde_json::from_value::<MessageCreateEvent>(d)
+                                        {
+                                            if let Some(request) =
+                                                gateway_message_to_request(msg)
+                                            {
+                                                let runtime = gateway.runtime.clone();
+                                                let channels = gateway.channels.clone();
+                                                tokio::spawn(async move {
+                                                    let mut channels = channels.lock().await;
+                                                    if let Err(err) = channels
+                                                        .discord_ingest(&runtime, request)
+                                                        .await
+                                                    {
+                                                        eprintln!(
+                                                            "discord gateway ingest failed: {err}"
+                                                        );
+                                                    }
+                                                });
+                                            }
+                                        }
+                                    }
+                                }
+                                _ => {}
+                            }
+                        }
+                        1 => {
+                            // HEARTBEAT request — respond immediately
+                            let s = seq;
+                            let payload = json!({ "op": 1, "d": s }).to_string();
+                            let mut sink = sink.lock().await;
+                            let _ = sink.send(Message::Text(payload)).await;
+                        }
+                        7 => {
+                            // RECONNECT
+                            eprintln!("discord gateway: reconnect requested");
+                            should_resume = true;
+                            break;
+                        }
+                        9 => {
+                            // INVALID_SESSION
+                            let resumable = payload
+                                .d
+                                .as_ref()
+                                .and_then(|d| d.as_bool())
+                                .unwrap_or(false);
+                            if resumable {
+                                eprintln!("discord gateway: invalid session (resumable)");
+                                tokio::time::sleep(Duration::from_secs(2)).await;
+                                should_resume = true;
+                            } else {
+                                eprintln!("discord gateway: invalid session (not resumable)");
+                                session_id = None;
+                                seq = None;
+                                tokio::time::sleep(Duration::from_secs(5)).await;
+                                should_resume = false;
+                            }
+                            break;
+                        }
+                        11 => {} // HEARTBEAT_ACK
+                        _ => {}
+                    }
+                }
+                Some(Ok(Message::Close(frame))) => {
+                    let (code, reason) = frame
+                        .as_ref()
+                        .map(|f| (f.code.into(), f.reason.as_ref()))
+                        .unwrap_or((0u16, ""));
+                    eprintln!("discord gateway: closed by server (code={code}, reason={reason:?})");
+                    // Fatal codes — don't retry with resume, back off longer
+                    match code {
+                        4004 => {
+                            eprintln!("discord gateway: authentication failed — check KELVIN_DISCORD_BOT_TOKEN");
+                            tokio::time::sleep(Duration::from_secs(60)).await;
+                        }
+                        4013 => eprintln!("discord gateway: invalid intents — check KELVIN_DISCORD_GATEWAY_INTENTS"),
+                        4014 => eprintln!("discord gateway: disallowed intents — enable Message Content Intent in Discord Developer Portal"),
+                        _ => {}
+                    }
+                    should_resume = matches!(code, 4000 | 4001 | 4002 | 4003 | 4007 | 4008 | 4009);
+                    break;
+                }
+                Some(Ok(_)) => {}
+                Some(Err(err)) => {
+                    eprintln!("discord gateway: connection error: {err}");
+                    should_resume = true;
+                    break;
+                }
+                None => {
+                    eprintln!("discord gateway: connection closed");
+                    should_resume = true;
+                    break;
+                }
+            }
+        }
+
+        resume = should_resume && session_established;
+        if !session_established {
+            // Never got READY — bad token or intents; back off before retrying
+            tokio::time::sleep(Duration::from_secs(15)).await;
+        } else if !resume {
+            tokio::time::sleep(Duration::from_secs(5)).await;
+        }
+        session_established = false;
+    }
+}
+
+fn gateway_message_to_request(msg: MessageCreateEvent) -> Option<DiscordIngressRequest> {
+    if msg.author.bot {
+        return None;
+    }
+    let text = msg.content.trim().to_string();
+    if text.is_empty() {
+        return None;
+    }
+    Some(DiscordIngressRequest {
+        delivery_id: format!("discord:{}", msg.id),
+        channel_id: msg.channel_id,
+        user_id: msg.author.id,
+        text,
+        timeout_ms: None,
+        auth_token: None,
+        session_id: None,
+        workspace_dir: None,
+    })
 }
