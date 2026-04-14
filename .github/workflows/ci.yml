@@ -44,11 +44,14 @@ jobs:
             - name: Check formatting
               run: cargo fmt --all -- --check
 
+            - name: Check lockfile
+              run: cargo metadata --format-version 1 --locked > /dev/null
+
             - name: Clippy
-              run: cargo clippy --workspace -- -D warnings
+              run: cargo clippy --locked --workspace -- -D warnings
 
             - name: Test
-              run: cargo test --workspace
+              run: cargo test --locked --workspace
 
     # cargo audit reads Cargo.lock only — no compilation needed.
     audit:
