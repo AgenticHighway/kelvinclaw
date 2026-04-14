@@ -57,6 +57,8 @@ kelvin init
 kelvin
 ```
 
+Homebrew and release installs now treat `~/.kelvinclaw/.env` as the canonical config path.
+
 ### More Options
 
 Choose the onboarding path for your experience level:

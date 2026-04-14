@@ -19,6 +19,8 @@ if [[ -x "${SCRIPT_DIR}/bin/kelvin-gateway" ]]; then
 else
   ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 fi
+DEFAULT_KELVIN_HOME="${KELVIN_HOME:-${HOME}/.kelvinclaw}"
+DEFAULT_KELVIN_HOME="${DEFAULT_KELVIN_HOME/#\~/${HOME}}"
 
 # ── dotenv loader ─────────────────────────────────────────────────────────────
 _kgw_trim()   { local v="$1"; v="${v#"${v%%[![:space:]]*}"}"; v="${v%"${v##*[![:space:]]}"}"; printf '%s' "${v}"; }
@@ -30,7 +32,7 @@ _kgw_unquote() {
 }
 load_dotenv() {
   local f line stripped key value
-  for f in "${PWD}/.env.local" "${PWD}/.env" "${HOME}/.kelvinclaw/.env.local" "${HOME}/.kelvinclaw/.env"; do
+  for f in "${DEFAULT_KELVIN_HOME}/.env.local" "${DEFAULT_KELVIN_HOME}/.env" "${PWD}/.env.local" "${PWD}/.env"; do
     [[ -f "${f}" ]] || continue
     while IFS= read -r line || [[ -n "${line}" ]]; do
       stripped="$(_kgw_trim "${line%%#*}")"
@@ -43,12 +45,13 @@ load_dotenv() {
       fi
     done < "${f}"
   done
+  return 0
 }
 load_dotenv
 # ──────────────────────────────────────────────────────────────────────────────
 
 KELVIN_MODEL_PROVIDER="${KELVIN_MODEL_PROVIDER:-kelvin.echo}"
-KELVIN_HOME="${KELVIN_HOME:-${HOME}/.kelvinclaw}"
+KELVIN_HOME="${KELVIN_HOME:-${DEFAULT_KELVIN_HOME}}"
 KELVIN_HOME="${KELVIN_HOME/#\~/${HOME}}"
 PLUGIN_HOME="${KELVIN_PLUGIN_HOME:-${KELVIN_HOME}/plugins}"
 PLUGIN_HOME="${PLUGIN_HOME/#\~/${HOME}}"
@@ -173,6 +176,12 @@ Examples:
   ./kelvin-gateway stop
   ./kelvin-gateway restart
   ./kelvin-gateway approve-pairing <code>
+
+Config precedence:
+  1. ~/.kelvinclaw/.env.local
+  2. ~/.kelvinclaw/.env
+  3. ./.env.local
+  4. ./.env
 USAGE
 }
 

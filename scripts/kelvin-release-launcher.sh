@@ -22,10 +22,10 @@ DEFAULT_PLUGIN_INDEX_URL="https://raw.githubusercontent.com/AgenticHighway/kelvi
 DEFAULT_OLLAMA_BASE_URL="http://localhost:11434"
 PLUGIN_MANIFEST_PATH="${ROOT_DIR}/share/official-first-party-plugins.env"
 ENV_SEARCH_PATHS=(
-  "${PWD}/.env.local"
-  "${PWD}/.env"
   "${KELVIN_HOME}/.env.local"
   "${KELVIN_HOME}/.env"
+  "${PWD}/.env.local"
+  "${PWD}/.env"
 )
 
 usage() {
@@ -49,10 +49,10 @@ Environment:
   OPENAI_API_KEY             If set, installs and selects kelvin.openai on first run
 
 The launcher also reads OPENAI_API_KEY from:
-  - ./.env.local
-  - ./.env
   - ~/.kelvinclaw/.env.local
   - ~/.kelvinclaw/.env
+  - ./.env.local
+  - ./.env
 USAGE
 }
 
@@ -386,6 +386,7 @@ load_dotenv() {
       fi
     done < "${env_file}"
   done
+  return 0
 }
 
 prompt_for_openai_api_key() {

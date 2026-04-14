@@ -5,13 +5,14 @@ if (Test-Path (Join-Path $PSScriptRoot "bin\kelvin-gateway.exe")) {
 } else {
     $RootDir = Split-Path -Parent $PSScriptRoot
 }
+$DefaultKelvinHome = if ($env:KELVIN_HOME) { $env:KELVIN_HOME } else { Join-Path $HOME ".kelvinclaw" }
 
 # ── dotenv loader ─────────────────────────────────────────────────────────────
 $_KgwEnvPaths = @(
+    (Join-Path $DefaultKelvinHome ".env.local"),
+    (Join-Path $DefaultKelvinHome ".env"),
     (Join-Path (Get-Location).Path ".env.local"),
-    (Join-Path (Get-Location).Path ".env"),
-    (Join-Path $HOME ".kelvinclaw\.env.local"),
-    (Join-Path $HOME ".kelvinclaw\.env")
+    (Join-Path (Get-Location).Path ".env")
 )
 function _KgwLoadDotenv {
     $Dotenv = @{}
@@ -186,6 +187,12 @@ Environment:
   KELVIN_STATE_DIR           Override gateway state dir (default: $KELVIN_HOME\state)
   KELVIN_PLUGIN_HOME         Override plugin install root
   KELVIN_TRUST_POLICY_PATH   Override trust policy path
+
+Config precedence:
+  1. ~\.kelvinclaw\.env.local
+  2. ~\.kelvinclaw\.env
+  3. .\.env.local
+  4. .\.env
 "@
 }
 
