@@ -185,6 +185,12 @@ pub struct InitArgs {
     /// Also install shell completions after setup
     #[arg(long)]
     pub with_completions: bool,
+    /// Skip confirmation prompt and overwrite existing config
+    #[arg(long)]
+    pub force: bool,
+    /// Select provider non-interactively (e.g. openai, anthropic, openrouter, ollama, echo)
+    #[arg(long)]
+    pub provider: Option<String>,
 }
 
 // ── medkit ────────────────────────────────────────────────────────────────────

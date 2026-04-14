@@ -7,10 +7,10 @@ pub fn run(args: InitArgs) -> Result<()> {
     let dot_env = paths::dotenv_path();
     let home = paths::kelvin_home();
 
-    if dot_env.exists() {
+    if dot_env.exists() && !args.force {
         if !crate::tty::is_interactive() {
             anyhow::bail!(
-                "{} already exists. Remove it first or run interactively to confirm overwrite.",
+                "{} already exists. Use --force to overwrite.",
                 dot_env.display()
             );
         }
@@ -41,17 +41,27 @@ pub fn run(args: InitArgs) -> Result<()> {
     let priv_key_path = paths::memory_private_key_path();
 
     // Provider selection.
-    let (provider_id, api_key_entry) = select_provider()?;
+    let (provider_id, api_key_entry, extra_env) = select_provider(args.provider.as_deref())?;
 
     // Build .env content.
+    let plugin_index_url = std::env::var("KELVIN_PLUGIN_INDEX_URL").unwrap_or_else(|_| {
+        "https://raw.githubusercontent.com/AgenticHighway/kelvinclaw-plugins/main/index.json"
+            .to_string()
+    });
+
     let mut env_lines = vec![
         format!("KELVIN_GATEWAY_TOKEN={}", gateway_token),
         format!("KELVIN_MODEL_PROVIDER={}", provider_id),
         format!("KELVIN_MEMORY_PUBLIC_KEY_PATH={}", pub_key_path.display()),
         format!("KELVIN_MEMORY_PRIVATE_KEY_PATH={}", priv_key_path.display()),
+        format!("KELVIN_PLUGIN_INDEX_URL={}", plugin_index_url),
     ];
 
     if let Some((key_name, key_value)) = api_key_entry {
+        env_lines.push(format!("{}={}", key_name, key_value));
+    }
+
+    for (key_name, key_value) in extra_env {
         env_lines.push(format!("{}={}", key_name, key_value));
     }
 
@@ -84,10 +94,22 @@ pub fn run(args: InitArgs) -> Result<()> {
     Ok(())
 }
 
-fn select_provider() -> Result<(String, Option<(String, String)>)> {
+/// Returns `(provider_id, api_key_entry, extra_env_pairs)`.
+///
+/// `provider_hint` is the value of `--provider` if supplied. Accepted values
+/// (case-insensitive, with or without the `kelvin.` prefix):
+///   echo, openai, anthropic, openrouter, ollama
+fn select_provider(
+    provider_hint: Option<&str>,
+) -> Result<(String, Option<(String, String)>, Vec<(String, String)>)> {
+    // If a provider was given on the CLI, resolve it without prompting.
+    if let Some(hint) = provider_hint {
+        return resolve_provider_hint(hint);
+    }
+
     if !crate::tty::is_interactive() {
-        // Non-interactive: default to echo.
-        return Ok(("kelvin.echo".to_string(), None));
+        // Non-interactive with no --provider: default to echo.
+        return Ok(("kelvin.echo".to_string(), None, vec![]));
     }
 
     let choices = &[
@@ -106,34 +128,80 @@ fn select_provider() -> Result<(String, Option<(String, String)>)> {
         .context("provider selection failed")?;
 
     match selection {
-        0 => Ok(("kelvin.echo".to_string(), None)),
+        0 => Ok(("kelvin.echo".to_string(), None, vec![])),
         1 => {
             let key = prompt_api_key("OPENAI_API_KEY")?;
-            Ok((
-                "kelvin.openai".to_string(),
-                Some(("OPENAI_API_KEY".to_string(), key)),
-            ))
+            Ok(("kelvin.openai".to_string(), Some(("OPENAI_API_KEY".to_string(), key)), vec![]))
         }
         2 => {
             let key = prompt_api_key("ANTHROPIC_API_KEY")?;
-            Ok((
-                "kelvin.anthropic".to_string(),
-                Some(("ANTHROPIC_API_KEY".to_string(), key)),
-            ))
+            Ok(("kelvin.anthropic".to_string(), Some(("ANTHROPIC_API_KEY".to_string(), key)), vec![]))
         }
         3 => {
             let key = prompt_api_key("OPENROUTER_API_KEY")?;
-            Ok((
-                "kelvin.openrouter".to_string(),
-                Some(("OPENROUTER_API_KEY".to_string(), key)),
-            ))
+            Ok(("kelvin.openrouter".to_string(), Some(("OPENROUTER_API_KEY".to_string(), key)), vec![]))
         }
         4 => {
             println!("Note: ensure `ollama serve` is running before starting kelvin.");
-            Ok(("kelvin.ollama".to_string(), None))
+            let base_url = prompt_ollama_base_url()?;
+            Ok(("kelvin.ollama".to_string(), None, vec![("OLLAMA_BASE_URL".to_string(), base_url)]))
         }
         _ => unreachable!(),
     }
+}
+
+/// Resolve a `--provider` flag value to `(provider_id, api_key_entry, extra_env)`.
+fn resolve_provider_hint(
+    hint: &str,
+) -> Result<(String, Option<(String, String)>, Vec<(String, String)>)> {
+    let normalized = hint.trim_start_matches("kelvin.").to_ascii_lowercase();
+    match normalized.as_str() {
+        "echo" => Ok(("kelvin.echo".to_string(), None, vec![])),
+        "openai" => {
+            let key = std::env::var("OPENAI_API_KEY").unwrap_or_default();
+            if key.is_empty() {
+                anyhow::bail!("--provider openai requires OPENAI_API_KEY to be set in the environment");
+            }
+            Ok(("kelvin.openai".to_string(), Some(("OPENAI_API_KEY".to_string(), key)), vec![]))
+        }
+        "anthropic" => {
+            let key = std::env::var("ANTHROPIC_API_KEY").unwrap_or_default();
+            if key.is_empty() {
+                anyhow::bail!("--provider anthropic requires ANTHROPIC_API_KEY to be set in the environment");
+            }
+            Ok(("kelvin.anthropic".to_string(), Some(("ANTHROPIC_API_KEY".to_string(), key)), vec![]))
+        }
+        "openrouter" => {
+            let key = std::env::var("OPENROUTER_API_KEY").unwrap_or_default();
+            if key.is_empty() {
+                anyhow::bail!("--provider openrouter requires OPENROUTER_API_KEY to be set in the environment");
+            }
+            Ok(("kelvin.openrouter".to_string(), Some(("OPENROUTER_API_KEY".to_string(), key)), vec![]))
+        }
+        "ollama" => {
+            let base_url = std::env::var("OLLAMA_BASE_URL")
+                .unwrap_or_else(|_| "http://localhost:11434".to_string());
+            Ok(("kelvin.ollama".to_string(), None, vec![("OLLAMA_BASE_URL".to_string(), base_url)]))
+        }
+        other => anyhow::bail!(
+            "unknown provider {:?}. Valid values: echo, openai, anthropic, openrouter, ollama",
+            other
+        ),
+    }
+}
+
+fn prompt_ollama_base_url() -> Result<String> {
+    let default = std::env::var("OLLAMA_BASE_URL")
+        .unwrap_or_else(|_| "http://localhost:11434".to_string());
+    if !crate::tty::is_interactive() {
+        return Ok(default);
+    }
+    let input = dialoguer::Input::<String>::new()
+        .with_prompt("Ollama base URL")
+        .default(default)
+        .interact_text()
+        .context("failed to read OLLAMA_BASE_URL")?;
+    Ok(input)
 }
 
 fn prompt_api_key(name: &str) -> Result<String> {
