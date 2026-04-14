@@ -16,7 +16,10 @@ pub fn run(sub: MemoryCmd) -> Result<()> {
 }
 
 pub fn memory_binary() -> std::path::PathBuf {
-    paths::binary_dir().join(format!("kelvin-memory-controller{}", std::env::consts::EXE_SUFFIX))
+    paths::binary_dir().join(format!(
+        "kelvin-memory-controller{}",
+        std::env::consts::EXE_SUFFIX
+    ))
 }
 
 pub fn build_memory_env() -> anyhow::Result<Vec<(String, String)>> {

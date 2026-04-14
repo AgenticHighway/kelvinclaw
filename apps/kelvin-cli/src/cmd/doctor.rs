@@ -13,7 +13,8 @@ pub fn run() -> Result<()> {
         bail!("gateway is not running.\nRun `kelvin start` to start the full stack.");
     }
 
-    let gateway_bin = paths::binary_dir().join(format!("kelvin-gateway{}", std::env::consts::EXE_SUFFIX));
+    let gateway_bin =
+        paths::binary_dir().join(format!("kelvin-gateway{}", std::env::consts::EXE_SUFFIX));
     if !gateway_bin.exists() {
         bail!(
             "kelvin-gateway binary not found at {}",
