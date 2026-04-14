@@ -44,6 +44,7 @@ function Sha256-File([string]$Path) {
 function Build-ReleaseBinaries([string]$Triple, [string]$TargetDirPath) {
     $env:CARGO_TARGET_DIR = $TargetDirPath
     cargo build --locked --release --target $Triple `
+      -p kelvin-cli `
       -p kelvin-host `
       -p kelvin-gateway `
       -p kelvin-registry `
@@ -57,10 +58,10 @@ function Smoke-TestZip([string]$ZipPath, [string]$RootName) {
     New-Item -ItemType Directory -Force -Path $WorkDir | Out-Null
     Expand-Archive -Path $ZipPath -DestinationPath $WorkDir
 
-    & (Join-Path $WorkDir "$RootName\\kelvin.cmd") --help | Out-Null
-    & (Join-Path $WorkDir "$RootName\\kelvin-gateway.cmd") --help | Out-Null
-    & (Join-Path $WorkDir "$RootName\\kpm.cmd") --help | Out-Null
-    & (Join-Path $WorkDir "$RootName\\kelvin-tui.cmd") --help | Out-Null
+    & (Join-Path $WorkDir "$RootName\\bin\\kelvin.exe") --help | Out-Null
+    & (Join-Path $WorkDir "$RootName\\bin\\kelvin.exe") plugin --help | Out-Null
+    & (Join-Path $WorkDir "$RootName\\bin\\kelvin.exe") gateway --help | Out-Null
+    & (Join-Path $WorkDir "$RootName\\bin\\kelvin.exe") memory --help | Out-Null
     & (Join-Path $WorkDir "$RootName\\bin\\kelvin-host.exe") --help | Out-Null
     & (Join-Path $WorkDir "$RootName\\bin\\kelvin-gateway.exe") --help | Out-Null
     & (Join-Path $WorkDir "$RootName\\bin\\kelvin-registry.exe") --help | Out-Null
@@ -93,6 +94,7 @@ try {
 
     Build-ReleaseBinaries -Triple $Target -TargetDirPath $TargetDir
 
+    Copy-Item (Join-Path $TargetDir "$Target\\release\\kelvin.exe") (Join-Path $StageRoot "bin\\")
     Copy-Item (Join-Path $TargetDir "$Target\\release\\kelvin-host.exe") (Join-Path $StageRoot "bin\\")
     Copy-Item (Join-Path $TargetDir "$Target\\release\\kelvin-gateway.exe") (Join-Path $StageRoot "bin\\")
     Copy-Item (Join-Path $TargetDir "$Target\\release\\kelvin-registry.exe") (Join-Path $StageRoot "bin\\")
@@ -101,14 +103,6 @@ try {
     Copy-Item (Join-Path $RootDir "LICENSE") $StageRoot
     Copy-Item (Join-Path $RootDir "release\README.md") $StageRoot
     Copy-Item (Join-Path $RootDir "release\env.example") (Join-Path $StageRoot ".env.example")
-    Copy-Item (Join-Path $RootDir "scripts\\kelvin-release-launcher.ps1") (Join-Path $StageRoot "kelvin.ps1")
-    Copy-Item (Join-Path $RootDir "scripts\\kelvin-release-launcher.cmd") (Join-Path $StageRoot "kelvin.cmd")
-    Copy-Item (Join-Path $RootDir "scripts\\kelvin-gateway.ps1") (Join-Path $StageRoot "kelvin-gateway.ps1")
-    Copy-Item (Join-Path $RootDir "scripts\\kelvin-gateway.cmd") (Join-Path $StageRoot "kelvin-gateway.cmd")
-    Copy-Item (Join-Path $RootDir "scripts\\kpm.ps1") (Join-Path $StageRoot "kpm.ps1")
-    Copy-Item (Join-Path $RootDir "scripts\\kpm.cmd") (Join-Path $StageRoot "kpm.cmd")
-    Copy-Item (Join-Path $RootDir "scripts\\kelvin-tui.ps1") (Join-Path $StageRoot "kelvin-tui.ps1")
-    Copy-Item (Join-Path $RootDir "scripts\\kelvin-tui.cmd") (Join-Path $StageRoot "kelvin-tui.cmd")
     Copy-Item (Join-Path $RootDir "release\\official-first-party-plugins.env") (Join-Path $StageRoot "share\\official-first-party-plugins.env")
 
     @"
