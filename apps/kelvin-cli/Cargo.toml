@@ -1,0 +1,43 @@
+[package]
+name = "kelvin-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "kelvin"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+base64.workspace = true
+chrono.workspace = true
+clap.workspace = true
+clap_complete.workspace = true
+dialoguer.workspace = true
+dirs.workspace = true
+dotenvy.workspace = true
+ed25519-dalek = { workspace = true, features = ["pkcs8", "pem"] }
+flate2.workspace = true
+futures-util.workspace = true
+jsonwebtoken.workspace = true
+pkcs8.workspace = true
+rand.workspace = true
+reqwest = { workspace = true, features = ["blocking", "json", "rustls-tls"] }
+rpassword.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+sysinfo.workspace = true
+tar.workspace = true
+tokio.workspace = true
+tokio-tungstenite.workspace = true
+url.workspace = true
+uuid.workspace = true
+
+[target.'cfg(unix)'.dependencies]
+nix.workspace = true
+
+[dev-dependencies]
+tempfile = "3"
