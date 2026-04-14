@@ -83,6 +83,15 @@ This file defines default expectations for coding agents working in this reposit
 - Only stage files relevant to the requested change.
 - Use clear commit messages that describe intent.
 
+## Branching and Delivery Philosophy
+
+- `main` must stay releasable and working at all times.
+- Prefer short-lived branches over long-running divergence.
+- Merge small, reviewable changes frequently instead of batching large rewrites.
+- Treat CI as a hard quality gate for anything headed to `main`.
+- If a branch stops getting frequent merges, either shrink its scope or merge it behind a safe default.
+- When in doubt, optimize for fast feedback, green builds, and easy rollback.
+
 Below is an AI-optimized AGENTS.md designed specifically for agentic coding environments (Cursor, Claude Code, OpenAI agents, etc.).
 
 It focuses on things that AI coding systems consistently struggle with:

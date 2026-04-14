@@ -48,6 +48,16 @@ Requires Rust toolchain, `jq`, `curl`, `tar`, and `openssl`.
 The quickstart prompts you to pick a model provider (OpenAI, Anthropic, OpenRouter)
 or continue with echo mode if you don't have a key.
 
+### Install via Homebrew
+
+```bash
+brew tap AgenticHighway/tap
+brew install kelvinclaw
+cp "$(brew --prefix)/opt/kelvinclaw/libexec/kelvinclaw/.env.example" .env
+kelvin-gateway start
+kelvin-tui
+```
+
 ### More Options
 
 Choose the onboarding path for your experience level:
@@ -97,6 +107,10 @@ unnotarized in this phase.
 Latest public release:
 
 - [GitHub Releases](https://github.com/AgenticHighway/kelvinclaw/releases/latest)
+
+Tagged releases also refresh the Homebrew tap formula in
+`AgenticHighway/homebrew-tap` when the `HOMEBREW_TAP_TOKEN` repository secret is
+configured.
 
 The intended Unix end-user entrypoint is:
 
