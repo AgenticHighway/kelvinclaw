@@ -1478,6 +1478,10 @@ fn claw_call_json(call: &ClawCall) -> serde_json::Value {
             "kind": "network_send",
             "packet": packet,
         }),
+        ClawCall::ShellExec { command_handle } => json!({
+            "kind": "shell_exec",
+            "command_handle": command_handle,
+        }),
     }
 }
 

@@ -18,6 +18,7 @@ pub mod claw_abi {
     pub const MOVE_SERVO: &str = "move_servo";
     pub const FS_READ: &str = "fs_read";
     pub const NETWORK_SEND: &str = "network_send";
+    pub const SHELL_EXEC: &str = "shell_exec";
 }
 
 pub const DEFAULT_MAX_MODULE_BYTES: usize = 512 * 1024;
@@ -29,6 +30,7 @@ pub enum ClawCall {
     MoveServo { channel: i32, position: i32 },
     FsRead { handle: i32 },
     NetworkSend { packet: i32 },
+    ShellExec { command_handle: i32 },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -76,6 +78,7 @@ pub struct SandboxPolicy {
     pub allow_move_servo: bool,
     pub allow_fs_read: bool,
     pub allow_network_send: bool,
+    pub allow_shell_exec: bool,
     pub max_module_bytes: usize,
     pub fuel_budget: u64,
 }
@@ -86,6 +89,7 @@ impl Default for SandboxPolicy {
             allow_move_servo: false,
             allow_fs_read: false,
             allow_network_send: false,
+            allow_shell_exec: false,
             max_module_bytes: DEFAULT_MAX_MODULE_BYTES,
             fuel_budget: DEFAULT_FUEL_BUDGET,
         }
@@ -102,6 +106,7 @@ impl SandboxPolicy {
             allow_move_servo: true,
             allow_fs_read: true,
             allow_network_send: true,
+            allow_shell_exec: false,
             ..Self::default()
         }
     }
@@ -234,6 +239,21 @@ impl WasmSkillHost {
                 .map_err(|err| backend("link claw.network_send", err))?;
         }
 
+        if policy.allow_shell_exec {
+            linker
+                .func_wrap(
+                    claw_abi::MODULE,
+                    claw_abi::SHELL_EXEC,
+                    |mut caller: Caller<'_, HostState>, command_handle: i32| -> i32 {
+                        caller
+                            .data_mut()
+                            .record(ClawCall::ShellExec { command_handle });
+                        0
+                    },
+                )
+                .map_err(|err| backend("link claw.shell_exec", err))?;
+        }
+
         let instance = linker
             .instantiate(&mut store, &module)
             .map_err(|err| backend("instantiate module", err))?;
@@ -277,7 +297,11 @@ fn validate_imports(module: &Module, policy: SandboxPolicy) -> KelvinResult<()> 
             claw_abi::MOVE_SERVO if policy.allow_move_servo => {}
             claw_abi::FS_READ if policy.allow_fs_read => {}
             claw_abi::NETWORK_SEND if policy.allow_network_send => {}
-            claw_abi::MOVE_SERVO | claw_abi::FS_READ | claw_abi::NETWORK_SEND => {
+            claw_abi::SHELL_EXEC if policy.allow_shell_exec => {}
+            claw_abi::MOVE_SERVO
+            | claw_abi::FS_READ
+            | claw_abi::NETWORK_SEND
+            | claw_abi::SHELL_EXEC => {
                 return Err(KelvinError::InvalidInput(format!(
                     "capability import '{name}' denied by sandbox policy"
                 )));
@@ -482,5 +506,92 @@ mod tests {
             )
             .expect_err("fuel exhaustion expected");
         assert!(matches!(err, KelvinError::Timeout(_)));
+    }
+
+    #[test]
+    fn rejects_skill_when_policy_blocks_shell_exec() {
+        let wasm = parse_wat(
+            r#"
+            (module
+              (import "claw" "shell_exec" (func $shell_exec (param i32) (result i32)))
+              (func (export "run") (result i32)
+                i32.const 1
+                call $shell_exec
+              )
+            )
+            "#,
+        );
+
+        let host = WasmSkillHost::try_new().expect("host");
+        let err = host
+            .run_bytes(&wasm, SandboxPolicy::locked_down())
+            .expect_err("policy should reject shell_exec import");
+        assert!(matches!(err, KelvinError::InvalidInput(_)));
+        assert!(err.to_string().contains("denied by sandbox policy"));
+    }
+
+    #[test]
+    fn allows_skill_when_policy_enables_shell_exec() {
+        let wasm = parse_wat(
+            r#"
+            (module
+              (import "claw" "shell_exec" (func $shell_exec (param i32) (result i32)))
+              (func (export "run") (result i32)
+                i32.const 42
+                call $shell_exec
+              )
+            )
+            "#,
+        );
+
+        let host = WasmSkillHost::try_new().expect("host");
+        let result = host
+            .run_bytes(
+                &wasm,
+                SandboxPolicy {
+                    allow_shell_exec: true,
+                    ..SandboxPolicy::locked_down()
+                },
+            )
+            .expect("run allowed shell_exec skill");
+        assert_eq!(result.exit_code, 0);
+        assert_eq!(
+            result.calls,
+            vec![ClawCall::ShellExec { command_handle: 42 }]
+        );
+    }
+
+    #[test]
+    fn allow_all_excludes_shell_exec() {
+        assert!(!SandboxPolicy::allow_all().allow_shell_exec);
+    }
+
+    #[test]
+    fn shell_exec_denied_even_with_allow_all() {
+        let wasm = parse_wat(
+            r#"
+            (module
+              (import "claw" "shell_exec" (func $shell_exec (param i32) (result i32)))
+              (func (export "run") (result i32)
+                i32.const 1
+                call $shell_exec
+              )
+            )
+            "#,
+        );
+
+        let host = WasmSkillHost::try_new().expect("host");
+        let err = host
+            .run_bytes(&wasm, SandboxPolicy::allow_all())
+            .expect_err("allow_all should still deny shell_exec");
+        assert!(matches!(err, KelvinError::InvalidInput(_)));
+        assert!(err.to_string().contains("denied by sandbox policy"));
+    }
+
+    #[test]
+    fn preset_policies_deny_shell_exec() {
+        assert!(!SandboxPreset::LockedDown.policy().allow_shell_exec);
+        assert!(!SandboxPreset::DevLocal.policy().allow_shell_exec);
+        assert!(!SandboxPreset::HardwareControl.policy().allow_shell_exec);
     }
 }

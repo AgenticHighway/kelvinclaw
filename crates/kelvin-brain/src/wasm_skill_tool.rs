@@ -185,6 +185,9 @@ impl WasmSkillTool {
         if let Some(value) = self.optional_bool(args, "allow_network_send")? {
             policy.allow_network_send = value;
         }
+        if let Some(value) = self.optional_bool(args, "allow_shell_exec")? {
+            policy.allow_shell_exec = value;
+        }
         if let Some(value) = self.optional_usize(args, "max_module_bytes")? {
             policy.max_module_bytes = value;
         }
@@ -339,6 +342,7 @@ fn claw_call_label(call: &ClawCall) -> String {
         ClawCall::MoveServo { channel, position } => format!("move_servo({channel},{position})"),
         ClawCall::FsRead { handle } => format!("fs_read({handle})"),
         ClawCall::NetworkSend { packet } => format!("network_send({packet})"),
+        ClawCall::ShellExec { command_handle } => format!("shell_exec({command_handle})"),
     }
 }
 
@@ -360,6 +364,10 @@ fn claw_call_json(call: &ClawCall) -> Value {
         ClawCall::NetworkSend { packet } => json!({
             "kind": "network_send",
             "packet": packet,
+        }),
+        ClawCall::ShellExec { command_handle } => json!({
+            "kind": "shell_exec",
+            "command_handle": command_handle,
         }),
     }
 }
