@@ -560,7 +560,7 @@ impl Tool for SafeFsWriteTool {
     }
 
     fn description(&self) -> &str {
-        "Write content to a file in the workspace. Only sandbox/, memory/, and notes/ roots are permitted. Requires sensitive approval."
+        "Write content to a file in the workspace. Only .kelvin/sandbox/, memory/, and notes/ roots are permitted. Requires sensitive approval."
     }
 
     fn input_schema(&self) -> serde_json::Value {

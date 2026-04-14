@@ -39,13 +39,13 @@ pub const TEMP_FILE_EXTENSION: &str = "tmp";
 // NOTE probably make more sense to regex these
 pub const SENSITIVE_PATHS_COMPARE: &[&str] = &[".env"];
 pub const SENSITIVE_PATHS_PREFIX: &[&str] =
-    &[".env.", ".git/", ".kelvin/plugins", ".kelvinclaw/plugins"];
+    &[".env.", ".git/", ".kelvin/plugins/", ".kelvinclaw/plugins/"];
 
 // --- Default Tool Scopes
 // why tf is this a comma-sep string
 pub const DEFAULT_WEB_ALLOW_HOSTS: &str =
     "docs.rs,crates.io,raw.githubusercontent.com,api.openai.com";
-pub const DEFAULT_FS_WRITE_SCOPE: &[&str] = &["sandbox/", "memory/", "notes/"];
+pub const DEFAULT_FS_WRITE_SCOPE: &[&str] = &[".kelvin/sandbox/", "memory/", "notes/"];
 
 // --- Session Defaults ---
 pub const DEFAULT_SESSION_ID: &str = "main";

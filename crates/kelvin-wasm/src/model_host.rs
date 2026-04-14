@@ -652,11 +652,7 @@ impl WasmModelHost {
                 model_abi::MODULE,
                 model_abi::IMPORT_LOG,
                 |mut caller: Caller<'_, ModelHostState>, _level: i32, ptr: i32, len: i32| -> i32 {
-                    let max_len = caller
-                        .data()
-                        .policy
-                        .max_request_bytes
-                        .min(consts::MODEL_DEFAULT_MAX_REQUEST_BYTES);
+                    let max_len = consts::MODEL_LOG_MAX_BYTES;
                     if let Ok(bytes) =
                         read_caller_bytes(&mut caller, ptr, len, max_len, "log message")
                     {

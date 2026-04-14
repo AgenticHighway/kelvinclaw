@@ -45,6 +45,12 @@ pub const MODEL_DEFAULT_MAX_REQUEST_BYTES: usize = 256 * 1024;
 pub const MODEL_DEFAULT_MAX_RESPONSE_BYTES: usize = 1024 * 1024;
 pub const CHANNEL_DEFAULT_MAX_REQUEST_BYTES: usize = 256 * 1024;
 pub const CHANNEL_DEFAULT_MAX_RESPONSE_BYTES: usize = 256 * 1024;
+/// Maximum bytes allowed for a single log message emitted by a model WASM plugin.
+/// Kept deliberately small to prevent untrusted modules from flooding logs or causing DoS.
+pub const MODEL_LOG_MAX_BYTES: usize = 16 * 1024;
+/// Maximum bytes allowed for a single log message emitted by a channel WASM plugin.
+/// Kept deliberately small to prevent untrusted modules from flooding logs or causing DoS.
+pub const CHANNEL_LOG_MAX_BYTES: usize = 16 * 1024;
 
 // --- Fuel/Execution ---
 pub const DEFAULT_FUEL_BUDGET: u64 = 1_000_000;
