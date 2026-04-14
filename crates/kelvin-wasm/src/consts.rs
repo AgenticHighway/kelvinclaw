@@ -13,6 +13,7 @@ pub const CLAW_HANDLE_TOOL_CALL: &str = "handle_tool_call";
 pub const CLAW_IMPORT_LOG: &str = "log";
 pub const CLAW_HTTP_CALL: &str = "http_call";
 pub const CLAW_GET_ENV: &str = "get_env";
+pub const CLAW_SHELL_EXEC: &str = "shell_exec";
 
 // --- ABI: Model Host ---
 pub const MODEL_ABI_VERSION: &str = "1.0.0";
@@ -59,6 +60,12 @@ pub const MAX_FUEL_BUDGET: u64 = 100_000_000;
 // --- Timeouts ---
 pub const MODEL_DEFAULT_TIMEOUT_MS: u64 = 30_000;
 pub const HTTP_CALL_TIMEOUT_SECS: u64 = 30;
+/// Hard upper bound on shell_exec timeout to prevent runaway processes.
+pub const SHELL_EXEC_MAX_TIMEOUT_SECS: u64 = 30;
+/// Default timeout applied when the guest does not specify one.
+pub const SHELL_EXEC_DEFAULT_TIMEOUT_SECS: u64 = 10;
+/// Maximum combined stdout + stderr bytes returned to the guest.
+pub const SHELL_EXEC_MAX_OUTPUT_BYTES: usize = 64 * 1024;
 
 // --- Network/Hosts ---
 pub const DEFAULT_OPENAI_HOST: &str = "api.openai.com";
