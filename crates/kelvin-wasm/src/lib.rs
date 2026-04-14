@@ -1,5 +1,6 @@
 use std::fmt::Display;
 use std::path::Path;
+use std::process::Command;
 
 use kelvin_core::{KelvinError, KelvinResult};
 use wasmtime::{Caller, Config, Engine, Linker, Module, Store};
@@ -36,6 +37,8 @@ pub mod claw_abi {
     pub const HTTP_CALL: &str = consts::CLAW_HTTP_CALL;
     // read an env var from the host (gated by env_allow in sandbox policy)
     pub const GET_ENV: &str = consts::CLAW_GET_ENV;
+    // execute a shell command (gated by shell_allow_commands in sandbox policy)
+    pub const SHELL_EXEC: &str = consts::CLAW_SHELL_EXEC;
 }
 
 pub const DEFAULT_MAX_MODULE_BYTES: usize = consts::DEFAULT_MAX_MODULE_BYTES;
@@ -54,6 +57,7 @@ pub enum ClawCall {
     NetworkSend { packet: i32 },
     HttpCall { url: String },
     EnvAccess { key: String },
+    ShellExec { command: String, args: Vec<String> },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -106,6 +110,11 @@ pub struct SandboxPolicy {
     /// Environment variable names the plugin is allowed to read via `get_env`.
     /// Empty = no env access. Names are matched case-sensitively.
     pub env_allow: Vec<String>,
+    /// Command basenames the plugin is allowed to execute via `shell_exec`.
+    /// Empty = no shell access (fail-closed). Only the basename is checked;
+    /// the host resolves the full path via `PATH`. Supports `"*"` as a
+    /// wildcard to allow any command (use with extreme caution).
+    pub shell_allow_commands: Vec<String>,
     pub max_module_bytes: usize,
     pub fuel_budget: u64,
     pub max_request_bytes: usize,
@@ -119,6 +128,7 @@ impl Default for SandboxPolicy {
             allow_fs_read: false,
             network_allow_hosts: Vec::new(),
             env_allow: Vec::new(),
+            shell_allow_commands: Vec::new(),
             max_module_bytes: DEFAULT_MAX_MODULE_BYTES,
             fuel_budget: DEFAULT_FUEL_BUDGET,
             max_request_bytes: DEFAULT_MAX_REQUEST_BYTES,
@@ -408,11 +418,13 @@ fn validate_imports(module: &Module, policy: &SandboxPolicy) -> KelvinResult<()>
             claw_abi::NETWORK_SEND if !policy.network_allow_hosts.is_empty() => {}
             claw_abi::HTTP_CALL if !policy.network_allow_hosts.is_empty() => {}
             claw_abi::GET_ENV if !policy.env_allow.is_empty() => {}
+            claw_abi::SHELL_EXEC if !policy.shell_allow_commands.is_empty() => {}
             claw_abi::MOVE_SERVO
             | claw_abi::FS_READ
             | claw_abi::NETWORK_SEND
             | claw_abi::HTTP_CALL
-            | claw_abi::GET_ENV => {
+            | claw_abi::GET_ENV
+            | claw_abi::SHELL_EXEC => {
                 return Err(KelvinError::InvalidInput(format!(
                     "capability import '{name}' denied by sandbox policy"
                 )));
@@ -700,6 +712,220 @@ fn link_claw_imports(linker: &mut Linker<HostState>, policy: &SandboxPolicy) -> 
             .map_err(|err| backend("link claw.get_env", err))?;
     }
 
+    if !policy.shell_allow_commands.is_empty() {
+        // Execute a shell command. Only commands whose basename is present in
+        // `shell_allow_commands` are permitted. No shell expansion — the command
+        // is invoked directly via `std::process::Command`.
+        //
+        // Signature: shell_exec(req_ptr, req_len, resp_ptr, resp_max_len) -> i32
+        //   req_ptr/req_len  – JSON request  {"command":"...","args":["..."],"timeout_secs":10}
+        //   resp_ptr/resp_max_len – buffer for JSON response
+        //   returns bytes written into resp buffer (0 = error)
+        //
+        // Response JSON: {"exit_code":0,"stdout":"...","stderr":"..."}
+        let allow_cmds = policy.shell_allow_commands.clone();
+        let max_req = policy.max_request_bytes;
+        linker
+            .func_wrap(
+                claw_abi::MODULE,
+                claw_abi::SHELL_EXEC,
+                move |mut caller: Caller<'_, HostState>,
+                      req_ptr: i32,
+                      req_len: i32,
+                      resp_ptr: i32,
+                      resp_max_len: i32|
+                      -> i32 {
+                    if req_ptr < 0 || req_len <= 0 || resp_ptr < 0 || resp_max_len <= 0 {
+                        return 0;
+                    }
+                    let memory = match caller
+                        .get_export(claw_abi::EXPORT_MEMORY)
+                        .and_then(|e| e.into_memory())
+                    {
+                        Some(m) => m,
+                        None => return 0,
+                    };
+                    if req_len as usize > max_req {
+                        return write_resp_to_buf(
+                            &mut caller,
+                            &serde_json::json!({"exit_code": -1, "stdout": "", "stderr": "request too large"}).to_string(),
+                            resp_ptr,
+                            resp_max_len,
+                        );
+                    }
+                    let mut req_bytes = vec![0u8; req_len as usize];
+                    if memory
+                        .read(&caller, req_ptr as usize, &mut req_bytes)
+                        .is_err()
+                    {
+                        return 0;
+                    }
+                    let req: serde_json::Value = match serde_json::from_slice(&req_bytes) {
+                        Ok(v) => v,
+                        Err(_) => {
+                            return write_resp_to_buf(
+                                &mut caller,
+                                &serde_json::json!({"exit_code": -1, "stdout": "", "stderr": "invalid JSON request"}).to_string(),
+                                resp_ptr,
+                                resp_max_len,
+                            );
+                        }
+                    };
+
+                    let command_raw = match req.get("command").and_then(|v| v.as_str()) {
+                        Some(c) => c,
+                        None => {
+                            return write_resp_to_buf(
+                                &mut caller,
+                                &serde_json::json!({"exit_code": -1, "stdout": "", "stderr": "missing 'command' field"}).to_string(),
+                                resp_ptr,
+                                resp_max_len,
+                            );
+                        }
+                    };
+
+                    // Security: extract basename only — reject absolute paths and
+                    // path traversals to prevent bypassing the allowlist.
+                    let cmd_path = std::path::Path::new(command_raw);
+                    let basename = match cmd_path.file_name().and_then(|n| n.to_str()) {
+                        Some(b) => b,
+                        None => {
+                            return write_resp_to_buf(
+                                &mut caller,
+                                &serde_json::json!({"exit_code": -1, "stdout": "", "stderr": "invalid command name"}).to_string(),
+                                resp_ptr,
+                                resp_max_len,
+                            );
+                        }
+                    };
+                    if cmd_path.components().count() > 1 {
+                        return write_resp_to_buf(
+                            &mut caller,
+                            &serde_json::json!({"exit_code": -1, "stdout": "", "stderr": "absolute paths and path separators are not allowed; use the command basename only"}).to_string(),
+                            resp_ptr,
+                            resp_max_len,
+                        );
+                    }
+
+                    // Check against allowlist
+                    if !shell_command_allowed(basename, &allow_cmds) {
+                        return write_resp_to_buf(
+                            &mut caller,
+                            &serde_json::json!({"exit_code": -1, "stdout": "", "stderr": "command not allowed by sandbox policy"}).to_string(),
+                            resp_ptr,
+                            resp_max_len,
+                        );
+                    }
+
+                    let args: Vec<String> = req
+                        .get("args")
+                        .and_then(|v| v.as_array())
+                        .map(|arr| {
+                            arr.iter()
+                                .filter_map(|v| v.as_str().map(String::from))
+                                .collect()
+                        })
+                        .unwrap_or_default();
+
+                    caller.data_mut().record(ClawCall::ShellExec {
+                        command: basename.to_string(),
+                        args: args.clone(),
+                    });
+
+                    let timeout_secs = req
+                        .get("timeout_secs")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(consts::SHELL_EXEC_DEFAULT_TIMEOUT_SECS)
+                        .min(consts::SHELL_EXEC_MAX_TIMEOUT_SECS);
+
+                    // Execute the command with no shell expansion and a clean
+                    // environment (only PATH is inherited so the command can be
+                    // resolved).
+                    let result = tokio::task::block_in_place(|| {
+                        let child = Command::new(basename)
+                            .args(&args)
+                            .env_clear()
+                            .env("PATH", std::env::var("PATH").unwrap_or_default())
+                            .stdin(std::process::Stdio::null())
+                            .stdout(std::process::Stdio::piped())
+                            .stderr(std::process::Stdio::piped())
+                            .spawn();
+
+                        let mut child = match child {
+                            Ok(c) => c,
+                            Err(e) => {
+                                return serde_json::json!({
+                                    "exit_code": -1,
+                                    "stdout": "",
+                                    "stderr": format!("spawn error: {e}")
+                                })
+                                .to_string();
+                            }
+                        };
+
+                        let timeout = std::time::Duration::from_secs(timeout_secs);
+                        let start = std::time::Instant::now();
+                        loop {
+                            match child.try_wait() {
+                                Ok(Some(status)) => {
+                                    let output = child.wait_with_output().unwrap_or_else(|_| {
+                                        std::process::Output {
+                                            status,
+                                            stdout: Vec::new(),
+                                            stderr: Vec::new(),
+                                        }
+                                    });
+                                    let max_out = consts::SHELL_EXEC_MAX_OUTPUT_BYTES;
+                                    let stdout_raw = String::from_utf8_lossy(&output.stdout);
+                                    let stderr_raw = String::from_utf8_lossy(&output.stderr);
+                                    let stdout = if stdout_raw.len() > max_out {
+                                        format!("{}...[truncated]", &stdout_raw[..max_out / 2])
+                                    } else {
+                                        stdout_raw.into_owned()
+                                    };
+                                    let stderr = if stderr_raw.len() > max_out {
+                                        format!("{}...[truncated]", &stderr_raw[..max_out / 2])
+                                    } else {
+                                        stderr_raw.into_owned()
+                                    };
+                                    return serde_json::json!({
+                                        "exit_code": status.code().unwrap_or(-1),
+                                        "stdout": stdout,
+                                        "stderr": stderr,
+                                    })
+                                    .to_string();
+                                }
+                                Ok(None) => {
+                                    if start.elapsed() >= timeout {
+                                        let _ = child.kill();
+                                        let _ = child.wait();
+                                        return serde_json::json!({
+                                            "exit_code": -1,
+                                            "stdout": "",
+                                            "stderr": "command timed out"
+                                        })
+                                        .to_string();
+                                    }
+                                    std::thread::sleep(std::time::Duration::from_millis(50));
+                                }
+                                Err(e) => {
+                                    return serde_json::json!({
+                                        "exit_code": -1,
+                                        "stdout": "",
+                                        "stderr": format!("wait error: {e}")
+                                    })
+                                    .to_string();
+                                }
+                            }
+                        }
+                    });
+
+                    write_resp_to_buf(&mut caller, &result, resp_ptr, resp_max_len)
+                },
+            )
+            .map_err(|err| backend("link claw.shell_exec", err))?;
+    }
+
     Ok(())
 }
 
@@ -795,6 +1021,31 @@ fn claw_host_allowed(hostname: &str, allowed: &[String]) -> bool {
             continue;
         }
         if host == p {
+            return true;
+        }
+    }
+    false
+}
+
+/// Checks whether `command` basename is permitted by the `allowed` list.
+/// Supports `"*"` (any command). Matching is case-sensitive.
+fn shell_command_allowed(command: &str, allowed: &[String]) -> bool {
+    if allowed.is_empty() {
+        return false;
+    }
+    let cmd = command.trim();
+    if cmd.is_empty() {
+        return false;
+    }
+    for pattern in allowed {
+        let p = pattern.trim();
+        if p.is_empty() {
+            continue;
+        }
+        if p == "*" {
+            return true;
+        }
+        if cmd == p {
             return true;
         }
     }
@@ -1391,5 +1642,196 @@ mod tests {
             "expected valid HTTP status, got {status}"
         );
         assert!(!v["body"].as_str().unwrap_or("").is_empty());
+    }
+
+    // --- shell_exec tests ---
+
+    #[test]
+    fn rejects_shell_exec_import_when_policy_blocks_it() {
+        let wasm = parse_wat(
+            r#"
+            (module
+              (import "claw" "shell_exec" (func $shell_exec (param i32 i32 i32 i32) (result i32)))
+              (func (export "run") (result i32)
+                i32.const 0
+              )
+            )
+            "#,
+        );
+
+        let host = WasmSkillHost::try_new().expect("host");
+        let err = host
+            .run_bytes(&wasm, SandboxPolicy::locked_down())
+            .expect_err("policy should reject shell_exec import");
+        assert!(matches!(err, KelvinError::InvalidInput(_)));
+        assert!(err.to_string().contains("denied by sandbox policy"));
+    }
+
+    #[test]
+    fn shell_command_allowed_checks() {
+        use super::shell_command_allowed;
+        let allow = vec!["echo".to_string(), "ls".to_string()];
+        assert!(shell_command_allowed("echo", &allow));
+        assert!(shell_command_allowed("ls", &allow));
+        assert!(!shell_command_allowed("rm", &allow));
+        assert!(!shell_command_allowed("", &allow));
+
+        let wildcard = vec!["*".to_string()];
+        assert!(shell_command_allowed("anything", &wildcard));
+
+        let empty: Vec<String> = vec![];
+        assert!(!shell_command_allowed("echo", &empty));
+    }
+
+    #[test]
+    fn shell_exec_runs_allowed_command() {
+        // Build a v2 WAT module that calls shell_exec with {"command":"echo","args":["hello"]}
+        // and returns the response through handle_tool_call.
+        let wasm = parse_wat(
+            r#"
+            (module
+              (import "claw" "shell_exec" (func $shell_exec (param i32 i32 i32 i32) (result i32)))
+              (memory (export "memory") 2)
+              (data (i32.const 0) "{\"command\":\"echo\",\"args\":[\"hello\"]}")
+              (global $bump (mut i32) (i32.const 4096))
+              (func $alloc (export "alloc") (param $len i32) (result i32)
+                (local $ptr i32)
+                (local.set $ptr (global.get $bump))
+                (global.set $bump (i32.add (global.get $bump) (local.get $len)))
+                (local.get $ptr)
+              )
+              (func (export "dealloc") (param i32 i32))
+              (func (export "handle_tool_call") (param $in_ptr i32) (param $in_len i32) (result i64)
+                (local $written i32)
+                ;; call shell_exec: req at 0..35, resp buffer at 8192 max 8192
+                (local.set $written
+                  (call $shell_exec (i32.const 0) (i32.const 35) (i32.const 8192) (i32.const 8192))
+                )
+                ;; return (resp_ptr << 32) | written
+                (i64.or
+                  (i64.shl (i64.extend_i32_u (i32.const 8192)) (i64.const 32))
+                  (i64.extend_i32_u (local.get $written))
+                )
+              )
+              (func (export "run") (result i32) i32.const 0)
+            )
+            "#,
+        );
+
+        let host = WasmSkillHost::try_new().expect("host");
+        let policy = SandboxPolicy {
+            shell_allow_commands: vec!["echo".to_string()],
+            ..SandboxPolicy::locked_down()
+        };
+        let result = host
+            .run_bytes_with_input(&wasm, r#"{}"#, policy)
+            .expect("shell_exec should succeed");
+        let output = result.output_json.expect("output_json should be set");
+        let v: serde_json::Value = serde_json::from_str(&output).expect("valid json");
+        assert_eq!(v["exit_code"], 0);
+        assert!(v["stdout"].as_str().unwrap_or("").contains("hello"));
+
+        // Verify the ClawCall was recorded
+        assert_eq!(result.calls.len(), 1);
+        assert_eq!(
+            result.calls[0],
+            ClawCall::ShellExec {
+                command: "echo".to_string(),
+                args: vec!["hello".to_string()],
+            }
+        );
+    }
+
+    #[test]
+    fn shell_exec_rejects_disallowed_command() {
+        let wasm = parse_wat(
+            r#"
+            (module
+              (import "claw" "shell_exec" (func $shell_exec (param i32 i32 i32 i32) (result i32)))
+              (memory (export "memory") 2)
+              (data (i32.const 0) "{\"command\":\"rm\",\"args\":[\"-rf\",\"/\"]}")
+              (global $bump (mut i32) (i32.const 4096))
+              (func $alloc (export "alloc") (param $len i32) (result i32)
+                (local $ptr i32)
+                (local.set $ptr (global.get $bump))
+                (global.set $bump (i32.add (global.get $bump) (local.get $len)))
+                (local.get $ptr)
+              )
+              (func (export "dealloc") (param i32 i32))
+              (func (export "handle_tool_call") (param $in_ptr i32) (param $in_len i32) (result i64)
+                (local $written i32)
+                (local.set $written
+                  (call $shell_exec (i32.const 0) (i32.const 35) (i32.const 8192) (i32.const 8192))
+                )
+                (i64.or
+                  (i64.shl (i64.extend_i32_u (i32.const 8192)) (i64.const 32))
+                  (i64.extend_i32_u (local.get $written))
+                )
+              )
+              (func (export "run") (result i32) i32.const 0)
+            )
+            "#,
+        );
+
+        let host = WasmSkillHost::try_new().expect("host");
+        let policy = SandboxPolicy {
+            shell_allow_commands: vec!["echo".to_string(), "ls".to_string()],
+            ..SandboxPolicy::locked_down()
+        };
+        let result = host
+            .run_bytes_with_input(&wasm, r#"{}"#, policy)
+            .expect("should not trap, just return denial in response");
+        let output = result.output_json.expect("output_json");
+        let v: serde_json::Value = serde_json::from_str(&output).expect("valid json");
+        assert_eq!(v["exit_code"], -1);
+        assert!(v["stderr"].as_str().unwrap_or("").contains("not allowed"));
+    }
+
+    #[test]
+    fn shell_exec_rejects_absolute_path_command() {
+        let wasm = parse_wat(
+            r#"
+            (module
+              (import "claw" "shell_exec" (func $shell_exec (param i32 i32 i32 i32) (result i32)))
+              (memory (export "memory") 2)
+              (data (i32.const 0) "{\"command\":\"/bin/echo\",\"args\":[\"hello\"]}")
+              (global $bump (mut i32) (i32.const 4096))
+              (func $alloc (export "alloc") (param $len i32) (result i32)
+                (local $ptr i32)
+                (local.set $ptr (global.get $bump))
+                (global.set $bump (i32.add (global.get $bump) (local.get $len)))
+                (local.get $ptr)
+              )
+              (func (export "dealloc") (param i32 i32))
+              (func (export "handle_tool_call") (param $in_ptr i32) (param $in_len i32) (result i64)
+                (local $written i32)
+                (local.set $written
+                  (call $shell_exec (i32.const 0) (i32.const 40) (i32.const 8192) (i32.const 8192))
+                )
+                (i64.or
+                  (i64.shl (i64.extend_i32_u (i32.const 8192)) (i64.const 32))
+                  (i64.extend_i32_u (local.get $written))
+                )
+              )
+              (func (export "run") (result i32) i32.const 0)
+            )
+            "#,
+        );
+
+        let host = WasmSkillHost::try_new().expect("host");
+        let policy = SandboxPolicy {
+            shell_allow_commands: vec!["echo".to_string()],
+            ..SandboxPolicy::locked_down()
+        };
+        let result = host
+            .run_bytes_with_input(&wasm, r#"{}"#, policy)
+            .expect("should not trap");
+        let output = result.output_json.expect("output_json");
+        let v: serde_json::Value = serde_json::from_str(&output).expect("valid json");
+        assert_eq!(v["exit_code"], -1);
+        assert!(v["stderr"]
+            .as_str()
+            .unwrap_or("")
+            .contains("absolute paths"));
     }
 }
