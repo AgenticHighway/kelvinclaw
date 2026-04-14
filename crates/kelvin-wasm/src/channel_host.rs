@@ -45,10 +45,8 @@ impl Default for ChannelSandboxPolicy {
     }
 }
 
-#[derive(Debug, Clone)]
-struct ChannelHostState {
-    policy: ChannelSandboxPolicy,
-}
+#[derive(Debug, Clone, Default)]
+struct ChannelHostState;
 
 #[derive(Clone)]
 pub struct WasmChannelHost {
@@ -107,12 +105,7 @@ impl WasmChannelHost {
             .map_err(|err| backend("compile channel wasm module", err))?;
         validate_imports(&module)?;
 
-        let mut store = Store::new(
-            &self.engine,
-            ChannelHostState {
-                policy: policy.clone(),
-            },
-        );
+        let mut store = Store::new(&self.engine, ChannelHostState);
         store
             .set_fuel(policy.fuel_budget)
             .map_err(|err| backend("set channel fuel budget", err))?;
