@@ -9,11 +9,12 @@ if (Test-Path (Join-Path $PSScriptRoot "bin\\kelvin-host.exe")) {
 $PluginManifestPath = Join-Path $RootDir "share\\official-first-party-plugins.env"
 $DefaultPluginIndexUrl = "https://raw.githubusercontent.com/AgenticHighway/kelvinclaw-plugins/main/index.json"
 $DefaultOllamaBaseUrl = "http://localhost:11434"
+$DefaultKelvinHome = if ($env:KELVIN_HOME) { $env:KELVIN_HOME } else { Join-Path $HOME ".kelvinclaw" }
 $_LaunchEnvPaths = @(
+    (Join-Path $DefaultKelvinHome ".env.local"),
+    (Join-Path $DefaultKelvinHome ".env"),
     (Join-Path (Get-Location).Path ".env.local"),
-    (Join-Path (Get-Location).Path ".env"),
-    (Join-Path $HOME ".kelvinclaw\.env.local"),
-    (Join-Path $HOME ".kelvinclaw\.env")
+    (Join-Path (Get-Location).Path ".env")
 )
 
 function Show-Usage {

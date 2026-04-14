@@ -15,6 +15,8 @@ if [[ -x "${SCRIPT_DIR}/bin/kelvin-tui" ]]; then
 else
   ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 fi
+DEFAULT_KELVIN_HOME="${KELVIN_HOME:-${HOME}/.kelvinclaw}"
+DEFAULT_KELVIN_HOME="${DEFAULT_KELVIN_HOME/#\~/${HOME}}"
 
 # ── dotenv loader ─────────────────────────────────────────────────────────────
 _ktui_trim()   { local v="$1"; v="${v#"${v%%[![:space:]]*}"}"; v="${v%"${v##*[![:space:]]}"}"; printf '%s' "${v}"; }
@@ -26,7 +28,7 @@ _ktui_unquote() {
 }
 load_dotenv() {
   local f line stripped key value
-  for f in "${PWD}/.env.local" "${PWD}/.env" "${HOME}/.kelvinclaw/.env.local" "${HOME}/.kelvinclaw/.env"; do
+  for f in "${DEFAULT_KELVIN_HOME}/.env.local" "${DEFAULT_KELVIN_HOME}/.env" "${PWD}/.env.local" "${PWD}/.env"; do
     [[ -f "${f}" ]] || continue
     while IFS= read -r line || [[ -n "${line}" ]]; do
       stripped="$(_ktui_trim "${line%%#*}")"
@@ -39,6 +41,7 @@ load_dotenv() {
       fi
     done < "${f}"
   done
+  return 0
 }
 load_dotenv
 # ──────────────────────────────────────────────────────────────────────────────
@@ -54,8 +57,8 @@ Environment:
   KELVIN_HOME            State root (default: ~/.kelvinclaw)
 
 The launcher reads KELVIN_GATEWAY_TOKEN from:
-  - ./.env.local / ./.env
   - ~/.kelvinclaw/.env.local / ~/.kelvinclaw/.env
+  - ./.env.local / ./.env
 
 Pass --help to kelvin-tui for its full option list.
 USAGE

@@ -27,10 +27,12 @@ On first run, `kelvin init` writes `~/.kelvinclaw/.env`, generates a gateway tok
 
 All launchers auto-read `.env` files in this order:
 
-1. `./.env.local`
-2. `./.env`
-3. `~/.kelvinclaw/.env.local`
-4. `~/.kelvinclaw/.env`
+1. `~/.kelvinclaw/.env.local`
+2. `~/.kelvinclaw/.env`
+3. `./.env.local`
+4. `./.env`
+
+`~/.kelvinclaw/.env` is the canonical config path for release and Homebrew installs.
 
 The recommended path is to let `kelvin init` create `~/.kelvinclaw/.env` for you:
 

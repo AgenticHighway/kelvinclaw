@@ -5,13 +5,14 @@ if (Test-Path (Join-Path $PSScriptRoot "bin\kelvin-tui.exe")) {
 } else {
     $RootDir = Split-Path -Parent $PSScriptRoot
 }
+$DefaultKelvinHome = if ($env:KELVIN_HOME) { $env:KELVIN_HOME } else { Join-Path $HOME ".kelvinclaw" }
 
 # ── dotenv loader ─────────────────────────────────────────────────────────────
 $_TuiEnvPaths = @(
+    (Join-Path $DefaultKelvinHome ".env.local"),
+    (Join-Path $DefaultKelvinHome ".env"),
     (Join-Path (Get-Location).Path ".env.local"),
-    (Join-Path (Get-Location).Path ".env"),
-    (Join-Path $HOME ".kelvinclaw\.env.local"),
-    (Join-Path $HOME ".kelvinclaw\.env")
+    (Join-Path (Get-Location).Path ".env")
 )
 function _TuiLoadDotenv {
     foreach ($F in $_TuiEnvPaths) {
@@ -43,8 +44,8 @@ Environment:
   KELVIN_GATEWAY_TOKEN   Auth token for the gateway (required)
 
 The launcher reads all variables from:
-  - .\.env.local / .\.env
   - ~\.kelvinclaw\.env.local / ~\.kelvinclaw\.env
+  - .\.env.local / .\.env
 
 Pass --help to see kelvin-tui's full option list.
 "@

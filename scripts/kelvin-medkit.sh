@@ -190,10 +190,10 @@ section "Configuration"
 
 ENV_FILES_FOUND=0
 for env_path in \
-  "${PWD}/.env.local" \
-  "${PWD}/.env" \
   "${KELVIN_HOME}/.env.local" \
-  "${KELVIN_HOME}/.env"; do
+  "${KELVIN_HOME}/.env" \
+  "${PWD}/.env.local" \
+  "${PWD}/.env"; do
   if [[ -f "${env_path}" ]]; then
     check_pass ".env found: ${env_path}"
     ENV_FILES_FOUND=$((ENV_FILES_FOUND + 1))
