@@ -879,12 +879,20 @@ fn link_claw_imports(linker: &mut Linker<HostState>, policy: &SandboxPolicy) -> 
                                     let stdout_raw = String::from_utf8_lossy(&output.stdout);
                                     let stderr_raw = String::from_utf8_lossy(&output.stderr);
                                     let stdout = if stdout_raw.len() > max_out {
-                                        format!("{}...[truncated]", &stdout_raw[..max_out / 2])
+                                        let mut end = max_out / 2;
+                                        while end > 0 && !stdout_raw.is_char_boundary(end) {
+                                            end -= 1;
+                                        }
+                                        format!("{}...[truncated]", &stdout_raw[..end])
                                     } else {
                                         stdout_raw.into_owned()
                                     };
                                     let stderr = if stderr_raw.len() > max_out {
-                                        format!("{}...[truncated]", &stderr_raw[..max_out / 2])
+                                        let mut end = max_out / 2;
+                                        while end > 0 && !stderr_raw.is_char_boundary(end) {
+                                            end -= 1;
+                                        }
+                                        format!("{}...[truncated]", &stderr_raw[..end])
                                     } else {
                                         stderr_raw.into_owned()
                                     };
