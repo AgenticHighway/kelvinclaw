@@ -20,8 +20,9 @@ use bin_consts::{
 
 use kelvin_core::PluginSecurityPolicy;
 use kelvin_gateway::{
-    run_approve_pairing, run_gateway, run_gateway_doctor, GatewayApprovePairingConfig, GatewayConfig,
-    GatewayDoctorConfig, GatewayIngressConfig, GatewaySecurityConfig, GatewayTlsConfig,
+    run_approve_pairing, run_gateway, run_gateway_doctor, GatewayApprovePairingConfig,
+    GatewayConfig, GatewayDoctorConfig, GatewayIngressConfig, GatewaySecurityConfig,
+    GatewayTlsConfig,
 };
 use kelvin_sdk::{KelvinCliMemoryMode, KelvinSdkModelSelection, KelvinSdkRuntimeConfig};
 

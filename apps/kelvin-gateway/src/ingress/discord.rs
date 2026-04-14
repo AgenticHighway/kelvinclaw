@@ -389,7 +389,10 @@ async fn run_gateway(gateway: GatewayState, config: DiscordGatewayConfig) {
                 Some(Ok(Message::Text(text))) => {
                     match serde_json::from_str::<GatewayPayload>(&text) {
                         Ok(payload) if payload.op == 10 => {
-                            match payload.d.and_then(|d| serde_json::from_value::<HelloData>(d).ok()) {
+                            match payload
+                                .d
+                                .and_then(|d| serde_json::from_value::<HelloData>(d).ok())
+                            {
                                 Some(hello) => break hello.heartbeat_interval,
                                 None => {
                                     eprintln!("discord gateway: malformed HELLO payload");
@@ -423,8 +426,7 @@ async fn run_gateway(gateway: GatewayState, config: DiscordGatewayConfig) {
         let heartbeat_seq = Arc::new(Mutex::new(seq));
         let heartbeat_seq_writer = heartbeat_seq.clone();
         tokio::spawn(async move {
-            let mut interval =
-                tokio::time::interval(Duration::from_millis(heartbeat_interval));
+            let mut interval = tokio::time::interval(Duration::from_millis(heartbeat_interval));
             interval.tick().await; // skip immediate first tick
             loop {
                 interval.tick().await;
@@ -485,7 +487,7 @@ async fn run_gateway(gateway: GatewayState, config: DiscordGatewayConfig) {
         }
 
         // Main receive loop
-        let mut should_resume = false;
+        let should_resume;
         loop {
             let msg = stream.next().await;
             match msg {
@@ -509,9 +511,7 @@ async fn run_gateway(gateway: GatewayState, config: DiscordGatewayConfig) {
                             match payload.t.as_deref() {
                                 Some("READY") => {
                                     if let Some(d) = payload.d {
-                                        if let Ok(ready) =
-                                            serde_json::from_value::<ReadyEvent>(d)
-                                        {
+                                        if let Ok(ready) = serde_json::from_value::<ReadyEvent>(d) {
                                             eprintln!("discord gateway: ready");
                                             session_id = Some(ready.session_id);
                                             resume_gateway_url = Some(ready.resume_gateway_url);
@@ -524,9 +524,7 @@ async fn run_gateway(gateway: GatewayState, config: DiscordGatewayConfig) {
                                         if let Ok(msg) =
                                             serde_json::from_value::<MessageCreateEvent>(d)
                                         {
-                                            if let Some(request) =
-                                                gateway_message_to_request(msg)
-                                            {
+                                            if let Some(request) = gateway_message_to_request(msg) {
                                                 let runtime = gateway.runtime.clone();
                                                 let channels = gateway.channels.clone();
                                                 tokio::spawn(async move {

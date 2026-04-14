@@ -559,14 +559,13 @@ pub struct GatewayApprovePairingConfig {
 }
 
 pub async fn run_approve_pairing(config: GatewayApprovePairingConfig) -> Result<(), String> {
-    let (mut socket, _) =
-        tokio::time::timeout(
-            Duration::from_millis(config.timeout_ms.max(250)),
-            connect_async(config.endpoint.clone()),
-        )
-        .await
-        .map_err(|_| format!("timed out connecting to {}", config.endpoint))?
-        .map_err(|err| format!("failed to connect to {}: {err}", config.endpoint))?;
+    let (mut socket, _) = tokio::time::timeout(
+        Duration::from_millis(config.timeout_ms.max(250)),
+        connect_async(config.endpoint.clone()),
+    )
+    .await
+    .map_err(|_| format!("timed out connecting to {}", config.endpoint))?
+    .map_err(|err| format!("failed to connect to {}: {err}", config.endpoint))?;
 
     let connect_payload = json!({
         "type": "req",

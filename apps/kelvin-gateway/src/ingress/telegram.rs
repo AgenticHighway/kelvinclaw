@@ -180,7 +180,9 @@ async fn run_poller(gateway: GatewayState, config: TelegramPollingConfig) {
                     .map(|d| format!(": {d}"))
                     .unwrap_or_default()
             ),
-            Err(err) => eprintln!("telegram polling: failed to parse deleteWebhook response: {err}"),
+            Err(err) => {
+                eprintln!("telegram polling: failed to parse deleteWebhook response: {err}")
+            }
         },
         Err(err) => eprintln!("telegram polling: deleteWebhook request failed: {err}"),
     }
@@ -196,7 +198,9 @@ async fn run_poller(gateway: GatewayState, config: TelegramPollingConfig) {
                 "timeout": config.poll_timeout_secs,
                 "allowed_updates": ["message", "edited_message", "channel_post"],
             }))
-            .timeout(std::time::Duration::from_secs(config.poll_timeout_secs + 10))
+            .timeout(std::time::Duration::from_secs(
+                config.poll_timeout_secs + 10,
+            ))
             .send()
             .await;
 

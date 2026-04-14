@@ -15,7 +15,10 @@ use kelvin_core::{
     ToolCallInput, ToolPhase, ToolRegistry,
 };
 
-use crate::{system_prompt, tool_loop_detector::{LoopDetectionResult, ToolLoopDetector}};
+use crate::{
+    system_prompt,
+    tool_loop_detector::{LoopDetectionResult, ToolLoopDetector},
+};
 
 #[derive(Clone)]
 pub struct KelvinBrain {
