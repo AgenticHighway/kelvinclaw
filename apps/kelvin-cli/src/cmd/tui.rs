@@ -10,7 +10,7 @@ pub fn run(args: TuiArgs) -> Result<()> {
     // Hard-fail if gateway isn't running.
     let pid_file = paths::gateway_pid_path();
     let gateway_up = proc::read_pid_file(&pid_file)
-        .map(|pid| proc::is_running(pid))
+        .map(proc::is_running)
         .unwrap_or(false);
 
     if !gateway_up {

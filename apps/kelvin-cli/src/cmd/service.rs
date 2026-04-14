@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::Result;
 
 use crate::cli::ServiceCmd;
 
@@ -18,7 +18,7 @@ fn kelvin_bin() -> String {
         .unwrap_or_else(|| "kelvin".to_string())
 }
 
-fn systemd_unit(unit_name: &str) -> String {
+fn systemd_unit(_unit_name: &str) -> String {
     let bin = kelvin_bin();
     format!(
         r#"[Unit]
@@ -39,6 +39,7 @@ WantedBy=default.target
     )
 }
 
+#[cfg(target_os = "macos")]
 fn launchd_plist(label: &str) -> String {
     let bin = kelvin_bin();
     format!(
@@ -128,6 +129,7 @@ fn install_systemd(unit_name: &str) -> Result<()> {
     }
 }
 
+#[cfg_attr(not(target_os = "macos"), allow(unused_variables))]
 fn install_launchd(label: &str) -> Result<()> {
     #[cfg(not(target_os = "macos"))]
     {

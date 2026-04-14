@@ -36,7 +36,7 @@ pub fn spawn_detached(
     // setsid() in the child to detach from the controlling terminal.
     unsafe {
         cmd.pre_exec(|| {
-            nix::unistd::setsid().map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+            nix::unistd::setsid().map_err(std::io::Error::other)?;
             Ok(())
         });
     }

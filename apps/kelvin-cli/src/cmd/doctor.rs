@@ -7,7 +7,7 @@ pub fn run() -> Result<()> {
     // Hard-fail if gateway isn't running.
     let pid_file = paths::gateway_pid_path();
     let gateway_pid = proc::read_pid_file(&pid_file);
-    let gateway_up = gateway_pid.map(|pid| proc::is_running(pid)).unwrap_or(false);
+    let gateway_up = gateway_pid.map(proc::is_running).unwrap_or(false);
 
     if !gateway_up {
         bail!(

@@ -7,11 +7,10 @@
 /// 4. Start memory controller and gateway daemons.
 /// 5. Poll gateway readiness (up to 10 seconds).
 /// 6. exec(kelvin-tui). If exec fails: stop daemons, print loud error, exit 1.
-use anyhow::{bail, Result};
+use anyhow::Result;
 
 use crate::cmd::start;
 use crate::paths;
-use crate::proc;
 
 const GATEWAY_URL: &str = "ws://127.0.0.1:34617";
 const READY_POLL_MS: u64 = 500;

@@ -82,7 +82,7 @@ pub fn ensure_plugin() -> Result<()> {
 }
 
 pub fn start_memory_daemon() -> Result<()> {
-    use crate::cmd::memory::{build_memory_env, cmd_start, memory_binary};
+    use crate::cmd::memory::{cmd_start, memory_binary};
     use crate::cli::MemoryStartArgs;
 
     if !memory_binary().exists() {

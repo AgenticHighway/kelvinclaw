@@ -21,22 +21,14 @@ pub fn load_dotenv() {
         if !path.exists() {
             continue;
         }
-        match dotenvy::from_path_iter(path) {
-            Ok(iter) => {
-                for item in iter {
-                    match item {
-                        Ok((key, value)) => {
-                            // Only set if not already present in environment.
-                            if std::env::var(&key).is_err() {
-                                // SAFETY: single-threaded at this point in startup.
-                                unsafe { std::env::set_var(&key, &value) };
-                            }
-                        }
-                        Err(_) => {} // Skip malformed lines silently
-                    }
+        if let Ok(iter) = dotenvy::from_filename_iter(path) {
+            for (key, value) in iter.flatten() {
+                // Only set if not already present in environment.
+                if std::env::var(&key).is_err() {
+                    // SAFETY: single-threaded at this point in startup.
+                    unsafe { std::env::set_var(&key, &value) };
                 }
             }
-            Err(_) => {} // Skip unreadable files silently
         }
     }
 }
