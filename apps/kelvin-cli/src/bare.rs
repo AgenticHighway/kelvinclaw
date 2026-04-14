@@ -20,9 +20,7 @@ pub async fn run() -> Result<()> {
     // Check config exists.
     let dot_env = paths::dotenv_path();
     if !dot_env.exists() {
-        eprintln!(
-            "no config found — run `kelvin init` to set up, or `kelvin medkit` to diagnose"
-        );
+        eprintln!("no config found — run `kelvin init` to set up, or `kelvin medkit` to diagnose");
         std::process::exit(1);
     }
 
@@ -57,14 +55,17 @@ pub async fn run() -> Result<()> {
     // exec into kelvin-tui.
     let tui_bin = paths::binary_dir().join("kelvin-tui");
     if !tui_bin.exists() {
-        eprintln!("[kelvin] ERROR: kelvin-tui binary not found at {}", tui_bin.display());
+        eprintln!(
+            "[kelvin] ERROR: kelvin-tui binary not found at {}",
+            tui_bin.display()
+        );
         eprintln!("[kelvin] stopping daemons...");
         crate::cmd::stop::run().ok();
         std::process::exit(1);
     }
 
-    let gateway_url = std::env::var("KELVIN_GATEWAY_URL")
-        .unwrap_or_else(|_| GATEWAY_URL.to_string());
+    let gateway_url =
+        std::env::var("KELVIN_GATEWAY_URL").unwrap_or_else(|_| GATEWAY_URL.to_string());
     let mut tui_args = vec!["--gateway-url".to_string(), gateway_url];
 
     if let Ok(token) = std::env::var("KELVIN_GATEWAY_TOKEN") {
@@ -80,8 +81,8 @@ pub async fn run() -> Result<()> {
 async fn poll_gateway_ready() -> bool {
     use tokio_tungstenite::connect_async;
 
-    let gateway_url = std::env::var("KELVIN_GATEWAY_URL")
-        .unwrap_or_else(|_| GATEWAY_URL.to_string());
+    let gateway_url =
+        std::env::var("KELVIN_GATEWAY_URL").unwrap_or_else(|_| GATEWAY_URL.to_string());
 
     let steps = READY_MAX_MS / READY_POLL_MS;
     for _ in 0..steps {

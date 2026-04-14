@@ -15,10 +15,7 @@ pub fn run(args: InitArgs) -> Result<()> {
             );
         }
         let confirmed = dialoguer::Confirm::new()
-            .with_prompt(format!(
-                "{} already exists. Overwrite?",
-                dot_env.display()
-            ))
+            .with_prompt(format!("{} already exists. Overwrite?", dot_env.display()))
             .default(false)
             .interact()
             .context("prompt failed")?;
@@ -50,14 +47,8 @@ pub fn run(args: InitArgs) -> Result<()> {
     let mut env_lines = vec![
         format!("KELVIN_GATEWAY_TOKEN={}", gateway_token),
         format!("KELVIN_MODEL_PROVIDER={}", provider_id),
-        format!(
-            "KELVIN_MEMORY_PUBLIC_KEY_PATH={}",
-            pub_key_path.display()
-        ),
-        format!(
-            "KELVIN_MEMORY_PRIVATE_KEY_PATH={}",
-            priv_key_path.display()
-        ),
+        format!("KELVIN_MEMORY_PUBLIC_KEY_PATH={}", pub_key_path.display()),
+        format!("KELVIN_MEMORY_PRIVATE_KEY_PATH={}", priv_key_path.display()),
     ];
 
     if let Some((key_name, key_value)) = api_key_entry {
@@ -118,15 +109,24 @@ fn select_provider() -> Result<(String, Option<(String, String)>)> {
         0 => Ok(("kelvin.echo".to_string(), None)),
         1 => {
             let key = prompt_api_key("OPENAI_API_KEY")?;
-            Ok(("kelvin.openai".to_string(), Some(("OPENAI_API_KEY".to_string(), key))))
+            Ok((
+                "kelvin.openai".to_string(),
+                Some(("OPENAI_API_KEY".to_string(), key)),
+            ))
         }
         2 => {
             let key = prompt_api_key("ANTHROPIC_API_KEY")?;
-            Ok(("kelvin.anthropic".to_string(), Some(("ANTHROPIC_API_KEY".to_string(), key))))
+            Ok((
+                "kelvin.anthropic".to_string(),
+                Some(("ANTHROPIC_API_KEY".to_string(), key)),
+            ))
         }
         3 => {
             let key = prompt_api_key("OPENROUTER_API_KEY")?;
-            Ok(("kelvin.openrouter".to_string(), Some(("OPENROUTER_API_KEY".to_string(), key))))
+            Ok((
+                "kelvin.openrouter".to_string(),
+                Some(("OPENROUTER_API_KEY".to_string(), key)),
+            ))
         }
         4 => {
             println!("Note: ensure `ollama serve` is running before starting kelvin.");

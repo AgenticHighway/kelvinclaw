@@ -10,14 +10,15 @@ pub fn run() -> Result<()> {
     let gateway_up = gateway_pid.map(proc::is_running).unwrap_or(false);
 
     if !gateway_up {
-        bail!(
-            "gateway is not running.\nRun `kelvin start` to start the full stack."
-        );
+        bail!("gateway is not running.\nRun `kelvin start` to start the full stack.");
     }
 
     let gateway_bin = paths::binary_dir().join("kelvin-gateway");
     if !gateway_bin.exists() {
-        bail!("kelvin-gateway binary not found at {}", gateway_bin.display());
+        bail!(
+            "kelvin-gateway binary not found at {}",
+            gateway_bin.display()
+        );
     }
 
     let endpoint = std::env::var("KELVIN_GATEWAY_BIND")

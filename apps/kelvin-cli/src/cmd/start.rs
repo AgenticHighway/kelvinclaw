@@ -43,7 +43,10 @@ pub fn ensure_trust_policy() -> Result<()> {
             r#"{"require_signature":false,"publishers":[]}"#,
         )
         .with_context(|| format!("failed to write trust policy to {}", trust_path.display()))?;
-        println!("[kelvin] wrote permissive trust policy: {}", trust_path.display());
+        println!(
+            "[kelvin] wrote permissive trust policy: {}",
+            trust_path.display()
+        );
     }
     Ok(())
 }
@@ -82,8 +85,8 @@ pub fn ensure_plugin() -> Result<()> {
 }
 
 pub fn start_memory_daemon() -> Result<()> {
-    use crate::cmd::memory::{cmd_start, memory_binary};
     use crate::cli::MemoryStartArgs;
+    use crate::cmd::memory::{cmd_start, memory_binary};
 
     if !memory_binary().exists() {
         eprintln!(
@@ -104,9 +107,9 @@ pub fn start_memory_daemon() -> Result<()> {
 }
 
 pub fn start_gateway_daemon() -> Result<()> {
+    use crate::cli::GatewayCmd;
     use crate::cli::GatewayStartArgs;
     use crate::cmd::gateway::run;
-    use crate::cli::GatewayCmd;
 
     let home = paths::kelvin_home();
     crate::keys::ensure_memory_keys(&home)?;

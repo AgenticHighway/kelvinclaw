@@ -75,7 +75,9 @@ fn launchd_plist(label: &str) -> String {
 fn render_systemd() -> Result<()> {
     #[cfg(windows)]
     {
-        eprintln!("systemd is not available on Windows. Use `kelvin gateway start` for daemon mode.");
+        eprintln!(
+            "systemd is not available on Windows. Use `kelvin gateway start` for daemon mode."
+        );
         std::process::exit(1);
     }
     #[cfg(not(windows))]
@@ -88,7 +90,9 @@ fn render_systemd() -> Result<()> {
 fn render_launchd() -> Result<()> {
     #[cfg(not(target_os = "macos"))]
     {
-        eprintln!("launchd is only available on macOS. Use `kelvin gateway start` for daemon mode.");
+        eprintln!(
+            "launchd is only available on macOS. Use `kelvin gateway start` for daemon mode."
+        );
         std::process::exit(1);
     }
     #[cfg(target_os = "macos")]
@@ -101,7 +105,9 @@ fn render_launchd() -> Result<()> {
 fn install_systemd(unit_name: &str) -> Result<()> {
     #[cfg(windows)]
     {
-        eprintln!("systemd is not available on Windows. Use `kelvin gateway start` for daemon mode.");
+        eprintln!(
+            "systemd is not available on Windows. Use `kelvin gateway start` for daemon mode."
+        );
         std::process::exit(1);
     }
     #[cfg(not(windows))]
@@ -133,7 +139,9 @@ fn install_systemd(unit_name: &str) -> Result<()> {
 fn install_launchd(label: &str) -> Result<()> {
     #[cfg(not(target_os = "macos"))]
     {
-        eprintln!("launchd is only available on macOS. Use `kelvin gateway start` for daemon mode.");
+        eprintln!(
+            "launchd is only available on macOS. Use `kelvin gateway start` for daemon mode."
+        );
         std::process::exit(1);
     }
     #[cfg(target_os = "macos")]
@@ -151,7 +159,9 @@ fn install_launchd(label: &str) -> Result<()> {
         println!("Load with:");
         println!("  launchctl load {}", plist_file.display());
         println!();
-        println!("Tip: if you installed via Homebrew, `brew services start kelvin` is also available.");
+        println!(
+            "Tip: if you installed via Homebrew, `brew services start kelvin` is also available."
+        );
         Ok(())
     }
 }

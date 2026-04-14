@@ -78,7 +78,9 @@ fn completion_path(shell: Shell) -> Result<std::path::PathBuf> {
             let xdg = std::env::var("XDG_DATA_HOME")
                 .map(std::path::PathBuf::from)
                 .unwrap_or_else(|_| home.join(".local").join("share"));
-            xdg.join("bash-completion").join("completions").join("kelvin")
+            xdg.join("bash-completion")
+                .join("completions")
+                .join("kelvin")
         }
         Shell::Zsh => home.join(".zsh").join("completions").join("_kelvin"),
         Shell::Fish => home

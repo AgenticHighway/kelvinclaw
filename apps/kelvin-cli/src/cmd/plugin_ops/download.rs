@@ -124,14 +124,8 @@ pub fn select_plugin_entry<'a>(
     let best = candidates
         .into_iter()
         .max_by(|a, b| {
-            let va = a
-                .get("version")
-                .and_then(|v| v.as_str())
-                .unwrap_or("0.0.0");
-            let vb = b
-                .get("version")
-                .and_then(|v| v.as_str())
-                .unwrap_or("0.0.0");
+            let va = a.get("version").and_then(|v| v.as_str()).unwrap_or("0.0.0");
+            let vb = b.get("version").and_then(|v| v.as_str()).unwrap_or("0.0.0");
             compare_semver(va, vb)
         })
         .unwrap();
@@ -147,10 +141,7 @@ fn compare_semver(a: &str, b: &str) -> std::cmp::Ordering {
     let parse = |s: &str| {
         let base = s.split('+').next().unwrap_or(s);
         let base = base.split('-').next().unwrap_or(base);
-        let parts: Vec<u64> = base
-            .split('.')
-            .map(|p| p.parse().unwrap_or(0))
-            .collect();
+        let parts: Vec<u64> = base.split('.').map(|p| p.parse().unwrap_or(0)).collect();
         parts
     };
     parse(a).cmp(&parse(b))
@@ -169,6 +160,7 @@ pub fn fetch_trust_policy(url: &str) -> Result<serde_json::Value> {
             .with_context(|| format!("failed to fetch trust policy from {}", url))?
             .error_for_status()
             .with_context(|| format!("HTTP error fetching trust policy from {}", url))?;
-        resp.json().with_context(|| "failed to parse trust policy JSON")
+        resp.json()
+            .with_context(|| "failed to parse trust policy JSON")
     })
 }

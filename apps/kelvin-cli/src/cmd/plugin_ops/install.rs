@@ -194,7 +194,10 @@ pub fn install_from_index(
     if let Some(trust_url) = entry.get("trust_policy_url").and_then(|v| v.as_str()) {
         if !trust_url.is_empty() {
             if let Err(e) = merge_trust_policy(trust_url) {
-                eprintln!("[kelvin] warning: could not merge trust policy from {}: {}", trust_url, e);
+                eprintln!(
+                    "[kelvin] warning: could not merge trust policy from {}: {}",
+                    trust_url, e
+                );
             }
         }
     }
@@ -207,7 +210,11 @@ pub fn install_from_index(
 fn tempdir() -> Result<PathBuf> {
     let dir = std::env::temp_dir().join(format!(
         "kelvin-plugin-{}",
-        uuid::Uuid::new_v4().to_string().split('-').next().unwrap_or("tmp")
+        uuid::Uuid::new_v4()
+            .to_string()
+            .split('-')
+            .next()
+            .unwrap_or("tmp")
     ));
     std::fs::create_dir_all(&dir)?;
     Ok(dir)
@@ -221,7 +228,10 @@ fn extract_tarball(tarball: &Path, dest: &Path) -> Result<()> {
     archive.set_preserve_permissions(false);
     archive.set_ignore_zeros(true);
 
-    for entry in archive.entries().context("failed to read tarball entries")? {
+    for entry in archive
+        .entries()
+        .context("failed to read tarball entries")?
+    {
         let mut entry = entry.context("failed to read tarball entry")?;
         let entry_path = entry.path().context("invalid entry path")?;
 
@@ -358,7 +368,10 @@ fn merge_trust_policy(trust_url: &str) -> Result<()> {
 
     if let Some(incoming_pubs) = incoming.get("publishers").and_then(|v| v.as_array()) {
         for incoming_pub in incoming_pubs {
-            let id = incoming_pub.get("id").and_then(|v| v.as_str()).unwrap_or("");
+            let id = incoming_pub
+                .get("id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
             // Replace existing entry with same id, or append.
             if let Some(pos) = base_pubs
                 .iter()

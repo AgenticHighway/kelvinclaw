@@ -123,9 +123,7 @@ pub fn run(args: MedkitArgs) -> Result<()> {
         println!();
         println!(
             "Summary: {}✔ {} passed{} | {}⚠ {} warnings{} | {}✘ {} failed{}",
-            GREEN, mk.pass, RESET,
-            YELLOW, mk.warn, RESET,
-            RED, mk.fail, RESET,
+            GREEN, mk.pass, RESET, YELLOW, mk.warn, RESET, RED, mk.fail, RESET,
         );
     }
 
@@ -201,7 +199,10 @@ fn check_prerequisites(mk: &mut Medkit) {
                 .unwrap_or_default();
             mk.pass(format!("{}{}", cmd, ver));
         } else {
-            mk.warn(format!("{} not found (optional for dev builds)", cmd), *hint);
+            mk.warn(
+                format!("{} not found (optional for dev builds)", cmd),
+                *hint,
+            );
         }
     }
 }
@@ -212,9 +213,18 @@ fn check_directories(mk: &mut Medkit) {
     }
 
     let dirs = vec![
-        (paths::kelvin_home(), format!("KELVIN_HOME ({})", paths::kelvin_home().display())),
-        (paths::plugin_home(), format!("Plugin home ({})", paths::plugin_home().display())),
-        (paths::state_dir(), format!("State directory ({})", paths::state_dir().display())),
+        (
+            paths::kelvin_home(),
+            format!("KELVIN_HOME ({})", paths::kelvin_home().display()),
+        ),
+        (
+            paths::plugin_home(),
+            format!("Plugin home ({})", paths::plugin_home().display()),
+        ),
+        (
+            paths::state_dir(),
+            format!("State directory ({})", paths::state_dir().display()),
+        ),
     ];
 
     for (dir, label) in dirs {
@@ -318,23 +328,38 @@ fn check_trust_policy(mk: &mut Medkit) {
             .and_then(|b| serde_json::from_slice::<serde_json::Value>(&b).ok())
         {
             Some(v) => {
-                let req_sig = v.get("require_signature").and_then(|v| v.as_bool()).unwrap_or(false);
-                let pub_count = v.get("publishers").and_then(|v| v.as_array()).map(|a| a.len()).unwrap_or(0);
+                let req_sig = v
+                    .get("require_signature")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+                let pub_count = v
+                    .get("publishers")
+                    .and_then(|v| v.as_array())
+                    .map(|a| a.len())
+                    .unwrap_or(0);
                 mk.pass(format!(
                     "Trust policy: {} (require_signature={}, {} publishers)",
-                    trust_path.display(), req_sig, pub_count
+                    trust_path.display(),
+                    req_sig,
+                    pub_count
                 ));
             }
             None => {
                 mk.fail(
                     "Trust policy is invalid JSON",
-                    Some(&format!("Delete and re-create: rm {}", trust_path.display())),
+                    Some(&format!(
+                        "Delete and re-create: rm {}",
+                        trust_path.display()
+                    )),
                 );
             }
         }
     } else if mk.fix {
         let _ = std::fs::create_dir_all(trust_path.parent().unwrap_or(Path::new(".")));
-        match std::fs::write(&trust_path, r#"{"require_signature":false,"publishers":[]}"#) {
+        match std::fs::write(
+            &trust_path,
+            r#"{"require_signature":false,"publishers":[]}"#,
+        ) {
             Ok(_) => mk.pass(format!("Trust policy created: {}", trust_path.display())),
             Err(e) => mk.fail(format!("Trust policy missing (create failed: {})", e), None),
         }
@@ -353,7 +378,10 @@ fn check_plugins(mk: &mut Medkit) {
 
     let plugin_home = paths::plugin_home();
     if !plugin_home.exists() {
-        mk.warn("No plugins installed", Some("Run: kelvin plugin install kelvin.cli"));
+        mk.warn(
+            "No plugins installed",
+            Some("Run: kelvin plugin install kelvin.cli"),
+        );
         return;
     }
 
@@ -366,7 +394,10 @@ fn check_plugins(mk: &mut Medkit) {
     };
 
     if installed.is_empty() {
-        mk.warn("No plugins installed", Some("Run: kelvin plugin install kelvin.cli"));
+        mk.warn(
+            "No plugins installed",
+            Some("Run: kelvin plugin install kelvin.cli"),
+        );
     }
 
     let mut cli_installed = false;
@@ -449,7 +480,10 @@ fn check_plugin_index(mk: &mut Medkit) {
                 .and_then(|p| p.as_array())
                 .map(|a| a.len())
                 .unwrap_or(0);
-            mk.pass(format!("Plugin index reachable ({}, {} plugins)", index_url, count));
+            mk.pass(format!(
+                "Plugin index reachable ({}, {} plugins)",
+                index_url, count
+            ));
         }
         Err(e) => {
             mk.warn(
@@ -495,7 +529,10 @@ fn check_binaries(mk: &mut Medkit) {
     let bin_dir = paths::binary_dir();
     for (name, build_hint) in &[
         ("kelvin-gateway", "cargo build -p kelvin-gateway"),
-        ("kelvin-memory-controller", "cargo build -p kelvin-memory-controller"),
+        (
+            "kelvin-memory-controller",
+            "cargo build -p kelvin-memory-controller",
+        ),
         ("kelvin-tui", "cargo build -p kelvin-tui"),
     ] {
         let bin = bin_dir.join(name);
@@ -530,7 +567,8 @@ fn check_security(mk: &mut Medkit) {
         .or_else(|_| std::env::var("KELVIN_GATEWAY_ADDR"))
         .unwrap_or_else(|_| "127.0.0.1:34617".to_string());
 
-    let is_loopback = bind.starts_with("127.") || bind.starts_with("::1") || bind.starts_with("localhost");
+    let is_loopback =
+        bind.starts_with("127.") || bind.starts_with("::1") || bind.starts_with("localhost");
     if is_loopback {
         mk.pass(format!("Gateway bound to loopback ({})", bind));
     } else {
@@ -557,7 +595,10 @@ fn check_security(mk: &mut Medkit) {
         if content.contains(".env") {
             mk.pass(".env is in .gitignore");
         } else {
-            mk.warn(".env not found in .gitignore", Some("Add .env to .gitignore to avoid leaking secrets"));
+            mk.warn(
+                ".env not found in .gitignore",
+                Some("Add .env to .gitignore to avoid leaking secrets"),
+            );
         }
     }
 }

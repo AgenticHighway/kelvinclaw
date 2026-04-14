@@ -27,11 +27,9 @@ pub fn run(args: TuiArgs) -> Result<()> {
         );
     }
 
-    let gateway_url = args
-        .gateway_url
-        .unwrap_or_else(|| {
-            std::env::var("KELVIN_GATEWAY_URL").unwrap_or_else(|_| DEFAULT_GATEWAY_URL.to_string())
-        });
+    let gateway_url = args.gateway_url.unwrap_or_else(|| {
+        std::env::var("KELVIN_GATEWAY_URL").unwrap_or_else(|_| DEFAULT_GATEWAY_URL.to_string())
+    });
 
     let mut cmd_args = vec!["--gateway-url".to_string(), gateway_url];
 

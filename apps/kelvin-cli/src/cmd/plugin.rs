@@ -39,7 +39,13 @@ fn cmd_install(args: PluginInstallArgs) -> Result<()> {
         .id
         .ok_or_else(|| anyhow::anyhow!("provide a plugin <id> or --package <path>"))?;
     let url = index_url();
-    super::plugin_ops::install_from_index(&id, args.version.as_deref(), &plugin_home, &url, args.force)
+    super::plugin_ops::install_from_index(
+        &id,
+        args.version.as_deref(),
+        &plugin_home,
+        &url,
+        args.force,
+    )
 }
 
 fn cmd_uninstall(args: PluginUninstallArgs) -> Result<()> {
@@ -135,7 +141,11 @@ fn cmd_update(args: PluginUpdateArgs) -> Result<()> {
 
         let tmp = std::env::temp_dir().join(format!(
             "kelvin-update-{}",
-            uuid::Uuid::new_v4().to_string().split('-').next().unwrap_or("tmp")
+            uuid::Uuid::new_v4()
+                .to_string()
+                .split('-')
+                .next()
+                .unwrap_or("tmp")
         ));
         std::fs::create_dir_all(&tmp)?;
         let tarball = tmp.join("plugin.tar.gz");
@@ -176,11 +186,21 @@ fn cmd_search(query: Option<&str>) -> Result<()> {
         {
             continue;
         }
-        println!("{} {} — {}", id, version, if desc.is_empty() { name } else { desc });
+        println!(
+            "{} {} — {}",
+            id,
+            version,
+            if desc.is_empty() { name } else { desc }
+        );
         found = true;
     }
     if !found {
-        println!("No plugins found{}", query.map(|q| format!(" matching '{}'", q)).unwrap_or_default());
+        println!(
+            "No plugins found{}",
+            query
+                .map(|q| format!(" matching '{}'", q))
+                .unwrap_or_default()
+        );
     }
     Ok(())
 }
@@ -229,10 +249,12 @@ fn cmd_status() -> Result<()> {
     }
     for (id, version) in &installed {
         let current = plugin_home.join(id).join("current");
-        let wasm_present = current
-            .join("payload")
-            .exists();
-        let status = if wasm_present { "ok" } else { "missing payload" };
+        let wasm_present = current.join("payload").exists();
+        let status = if wasm_present {
+            "ok"
+        } else {
+            "missing payload"
+        };
         println!("{} {} [{}]", id, version, status);
     }
     Ok(())
