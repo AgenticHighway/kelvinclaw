@@ -214,3 +214,86 @@ jobs:
                       release-assets/*.deb.sha256
                   fail_on_unmatched_files: true
                   generate_release_notes: true
+
+    update-homebrew-tap:
+        name: Update Homebrew Tap
+        if: ${{ github.event_name == 'push' }}
+        needs:
+            - resolve-version
+            - publish
+        runs-on: blacksmith-2vcpu-ubuntu-2404
+        timeout-minutes: 15
+        permissions:
+            contents: read
+        env:
+            HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+            RELEASE_VERSION: ${{ needs.resolve-version.outputs.version }}
+        steps:
+            - name: Skip when tap token is not configured
+              if: env.HOMEBREW_TAP_TOKEN == ''
+              run: echo "HOMEBREW_TAP_TOKEN not configured; skipping Homebrew tap refresh."
+
+            - name: Download release artifacts
+              if: env.HOMEBREW_TAP_TOKEN != ''
+              uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+              with:
+                  path: release-assets
+                  merge-multiple: true
+
+            - name: Checkout Homebrew tap
+              if: env.HOMEBREW_TAP_TOKEN != ''
+              uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+              with:
+                  repository: AgenticHighway/homebrew-tap
+                  ref: main
+                  token: ${{ env.HOMEBREW_TAP_TOKEN }}
+                  path: homebrew-tap
+
+            - name: Update Formula/kelvinclaw.rb
+              if: env.HOMEBREW_TAP_TOKEN != ''
+              working-directory: homebrew-tap
+              run: |
+                  set -euo pipefail
+                  export MACOS_ARM64_SHA="$(sha256sum ../release-assets/kelvinclaw-${RELEASE_VERSION}-macos-arm64.tar.gz | awk '{print $1}')"
+                  export MACOS_X86_64_SHA="$(sha256sum ../release-assets/kelvinclaw-${RELEASE_VERSION}-macos-x86_64.tar.gz | awk '{print $1}')"
+                  export LINUX_ARM64_SHA="$(sha256sum ../release-assets/kelvinclaw-${RELEASE_VERSION}-linux-arm64.tar.gz | awk '{print $1}')"
+                  export LINUX_X86_64_SHA="$(sha256sum ../release-assets/kelvinclaw-${RELEASE_VERSION}-linux-x86_64.tar.gz | awk '{print $1}')"
+
+                  ruby <<'RUBY'
+                  path = "Formula/kelvinclaw.rb"
+                  text = File.read(path)
+
+                  replacements = {
+                    /version "\d+\.\d+\.\d+"/ => %(version "#{ENV.fetch("RELEASE_VERSION")}"),
+                    /(macos-arm64\.tar\.gz"\n\s+sha256 ")([0-9a-f]+)"/ => "\\1#{ENV.fetch("MACOS_ARM64_SHA")}\"",
+                    /(macos-x86_64\.tar\.gz"\n\s+sha256 ")([0-9a-f]+)"/ => "\\1#{ENV.fetch("MACOS_X86_64_SHA")}\"",
+                    /(linux-arm64\.tar\.gz"\n\s+sha256 ")([0-9a-f]+)"/ => "\\1#{ENV.fetch("LINUX_ARM64_SHA")}\"",
+                    /(linux-x86_64\.tar\.gz"\n\s+sha256 ")([0-9a-f]+)"/ => "\\1#{ENV.fetch("LINUX_X86_64_SHA")}\""
+                  }
+
+                  replacements.each do |pattern, replacement|
+                    updated = text.sub(pattern, replacement)
+                    raise "failed to update #{pattern.inspect}" if updated == text
+                    text = updated
+                  end
+
+                  File.write(path, text)
+                  RUBY
+
+                  git --no-pager diff -- Formula/kelvinclaw.rb
+
+            - name: Commit and push formula
+              if: env.HOMEBREW_TAP_TOKEN != ''
+              working-directory: homebrew-tap
+              run: |
+                  set -euo pipefail
+                  if git diff --quiet -- Formula/kelvinclaw.rb; then
+                    echo "Formula already up to date."
+                    exit 0
+                  fi
+
+                  git config user.name "github-actions[bot]"
+                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+                  git add Formula/kelvinclaw.rb
+                  git commit -m "kelvinclaw ${RELEASE_VERSION}"
+                  git push origin HEAD:main
