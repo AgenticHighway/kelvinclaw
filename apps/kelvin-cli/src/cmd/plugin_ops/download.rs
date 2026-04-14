@@ -160,3 +160,15 @@ fn compare_semver(a: &str, b: &str) -> std::cmp::Ordering {
 pub fn download_tarball(package_url: &str, expected_sha256: &str, dest_path: &Path) -> Result<()> {
     download_and_verify(package_url, expected_sha256, dest_path)
 }
+
+/// Fetches a trust policy JSON document from a URL and returns the parsed value.
+pub fn fetch_trust_policy(url: &str) -> Result<serde_json::Value> {
+    let url = url.to_string();
+    run_blocking_http(move || {
+        let resp = reqwest::blocking::get(&url)
+            .with_context(|| format!("failed to fetch trust policy from {}", url))?
+            .error_for_status()
+            .with_context(|| format!("HTTP error fetching trust policy from {}", url))?;
+        resp.json().with_context(|| "failed to parse trust policy JSON")
+    })
+}

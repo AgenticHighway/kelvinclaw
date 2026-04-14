@@ -31,6 +31,9 @@ pub fn run(args: InitArgs) -> Result<()> {
     std::fs::create_dir_all(&home)
         .with_context(|| format!("failed to create {}", home.display()))?;
 
+    // Write permissive trust policy so plugins load before the user runs `kelvin start`.
+    super::start::ensure_trust_policy()?;
+
     // Generate gateway token.
     let token_bytes: [u8; 32] = rand::random();
     let gateway_token = hex::encode(token_bytes);

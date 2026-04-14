@@ -188,7 +188,18 @@ pub fn install_from_index(
     let tarball_path = work_dir.join("plugin.tar.gz");
     download::download_tarball(package_url, expected_sha, &tarball_path)?;
 
-    install_package(&tarball_path, plugin_home, force)
+    install_package(&tarball_path, plugin_home, force)?;
+
+    // Merge publisher trust entries from the index if a trust_policy_url is present.
+    if let Some(trust_url) = entry.get("trust_policy_url").and_then(|v| v.as_str()) {
+        if !trust_url.is_empty() {
+            if let Err(e) = merge_trust_policy(trust_url) {
+                eprintln!("[kelvin] warning: could not merge trust policy from {}: {}", trust_url, e);
+            }
+        }
+    }
+
+    Ok(())
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -305,5 +316,68 @@ fn update_current_link(current_link: &Path, version: &str) -> Result<()> {
         std::fs::remove_dir_all(current_link)?;
     }
     copy_dir_all(&version_dir, current_link)?;
+    Ok(())
+}
+
+/// Fetches a trust policy URL and merges its publishers into the local trust policy file.
+///
+/// Merge rules (per index schema):
+/// - `require_signature` = base && incoming (stays strict if either side is strict)
+/// - `publishers` merged by `id` (incoming entry wins for duplicates)
+fn merge_trust_policy(trust_url: &str) -> Result<()> {
+    let incoming: serde_json::Value = download::fetch_trust_policy(trust_url)?;
+
+    let trust_path = crate::paths::trust_policy_path();
+
+    // Read existing policy, or start with a permissive default.
+    let mut base: serde_json::Value = if trust_path.exists() {
+        let bytes = std::fs::read(&trust_path)
+            .with_context(|| format!("failed to read {}", trust_path.display()))?;
+        serde_json::from_slice(&bytes)
+            .with_context(|| format!("failed to parse {}", trust_path.display()))?
+    } else {
+        serde_json::json!({"require_signature": false, "publishers": []})
+    };
+
+    // Merge require_signature: base && incoming (strict wins).
+    let base_strict = base
+        .get("require_signature")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    let incoming_strict = incoming
+        .get("require_signature")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    base["require_signature"] = serde_json::Value::Bool(base_strict || incoming_strict);
+
+    // Merge publishers by id (incoming wins for duplicates).
+    let base_pubs = base
+        .get_mut("publishers")
+        .and_then(|v| v.as_array_mut())
+        .ok_or_else(|| anyhow::anyhow!("trust policy missing 'publishers' array"))?;
+
+    if let Some(incoming_pubs) = incoming.get("publishers").and_then(|v| v.as_array()) {
+        for incoming_pub in incoming_pubs {
+            let id = incoming_pub.get("id").and_then(|v| v.as_str()).unwrap_or("");
+            // Replace existing entry with same id, or append.
+            if let Some(pos) = base_pubs
+                .iter()
+                .position(|p| p.get("id").and_then(|v| v.as_str()) == Some(id))
+            {
+                base_pubs[pos] = incoming_pub.clone();
+            } else {
+                base_pubs.push(incoming_pub.clone());
+            }
+        }
+    }
+
+    if let Some(parent) = trust_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    let merged = serde_json::to_string_pretty(&base).context("failed to serialize trust policy")?;
+    std::fs::write(&trust_path, merged)
+        .with_context(|| format!("failed to write {}", trust_path.display()))?;
+
+    eprintln!("[kelvin] merged trust policy: {}", trust_path.display());
     Ok(())
 }
