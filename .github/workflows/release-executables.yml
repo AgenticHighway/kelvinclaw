@@ -53,9 +53,40 @@ jobs:
                   fi
                   echo "version=${normalized_version}" >> "${GITHUB_OUTPUT}"
 
+    verify-release-state:
+        name: Verify Release State
+        needs: [resolve-version]
+        runs-on: blacksmith-2vcpu-ubuntu-2404
+        timeout-minutes: 10
+        env:
+            RELEASE_VERSION: ${{ needs.resolve-version.outputs.version }}
+        steps:
+            - name: Checkout
+              uses: useblacksmith/checkout@41cdeedae8edb2e684ba22896a5fd2a3cb85db6b
+              with:
+                  persist-credentials: false
+
+            - name: Setup Rust
+              uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9
+              with:
+                  toolchain: stable
+
+            - name: Verify tag matches workspace version
+              if: ${{ github.event_name == 'push' }}
+              run: |
+                  set -euo pipefail
+                  workspace_version="$(awk -F'"' '/^version = "/ {print $2; exit}' Cargo.toml)"
+                  if [[ "${workspace_version}" != "${RELEASE_VERSION}" ]]; then
+                    echo "Tag version (${RELEASE_VERSION}) does not match Cargo.toml (${workspace_version})." >&2
+                    exit 1
+                  fi
+
+            - name: Verify Cargo.lock is up to date
+              run: cargo metadata --format-version 1 --locked > /dev/null
+
     build-linux:
         name: Build Linux (${{ matrix.target }})
-        needs: [resolve-version]
+        needs: [resolve-version, verify-release-state]
         runs-on: ${{ matrix.runner }}
         timeout-minutes: 60
         env:
@@ -101,7 +132,7 @@ jobs:
 
     build-macos:
         name: Build macOS (${{ matrix.target }})
-        needs: [resolve-version]
+        needs: [resolve-version, verify-release-state]
         runs-on: ${{ matrix.runner }}
         timeout-minutes: 60
         env:
@@ -143,7 +174,7 @@ jobs:
 
     build-windows:
         name: Build Windows (${{ matrix.target }})
-        needs: [resolve-version]
+        needs: [resolve-version, verify-release-state]
         runs-on: ${{ matrix.runner }}
         timeout-minutes: 60
         env:
