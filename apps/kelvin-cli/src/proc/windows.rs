@@ -51,9 +51,9 @@ pub fn spawn_detached(
 }
 
 pub fn is_running(pid: u32) -> bool {
-    use sysinfo::{Pid, System};
+    use sysinfo::{Pid, ProcessesToUpdate, System};
     let mut sys = System::new();
-    sys.refresh_process(Pid::from_u32(pid));
+    sys.refresh_processes(ProcessesToUpdate::Some(&[Pid::from_u32(pid)]), false);
     sys.process(Pid::from_u32(pid)).is_some()
 }
 
@@ -74,7 +74,7 @@ pub fn stop(pid: u32, grace_ms: u64) -> Result<()> {
                 OpenProcess, TerminateProcess, PROCESS_TERMINATE,
             };
             let handle = OpenProcess(PROCESS_TERMINATE, 0, pid);
-            if !handle.is_null() {
+            if handle != 0 {
                 TerminateProcess(handle, 1);
                 windows_sys::Win32::Foundation::CloseHandle(handle);
             }
