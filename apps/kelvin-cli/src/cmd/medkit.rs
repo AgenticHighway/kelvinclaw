@@ -135,34 +135,39 @@ pub fn run(args: MedkitArgs) -> Result<()> {
     Ok(())
 }
 
+/// Returns true if the named binary exists anywhere in PATH.
+/// Distinguishes "binary not found" (Err with NotFound) from "binary ran but
+/// exited non-zero" — the latter still means the binary is present.
 fn check_command_exists(name: &str) -> bool {
-    std::process::Command::new(name)
-        .arg("--version")
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or_else(|_| {
-            // Fallback: try with --help for commands that don't support --version
-            std::process::Command::new(name)
-                .arg("--help")
-                .output()
-                .map(|_| true)
-                .unwrap_or(false)
-        })
+    let args = version_args(name);
+    match std::process::Command::new(name).args(args).output() {
+        Ok(_) => true, // ran successfully (any exit code — binary exists)
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => false,
+        Err(_) => true, // some other OS error; binary likely exists
+    }
+}
+
+/// Returns the version string args for a given command.
+/// `openssl` uses `openssl version` (subcommand), not `--version`.
+fn version_args(name: &str) -> &'static [&'static str] {
+    match name {
+        "openssl" => &["version"],
+        _ => &["--version"],
+    }
 }
 
 fn which_version(name: &str) -> Option<String> {
-    std::process::Command::new(name)
-        .arg("--version")
-        .output()
-        .ok()
-        .and_then(|o| {
-            let s = String::from_utf8_lossy(&o.stdout).trim().to_string();
-            if s.is_empty() {
-                None
-            } else {
-                Some(s.lines().next().unwrap_or(&s).to_string())
-            }
-        })
+    let args = version_args(name);
+    let output = std::process::Command::new(name).args(args).output().ok()?;
+    // Some tools print version to stderr (e.g. openssl), try both.
+    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+    let s = if !stdout.is_empty() { stdout } else { stderr };
+    if s.is_empty() {
+        None
+    } else {
+        Some(s.lines().next().unwrap_or(&s).to_string())
+    }
 }
 
 fn check_prerequisites(mk: &mut Medkit) {
@@ -425,13 +430,19 @@ fn check_plugin_index(mk: &mut Medkit) {
     }
 
     let resolved = super::plugin_ops::download::resolve_index_url(&index_url);
-    match reqwest::blocking::Client::builder()
-        .timeout(std::time::Duration::from_secs(10))
-        .build()
-        .and_then(|c| c.get(&resolved).send())
-        .and_then(|r| r.error_for_status())
-        .and_then(|r| r.json::<serde_json::Value>())
-    {
+    let result: Result<serde_json::Value, String> = std::thread::spawn(move || {
+        reqwest::blocking::Client::builder()
+            .timeout(std::time::Duration::from_secs(10))
+            .build()
+            .and_then(|c| c.get(&resolved).send())
+            .and_then(|r| r.error_for_status())
+            .and_then(|r| r.json::<serde_json::Value>())
+            .map_err(|e| e.to_string())
+    })
+    .join()
+    .unwrap_or_else(|_| Err("thread panicked".to_string()));
+
+    match result {
         Ok(index) => {
             let count = index
                 .get("plugins")

@@ -30,6 +30,10 @@ fn cmd_start(args: GatewayStartArgs) -> Result<()> {
         );
     }
 
+    // Ensure required files/dirs exist (mirrors what kelvin-gateway.sh::ensure_trust_policy did).
+    std::fs::create_dir_all(paths::plugin_home())?;
+    crate::cmd::start::ensure_trust_policy()?;
+
     let state_dir = paths::state_dir();
     std::fs::create_dir_all(&state_dir)?;
 
@@ -52,9 +56,14 @@ fn cmd_start(args: GatewayStartArgs) -> Result<()> {
 
     gateway_args.extend(args.gateway_args.clone());
 
+    // Inject tilde-expanded paths so the gateway subprocess never sees a literal
+    // `~` inherited from a dotenv file — the OS does not expand tildes in env vars.
+    let resolved_env = resolved_path_env(&state_dir);
+
     if args.foreground {
         let status = std::process::Command::new(&bin)
             .args(&gateway_args)
+            .envs(resolved_env.iter().map(|(k, v)| (k.as_str(), v.as_str())))
             .status()?;
         std::process::exit(status.code().unwrap_or(1));
     }
@@ -77,7 +86,7 @@ fn cmd_start(args: GatewayStartArgs) -> Result<()> {
 
     std::fs::create_dir_all(paths::log_dir())?;
     let log = paths::gateway_log_path();
-    let pid = proc::spawn_detached(&bin, &gateway_args, &[], &log, &pid_file)?;
+    let pid = proc::spawn_detached(&bin, &gateway_args, &resolved_env, &log, &pid_file)?;
     println!("[kelvin-gateway] started (pid={})", pid);
     println!("[kelvin-gateway] log: {}", log.display());
     println!("[kelvin-gateway] pid: {}", pid_file.display());
@@ -169,6 +178,35 @@ fn cmd_approve_pairing(code: &str) -> Result<()> {
     }
     let status = std::process::Command::new(&bin).args(&cmd_args).status()?;
     std::process::exit(status.code().unwrap_or(1));
+}
+
+/// Returns env var overrides with tilde-expanded, absolute paths for all
+/// path-type vars the gateway reads. This prevents the subprocess from
+/// inheriting literal `~` values loaded from a dotenv file.
+fn resolved_path_env(state_dir: &std::path::Path) -> Vec<(String, String)> {
+    let mut vars = vec![
+        (
+            "KELVIN_HOME".to_string(),
+            paths::kelvin_home().to_string_lossy().to_string(),
+        ),
+        (
+            "KELVIN_PLUGIN_HOME".to_string(),
+            paths::plugin_home().to_string_lossy().to_string(),
+        ),
+        (
+            "KELVIN_TRUST_POLICY_PATH".to_string(),
+            paths::trust_policy_path().to_string_lossy().to_string(),
+        ),
+        (
+            "KELVIN_STATE_DIR".to_string(),
+            state_dir.to_string_lossy().to_string(),
+        ),
+    ];
+    // Forward memory controller address if set.
+    if let Ok(addr) = std::env::var("KELVIN_MEMORY_CONTROLLER_ADDR") {
+        vars.push(("KELVIN_MEMORY_CONTROLLER_ADDR".to_string(), addr));
+    }
+    vars
 }
 
 fn format_uptime(secs: u64) -> String {

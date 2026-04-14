@@ -129,6 +129,7 @@ pub struct MemoryStartArgs {
 #[derive(Subcommand, Debug, Clone)]
 pub enum PluginCmd {
     /// Install a plugin
+    #[command(disable_version_flag = true)]
     Install(PluginInstallArgs),
     /// Uninstall a plugin
     Uninstall(PluginUninstallArgs),

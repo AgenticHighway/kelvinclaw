@@ -4,40 +4,57 @@ use std::path::Path;
 use anyhow::{bail, Context, Result};
 use sha2::{Digest, Sha256};
 
-/// Downloads a URL to a temp file, verifies the sha256, and returns the path.
-/// Caller is responsible for cleaning up the temp dir.
+/// Runs a closure on a dedicated OS thread so that `reqwest::blocking` calls
+/// never panic when invoked from inside a tokio runtime context.
+/// (`reqwest::blocking` creates its own runtime internally; nesting panics.)
+fn run_blocking_http<F, T>(f: F) -> Result<T>
+where
+    F: FnOnce() -> Result<T> + Send + 'static,
+    T: Send + 'static,
+{
+    std::thread::spawn(f)
+        .join()
+        .map_err(|_| anyhow::anyhow!("HTTP worker thread panicked"))?
+}
+
+/// Downloads a URL to `dest`, verifying the sha256 checksum.
 pub fn download_and_verify(url: &str, expected_sha256: &str, dest: &Path) -> Result<()> {
     eprintln!("[kelvin] downloading: {}", url);
 
-    let response = reqwest::blocking::get(url)
-        .with_context(|| format!("failed to GET {}", url))?
-        .error_for_status()
-        .with_context(|| format!("HTTP error fetching {}", url))?;
+    let url = url.to_string();
+    let expected_sha256 = expected_sha256.to_string();
+    let dest = dest.to_path_buf();
 
-    let bytes = response
-        .bytes()
-        .with_context(|| format!("failed to read response body from {}", url))?;
+    run_blocking_http(move || {
+        let response = reqwest::blocking::get(&url)
+            .with_context(|| format!("failed to GET {}", url))?
+            .error_for_status()
+            .with_context(|| format!("HTTP error fetching {}", url))?;
 
-    // Verify sha256.
-    let mut hasher = Sha256::new();
-    hasher.update(&bytes);
-    let actual = format!("{:x}", hasher.finalize());
+        let bytes = response
+            .bytes()
+            .with_context(|| format!("failed to read response body from {}", url))?;
 
-    if actual != expected_sha256 {
-        bail!(
-            "checksum mismatch for {}\n  expected: {}\n  actual:   {}",
-            url,
-            expected_sha256,
-            actual
-        );
-    }
+        let mut hasher = Sha256::new();
+        hasher.update(&bytes);
+        let actual = format!("{:x}", hasher.finalize());
 
-    let mut f = std::fs::File::create(dest)
-        .with_context(|| format!("failed to create {}", dest.display()))?;
-    f.write_all(&bytes)
-        .with_context(|| format!("failed to write to {}", dest.display()))?;
+        if actual != expected_sha256 {
+            bail!(
+                "checksum mismatch for {}\n  expected: {}\n  actual:   {}",
+                url,
+                expected_sha256,
+                actual
+            );
+        }
 
-    Ok(())
+        let mut f = std::fs::File::create(&dest)
+            .with_context(|| format!("failed to create {}", dest.display()))?;
+        f.write_all(&bytes)
+            .with_context(|| format!("failed to write to {}", dest.display()))?;
+
+        Ok(())
+    })
 }
 
 /// Fetches a plugin index from a URL and returns the parsed JSON value.
@@ -45,14 +62,14 @@ pub fn fetch_index(index_url: &str) -> Result<serde_json::Value> {
     let url = resolve_index_url(index_url);
     eprintln!("[kelvin] fetching index: {}", url);
 
-    let resp = reqwest::blocking::get(&url)
-        .with_context(|| format!("failed to fetch index from {}", url))?
-        .error_for_status()
-        .with_context(|| format!("HTTP error fetching index from {}", url))?;
+    let value: serde_json::Value = run_blocking_http(move || {
+        let resp = reqwest::blocking::get(&url)
+            .with_context(|| format!("failed to fetch index from {}", url))?
+            .error_for_status()
+            .with_context(|| format!("HTTP error fetching index from {}", url))?;
 
-    let value: serde_json::Value = resp
-        .json()
-        .with_context(|| "failed to parse index JSON")?;
+        resp.json().with_context(|| "failed to parse index JSON")
+    })?;
 
     if value.get("schema_version").and_then(|v| v.as_str()) != Some("v1") {
         bail!("invalid index: expected schema_version=v1");
