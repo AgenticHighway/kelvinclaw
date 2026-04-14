@@ -12,9 +12,7 @@ use kelvin_core::{
 };
 use kelvin_wasm::{ClawCall, SandboxPolicy, SandboxPreset, WasmSkillHost};
 
-const DEFAULT_MEMORY_APPEND_PATH: &str = "memory/skill-events.md";
-pub const WASM_SKILL_PLUGIN_ID: &str = "kelvin.wasm_skill";
-pub const WASM_SKILL_PLUGIN_NAME: &str = "Kelvin WASM Skill Tool";
+use crate::consts;
 
 /// ### Brief
 ///
@@ -51,7 +49,7 @@ impl WasmSkillTool {
             name: name.into(),
             host,
             default_policy,
-            default_memory_append_path: DEFAULT_MEMORY_APPEND_PATH.to_string(),
+            default_memory_append_path: consts::DEFAULT_MEMORY_APPEND_PATH.to_string(),
         }
     }
 
@@ -331,9 +329,9 @@ impl WasmSkillTool {
     /// - path is not a valid memory location
     /// - path doesnt resolve to a markdown file
     fn validate_memory_path_scope(&self, memory_rel_path: &str) -> KelvinResult<()> {
-        let is_memory_root = memory_rel_path == "MEMORY.md";
+        let is_memory_root = memory_rel_path == consts::MEMORY_ROOT_FILE;
         let is_memory_daily =
-            memory_rel_path.starts_with("memory/") && memory_rel_path.ends_with(".md");
+            memory_rel_path.starts_with(consts::MEMORY_PREFIX) && memory_rel_path.ends_with(".md");
         if !is_memory_root && !is_memory_daily {
             return Err(KelvinError::InvalidInput(
                 "memory append path must be MEMORY.md or memory/*.md".to_string(),
@@ -372,7 +370,9 @@ impl WasmSkillTool {
         args: &serde_json::Map<String, Value>,
         default_policy: SandboxPolicy,
     ) -> KelvinResult<SandboxPolicy> {
-        let mut policy = if let Some(raw) = self.optional_string(args, "policy_preset")? {
+        let mut policy = if let Some(raw) =
+            self.optional_string(args, consts::FIELD_POLICY_PRESET)?
+        {
             SandboxPreset::parse(&raw)
                 .ok_or_else(|| KelvinError::InvalidInput(format!("unknown policy preset: {raw}")))?
                 .policy()
@@ -380,19 +380,19 @@ impl WasmSkillTool {
             default_policy
         };
 
-        if let Some(value) = self.optional_bool(args, "allow_move_servo")? {
+        if let Some(value) = self.optional_bool(args, consts::FIELD_ALLOW_MOVE_SERVO)? {
             policy.allow_move_servo = value;
         }
-        if let Some(value) = self.optional_bool(args, "allow_fs_read")? {
+        if let Some(value) = self.optional_bool(args, consts::FIELD_ALLOW_FS_READ)? {
             policy.allow_fs_read = value;
         }
-        if let Some(hosts) = self.optional_string_array(args, "network_allow_hosts")? {
+        if let Some(hosts) = self.optional_string_array(args, consts::FIELD_NETWORK_ALLOW_HOSTS)? {
             policy.network_allow_hosts = hosts;
         }
-        if let Some(value) = self.optional_usize(args, "max_module_bytes")? {
+        if let Some(value) = self.optional_usize(args, consts::FIELD_MAX_MODULE_BYTES)? {
             policy.max_module_bytes = value;
         }
-        if let Some(value) = self.optional_u64(args, "fuel_budget")? {
+        if let Some(value) = self.optional_u64(args, consts::FIELD_FUEL_BUDGET)? {
             policy.fuel_budget = value;
         }
 
@@ -406,7 +406,7 @@ impl WasmSkillTool {
 impl Default for WasmSkillTool {
     fn default() -> Self {
         Self::new(
-            "wasm_skill",
+            consts::WASM_SKILL_TOOL_DEFAULT_NAME,
             Arc::new(WasmSkillHost::new()),
             SandboxPolicy::locked_down(),
         )
@@ -452,9 +452,9 @@ impl WasmSkillPlugin {
     /// default plugin manifest as a `PluginManifest`
     pub fn default_manifest() -> PluginManifest {
         PluginManifest {
-            id: WASM_SKILL_PLUGIN_ID.to_string(),
-            name: WASM_SKILL_PLUGIN_NAME.to_string(),
-            version: "0.1.0".to_string(),
+            id: consts::WASM_SKILL_PLUGIN_ID.to_string(),
+            name: consts::WASM_SKILL_PLUGIN_NAME.to_string(),
+            version: consts::WASM_SKILL_PLUGIN_VERSION.to_string(),
             api_version: KELVIN_CORE_API_VERSION.to_string(),
             description: Some(
                 "Sandboxed WebAssembly skill execution with workspace-scoped memory append."
@@ -467,7 +467,7 @@ impl WasmSkillPlugin {
                 PluginCapability::FsWrite,
             ],
             experimental: false,
-            min_core_version: Some("0.1.0".to_string()),
+            min_core_version: None,
             max_core_version: None,
         }
     }
@@ -506,8 +506,10 @@ impl Tool for WasmSkillTool {
 
     async fn call(&self, input: ToolCallInput) -> KelvinResult<ToolCallResult> {
         let args = self.require_args_object(&input.arguments)?;
-        let wasm_rel_path =
-            self.sanitize_rel_path(&self.require_string(args, "wasm_path")?, "wasm_path")?;
+        let wasm_rel_path = self.sanitize_rel_path(
+            &self.require_string(args, consts::FIELD_WASM_PATH)?,
+            consts::FIELD_WASM_PATH,
+        )?;
         let policy = self.resolve_policy(args, self.default_policy.clone())?;
 
         let workspace_dir = PathBuf::from(&input.workspace_dir);
@@ -515,13 +517,14 @@ impl Tool for WasmSkillTool {
         let execution = self.host.run_file(&wasm_path, policy)?;
 
         let memory_rel_path = self
-            .optional_string(args, "memory_append_path")?
+            .optional_string(args, consts::FIELD_MEMORY_APPEND_PATH)?
             .unwrap_or_else(|| self.default_memory_append_path.clone());
-        let memory_rel_path = self.sanitize_rel_path(&memory_rel_path, "memory_append_path")?;
+        let memory_rel_path =
+            self.sanitize_rel_path(&memory_rel_path, consts::FIELD_MEMORY_APPEND_PATH)?;
         self.validate_memory_path_scope(&memory_rel_path)?;
 
         let memory_entry = self
-            .optional_string(args, "memory_entry")?
+            .optional_string(args, consts::FIELD_MEMORY_ENTRY)?
             .unwrap_or_else(|| {
                 format!(
                     "run_id={} exit_code={} calls={}",
@@ -557,10 +560,10 @@ impl Tool for WasmSkillTool {
             calls_json.len()
         );
         let output = json!({
-            "wasm_path": wasm_rel_path,
-            "memory_path": memory_rel_path,
-            "exit_code": execution.exit_code,
-            "calls": calls_json,
+            consts::JSON_KEY_WASM_PATH: wasm_rel_path,
+            consts::JSON_KEY_MEMORY_PATH: memory_rel_path,
+            consts::JSON_KEY_EXIT_CODE: execution.exit_code,
+            consts::JSON_KEY_CALLS: calls_json,
         });
 
         Ok(ToolCallResult {
@@ -592,28 +595,28 @@ fn claw_call_label(call: &ClawCall) -> String {
 fn claw_call_json(call: &ClawCall) -> Value {
     match call {
         ClawCall::SendMessage { message_code } => json!({
-            "kind": "send_message",
+            consts::JSON_KEY_KIND: consts::CLAW_KIND_SEND_MESSAGE,
             "message_code": message_code,
         }),
         ClawCall::MoveServo { channel, position } => json!({
-            "kind": "move_servo",
+            consts::JSON_KEY_KIND: consts::CLAW_KIND_MOVE_SERVO,
             "channel": channel,
             "position": position,
         }),
         ClawCall::FsRead { handle } => json!({
-            "kind": "fs_read",
+            consts::JSON_KEY_KIND: consts::CLAW_KIND_FS_READ,
             "handle": handle,
         }),
         ClawCall::NetworkSend { packet } => json!({
-            "kind": "network_send",
+            consts::JSON_KEY_KIND: consts::CLAW_KIND_NETWORK_SEND,
             "packet": packet,
         }),
         ClawCall::HttpCall { url } => json!({
-            "kind": "http_call",
+            consts::JSON_KEY_KIND: consts::CLAW_KIND_HTTP_CALL,
             "url": url,
         }),
         ClawCall::EnvAccess { key } => json!({
-            "kind": "env_access",
+            consts::JSON_KEY_KIND: consts::CLAW_KIND_ENV_ACCESS,
             "key": key,
         }),
     }

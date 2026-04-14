@@ -166,19 +166,17 @@ pub struct ChatLineInfo {
     pub is_separator: bool,
 }
 
-const PASTE_THRESHOLD_LINES: usize = 3;
-const PASTE_THRESHOLD_BYTES: usize = 200;
-
 fn is_large_paste(text: &str) -> bool {
     let lines = text.lines().count();
-    lines >= PASTE_THRESHOLD_LINES || text.len() >= PASTE_THRESHOLD_BYTES
+    lines >= crate::consts::PASTE_THRESHOLD_LINES
+        || text.len() >= crate::consts::PASTE_THRESHOLD_BYTES
 }
 
 fn paste_label(text: &str) -> String {
     let lines = text.lines().count();
     let bytes = text.len();
     let size = if bytes >= 1024 {
-        format!("{:.1} KB", bytes as f64 / 1024.0)
+        format!("{:.1} KB", bytes as f64 / crate::consts::KB_DIVISOR)
     } else {
         format!("{bytes} B")
     };
@@ -477,11 +475,10 @@ impl App {
     }
 
     fn compact_chat(&mut self) {
-        const MAX_CHAT_MESSAGES: usize = 1000;
-        if self.chat.len() <= MAX_CHAT_MESSAGES {
+        if self.chat.len() <= crate::consts::MAX_CHAT_MESSAGES {
             return;
         }
-        let to_remove = self.chat.len() - MAX_CHAT_MESSAGES;
+        let to_remove = self.chat.len() - crate::consts::MAX_CHAT_MESSAGES;
         let prior_count = match self.chat.first() {
             Some(ChatMessage::System(s))
                 if s.starts_with('[') && s.contains("earlier messages omitted") =>
@@ -642,7 +639,7 @@ fn screen_to_chat_pos(col: u16, row: u16, app: &App) -> Option<ChatPos> {
 }
 
 fn screen_to_tools_row(row: u16, app: &App) -> Option<usize> {
-    let header_row = app.tools_area.y + 2; // top border + header row
+    let header_row = app.tools_area.y + crate::consts::TOOLS_HEADER_ROWS;
     if row < header_row {
         return None;
     }
@@ -742,27 +739,31 @@ fn display_col_to_byte(s: &str, col: usize) -> usize {
 fn copy_osc52(text: &str) {
     use std::io::Write;
     let encoded = base64_encode(text.as_bytes());
-    let _ = write!(std::io::stdout(), "\x1b]52;c;{}\x07", encoded);
+    let _ = write!(
+        std::io::stdout(),
+        "{}{}\x07",
+        crate::consts::OSC52_PREFIX,
+        encoded
+    );
     let _ = std::io::stdout().flush();
 }
 
 fn base64_encode(data: &[u8]) -> String {
-    const T: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let mut out = String::with_capacity(data.len().div_ceil(3) * 4);
     for chunk in data.chunks(3) {
         let b0 = chunk[0] as u32;
         let b1 = chunk.get(1).copied().unwrap_or(0) as u32;
         let b2 = chunk.get(2).copied().unwrap_or(0) as u32;
         let n = (b0 << 16) | (b1 << 8) | b2;
-        out.push(T[((n >> 18) & 0x3f) as usize] as char);
-        out.push(T[((n >> 12) & 0x3f) as usize] as char);
+        out.push(crate::consts::BASE64_ALPHABET[((n >> 18) & 0x3f) as usize] as char);
+        out.push(crate::consts::BASE64_ALPHABET[((n >> 12) & 0x3f) as usize] as char);
         out.push(if chunk.len() > 1 {
-            T[((n >> 6) & 0x3f) as usize] as char
+            crate::consts::BASE64_ALPHABET[((n >> 6) & 0x3f) as usize] as char
         } else {
             '='
         });
         out.push(if chunk.len() > 2 {
-            T[(n & 0x3f) as usize] as char
+            crate::consts::BASE64_ALPHABET[(n & 0x3f) as usize] as char
         } else {
             '='
         });
@@ -1168,10 +1169,10 @@ async fn run_loop(
                         if !app.input.trim().is_empty() {
                             let prompt = app.input.clone();
                             app.input_history.push(prompt.clone());
-                            const MAX_INPUT_HISTORY: usize = 500;
-                            if app.input_history.len() > MAX_INPUT_HISTORY {
-                                app.input_history
-                                    .drain(0..app.input_history.len() - MAX_INPUT_HISTORY);
+                            if app.input_history.len() > crate::consts::MAX_INPUT_HISTORY {
+                                app.input_history.drain(
+                                    0..app.input_history.len() - crate::consts::MAX_INPUT_HISTORY,
+                                );
                             }
                             app.history_idx = None;
                             app.history_saved.clear();

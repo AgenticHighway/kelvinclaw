@@ -3,8 +3,6 @@ use std::collections::BTreeMap;
 use kelvin_core::now_ms;
 use serde_json::Value;
 
-const TOOL_LOOP_DETECTOR_THRESHOLD: usize = 3;
-
 #[derive(Debug, Clone)]
 pub struct RecordedToolCall {
     pub tool_name: String,
@@ -35,7 +33,7 @@ impl ToolLoopDetector {
         Self {
             recent_calls: Vec::new(),
             consecutive_repeats: 0,
-            repeat_threshold: TOOL_LOOP_DETECTOR_THRESHOLD,
+            repeat_threshold: crate::consts::TOOL_LOOP_DETECTOR_THRESHOLD,
         }
     }
 
@@ -93,7 +91,7 @@ fn canonical_args(args: &Value) -> String {
         Some(map) => {
             let sorted: BTreeMap<&str, &Value> = map
                 .iter()
-                .filter(|(k, _)| k.as_str() != "approval")
+                .filter(|(k, _)| k.as_str() != crate::consts::APPROVAL_FIELD_NAME)
                 .map(|(k, v)| (k.as_str(), v))
                 .collect();
             serde_json::to_string(&sorted).unwrap_or_default()

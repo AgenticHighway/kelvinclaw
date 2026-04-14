@@ -17,6 +17,7 @@ use kelvin_memory_api::{
 use kelvin_memory_module_sdk::ModuleOperation;
 
 use crate::config::{MemoryControllerConfig, ProviderProfile};
+use crate::consts;
 use crate::module_runtime::{LoadedMemoryModule, ModuleRuntimeConfig};
 use crate::provider::ProviderRegistry;
 
@@ -124,7 +125,7 @@ impl MemoryController {
                 "request_id must not be empty".to_string(),
             ));
         }
-        if context.request_id.len() > 256 {
+        if context.request_id.len() > consts::MAX_REQUEST_ID_LENGTH {
             return Err(KelvinError::InvalidInput(
                 "request_id exceeds 256 chars".to_string(),
             ));

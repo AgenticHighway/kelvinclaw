@@ -4,6 +4,8 @@ use std::path::Path;
 use kelvin_core::{KelvinError, KelvinResult};
 use wasmtime::{Caller, Config, Engine, Linker, Module, Store};
 
+pub mod consts;
+
 pub mod model_host;
 pub use model_host::{
     model_abi, EnvOpenAiResponsesTransport, EnvProviderProfileTransport, ModelSandboxPolicy,
@@ -14,33 +16,35 @@ pub mod channel_host;
 pub use channel_host::{channel_abi, ChannelSandboxPolicy, WasmChannelHost};
 
 pub mod claw_abi {
-    pub const ABI_VERSION: &str = "1.0.0";
-    pub const MODULE: &str = "claw";
-    pub const RUN_EXPORT: &str = "run";
-    pub const SEND_MESSAGE: &str = "send_message";
-    pub const MOVE_SERVO: &str = "move_servo";
-    pub const FS_READ: &str = "fs_read";
-    pub const NETWORK_SEND: &str = "network_send";
+    use crate::consts;
+
+    pub const ABI_VERSION: &str = consts::CLAW_ABI_VERSION;
+    pub const MODULE: &str = consts::CLAW_MODULE;
+    pub const RUN_EXPORT: &str = consts::CLAW_RUN_EXPORT;
+    pub const SEND_MESSAGE: &str = consts::CLAW_SEND_MESSAGE;
+    pub const MOVE_SERVO: &str = consts::CLAW_MOVE_SERVO;
+    pub const FS_READ: &str = consts::CLAW_FS_READ;
+    pub const NETWORK_SEND: &str = consts::CLAW_NETWORK_SEND;
     // v2 shared-memory ABI exports
-    pub const EXPORT_MEMORY: &str = "memory";
-    pub const EXPORT_ALLOC: &str = "alloc";
-    pub const EXPORT_DEALLOC: &str = "dealloc";
-    pub const HANDLE_TOOL_CALL: &str = "handle_tool_call";
+    pub const EXPORT_MEMORY: &str = consts::CLAW_EXPORT_MEMORY;
+    pub const EXPORT_ALLOC: &str = consts::CLAW_EXPORT_ALLOC;
+    pub const EXPORT_DEALLOC: &str = consts::CLAW_EXPORT_DEALLOC;
+    pub const HANDLE_TOOL_CALL: &str = consts::CLAW_HANDLE_TOOL_CALL;
     // optional log import (always accepted)
-    pub const IMPORT_LOG: &str = "log";
+    pub const IMPORT_LOG: &str = consts::CLAW_IMPORT_LOG;
     // real HTTP call: request/response JSON through shared memory
-    pub const HTTP_CALL: &str = "http_call";
+    pub const HTTP_CALL: &str = consts::CLAW_HTTP_CALL;
     // read an env var from the host (gated by env_allow in sandbox policy)
-    pub const GET_ENV: &str = "get_env";
+    pub const GET_ENV: &str = consts::CLAW_GET_ENV;
 }
 
-pub const DEFAULT_MAX_MODULE_BYTES: usize = 512 * 1024;
-pub const DEFAULT_FUEL_BUDGET: u64 = 1_000_000;
+pub const DEFAULT_MAX_MODULE_BYTES: usize = consts::DEFAULT_MAX_MODULE_BYTES;
+pub const DEFAULT_FUEL_BUDGET: u64 = consts::DEFAULT_FUEL_BUDGET;
 /// Hard upper bound on fuel_budget to prevent manifests from requesting
 /// unbounded execution time (#69).
-pub const MAX_FUEL_BUDGET: u64 = 100_000_000;
-pub const DEFAULT_MAX_REQUEST_BYTES: usize = 256 * 1024;
-pub const DEFAULT_MAX_RESPONSE_BYTES: usize = 256 * 1024;
+pub const MAX_FUEL_BUDGET: u64 = consts::MAX_FUEL_BUDGET;
+pub const DEFAULT_MAX_REQUEST_BYTES: usize = consts::DEFAULT_MAX_REQUEST_BYTES;
+pub const DEFAULT_MAX_RESPONSE_BYTES: usize = consts::DEFAULT_MAX_RESPONSE_BYTES;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ClawCall {
@@ -568,7 +572,7 @@ fn link_claw_imports(linker: &mut Linker<HostState>, policy: &SandboxPolicy) -> 
                         let body =
                             req.get("body").and_then(|v| v.as_str()).unwrap_or("").to_string();
                         let client = match reqwest::blocking::Client::builder()
-                            .timeout(std::time::Duration::from_secs(30))
+                            .timeout(std::time::Duration::from_secs(consts::HTTP_CALL_TIMEOUT_SECS))
                             .build()
                         {
                             Ok(c) => c,
@@ -590,15 +594,10 @@ fn link_claw_imports(linker: &mut Linker<HostState>, policy: &SandboxPolicy) -> 
                         };
                         // Optional headers object: {"Header-Name": "value", ...}
                         // Block security-sensitive headers to prevent injection (#70).
-                        const BLOCKED_HEADERS: &[&str] = &[
-                            "host", "authorization", "proxy-authorization",
-                            "cookie", "set-cookie", "transfer-encoding",
-                            "te", "connection", "upgrade",
-                        ];
                         if let Some(hdrs) = req.get("headers").and_then(|v| v.as_object()) {
                             for (k, v) in hdrs {
                                 if let Some(val) = v.as_str() {
-                                    if !BLOCKED_HEADERS.contains(&k.to_ascii_lowercase().as_str()) {
+                                    if !consts::BLOCKED_HEADERS.contains(&k.to_ascii_lowercase().as_str()) {
                                         req_builder = req_builder.header(k.as_str(), val);
                                     }
                                 }

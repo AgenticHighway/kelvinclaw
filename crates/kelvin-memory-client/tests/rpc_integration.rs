@@ -21,7 +21,6 @@ const TEST_PRIVATE_KEY_DER_B64: &str =
     "MC4CAQAwBQYDK2VwBCIEIHCRmiDXsIoP30rbpS6V729OHS4HzRnpgTwSC9zqETba";
 const TEST_PUBLIC_KEY_DER_B64: &str =
     "MCowBQYDK2VwAyEAHOzip8DiPZOcMhc+e66Wzd1ifXEFAP8DEGUzJFg/DBc=";
-
 fn test_private_key_pem() -> String {
     format!(
         "-----{} PRIVATE KEY-----\n{}\n-----END PRIVATE KEY-----\n",
@@ -57,19 +56,7 @@ fn sample_wasm() -> Vec<u8> {
     wat::parse_str(
         r#"
         (module
-          (import "memory_host" "kv_get" (func $kv_get (param i32) (result i32)))
-          (import "memory_host" "kv_put" (func $kv_put (param i32) (result i32)))
-          (import "memory_host" "blob_get" (func $blob_get (param i32) (result i32)))
-          (import "memory_host" "blob_put" (func $blob_put (param i32) (result i32)))
-          (import "memory_host" "emit_metric" (func $emit_metric (param i32) (result i32)))
-          (import "memory_host" "log" (func $log (param i32) (result i32)))
-          (import "memory_host" "clock_now_ms" (func $clock (result i64)))
-          (func (export "handle_upsert") (result i32) i32.const 0)
-          (func (export "handle_query") (result i32) i32.const 0)
-          (func (export "handle_read") (result i32) i32.const 0)
-          (func (export "handle_delete") (result i32) i32.const 0)
-          (func (export "handle_health") (result i32) i32.const 0)
-        )
+          (import "memory_host" "kv_get" (func $kv_get (param i32) (result i32)))          (import "memory_host" "kv_put" (func $kv_put (param i32) (result i32)))          (import "memory_host" "blob_get" (func $blob_get (param i32) (result i32)))          (import "memory_host" "blob_put" (func $blob_put (param i32) (result i32)))          (import "memory_host" "emit_metric" (func $emit_metric (param i32) (result i32)))          (import "memory_host" "log" (func $log (param i32) (result i32)))          (import "memory_host" "clock_now_ms" (func $clock (result i64)))          (func (export "handle_upsert") (result i32) i32.const 0)          (func (export "handle_query") (result i32) i32.const 0)          (func (export "handle_read") (result i32) i32.const 0)          (func (export "handle_delete") (result i32) i32.const 0)          (func (export "handle_health") (result i32) i32.const 0)        )
         "#,
     )
     .expect("compile wat")
@@ -86,7 +73,6 @@ struct TestTlsMaterial {
 fn generate_test_tls_material() -> TestTlsMaterial {
     let server = generate_simple_self_signed(vec!["localhost".to_string()]).expect("server cert");
     let client = generate_simple_self_signed(vec!["localhost".to_string()]).expect("client cert");
-
     TestTlsMaterial {
         ca_pem: client.cert.pem(),
         server_cert_pem: server.cert.pem(),
@@ -192,19 +178,16 @@ async fn rpc_memory_manager_crud_and_search_roundtrip() {
         ..Default::default()
     };
     let manager = RpcMemoryManager::connect(cfg).await.expect("connect");
-
     manager
         .upsert("MEMORY.md", b"configured router on vlan10")
         .await
         .expect("upsert");
-
     let hits = manager
         .search("router", Default::default())
         .await
         .expect("search");
     assert_eq!(hits.len(), 1);
     assert_eq!(hits[0].path, "MEMORY.md");
-
     let read = manager
         .read_file(MemoryReadParams {
             rel_path: "MEMORY.md".to_string(),

@@ -6,7 +6,9 @@ use tonic::transport::{Server, ServerTlsConfig};
 
 use kelvin_memory_api::v1alpha1::memory_service_server::MemoryServiceServer;
 use kelvin_memory_api::MemoryModuleManifest;
-use kelvin_memory_controller::{MemoryController, MemoryControllerConfig, ProviderRegistry};
+use kelvin_memory_controller::{
+    consts, MemoryController, MemoryControllerConfig, ProviderRegistry,
+};
 
 fn usage() -> &'static str {
     "Usage: kelvin-memory-controller [--help]"
@@ -44,15 +46,18 @@ async fn main() {
 }
 
 async fn run() -> Result<(), Box<dyn std::error::Error>> {
-    let addr: SocketAddr = std::env::var("KELVIN_MEMORY_CONTROLLER_ADDR")
-        .unwrap_or_else(|_| "127.0.0.1:50051".to_string())
+    let addr: SocketAddr = std::env::var(consts::ENV_KELVIN_MEMORY_CONTROLLER_ADDR)
+        .unwrap_or_else(|_| consts::DEFAULT_CONTROLLER_ADDR.to_string())
         .parse()?;
-    let allow_insecure_non_loopback = std::env::var("KELVIN_MEMORY_ALLOW_INSECURE_NON_LOOPBACK")
-        .map(|value| {
-            let normalized = value.trim().to_ascii_lowercase();
-            normalized == "1" || normalized == "true" || normalized == "yes"
-        })
-        .unwrap_or(false);
+    let allow_insecure_non_loopback =
+        std::env::var(consts::ENV_KELVIN_MEMORY_ALLOW_INSECURE_NON_LOOPBACK)
+            .map(|value| {
+                let normalized = value.trim().to_ascii_lowercase();
+                normalized == consts::INSECURE_MODE_FLAG_1
+                    || normalized == consts::INSECURE_MODE_FLAG_TRUE
+                    || normalized == consts::INSECURE_MODE_FLAG_YES
+            })
+            .unwrap_or(false);
 
     let cfg = MemoryControllerConfig::from_env();
     if cfg.decoding_key_pem.trim().is_empty() && cfg.decoding_key_path.trim().is_empty() {
@@ -77,12 +82,13 @@ set KELVIN_MEMORY_ALLOW_INSECURE_NON_LOOPBACK=true only behind a trusted network
 
     let controller = MemoryController::new(cfg, ProviderRegistry::with_default_in_memory())?;
 
-    if let Ok(manifest_path) = std::env::var("KELVIN_MEMORY_MODULE_MANIFEST") {
+    if let Ok(manifest_path) = std::env::var(consts::ENV_KELVIN_MEMORY_MODULE_MANIFEST) {
         let manifest_bytes = fs::read(&manifest_path)?;
         let manifest: MemoryModuleManifest = serde_json::from_slice(&manifest_bytes)?;
-        let wasm_bytes = if let Ok(wasm_path) = std::env::var("KELVIN_MEMORY_MODULE_WASM") {
+        let wasm_bytes = if let Ok(wasm_path) = std::env::var(consts::ENV_KELVIN_MEMORY_MODULE_WASM)
+        {
             fs::read(&wasm_path)?
-        } else if let Ok(wat_path) = std::env::var("KELVIN_MEMORY_MODULE_WAT") {
+        } else if let Ok(wat_path) = std::env::var(consts::ENV_KELVIN_MEMORY_MODULE_WAT) {
             wat::parse_file(&wat_path)?
         } else {
             return Err(

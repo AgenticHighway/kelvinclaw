@@ -1,6 +1,7 @@
 #![recursion_limit = "256"]
 
 mod channels;
+mod consts;
 mod ingress;
 mod operator;
 mod scheduler;
@@ -42,45 +43,11 @@ use tokio_rustls::TlsAcceptor;
 use tokio_tungstenite::connect_async;
 use tokio_tungstenite::tungstenite::{self, Message};
 
-pub const GATEWAY_PROTOCOL_VERSION: &str = "1.0.0";
-pub const GATEWAY_METHODS_V1: &[&str] = &[
-    "agent",
-    "agent.outcome",
-    "agent.state",
-    "agent.wait",
-    "channel.discord.ingest",
-    "channel.discord.status",
-    "channel.route.inspect",
-    "channel.slack.ingest",
-    "channel.slack.status",
-    "channel.telegram.ingest",
-    "channel.telegram.pair.approve",
-    "channel.telegram.status",
-    "channel.whatsapp.ingest",
-    "channel.whatsapp.status",
-    "command.exec",
-    "commands.list",
-    "connect",
-    "health",
-    "operator.plugins.inspect",
-    "operator.runs.list",
-    "operator.session.get",
-    "operator.sessions.list",
-    "run.outcome",
-    "run.state",
-    "run.submit",
-    "run.wait",
-    "schedule.history",
-    "schedule.list",
-];
-
-const DEFAULT_MAX_CONNECTIONS: usize = 128;
-const DEFAULT_MAX_MESSAGE_BYTES: usize = 64 * 1024;
-const DEFAULT_MAX_FRAME_BYTES: usize = 16 * 1024;
-const DEFAULT_HANDSHAKE_TIMEOUT_MS: u64 = 5_000;
-const DEFAULT_AUTH_FAILURE_THRESHOLD: u32 = 3;
-const DEFAULT_AUTH_FAILURE_BACKOFF_MS: u64 = 1_500;
-const DEFAULT_MAX_OUTBOUND_MESSAGES_PER_CONNECTION: usize = 128;
+pub use consts::{
+    DEFAULT_AUTH_FAILURE_BACKOFF_MS, DEFAULT_AUTH_FAILURE_THRESHOLD, DEFAULT_HANDSHAKE_TIMEOUT_MS,
+    DEFAULT_MAX_CONNECTIONS, DEFAULT_MAX_FRAME_BYTES, DEFAULT_MAX_MESSAGE_BYTES,
+    DEFAULT_MAX_OUTBOUND_MESSAGES_PER_CONNECTION, GATEWAY_METHODS_V1, GATEWAY_PROTOCOL_VERSION,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GatewayTlsConfig {
@@ -583,6 +550,84 @@ fn build_doctor_check(id: &str, ok: bool, message: String, remediation: &str) ->
     })
 }
 
+#[derive(Debug, Clone)]
+pub struct GatewayApprovePairingConfig {
+    pub endpoint: String,
+    pub auth_token: Option<String>,
+    pub code: String,
+    pub timeout_ms: u64,
+}
+
+pub async fn run_approve_pairing(config: GatewayApprovePairingConfig) -> Result<(), String> {
+    let (mut socket, _) = tokio::time::timeout(
+        Duration::from_millis(config.timeout_ms.max(250)),
+        connect_async(config.endpoint.clone()),
+    )
+    .await
+    .map_err(|_| format!("timed out connecting to {}", config.endpoint))?
+    .map_err(|err| format!("failed to connect to {}: {err}", config.endpoint))?;
+
+    let connect_payload = json!({
+        "type": "req",
+        "id": "ap-connect",
+        "method": "connect",
+        "params": {
+            "auth": config.auth_token.as_ref().map(|token| json!({ "token": token })),
+            "client_id": "kelvin-approve-pairing"
+        }
+    });
+    socket
+        .send(Message::Text(connect_payload.to_string()))
+        .await
+        .map_err(|err| format!("failed to send connect request: {err}"))?;
+
+    let connect_resp = wait_for_response(&mut socket, "ap-connect").await?;
+    if !connect_resp
+        .get("ok")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false)
+    {
+        let message = connect_resp
+            .get("error")
+            .and_then(|v| v.get("message"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("connect failed");
+        return Err(format!("gateway rejected connection: {message}"));
+    }
+
+    let approve_payload = json!({
+        "type": "req",
+        "id": "ap-approve",
+        "method": "channel.telegram.pair.approve",
+        "params": { "code": config.code.trim() }
+    });
+    socket
+        .send(Message::Text(approve_payload.to_string()))
+        .await
+        .map_err(|err| format!("failed to send approve request: {err}"))?;
+
+    let approve_resp = wait_for_response(&mut socket, "ap-approve").await?;
+    if approve_resp
+        .get("ok")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false)
+    {
+        let account_id = approve_resp
+            .pointer("/payload/account_id")
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown");
+        println!("approved: chat_id {account_id} is now paired");
+        Ok(())
+    } else {
+        let message = approve_resp
+            .get("error")
+            .and_then(|v| v.get("message"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("approve failed");
+        Err(format!("pairing approval failed: {message}"))
+    }
+}
+
 async fn wait_for_response(
     socket: &mut tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<TcpStream>>,
     target_id: &str,
@@ -695,14 +740,26 @@ pub async fn run_gateway_with_listener_secure_and_ingress(
         auth_token: auth_token.map(|value| value.trim().to_string()),
         security: security.clone(),
         started_at: Instant::now(),
-        idempotency: Arc::new(Mutex::new(IdempotencyCache::new(2_048))),
+        idempotency: Arc::new(Mutex::new(IdempotencyCache::new(
+            crate::consts::IDEMPOTENCY_CACHE_MAX_ENTRIES,
+        ))),
         channels,
         scheduler,
-        auth_failures: Arc::new(Mutex::new(AuthFailureTracker::new(512))),
+        auth_failures: Arc::new(Mutex::new(AuthFailureTracker::new(
+            crate::consts::AUTH_FAILURE_MAX_ENTRIES,
+        ))),
         connection_semaphore: Arc::new(Semaphore::new(security.max_connections)),
     };
+    let telegram_polling = ingress.telegram_polling.clone();
+    let discord_gateway = ingress.discord_gateway.clone();
     if let Some(listener) = ingress_listener {
         ingress::spawn_server(listener, state.clone(), ingress);
+    }
+    if telegram_polling.enabled {
+        ingress::spawn_telegram_poller(state.clone(), telegram_polling);
+    }
+    if discord_gateway.enabled {
+        ingress::spawn_discord_gateway(state.clone(), discord_gateway);
     }
 
     loop {
@@ -761,23 +818,35 @@ fn validate_gateway_security(
     if security.max_connections == 0 {
         return Err("gateway max_connections must be >= 1".to_string());
     }
-    if security.max_message_size_bytes < 1024 {
-        return Err("gateway max_message_size_bytes must be >= 1024".to_string());
+    if security.max_message_size_bytes < crate::consts::MIN_MESSAGE_SIZE_BYTES {
+        return Err(format!(
+            "gateway max_message_size_bytes must be >= {}",
+            crate::consts::MIN_MESSAGE_SIZE_BYTES
+        ));
     }
-    if security.max_frame_size_bytes < 512 {
-        return Err("gateway max_frame_size_bytes must be >= 512".to_string());
+    if security.max_frame_size_bytes < crate::consts::MIN_FRAME_SIZE_BYTES {
+        return Err(format!(
+            "gateway max_frame_size_bytes must be >= {}",
+            crate::consts::MIN_FRAME_SIZE_BYTES
+        ));
     }
     if security.max_frame_size_bytes > security.max_message_size_bytes {
         return Err("gateway max_frame_size_bytes must be <= max_message_size_bytes".to_string());
     }
-    if security.handshake_timeout_ms < 100 {
-        return Err("gateway handshake_timeout_ms must be >= 100".to_string());
+    if security.handshake_timeout_ms < crate::consts::MIN_HANDSHAKE_TIMEOUT_MS {
+        return Err(format!(
+            "gateway handshake_timeout_ms must be >= {}",
+            crate::consts::MIN_HANDSHAKE_TIMEOUT_MS
+        ));
     }
     if security.auth_failure_threshold == 0 {
         return Err("gateway auth_failure_threshold must be >= 1".to_string());
     }
-    if security.auth_failure_backoff_ms < 100 {
-        return Err("gateway auth_failure_backoff_ms must be >= 100".to_string());
+    if security.auth_failure_backoff_ms < crate::consts::MIN_AUTH_FAILURE_BACKOFF_MS {
+        return Err(format!(
+            "gateway auth_failure_backoff_ms must be >= {}",
+            crate::consts::MIN_AUTH_FAILURE_BACKOFF_MS
+        ));
     }
     if security.max_outbound_messages_per_connection == 0 {
         return Err("gateway max_outbound_messages_per_connection must be >= 1".to_string());

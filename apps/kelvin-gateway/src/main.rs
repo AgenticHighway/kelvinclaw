@@ -2,10 +2,27 @@ use std::env;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 
+mod bin_consts;
+
+use bin_consts::{
+    COMPACT_TO_MESSAGES, DEFAULT_AUTH_FAILURE_BACKOFF_MS, DEFAULT_AUTH_FAILURE_THRESHOLD,
+    DEFAULT_BIND_ADDR, DEFAULT_FAILOVER_BACKOFF_MS, DEFAULT_FAILOVER_RETRIES,
+    DEFAULT_HANDSHAKE_TIMEOUT_MS, DEFAULT_MAX_CONNECTIONS, DEFAULT_MAX_FRAME_BYTES,
+    DEFAULT_MAX_MESSAGE_BYTES, DEFAULT_MAX_OUTBOUND_MESSAGES_PER_CONNECTION, DEFAULT_SESSION_ID,
+    DEFAULT_STATE_DIR_COMPONENT, DEFAULT_TIMEOUT_MS, DOCTOR_ENDPOINT, DOCTOR_PLUGIN_HOME,
+    DOCTOR_TIMEOUT_MS, DOCTOR_TRUST_POLICY_PATH, ENV_GATEWAY_ALLOW_INSECURE_PUBLIC_BIND,
+    ENV_GATEWAY_AUTH_FAILURE_BACKOFF_MS, ENV_GATEWAY_AUTH_FAILURE_THRESHOLD,
+    ENV_GATEWAY_HANDSHAKE_TIMEOUT_MS, ENV_GATEWAY_MAX_CONNECTIONS, ENV_GATEWAY_MAX_FRAME_BYTES,
+    ENV_GATEWAY_MAX_MESSAGE_BYTES, ENV_GATEWAY_MAX_OUTBOUND_MESSAGES, ENV_GATEWAY_TLS_CERT_PATH,
+    ENV_GATEWAY_TLS_KEY_PATH, ENV_GATEWAY_TOKEN, MAX_SESSION_HISTORY_MESSAGES, MAX_TOOL_ITERATIONS,
+    STATE_SUBDIR,
+};
+
 use kelvin_core::PluginSecurityPolicy;
 use kelvin_gateway::{
-    run_gateway, run_gateway_doctor, GatewayConfig, GatewayDoctorConfig, GatewayIngressConfig,
-    GatewaySecurityConfig, GatewayTlsConfig,
+    run_approve_pairing, run_gateway, run_gateway_doctor, GatewayApprovePairingConfig,
+    GatewayConfig, GatewayDoctorConfig, GatewayIngressConfig, GatewaySecurityConfig,
+    GatewayTlsConfig,
 };
 use kelvin_sdk::{KelvinCliMemoryMode, KelvinSdkModelSelection, KelvinSdkRuntimeConfig};
 
@@ -25,6 +42,7 @@ struct CliConfig {
     load_installed_plugins: bool,
     require_cli_plugin_tool: bool,
     doctor_mode: bool,
+    approve_pairing_code: Option<String>,
     doctor_endpoint: String,
     doctor_plugin_home: PathBuf,
     doctor_trust_policy_path: PathBuf,
@@ -101,41 +119,53 @@ fn env_optional_path(name: &str) -> Option<PathBuf> {
 }
 
 fn parse_args() -> Result<CliConfig, String> {
-    let mut bind_addr: SocketAddr = "127.0.0.1:34617"
+    let mut bind_addr: SocketAddr = DEFAULT_BIND_ADDR
         .parse()
         .map_err(|err| format!("invalid default bind addr: {err}"))?;
-    let mut auth_token = env::var("KELVIN_GATEWAY_TOKEN").ok();
-    let mut default_session_id = "main".to_string();
+    let mut auth_token = env::var(ENV_GATEWAY_TOKEN).ok();
+    let mut default_session_id = DEFAULT_SESSION_ID.to_string();
     let mut workspace_dir = env::current_dir().map_err(|err| err.to_string())?;
     let mut memory_mode = KelvinCliMemoryMode::Markdown;
-    let mut default_timeout_ms = 300_000_u64;
+    let mut default_timeout_ms = DEFAULT_TIMEOUT_MS;
     let mut state_dir: Option<PathBuf> = None;
     let mut persist_runs = true;
-    let mut max_session_history_messages = 128_usize;
-    let mut compact_to_messages = 64_usize;
+    let mut max_session_history_messages = MAX_SESSION_HISTORY_MESSAGES;
+    let mut compact_to_messages = COMPACT_TO_MESSAGES;
     let mut model_provider = KelvinSdkModelSelection::Echo;
     let mut load_installed_plugins = true;
     let mut require_cli_plugin_tool = false;
     let mut doctor_mode = false;
-    let mut doctor_endpoint = "ws://127.0.0.1:34617".to_string();
-    let mut doctor_timeout_ms = 5_000_u64;
-    let mut doctor_plugin_home = PathBuf::from(".kelvin/plugins");
-    let mut doctor_trust_policy_path = PathBuf::from(".kelvin/trusted_publishers.json");
-    let mut failover_retries = 1_u8;
-    let mut failover_backoff_ms = 100_u64;
+    let mut approve_pairing_code: Option<String> = None;
+    let mut doctor_endpoint = DOCTOR_ENDPOINT.to_string();
+    let mut doctor_timeout_ms = DOCTOR_TIMEOUT_MS;
+    let mut doctor_plugin_home = PathBuf::from(DOCTOR_PLUGIN_HOME);
+    let mut doctor_trust_policy_path = PathBuf::from(DOCTOR_TRUST_POLICY_PATH);
+    let mut failover_retries = DEFAULT_FAILOVER_RETRIES;
+    let mut failover_backoff_ms = DEFAULT_FAILOVER_BACKOFF_MS;
     let mut pending_failover_ids: Option<Vec<String>> = None;
-    let mut allow_insecure_public_bind =
-        env_bool("KELVIN_GATEWAY_ALLOW_INSECURE_PUBLIC_BIND", false)?;
-    let mut tls_cert_path = env_optional_path("KELVIN_GATEWAY_TLS_CERT_PATH");
-    let mut tls_key_path = env_optional_path("KELVIN_GATEWAY_TLS_KEY_PATH");
-    let mut max_connections = env_usize("KELVIN_GATEWAY_MAX_CONNECTIONS", 128)?;
-    let mut max_message_size_bytes = env_usize("KELVIN_GATEWAY_MAX_MESSAGE_BYTES", 64 * 1024)?;
-    let mut max_frame_size_bytes = env_usize("KELVIN_GATEWAY_MAX_FRAME_BYTES", 16 * 1024)?;
-    let mut handshake_timeout_ms = env_u64("KELVIN_GATEWAY_HANDSHAKE_TIMEOUT_MS", 5_000)?;
-    let mut auth_failure_threshold = env_u32("KELVIN_GATEWAY_AUTH_FAILURE_THRESHOLD", 3)?;
-    let mut auth_failure_backoff_ms = env_u64("KELVIN_GATEWAY_AUTH_FAILURE_BACKOFF_MS", 1_500)?;
-    let mut max_outbound_messages_per_connection =
-        env_usize("KELVIN_GATEWAY_MAX_OUTBOUND_MESSAGES", 128)?;
+    let mut allow_insecure_public_bind = env_bool(ENV_GATEWAY_ALLOW_INSECURE_PUBLIC_BIND, false)?;
+    let mut tls_cert_path = env_optional_path(ENV_GATEWAY_TLS_CERT_PATH);
+    let mut tls_key_path = env_optional_path(ENV_GATEWAY_TLS_KEY_PATH);
+    let mut max_connections = env_usize(ENV_GATEWAY_MAX_CONNECTIONS, DEFAULT_MAX_CONNECTIONS)?;
+    let mut max_message_size_bytes =
+        env_usize(ENV_GATEWAY_MAX_MESSAGE_BYTES, DEFAULT_MAX_MESSAGE_BYTES)?;
+    let mut max_frame_size_bytes = env_usize(ENV_GATEWAY_MAX_FRAME_BYTES, DEFAULT_MAX_FRAME_BYTES)?;
+    let mut handshake_timeout_ms = env_u64(
+        ENV_GATEWAY_HANDSHAKE_TIMEOUT_MS,
+        DEFAULT_HANDSHAKE_TIMEOUT_MS,
+    )?;
+    let mut auth_failure_threshold = env_u32(
+        ENV_GATEWAY_AUTH_FAILURE_THRESHOLD,
+        DEFAULT_AUTH_FAILURE_THRESHOLD,
+    )?;
+    let mut auth_failure_backoff_ms = env_u64(
+        ENV_GATEWAY_AUTH_FAILURE_BACKOFF_MS,
+        DEFAULT_AUTH_FAILURE_BACKOFF_MS,
+    )?;
+    let mut max_outbound_messages_per_connection = env_usize(
+        ENV_GATEWAY_MAX_OUTBOUND_MESSAGES,
+        DEFAULT_MAX_OUTBOUND_MESSAGES_PER_CONNECTION,
+    )?;
     let mut ingress_bind_addr: Option<SocketAddr> = None;
     let mut ingress_base_path: Option<String> = None;
     let mut ingress_max_body_size_bytes: Option<usize> = None;
@@ -154,6 +184,12 @@ fn parse_args() -> Result<CliConfig, String> {
             }
             "--doctor" => {
                 doctor_mode = true;
+            }
+            "--approve-pairing" => {
+                let value = args
+                    .next()
+                    .ok_or_else(|| "missing value for --approve-pairing".to_string())?;
+                approve_pairing_code = Some(value.trim().to_string());
             }
             "--endpoint" => {
                 doctor_endpoint = args
@@ -430,6 +466,7 @@ fn parse_args() -> Result<CliConfig, String> {
         load_installed_plugins,
         require_cli_plugin_tool,
         doctor_mode,
+        approve_pairing_code,
         doctor_endpoint,
         doctor_plugin_home,
         doctor_trust_policy_path,
@@ -456,8 +493,24 @@ fn selection_requires_network(_policy: &KelvinSdkModelSelection) -> bool {
 
 #[tokio::main]
 async fn main() {
+    let _ = rustls::crypto::ring::default_provider().install_default();
     match parse_args() {
         Ok(config) => {
+            if let Some(code) = config.approve_pairing_code {
+                if let Err(err) = run_approve_pairing(GatewayApprovePairingConfig {
+                    endpoint: config.doctor_endpoint,
+                    auth_token: config.auth_token,
+                    code,
+                    timeout_ms: config.doctor_timeout_ms,
+                })
+                .await
+                {
+                    eprintln!("{err}");
+                    std::process::exit(1);
+                }
+                return;
+            }
+
             if config.doctor_mode {
                 let report = run_gateway_doctor(GatewayDoctorConfig {
                     endpoint: config.doctor_endpoint,
@@ -491,7 +544,10 @@ async fn main() {
                 plugin_security_policy.allow_network_egress = true;
             }
 
-            let state_dir = config.workspace_dir.join(".kelvin").join("state");
+            let state_dir = config
+                .workspace_dir
+                .join(DEFAULT_STATE_DIR_COMPONENT)
+                .join(STATE_SUBDIR);
             let runtime_config = KelvinSdkRuntimeConfig {
                 workspace_dir: config.workspace_dir,
                 default_session_id: config.default_session_id,
@@ -508,7 +564,7 @@ async fn main() {
                 persist_runs: config.persist_runs,
                 max_session_history_messages: config.max_session_history_messages,
                 compact_to_messages: config.compact_to_messages,
-                max_tool_iterations: 10,
+                max_tool_iterations: MAX_TOOL_ITERATIONS,
             };
             let gateway_config = GatewayConfig {
                 bind_addr: config.bind_addr,

@@ -7,6 +7,8 @@ use tokio::sync::RwLock;
 use kelvin_core::{KelvinError, KelvinResult};
 use kelvin_memory_api::v1alpha1::SearchHit;
 
+use crate::consts;
+
 #[async_trait]
 pub trait MemoryProvider: Send + Sync {
     fn id(&self) -> &str;
@@ -35,7 +37,7 @@ pub struct InMemoryProvider {
 #[async_trait]
 impl MemoryProvider for InMemoryProvider {
     fn id(&self) -> &str {
-        "in_memory"
+        consts::IN_MEMORY_PROVIDER_ID
     }
 
     async fn upsert(
@@ -59,13 +61,17 @@ impl MemoryProvider for InMemoryProvider {
             let text = String::from_utf8_lossy(value);
             let haystack = text.to_lowercase();
             if haystack.contains(&lowered) {
-                let score = (lowered.len() as f32 / haystack.len().max(1) as f32).max(0.001);
+                let score = (lowered.len() as f32 / haystack.len().max(1) as f32)
+                    .max(consts::MIN_SEARCH_SCORE);
                 hits.push(SearchHit {
                     path: key.clone(),
-                    snippet: text.chars().take(160).collect(),
+                    snippet: text
+                        .chars()
+                        .take(consts::SEARCH_SNIPPET_CHAR_LIMIT)
+                        .collect(),
                     score,
-                    start_line: 1,
-                    end_line: 1,
+                    start_line: consts::DEFAULT_SEARCH_START_LINE,
+                    end_line: consts::DEFAULT_SEARCH_END_LINE,
                 });
             }
         }

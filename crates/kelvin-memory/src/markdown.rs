@@ -12,6 +12,8 @@ use kelvin_core::{
     MemorySyncParams,
 };
 
+use crate::consts;
+
 #[derive(Debug)]
 pub struct MarkdownMemoryManager {
     workspace_dir: PathBuf,
@@ -23,15 +25,15 @@ impl MarkdownMemoryManager {
         Self {
             workspace_dir: workspace_dir.into(),
             status: RwLock::new(MemoryProviderStatus {
-                backend: "builtin".to_string(),
-                provider: "markdown".to_string(),
+                backend: consts::BACKEND_BUILTIN.to_string(),
+                provider: consts::PROVIDER_MARKDOWN.to_string(),
                 model: None,
-                requested_provider: Some("markdown".to_string()),
+                requested_provider: Some(consts::PROVIDER_MARKDOWN.to_string()),
                 files: Some(0),
                 chunks: Some(0),
                 dirty: true,
                 fallback: None,
-                custom: json!({"source_of_truth": "workspace_markdown"}),
+                custom: json!({consts::JSON_KEY_SOURCE_OF_TRUTH: consts::JSON_VALUE_WORKSPACE_MARKDOWN}),
             }),
         }
     }
@@ -39,12 +41,12 @@ impl MarkdownMemoryManager {
     fn collect_memory_files(&self) -> Vec<PathBuf> {
         let mut files = Vec::new();
 
-        let long_term = self.workspace_dir.join("MEMORY.md");
+        let long_term = self.workspace_dir.join(consts::MEMORY_FILE);
         if long_term.is_file() {
             files.push(long_term);
         }
 
-        let daily_dir = self.workspace_dir.join("memory");
+        let daily_dir = self.workspace_dir.join(consts::MEMORY_DIR);
         if daily_dir.is_dir() {
             for entry in WalkDir::new(daily_dir)
                 .follow_links(false)
@@ -57,7 +59,7 @@ impl MarkdownMemoryManager {
                 let path = entry.path();
                 if path
                     .extension()
-                    .map(|ext| ext.eq_ignore_ascii_case("md"))
+                    .map(|ext| ext.eq_ignore_ascii_case(consts::MARKDOWN_EXTENSION))
                     .unwrap_or(false)
                 {
                     files.push(path.to_path_buf());
@@ -96,8 +98,12 @@ impl MarkdownMemoryManager {
     }
 
     fn build_snippet(lines: &[&str], idx: usize) -> (usize, usize, String) {
-        let start = idx.saturating_sub(1);
-        let end = (idx + 1).min(lines.len().saturating_sub(1));
+        let start = idx.saturating_sub(consts::SEARCH_SNIPPET_CONTEXT_LINE_DELTA);
+        let end = (idx + consts::SEARCH_SNIPPET_CONTEXT_LINE_DELTA).min(
+            lines
+                .len()
+                .saturating_sub(consts::SEARCH_SNIPPET_CONTEXT_LINE_DELTA),
+        );
         let snippet = lines[start..=end].join("\n");
         (start + 1, end + 1, snippet)
     }
@@ -108,14 +114,14 @@ impl MarkdownMemoryManager {
                 "memory_get path must not be empty".to_string(),
             ));
         }
-        if rel_path.contains("..") {
+        if rel_path.contains(consts::PATH_TRAVERSAL_PATTERN) {
             return Err(KelvinError::InvalidInput(
                 "memory_get path traversal is not allowed".to_string(),
             ));
         }
         let normalized = rel_path.replace('\\', "/");
-        let is_memory_root = normalized == "MEMORY.md";
-        let is_daily = normalized.starts_with("memory/");
+        let is_memory_root = normalized == consts::MEMORY_FILE;
+        let is_daily = normalized.starts_with(&format!("{}/", consts::MEMORY_DIR));
         if !is_memory_root && !is_daily {
             return Err(KelvinError::InvalidInput(format!(
                 "memory_get path is out of scope: {normalized}"
@@ -134,7 +140,9 @@ impl MarkdownMemoryManager {
         if raw_lines.is_empty() {
             return String::new();
         }
-        let start = from.unwrap_or(1).saturating_sub(1);
+        let start = from
+            .unwrap_or(1)
+            .saturating_sub(consts::SEARCH_SNIPPET_CONTEXT_LINE_DELTA);
         if start >= raw_lines.len() {
             return String::new();
         }

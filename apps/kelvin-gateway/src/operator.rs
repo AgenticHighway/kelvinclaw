@@ -9,13 +9,11 @@ use kelvin_sdk::KelvinSdkRuntime;
 use serde::Deserialize;
 use serde_json::{json, Value};
 
-const DEFAULT_PLUGIN_INDEX_URL: &str = "";
-const RUN_LIST_LIMIT_DEFAULT: usize = 25;
-const RUN_LIST_LIMIT_MAX: usize = 200;
-const SESSION_LIST_LIMIT_DEFAULT: usize = 25;
-const SESSION_LIST_LIMIT_MAX: usize = 200;
-const SESSION_MESSAGE_LIMIT_DEFAULT: usize = 20;
-const SESSION_MESSAGE_LIMIT_MAX: usize = 200;
+use crate::consts::{
+    DEFAULT_PLUGIN_INDEX_URL, RUN_LIST_LIMIT_DEFAULT, RUN_LIST_LIMIT_MAX,
+    SESSION_LIST_LIMIT_DEFAULT, SESSION_LIST_LIMIT_MAX, SESSION_MESSAGE_LIMIT_DEFAULT,
+    SESSION_MESSAGE_LIMIT_MAX,
+};
 
 #[derive(Debug, Default, Deserialize)]
 pub(crate) struct OperatorRunsListParams {

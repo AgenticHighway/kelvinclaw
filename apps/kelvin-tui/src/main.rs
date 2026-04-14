@@ -2,6 +2,7 @@ use std::env;
 
 mod app;
 mod commands;
+mod consts;
 mod ui;
 mod ws_client;
 
@@ -13,9 +14,9 @@ pub struct CliConfig {
 }
 
 fn parse_args() -> Result<CliConfig, String> {
-    let mut gateway_url = "ws://127.0.0.1:34617".to_string();
-    let mut auth_token: Option<String> = env::var("KELVIN_GATEWAY_TOKEN").ok();
-    let mut session_id = "main".to_string();
+    let mut gateway_url = consts::DEFAULT_GATEWAY_URL.to_string();
+    let mut auth_token: Option<String> = env::var(consts::ENV_VAR_GATEWAY_TOKEN).ok();
+    let mut session_id = consts::DEFAULT_SESSION_ID.to_string();
 
     let mut args = env::args().skip(1).peekable();
     while let Some(arg) = args.next() {

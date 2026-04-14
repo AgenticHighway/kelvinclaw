@@ -13,6 +13,8 @@ use kelvin_memory_module_sdk::{
     MEMORY_HOST_IMPORT_MODULE,
 };
 
+use crate::consts;
+
 #[derive(Debug, Clone)]
 pub struct ModuleRuntimeConfig {
     pub max_module_bytes: usize,
@@ -106,42 +108,54 @@ impl LoadedMemoryModule {
                 .func_wrap(
                     MEMORY_HOST_IMPORT_MODULE,
                     HOST_FN_KV_GET,
-                    |_caller: Caller<'_, HostState>, _handle: i32| -> i32 { -1 },
+                    |_caller: Caller<'_, HostState>, _handle: i32| -> i32 {
+                        consts::MODULE_HOST_FN_NOT_FOUND
+                    },
                 )
                 .map_err(|err| KelvinError::Backend(format!("link kv_get failed: {err}")))?;
             linker
                 .func_wrap(
                     MEMORY_HOST_IMPORT_MODULE,
                     HOST_FN_KV_PUT,
-                    |_caller: Caller<'_, HostState>, _handle: i32| -> i32 { 0 },
+                    |_caller: Caller<'_, HostState>, _handle: i32| -> i32 {
+                        consts::MODULE_HOST_FN_OK
+                    },
                 )
                 .map_err(|err| KelvinError::Backend(format!("link kv_put failed: {err}")))?;
             linker
                 .func_wrap(
                     MEMORY_HOST_IMPORT_MODULE,
                     HOST_FN_BLOB_GET,
-                    |_caller: Caller<'_, HostState>, _handle: i32| -> i32 { -1 },
+                    |_caller: Caller<'_, HostState>, _handle: i32| -> i32 {
+                        consts::MODULE_HOST_FN_NOT_FOUND
+                    },
                 )
                 .map_err(|err| KelvinError::Backend(format!("link blob_get failed: {err}")))?;
             linker
                 .func_wrap(
                     MEMORY_HOST_IMPORT_MODULE,
                     HOST_FN_BLOB_PUT,
-                    |_caller: Caller<'_, HostState>, _handle: i32| -> i32 { 0 },
+                    |_caller: Caller<'_, HostState>, _handle: i32| -> i32 {
+                        consts::MODULE_HOST_FN_OK
+                    },
                 )
                 .map_err(|err| KelvinError::Backend(format!("link blob_put failed: {err}")))?;
             linker
                 .func_wrap(
                     MEMORY_HOST_IMPORT_MODULE,
                     HOST_FN_EMIT_METRIC,
-                    |_caller: Caller<'_, HostState>, _handle: i32| -> i32 { 0 },
+                    |_caller: Caller<'_, HostState>, _handle: i32| -> i32 {
+                        consts::MODULE_HOST_FN_OK
+                    },
                 )
                 .map_err(|err| KelvinError::Backend(format!("link emit_metric failed: {err}")))?;
             linker
                 .func_wrap(
                     MEMORY_HOST_IMPORT_MODULE,
                     HOST_FN_LOG,
-                    |_caller: Caller<'_, HostState>, _handle: i32| -> i32 { 0 },
+                    |_caller: Caller<'_, HostState>, _handle: i32| -> i32 {
+                        consts::MODULE_HOST_FN_OK
+                    },
                 )
                 .map_err(|err| KelvinError::Backend(format!("link log failed: {err}")))?;
             linker
@@ -166,7 +180,7 @@ impl LoadedMemoryModule {
             let code = func
                 .call(&mut store, ())
                 .map_err(|err| KelvinError::Backend(format!("module execution trap: {err}")))?;
-            if code != 0 {
+            if code != consts::MODULE_EXECUTION_SUCCESS {
                 return Err(KelvinError::Backend(format!(
                     "module '{}' returned non-zero code {} for op '{}'",
                     module.name().unwrap_or("unknown"),

@@ -4,6 +4,7 @@
 //! WASM-only memory modules. This crate remains for compatibility during the
 //! transition and should not be used for new root composition paths.
 
+pub mod consts;
 pub mod factory;
 pub mod fallback;
 pub mod in_memory;

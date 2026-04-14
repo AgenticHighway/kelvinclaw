@@ -88,7 +88,7 @@ fn parse_inline_markdown(src: &str, base_style: Style) -> (Vec<Span<'static>>, S
     (spans, plain)
 }
 
-const HL_BG: Color = Color::Indexed(238); // dark gray selection highlight
+const HL_BG: Color = crate::consts::HL_BG;
 
 #[cfg(test)]
 mod tests {

@@ -8,6 +8,8 @@ use kelvin_sdk::{
     KelvinSdkRunRequest, KelvinSdkRuntime, KelvinSdkRuntimeConfig,
 };
 
+mod consts;
+
 #[derive(Debug, Clone)]
 struct CliConfig {
     prompt: Option<String>,
@@ -31,8 +33,8 @@ fn usage() -> &'static str {
 fn parse_bool(value: &str, flag: &str) -> Result<bool, String> {
     let normalized = value.trim().to_ascii_lowercase();
     match normalized.as_str() {
-        "1" | "true" | "yes" | "on" => Ok(true),
-        "0" | "false" | "no" | "off" => Ok(false),
+        v if consts::BOOL_TRUE_VALUES.contains(&v) => Ok(true),
+        v if consts::BOOL_FALSE_VALUES.contains(&v) => Ok(false),
         _ => Err(format!("invalid boolean value for {flag}: {value}")),
     }
 }
@@ -40,48 +42,48 @@ fn parse_bool(value: &str, flag: &str) -> Result<bool, String> {
 fn parse_args() -> Result<CliConfig, String> {
     let mut prompt: Option<String> = None;
     let mut interactive = false;
-    let mut session_id = "main".to_string();
+    let mut session_id = consts::DEFAULT_SESSION_ID.to_string();
     let mut workspace_dir = env::current_dir().map_err(|err| err.to_string())?;
     let mut memory_mode = KelvinCliMemoryMode::Markdown;
-    let mut timeout_ms = 300_000_u64;
+    let mut timeout_ms = consts::DEFAULT_TIMEOUT_MS;
     let mut system_prompt: Option<String> = None;
     let mut model_provider_plugin_id: Option<String> = None;
     let mut state_dir: Option<PathBuf> = None;
     let mut persist_runs = true;
-    let mut max_session_history_messages = 128_usize;
-    let mut compact_to_messages = 64_usize;
+    let mut max_session_history_messages = consts::DEFAULT_MAX_SESSION_HISTORY_MESSAGES;
+    let mut compact_to_messages = consts::DEFAULT_COMPACT_TO_MESSAGES;
 
     let mut args = env::args().skip(1).peekable();
     while let Some(arg) = args.next() {
         match arg.as_str() {
-            "--help" | "-h" => return Err(usage().to_string()),
-            "--interactive" => {
+            consts::ARG_HELP_LONG | consts::ARG_HELP_SHORT => return Err(usage().to_string()),
+            consts::ARG_INTERACTIVE => {
                 interactive = true;
             }
-            "--prompt" => {
+            consts::ARG_PROMPT => {
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --prompt".to_string())?;
                 prompt = Some(value);
             }
-            "--session" => {
+            consts::ARG_SESSION => {
                 session_id = args
                     .next()
                     .ok_or_else(|| "missing value for --session".to_string())?;
             }
-            "--workspace" => {
+            consts::ARG_WORKSPACE => {
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --workspace".to_string())?;
                 workspace_dir = PathBuf::from(value);
             }
-            "--memory" => {
+            consts::ARG_MEMORY => {
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --memory".to_string())?;
                 memory_mode = KelvinCliMemoryMode::parse(&value);
             }
-            "--timeout-ms" => {
+            consts::ARG_TIMEOUT_MS => {
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --timeout-ms".to_string())?;
@@ -89,13 +91,13 @@ fn parse_args() -> Result<CliConfig, String> {
                     .parse::<u64>()
                     .map_err(|_| "invalid numeric value for --timeout-ms".to_string())?;
             }
-            "--system" => {
+            consts::ARG_SYSTEM => {
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --system".to_string())?;
                 system_prompt = Some(value);
             }
-            "--model-provider" => {
+            consts::ARG_MODEL_PROVIDER => {
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --model-provider".to_string())?;
@@ -105,19 +107,19 @@ fn parse_args() -> Result<CliConfig, String> {
                 }
                 model_provider_plugin_id = Some(trimmed.to_string());
             }
-            "--state-dir" => {
+            consts::ARG_STATE_DIR => {
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --state-dir".to_string())?;
                 state_dir = Some(PathBuf::from(value));
             }
-            "--persist-runs" => {
+            consts::ARG_PERSIST_RUNS => {
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --persist-runs".to_string())?;
-                persist_runs = parse_bool(&value, "--persist-runs")?;
+                persist_runs = parse_bool(&value, consts::ARG_PERSIST_RUNS)?;
             }
-            "--max-session-history" => {
+            consts::ARG_MAX_SESSION_HISTORY => {
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --max-session-history".to_string())?;
@@ -125,7 +127,7 @@ fn parse_args() -> Result<CliConfig, String> {
                     .parse::<usize>()
                     .map_err(|_| "invalid numeric value for --max-session-history".to_string())?;
             }
-            "--compact-to" => {
+            consts::ARG_COMPACT_TO => {
                 let value = args
                     .next()
                     .ok_or_else(|| "missing value for --compact-to".to_string())?;
@@ -202,11 +204,11 @@ fn runtime_config_from_cli(config: &CliConfig) -> KelvinSdkRuntimeConfig {
         state_dir: config
             .state_dir
             .clone()
-            .or_else(|| Some(config.workspace_dir.join(".kelvin").join("state"))),
+            .or_else(|| Some(config.workspace_dir.join(consts::DEFAULT_STATE_DIR_PATH))),
         persist_runs: config.persist_runs,
         max_session_history_messages: config.max_session_history_messages,
         compact_to_messages: config.compact_to_messages,
-        max_tool_iterations: 10,
+        max_tool_iterations: consts::MAX_TOOL_ITERATIONS,
     }
 }
 
@@ -226,11 +228,11 @@ async fn run_single(config: CliConfig) -> Result<(), KelvinError> {
         model_provider,
         state_dir: config
             .state_dir
-            .or_else(|| Some(config.workspace_dir.join(".kelvin").join("state"))),
+            .or_else(|| Some(config.workspace_dir.join(consts::DEFAULT_STATE_DIR_PATH))),
         persist_runs: config.persist_runs,
         max_session_history_messages: config.max_session_history_messages,
         compact_to_messages: config.compact_to_messages,
-        max_tool_iterations: 10,
+        max_tool_iterations: consts::MAX_TOOL_ITERATIONS,
     })
     .await?;
 
@@ -260,7 +262,7 @@ async fn run_interactive(config: CliConfig) -> Result<(), KelvinError> {
     let mut stdin = io::stdin().lock();
     let mut buffer = String::new();
     loop {
-        print!("kelvin> ");
+        print!("{}", consts::INTERACTIVE_PROMPT);
         io::stdout()
             .flush()
             .map_err(|err| KelvinError::Io(format!("flush stdout: {err}")))?;
@@ -268,14 +270,16 @@ async fn run_interactive(config: CliConfig) -> Result<(), KelvinError> {
         let bytes_read = stdin
             .read_line(&mut buffer)
             .map_err(|err| KelvinError::Io(format!("read interactive input: {err}")))?;
-        if bytes_read == 0 {
+        if bytes_read == consts::BYTES_EOF {
             break;
         }
         let prompt = buffer.trim();
         if prompt.is_empty() {
             continue;
         }
-        if prompt.eq_ignore_ascii_case("/exit") || prompt.eq_ignore_ascii_case("/quit") {
+        if prompt.eq_ignore_ascii_case(consts::EXIT_COMMAND_LOWERCASE)
+            || prompt.eq_ignore_ascii_case(consts::EXIT_COMMAND_QUIT)
+        {
             break;
         }
         process_prompt(&runtime, prompt.to_string(), config.timeout_ms).await?;
@@ -292,7 +296,10 @@ async fn process_prompt(
         .submit(KelvinSdkRunRequest::for_prompt(prompt))
         .await?;
     match runtime
-        .wait_for_outcome(&accepted.run_id, timeout_ms.saturating_add(5_000))
+        .wait_for_outcome(
+            &accepted.run_id,
+            timeout_ms.saturating_add(consts::TIMEOUT_BUFFER_MS),
+        )
         .await?
     {
         RunOutcome::Completed(result) => {
@@ -321,30 +328,30 @@ async fn main() {
             };
             if let Err(err) = result {
                 eprintln!("error: {err}");
-                if err.to_string().contains("kelvin_cli") {
+                if err.to_string().contains(consts::KELVIN_CLI_PLUGIN_ID) {
                     eprintln!(
                         "hint: install the CLI plugin with scripts/install-kelvin-cli-plugin.sh"
                     );
                 }
-                if err.to_string().contains("OPENAI_API_KEY") {
+                if err.to_string().contains(consts::OPENAI_API_KEY_VAR) {
                     eprintln!(
                         "hint: set OPENAI_API_KEY and install the OpenAI model plugin with scripts/install-kelvin-openai-plugin.sh"
                     );
                 }
-                if err.to_string().contains("ANTHROPIC_API_KEY") {
+                if err.to_string().contains(consts::ANTHROPIC_API_KEY_VAR) {
                     eprintln!(
                         "hint: set ANTHROPIC_API_KEY and install the Anthropic model plugin with scripts/install-kelvin-anthropic-plugin.sh"
                     );
                 }
-                std::process::exit(1);
+                std::process::exit(consts::EXIT_FAILURE);
             }
         }
         Err(err) => {
             eprintln!("{err}");
-            if err.starts_with("Usage:") {
-                std::process::exit(0);
+            if err.starts_with(consts::USAGE_PREFIX) {
+                std::process::exit(consts::EXIT_SUCCESS);
             }
-            std::process::exit(1);
+            std::process::exit(consts::EXIT_FAILURE);
         }
     }
 }

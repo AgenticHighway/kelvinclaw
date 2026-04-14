@@ -15,7 +15,10 @@ use kelvin_core::{
     ToolCallInput, ToolPhase, ToolRegistry,
 };
 
-use crate::tool_loop_detector::{LoopDetectionResult, ToolLoopDetector};
+use crate::{
+    system_prompt,
+    tool_loop_detector::{LoopDetectionResult, ToolLoopDetector},
+};
 
 #[derive(Clone)]
 pub struct KelvinBrain {
@@ -53,7 +56,7 @@ impl KelvinBrain {
             tools,
             events,
             seq: Arc::new(AtomicU64::new(0)),
-            max_tool_iterations: 10,
+            max_tool_iterations: crate::consts::MAX_TOOL_ITERATIONS,
         }
     }
 
@@ -112,7 +115,7 @@ impl KelvinBrain {
 
     fn emit_tool_receipt(&self, receipt: ToolReceipt<'_>) {
         let line = json!({
-            "stream": "tool_receipt",
+            "stream": crate::consts::JSON_KEY_TOOL_RECEIPT,
             "run_id": receipt.run_id,
             "who": {
                 "session_id": receipt.session_id,
@@ -161,7 +164,7 @@ impl KelvinBrain {
                     session_id: &req.session_id,
                     tool_name: &tool_call.name,
                     tool_call_id: &tool_call.id,
-                    result_class: "denied",
+                    result_class: crate::consts::RESULT_CLASS_DENIED,
                     reason: &summary,
                     latency_ms: now_ms().saturating_sub(started_tool_at),
                 });
@@ -214,7 +217,7 @@ impl KelvinBrain {
                         session_id: &req.session_id,
                         tool_name: tool.name(),
                         tool_call_id: &tool_call.id,
-                        result_class: "error",
+                        result_class: crate::consts::RESULT_CLASS_ERROR,
                         reason: &summary,
                         latency_ms: now_ms().saturating_sub(started_tool_at),
                     });
@@ -267,9 +270,9 @@ impl KelvinBrain {
                 tool_name: tool.name(),
                 tool_call_id: &tool_call.id,
                 result_class: if result.is_error {
-                    "tool_error"
+                    crate::consts::RESULT_CLASS_TOOL_ERROR
                 } else {
-                    "success"
+                    crate::consts::RESULT_CLASS_SUCCESS
                 },
                 reason: &result.summary,
                 latency_ms: now_ms().saturating_sub(started_tool_at),
@@ -335,13 +338,15 @@ impl KelvinBrain {
             })
             .collect::<Vec<_>>();
 
-        let system_prompt = req
-            .extra_system_prompt
-            .clone()
-            .unwrap_or_else(|| {
-                "KelvinClaw-style Kelvin brain\n\nIMPORTANT: Do not call the same tool multiple times with identical or nearly identical inputs. If a tool call did not achieve the desired outcome, either try a different tool, modify your approach, or ask the user for clarification instead of retrying."
-                    .to_string()
-            });
+        let system_prompt = system_prompt::build(system_prompt::SystemPromptParams {
+            run_id: &req.run_id,
+            session_id: &req.session_id,
+            model_provider: self.model.provider_name(),
+            model_name: self.model.model_name(),
+            workspace_dir: &req.workspace_dir,
+            tools: &self.tools.definitions(),
+            extra_system_prompt: req.extra_system_prompt.as_deref(),
+        });
 
         let max_iter = req.max_tool_iterations.unwrap_or(self.max_tool_iterations);
         let mut iteration = 0usize;
@@ -383,7 +388,7 @@ impl KelvinBrain {
             let text = output.assistant_text.trim().to_string();
             let has_tools = !output.tool_calls.is_empty();
 
-            if !text.is_empty() && text != "NO_REPLY" {
+            if !text.is_empty() && text != crate::consts::NO_REPLY_SIGNAL {
                 self.emit_assistant(&req.run_id, &text, !has_tools).await?;
                 self.session_store
                     .append_message(&req.session_id, SessionMessage::assistant(text.clone()))
@@ -450,7 +455,7 @@ impl KelvinBrain {
                 stop_reason = final_output.stop_reason.clone();
                 let final_text = final_output.assistant_text.trim().to_string();
 
-                if !final_text.is_empty() && final_text != "NO_REPLY" {
+                if !final_text.is_empty() && final_text != crate::consts::NO_REPLY_SIGNAL {
                     self.emit_assistant(&req.run_id, &final_text, true).await?;
                     self.session_store
                         .append_message(
@@ -488,7 +493,7 @@ impl KelvinBrain {
 fn sanitize_receipt_reason(reason: &str) -> String {
     let mut out = String::new();
     for (idx, ch) in reason.chars().enumerate() {
-        if idx >= 512 {
+        if idx >= crate::consts::RECEIPT_REASON_MAX_LENGTH {
             out.push_str("...");
             break;
         }

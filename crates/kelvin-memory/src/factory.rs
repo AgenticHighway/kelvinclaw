@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use kelvin_core::MemorySearchManager;
 
-use crate::{FallbackMemoryManager, InMemoryVectorMemoryManager, MarkdownMemoryManager};
+use crate::{consts, FallbackMemoryManager, InMemoryVectorMemoryManager, MarkdownMemoryManager};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MemoryBackendKind {
@@ -15,11 +15,13 @@ pub enum MemoryBackendKind {
 impl MemoryBackendKind {
     pub fn parse(value: &str) -> Self {
         match value.trim().to_lowercase().as_str() {
-            "markdown" => Self::Markdown,
-            "in-memory" | "in_memory" | "vector" => Self::InMemoryVector,
-            "fallback" | "in-memory-fallback" | "in_memory_fallback" => {
-                Self::InMemoryWithMarkdownFallback
+            consts::PARSE_MARKDOWN => Self::Markdown,
+            consts::PARSE_IN_MEMORY | consts::PARSE_IN_MEMORY_ALT | consts::PARSE_VECTOR => {
+                Self::InMemoryVector
             }
+            consts::PARSE_FALLBACK
+            | consts::PARSE_IN_MEMORY_FALLBACK
+            | consts::PARSE_IN_MEMORY_FALLBACK_ALT => Self::InMemoryWithMarkdownFallback,
             _ => Self::Markdown,
         }
     }

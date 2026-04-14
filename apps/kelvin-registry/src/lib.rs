@@ -14,6 +14,8 @@ use semver::Version;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
+pub mod consts;
+
 #[derive(Debug, Clone)]
 pub struct RegistryConfig {
     pub bind_addr: SocketAddr,
@@ -64,11 +66,11 @@ struct PluginVersionsQuery {
 pub fn router(config: RegistryConfig) -> Result<Router, String> {
     let state = Arc::new(load_state(config)?);
     Ok(Router::new()
-        .route("/healthz", get(health))
-        .route("/v1/index.json", get(index))
-        .route("/v1/plugins", get(plugins))
-        .route("/v1/plugins/{plugin_id}", get(plugin_versions))
-        .route("/v1/trust-policy", get(trust_policy))
+        .route(consts::ROUTE_HEALTH, get(health))
+        .route(consts::ROUTE_INDEX, get(index))
+        .route(consts::ROUTE_PLUGINS, get(plugins))
+        .route(consts::ROUTE_PLUGIN_VERSIONS, get(plugin_versions))
+        .route(consts::ROUTE_TRUST_POLICY, get(trust_policy))
         .with_state(state))
 }
 
@@ -100,7 +102,7 @@ fn load_state(config: RegistryConfig) -> Result<RegistryState, String> {
             config.index_path.to_string_lossy()
         )
     })?;
-    if index.schema_version.trim() != "v1" {
+    if index.schema_version.trim() != consts::SCHEMA_VERSION {
         return Err(format!(
             "unsupported registry schema_version '{}' in '{}'",
             index.schema_version.trim(),

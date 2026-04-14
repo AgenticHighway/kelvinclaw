@@ -9,7 +9,7 @@ use ratatui::{
 use crate::app::App;
 
 /// Maximum number of completions shown at once.
-pub const MAX_VISIBLE: usize = 8;
+pub const MAX_VISIBLE: usize = crate::consts::MAX_VISIBLE;
 
 /// Render the autocomplete popup floating just above `input_area`.
 /// Does nothing if `app.autocomplete_visible` is false or the area is too small.

@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::{Mutex, Notify, RwLock};
 use tokio::time;
 
+use crate::consts::*;
 use crate::{
     now_ms, AgentRunRequest, AgentRunResult, AgentWaitResult, Brain, KelvinError, KelvinResult,
     WaitStatus,
@@ -152,7 +153,7 @@ impl RunRegistry {
 
     pub async fn wait(&self, run_id: &str, timeout_ms: u64) -> KelvinResult<AgentWaitResult> {
         let record = self.get_record(run_id).await?;
-        let timeout = Duration::from_millis(timeout_ms.max(1));
+        let timeout = Duration::from_millis(timeout_ms.max(MIN_TIMEOUT_MS));
 
         loop {
             let (started_at, status, ended_at, notify) = {

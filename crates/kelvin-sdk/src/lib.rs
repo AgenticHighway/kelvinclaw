@@ -27,6 +27,7 @@ use kelvin_memory::MemoryFactory;
 #[cfg(feature = "memory_rpc")]
 use kelvin_memory_client::{MemoryClientConfig, RpcMemoryManager};
 
+pub mod consts;
 pub mod scheduler;
 mod toolpack;
 
@@ -36,9 +37,7 @@ pub use scheduler::{
     SchedulerStore,
 };
 
-const MIN_DEFAULT_TIMEOUT_MS: u64 = 100;
-const MAX_DEFAULT_TIMEOUT_MS: u64 = 300_000;
-const MAX_CONFIG_ID_LEN: usize = 128;
+use crate::consts::{MAX_CONFIG_ID_LEN, MAX_DEFAULT_TIMEOUT_MS, MIN_DEFAULT_TIMEOUT_MS};
 
 /// ### Brief
 ///
@@ -180,20 +179,20 @@ impl KelvinSdkConfig {
     pub fn for_prompt(prompt: impl Into<String>) -> Self {
         Self {
             prompt: prompt.into(),
-            session_id: "main".to_string(),
+            session_id: crate::consts::DEFAULT_SESSION_ID.to_string(),
             workspace_dir: std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")),
             memory_mode: KelvinCliMemoryMode::Markdown,
-            timeout_ms: 300_000,
+            timeout_ms: crate::consts::MAX_DEFAULT_TIMEOUT_MS,
             system_prompt: None,
-            core_version: "0.1.0".to_string(),
+            core_version: env!("CARGO_PKG_VERSION").to_string(),
             plugin_security_policy: PluginSecurityPolicy::default(),
             load_installed_plugins: true,
             model_provider: KelvinSdkModelSelection::Echo,
             state_dir: None,
             persist_runs: true,
-            max_session_history_messages: 128,
-            compact_to_messages: 64,
-            max_tool_iterations: 10,
+            max_session_history_messages: crate::consts::DEFAULT_MAX_SESSION_HISTORY_MESSAGES,
+            compact_to_messages: crate::consts::DEFAULT_COMPACT_TO_MESSAGES,
+            max_tool_iterations: crate::consts::DEFAULT_MAX_TOOL_ITERATIONS,
         }
     }
 }
@@ -325,10 +324,14 @@ impl KelvinSdkRuntimeConfig {
             model_provider: config.model_provider.clone(),
             require_cli_plugin_tool: true,
             emit_stdout_events: true,
-            state_dir: config
-                .state_dir
-                .clone()
-                .or_else(|| Some(config.workspace_dir.join(".kelvin").join("state"))),
+            state_dir: config.state_dir.clone().or_else(|| {
+                Some(
+                    config
+                        .workspace_dir
+                        .join(crate::consts::KELVIN_DIR_NAME)
+                        .join(crate::consts::STATE_DIR_NAME),
+                )
+            }),
             persist_runs: config.persist_runs,
             max_session_history_messages: config.max_session_history_messages,
             compact_to_messages: config.compact_to_messages,
@@ -687,14 +690,18 @@ impl RuntimePersistence {
     ///
     /// return the sessions subdirectory path, or `None` if no state directory is configured
     fn sessions_dir(&self) -> Option<PathBuf> {
-        self.state_dir.as_ref().map(|root| root.join("sessions"))
+        self.state_dir
+            .as_ref()
+            .map(|root| root.join(crate::consts::STATE_SESSIONS_SUBDIR))
     }
 
     /// ### Brief
     ///
     /// return the runs subdirectory path, or `None` if no state directory is configured
     fn runs_dir(&self) -> Option<PathBuf> {
-        self.state_dir.as_ref().map(|root| root.join("runs"))
+        self.state_dir
+            .as_ref()
+            .map(|root| root.join(crate::consts::STATE_RUNS_SUBDIR))
     }
 
     /// ### Brief
@@ -702,9 +709,9 @@ impl RuntimePersistence {
     /// ensure the sessions and runs subdirectories exist
     fn ensure_layout(&self) -> KelvinResult<()> {
         if let Some(root) = &self.state_dir {
-            fs::create_dir_all(root.join("sessions"))
+            fs::create_dir_all(root.join(crate::consts::STATE_SESSIONS_SUBDIR))
                 .map_err(|err| KelvinError::Io(format!("create sessions dir: {err}")))?;
-            fs::create_dir_all(root.join("runs"))
+            fs::create_dir_all(root.join(crate::consts::STATE_RUNS_SUBDIR))
                 .map_err(|err| KelvinError::Io(format!("create runs dir: {err}")))?;
         }
         Ok(())
@@ -948,8 +955,11 @@ impl RuntimePersistence {
             merged = json!({});
         }
         if let Some(object) = merged.as_object_mut() {
-            object.insert("run_id".to_string(), json!(run_id));
-            object.insert("updated_at_ms".to_string(), json!(now_ms()));
+            object.insert(crate::consts::JSON_KEY_RUN_ID.to_string(), json!(run_id));
+            object.insert(
+                crate::consts::JSON_KEY_UPDATED_AT_MS.to_string(),
+                json!(now_ms()),
+            );
             if let Some(incoming) = record.as_object() {
                 for (key, value) in incoming {
                     object.insert(key.clone(), value.clone());
@@ -976,7 +986,7 @@ impl RuntimePersistence {
 /// - file sync fails
 /// - rename fails
 fn write_atomic(path: &PathBuf, bytes: &[u8]) -> KelvinResult<()> {
-    let tmp_path = path.with_extension("tmp");
+    let tmp_path = path.with_extension(crate::consts::TEMP_FILE_EXTENSION);
     let mut file = File::create(&tmp_path)
         .map_err(|err| KelvinError::Io(format!("create temp file: {err}")))?;
     file.write_all(bytes)
@@ -1069,10 +1079,10 @@ impl FileBackedSessionStore {
         let mut role_counts = HashMap::<String, usize>::new();
         for message in dropped_slice {
             let role = match message.role {
-                SessionRole::User => "user",
-                SessionRole::Assistant => "assistant",
-                SessionRole::Tool => "tool",
-                SessionRole::System => "system",
+                SessionRole::User => crate::consts::ROLE_USER,
+                SessionRole::Assistant => crate::consts::ROLE_ASSISTANT,
+                SessionRole::Tool => crate::consts::ROLE_TOOL,
+                SessionRole::System => crate::consts::ROLE_SYSTEM,
             };
             *role_counts.entry(role.to_string()).or_default() += 1;
         }
@@ -1089,8 +1099,8 @@ impl FileBackedSessionStore {
                 role_parts.join(",")
             ),
             metadata: json!({
-                "compacted": true,
-                "dropped_messages": drop_count,
+                (crate::consts::JSON_KEY_COMPACTED): true,
+                (crate::consts::JSON_KEY_DROPPED_MESSAGES): drop_count,
                 "policy": {
                     "max_session_history_messages": self.persistence.max_session_history_messages,
                     "compact_to_messages": self.persistence.compact_to_messages
@@ -1298,7 +1308,7 @@ struct TimeTool;
 #[async_trait]
 impl Tool for TimeTool {
     fn name(&self) -> &str {
-        "time"
+        crate::consts::BUILTIN_TOOL_TIME
     }
 
     async fn call(&self, _input: ToolCallInput) -> KelvinResult<ToolCallResult> {
@@ -1306,53 +1316,13 @@ impl Tool for TimeTool {
         let formatted = now.format("%Y-%m-%d %H:%M:%S%.3f %Z").to_string();
         let iso8601 = now.to_rfc3339();
         let output = json!({
-            "human": formatted.clone(),
-            "iso8601": iso8601,
+            (crate::consts::JSON_KEY_HUMAN): formatted.clone(),
+            (crate::consts::JSON_KEY_ISO8601): iso8601,
         });
         Ok(ToolCallResult {
             summary: "timestamp generated".to_string(),
             output: Some(output.to_string()),
             visible_text: Some(formatted),
-            is_error: false,
-        })
-    }
-}
-
-/// ### Brief
-///
-/// built-in tool that always returns a fixed text response
-///
-/// ### Fields
-/// * `name` - tool name exposed to the agent
-/// * `text` - static text returned on every call
-#[derive(Debug, Clone)]
-struct StaticTextTool {
-    name: String,
-    text: String,
-}
-
-/// static text tool construction
-impl StaticTextTool {
-    fn new(name: &str, text: &str) -> Self {
-        Self {
-            name: name.to_string(),
-            text: text.to_string(),
-        }
-    }
-}
-
-/// `Tool` implementation for the static text tool
-#[async_trait]
-impl Tool for StaticTextTool {
-    fn name(&self) -> &str {
-        &self.name
-    }
-
-    async fn call(&self, _input: ToolCallInput) -> KelvinResult<ToolCallResult> {
-        Ok(ToolCallResult {
-            summary: format!("{} returned static text", self.name),
-            output: Some(self.text.clone()),
-            visible_text: Some(self.text.clone()),
             is_error: false,
         })
     }
@@ -1514,10 +1484,6 @@ impl KelvinSdkRuntime {
 
         let builtin_tools = Arc::new(HashMapToolRegistry::default());
         builtin_tools.register(TimeTool);
-        builtin_tools.register(StaticTextTool::new(
-            "hello_tool",
-            "Hello from Kelvin SDK built-in tools.",
-        ));
         let (toolpack_tools, toolpack_count) =
             toolpack::load_default_toolpack_plugins(&config.core_version, scheduler_store.clone())?;
         println!("loaded kelvin core toolpack plugins: {toolpack_count}");
@@ -1542,14 +1508,14 @@ impl KelvinSdkRuntime {
             };
 
         let cli_plugin_tool = if config.require_cli_plugin_tool {
-            Some(installed_tools.get("kelvin_cli").ok_or_else(|| {
+            Some(installed_tools.get(crate::consts::PLUGIN_TOOL_KELVIN_CLI).ok_or_else(|| {
                 KelvinError::NotFound(
                     "required plugin tool 'kelvin_cli' not found; install it with scripts/install-kelvin-cli-plugin.sh"
                         .to_string(),
                 )
             })?)
         } else {
-            installed_tools.get("kelvin_cli")
+            installed_tools.get(crate::consts::PLUGIN_TOOL_KELVIN_CLI)
         };
 
         let tools: Arc<dyn ToolRegistry> = Arc::new(CombinedToolRegistry::new(vec![
@@ -1764,10 +1730,10 @@ impl KelvinSdkRuntime {
         self.persistence.persist_run_record(
             &accepted.run_id,
             json!({
-                "accepted_at_ms": accepted.accepted_at_ms,
-                "session_id": session_id_for_record,
-                "workspace_dir": workspace_dir_for_record.to_string_lossy().to_string(),
-                "prompt_length": prompt_length,
+                (crate::consts::JSON_KEY_ACCEPTED_AT_MS): accepted.accepted_at_ms,
+                (crate::consts::JSON_KEY_SESSION_ID): session_id_for_record,
+                (crate::consts::JSON_KEY_WORKSPACE_DIR): workspace_dir_for_record.to_string_lossy().to_string(),
+                (crate::consts::JSON_KEY_PROMPT_LENGTH): prompt_length,
             }),
         )?;
 
@@ -1789,8 +1755,10 @@ impl KelvinSdkRuntime {
     /// current run state from the core runtime
     pub async fn state(&self, run_id: &str) -> KelvinResult<RunState> {
         let state = self.runtime.state(run_id).await?;
-        self.persistence
-            .persist_run_record(run_id, json!({ "last_state": state }))?;
+        self.persistence.persist_run_record(
+            run_id,
+            json!({ (crate::consts::JSON_KEY_LAST_STATE): state }),
+        )?;
         Ok(state)
     }
 
@@ -1807,7 +1775,7 @@ impl KelvinSdkRuntime {
     pub async fn wait(&self, run_id: &str, timeout_ms: u64) -> KelvinResult<AgentWaitResult> {
         let wait = self.runtime.wait(run_id, timeout_ms).await?;
         self.persistence
-            .persist_run_record(run_id, json!({ "last_wait": wait }))?;
+            .persist_run_record(run_id, json!({ (crate::consts::JSON_KEY_LAST_WAIT): wait }))?;
         Ok(wait)
     }
 
@@ -1833,19 +1801,21 @@ impl KelvinSdkRuntime {
         let outcome = self.runtime.wait_for_outcome(run_id, timeout_ms).await?;
         let persisted_outcome = match &outcome {
             RunOutcome::Completed(result) => json!({
-                "status": "completed",
-                "result": result,
+                (crate::consts::JSON_KEY_STATUS): crate::consts::JSON_KEY_COMPLETED,
+                (crate::consts::JSON_KEY_RESULT): result,
             }),
             RunOutcome::Failed(error) => json!({
-                "status": "failed",
-                "error": error,
+                (crate::consts::JSON_KEY_STATUS): crate::consts::JSON_KEY_FAILED,
+                (crate::consts::JSON_KEY_ERROR): error,
             }),
             RunOutcome::Timeout => json!({
-                "status": "timeout",
+                (crate::consts::JSON_KEY_STATUS): crate::consts::JSON_KEY_TIMEOUT,
             }),
         };
-        self.persistence
-            .persist_run_record(run_id, json!({ "last_outcome": persisted_outcome }))?;
+        self.persistence.persist_run_record(
+            run_id,
+            json!({ (crate::consts::JSON_KEY_LAST_OUTCOME): persisted_outcome }),
+        )?;
         Ok(outcome)
     }
 }
@@ -1901,7 +1871,10 @@ fn resolve_model_provider(
     };
 
     match selection {
-        KelvinSdkModelSelection::Echo => Ok(Arc::new(EchoModelProvider::new("kelvin", "echo-v1"))),
+        KelvinSdkModelSelection::Echo => Ok(Arc::new(EchoModelProvider::new(
+            crate::consts::MODEL_PROVIDER_KELVIN,
+            crate::consts::MODEL_VERSION_ECHO_V1,
+        ))),
         KelvinSdkModelSelection::InstalledPlugin { plugin_id } => resolve_installed(plugin_id),
         KelvinSdkModelSelection::InstalledPluginFailover {
             plugin_ids,
@@ -2107,7 +2080,7 @@ mod tests {
         let workspace = unique_workspace();
         let cfg = super::KelvinSdkRuntimeConfig {
             workspace_dir: workspace,
-            default_session_id: "main".to_string(),
+            default_session_id: crate::consts::DEFAULT_SESSION_ID.to_string(),
             memory_mode: KelvinCliMemoryMode::Markdown,
             default_timeout_ms: 1_000,
             default_system_prompt: None,
@@ -3004,7 +2977,7 @@ mod tests {
     }
 
     fn find_first_messages_file(state_dir: &Path) -> Option<PathBuf> {
-        let sessions_dir = state_dir.join("sessions");
+        let sessions_dir = state_dir.join(crate::consts::STATE_SESSIONS_SUBDIR);
         if !sessions_dir.is_dir() {
             return None;
         }
@@ -3020,7 +2993,7 @@ mod tests {
     }
 
     fn find_run_record(state_dir: &Path, run_id: &str) -> Option<serde_json::Value> {
-        let runs_dir = state_dir.join("runs");
+        let runs_dir = state_dir.join(crate::consts::STATE_RUNS_SUBDIR);
         if !runs_dir.is_dir() {
             return None;
         }
@@ -3032,7 +3005,7 @@ mod tests {
             }
             let bytes = fs::read(entry.path()).ok()?;
             let value: serde_json::Value = serde_json::from_slice(&bytes).ok()?;
-            if value.get("run_id") == Some(&json!(run_id)) {
+            if value.get(crate::consts::JSON_KEY_RUN_ID) == Some(&json!(run_id)) {
                 return Some(value);
             }
         }

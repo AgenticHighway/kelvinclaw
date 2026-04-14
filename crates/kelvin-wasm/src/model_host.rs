@@ -11,24 +11,28 @@ use serde_json::{json, Value};
 use url::Url;
 use wasmtime::{Caller, Config, Engine, Linker, Memory, Module, Store};
 
+use crate::consts;
+
 pub mod model_abi {
-    pub const ABI_VERSION: &str = "1.0.0";
-    pub const MODULE: &str = "kelvin_model_host_v1";
+    use crate::consts;
 
-    pub const EXPORT_ALLOC: &str = "alloc";
-    pub const EXPORT_DEALLOC: &str = "dealloc";
-    pub const EXPORT_INFER: &str = "infer";
-    pub const EXPORT_MEMORY: &str = "memory";
+    pub const ABI_VERSION: &str = consts::MODEL_ABI_VERSION;
+    pub const MODULE: &str = consts::MODEL_MODULE;
 
-    pub const IMPORT_OPENAI_RESPONSES_CALL: &str = "openai_responses_call";
-    pub const IMPORT_PROVIDER_PROFILE_CALL: &str = "provider_profile_call";
-    pub const IMPORT_LOG: &str = "log";
-    pub const IMPORT_CLOCK_NOW_MS: &str = "clock_now_ms";
+    pub const EXPORT_ALLOC: &str = consts::MODEL_EXPORT_ALLOC;
+    pub const EXPORT_DEALLOC: &str = consts::MODEL_EXPORT_DEALLOC;
+    pub const EXPORT_INFER: &str = consts::MODEL_EXPORT_INFER;
+    pub const EXPORT_MEMORY: &str = consts::MODEL_EXPORT_MEMORY;
+
+    pub const IMPORT_OPENAI_RESPONSES_CALL: &str = consts::MODEL_IMPORT_OPENAI_RESPONSES_CALL;
+    pub const IMPORT_PROVIDER_PROFILE_CALL: &str = consts::MODEL_IMPORT_PROVIDER_PROFILE_CALL;
+    pub const IMPORT_LOG: &str = consts::MODEL_IMPORT_LOG;
+    pub const IMPORT_CLOCK_NOW_MS: &str = consts::MODEL_IMPORT_CLOCK_NOW_MS;
 }
 
-const DEFAULT_MAX_REQUEST_BYTES: usize = 256 * 1024;
-const DEFAULT_MAX_RESPONSE_BYTES: usize = 1024 * 1024;
-const DEFAULT_TIMEOUT_MS: u64 = 30_000;
+const DEFAULT_MAX_REQUEST_BYTES: usize = crate::consts::MODEL_DEFAULT_MAX_REQUEST_BYTES;
+const DEFAULT_MAX_RESPONSE_BYTES: usize = crate::consts::MODEL_DEFAULT_MAX_RESPONSE_BYTES;
+const DEFAULT_TIMEOUT_MS: u64 = crate::consts::MODEL_DEFAULT_TIMEOUT_MS;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ModelSandboxPolicy {
@@ -45,7 +49,7 @@ pub struct ModelSandboxPolicy {
 impl Default for ModelSandboxPolicy {
     fn default() -> Self {
         Self {
-            network_allow_hosts: vec!["api.openai.com".to_string()],
+            network_allow_hosts: vec![crate::consts::DEFAULT_OPENAI_HOST.to_string()],
             max_module_bytes: super::DEFAULT_MAX_MODULE_BYTES,
             max_request_bytes: DEFAULT_MAX_REQUEST_BYTES,
             max_response_bytes: DEFAULT_MAX_RESPONSE_BYTES,
@@ -297,7 +301,7 @@ fn model_input_to_anthropic_request(input: &ModelInput, model_name: &str) -> Val
     let messages = build_anthropic_messages(input);
     let mut payload = json!({
         "model": model_name,
-        "max_tokens": 1024,
+        "max_tokens": consts::MODEL_PAYLOAD_MAX_TOKENS,
         "messages": messages
     });
 
@@ -648,7 +652,7 @@ impl WasmModelHost {
                 model_abi::MODULE,
                 model_abi::IMPORT_LOG,
                 |mut caller: Caller<'_, ModelHostState>, _level: i32, ptr: i32, len: i32| -> i32 {
-                    let max_len = caller.data().policy.max_request_bytes.min(16 * 1024);
+                    let max_len = consts::MODEL_LOG_MAX_BYTES;
                     if let Ok(bytes) =
                         read_caller_bytes(&mut caller, ptr, len, max_len, "log message")
                     {

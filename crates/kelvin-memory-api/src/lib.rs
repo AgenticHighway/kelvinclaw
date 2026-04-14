@@ -1,13 +1,14 @@
 use std::collections::HashSet;
 
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
-use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
+use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
 
-pub const MEMORY_API_VERSION: &str = "v1alpha1";
-pub const JWT_ALGORITHM: Algorithm = Algorithm::EdDSA;
+pub mod consts;
+
+pub use consts::{JWT_ALGORITHM, MEMORY_API_VERSION};
 
 pub mod v1alpha1 {
     tonic::include_proto!("kelvin.memory.v1alpha1");
@@ -29,11 +30,11 @@ pub enum MemoryOperation {
 impl MemoryOperation {
     pub fn as_str(self) -> &'static str {
         match self {
-            Self::Upsert => "upsert",
-            Self::Query => "query",
-            Self::Read => "read",
-            Self::Delete => "delete",
-            Self::Health => "health",
+            Self::Upsert => consts::OPERATION_UPSERT,
+            Self::Query => consts::OPERATION_QUERY,
+            Self::Read => consts::OPERATION_READ,
+            Self::Delete => consts::OPERATION_DELETE,
+            Self::Health => consts::OPERATION_HEALTH,
         }
     }
 }

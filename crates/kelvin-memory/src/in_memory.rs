@@ -13,6 +13,8 @@ use kelvin_core::{
     MemorySyncParams,
 };
 
+use crate::consts;
+
 #[derive(Debug, Clone)]
 pub struct InMemoryDocument {
     pub path: String,
@@ -33,15 +35,15 @@ impl InMemoryVectorMemoryManager {
         Self {
             docs: Arc::new(RwLock::new(docs)),
             status: Arc::new(RwLock::new(MemoryProviderStatus {
-                backend: "builtin".to_string(),
-                provider: "in_memory_vector".to_string(),
-                model: Some("token-overlap-v1".to_string()),
-                requested_provider: Some("in_memory_vector".to_string()),
+                backend: consts::BACKEND_BUILTIN.to_string(),
+                provider: consts::PROVIDER_IN_MEMORY_VECTOR.to_string(),
+                model: Some(consts::MODEL_TOKEN_OVERLAP_V1.to_string()),
+                requested_provider: Some(consts::PROVIDER_IN_MEMORY_VECTOR.to_string()),
                 files: Some(files),
                 chunks: Some(chunks),
                 dirty: false,
                 fallback: None,
-                custom: json!({"index": "volatile"}),
+                custom: json!({consts::JSON_KEY_INDEX: consts::JSON_VALUE_VOLATILE}),
             })),
         }
     }
@@ -50,16 +52,16 @@ impl InMemoryVectorMemoryManager {
         let workspace_dir = workspace_dir.as_ref();
         let mut docs = Vec::new();
 
-        let memory_root = workspace_dir.join("MEMORY.md");
+        let memory_root = workspace_dir.join(consts::MEMORY_FILE);
         if let Ok(text) = fs::read_to_string(memory_root) {
             docs.push(InMemoryDocument {
-                path: "MEMORY.md".to_string(),
+                path: consts::MEMORY_FILE.to_string(),
                 text,
                 source: MemorySource::Memory,
             });
         }
 
-        let daily_dir = workspace_dir.join("memory");
+        let daily_dir = workspace_dir.join(consts::MEMORY_DIR);
         if daily_dir.is_dir() {
             for entry in WalkDir::new(daily_dir)
                 .follow_links(false)
@@ -72,7 +74,7 @@ impl InMemoryVectorMemoryManager {
                 let file_path = entry.path();
                 if !file_path
                     .extension()
-                    .map(|ext| ext.eq_ignore_ascii_case("md"))
+                    .map(|ext| ext.eq_ignore_ascii_case(consts::MARKDOWN_EXTENSION))
                     .unwrap_or(false)
                 {
                     continue;
@@ -146,8 +148,12 @@ impl InMemoryVectorMemoryManager {
         }
 
         let idx = first_hit.unwrap_or(0);
-        let start = idx.saturating_sub(1);
-        let end = (idx + 1).min(lines.len().saturating_sub(1));
+        let start = idx.saturating_sub(consts::SEARCH_SNIPPET_CONTEXT_LINE_DELTA);
+        let end = (idx + consts::SEARCH_SNIPPET_CONTEXT_LINE_DELTA).min(
+            lines
+                .len()
+                .saturating_sub(consts::SEARCH_SNIPPET_CONTEXT_LINE_DELTA),
+        );
         (start + 1, end + 1, lines[start..=end].join("\n"))
     }
 
@@ -236,7 +242,10 @@ impl MemorySearchManager for InMemoryVectorMemoryManager {
             });
         }
 
-        let start = params.from.unwrap_or(1).saturating_sub(1);
+        let start = params
+            .from
+            .unwrap_or(1)
+            .saturating_sub(consts::SEARCH_SNIPPET_CONTEXT_LINE_DELTA);
         if start >= raw_lines.len() {
             return Ok(MemoryReadResult {
                 text: String::new(),

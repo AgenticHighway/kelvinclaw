@@ -7,17 +7,14 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::{
-    EventSink, KelvinError, KelvinResult, MemorySearchManager, ModelProvider, SessionStore, Tool,
-    ToolRegistry,
+    consts, EventSink, KelvinError, KelvinResult, MemorySearchManager, ModelProvider, SessionStore,
+    Tool, ToolRegistry,
 };
 
-pub const KELVIN_CORE_SDK_NAME: &str = "Kelvin Core";
-pub const KELVIN_CORE_API_VERSION: &str = "1.0.0";
-pub const MAX_PLUGIN_ID_LEN: usize = 128;
-pub const MAX_PLUGIN_NAME_LEN: usize = 128;
-pub const MAX_PLUGIN_DESCRIPTION_LEN: usize = 4_096;
-pub const MAX_PLUGIN_HOMEPAGE_LEN: usize = 2_048;
-pub const MAX_PLUGIN_CAPABILITIES: usize = 32;
+pub use crate::consts::{
+    KELVIN_CORE_API_VERSION, KELVIN_CORE_SDK_NAME, MAX_PLUGIN_CAPABILITIES,
+    MAX_PLUGIN_DESCRIPTION_LEN, MAX_PLUGIN_HOMEPAGE_LEN, MAX_PLUGIN_ID_LEN, MAX_PLUGIN_NAME_LEN,
+};
 
 /// ### Brief
 ///
@@ -345,7 +342,7 @@ fn validate_semver(label: &str, value: &str) -> KelvinResult<()> {
         )));
     }
     Version::parse(value).map_err(|err| {
-        let shown = preview(value, 64);
+        let shown = preview(value, consts::DISPLAY_PREVIEW_MAX_LEN);
         KelvinError::InvalidInput(format!(
             "{label} must be valid semver, got '{shown}': {err}"
         ))
@@ -382,7 +379,7 @@ fn validate_plugin_id(value: &str) -> KelvinResult<()> {
         .chars()
         .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '_' | '-' | '.'))
     {
-        let shown = preview(cleaned, 64);
+        let shown = preview(cleaned, consts::DISPLAY_PREVIEW_MAX_LEN);
         return Err(KelvinError::InvalidInput(format!(
             "plugin id has invalid characters: {shown}"
         )));

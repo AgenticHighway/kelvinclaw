@@ -9,8 +9,8 @@ use ratatui::{
 use crate::app::{App, PasteMarker};
 
 pub fn render(f: &mut Frame, app: &App, area: Rect) {
-    let inner_width = area.width.saturating_sub(2) as usize;
-    let prefix: usize = 2; // "> "
+    let inner_width = area.width.saturating_sub(crate::consts::INPUT_BORDER_WIDTH) as usize;
+    let prefix: usize = crate::consts::INPUT_PREFIX_WIDTH;
     let first_cap = inner_width.saturating_sub(prefix);
 
     let display = app.display_input();
@@ -46,7 +46,11 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
     let paragraph = Paragraph::new(Text::from(lines)).block(
         Block::default()
             .borders(Borders::ALL)
-            .border_style(Style::default().fg(Color::Rgb(255, 165, 0)))
+            .border_style(Style::default().fg(Color::Rgb(
+                crate::consts::RGB_ORANGE.0,
+                crate::consts::RGB_ORANGE.1,
+                crate::consts::RGB_ORANGE.2,
+            )))
             .title(" Input (Enter=submit, ^T=tools, ^C^C=quit) "),
     );
 

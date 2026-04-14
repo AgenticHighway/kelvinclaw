@@ -6,21 +6,25 @@ use kelvin_core::{KelvinError, KelvinResult};
 use serde_json::Value;
 use wasmtime::{Caller, Config, Engine, Linker, Memory, Module, Store};
 
+use crate::consts::CHANNEL_LOG_MAX_BYTES;
+
 pub mod channel_abi {
-    pub const ABI_VERSION: &str = "1.0.0";
-    pub const MODULE: &str = "kelvin_channel_host_v1";
+    use crate::consts;
 
-    pub const EXPORT_ALLOC: &str = "alloc";
-    pub const EXPORT_DEALLOC: &str = "dealloc";
-    pub const EXPORT_HANDLE_INGEST: &str = "handle_ingest";
-    pub const EXPORT_MEMORY: &str = "memory";
+    pub const ABI_VERSION: &str = consts::CHANNEL_ABI_VERSION;
+    pub const MODULE: &str = consts::CHANNEL_MODULE;
 
-    pub const IMPORT_LOG: &str = "log";
-    pub const IMPORT_CLOCK_NOW_MS: &str = "clock_now_ms";
+    pub const EXPORT_ALLOC: &str = consts::CHANNEL_EXPORT_ALLOC;
+    pub const EXPORT_DEALLOC: &str = consts::CHANNEL_EXPORT_DEALLOC;
+    pub const EXPORT_HANDLE_INGEST: &str = consts::CHANNEL_EXPORT_HANDLE_INGEST;
+    pub const EXPORT_MEMORY: &str = consts::CHANNEL_EXPORT_MEMORY;
+
+    pub const IMPORT_LOG: &str = consts::CHANNEL_IMPORT_LOG;
+    pub const IMPORT_CLOCK_NOW_MS: &str = consts::CHANNEL_IMPORT_CLOCK_NOW_MS;
 }
 
-const DEFAULT_MAX_REQUEST_BYTES: usize = 256 * 1024;
-const DEFAULT_MAX_RESPONSE_BYTES: usize = 256 * 1024;
+const DEFAULT_MAX_REQUEST_BYTES: usize = crate::consts::CHANNEL_DEFAULT_MAX_REQUEST_BYTES;
+const DEFAULT_MAX_RESPONSE_BYTES: usize = crate::consts::CHANNEL_DEFAULT_MAX_RESPONSE_BYTES;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChannelSandboxPolicy {
@@ -41,10 +45,8 @@ impl Default for ChannelSandboxPolicy {
     }
 }
 
-#[derive(Debug, Clone)]
-struct ChannelHostState {
-    policy: ChannelSandboxPolicy,
-}
+#[derive(Debug, Clone, Default)]
+struct ChannelHostState;
 
 #[derive(Clone)]
 pub struct WasmChannelHost {
@@ -103,12 +105,7 @@ impl WasmChannelHost {
             .map_err(|err| backend("compile channel wasm module", err))?;
         validate_imports(&module)?;
 
-        let mut store = Store::new(
-            &self.engine,
-            ChannelHostState {
-                policy: policy.clone(),
-            },
-        );
+        let mut store = Store::new(&self.engine, ChannelHostState);
         store
             .set_fuel(policy.fuel_budget)
             .map_err(|err| backend("set channel fuel budget", err))?;
@@ -208,7 +205,7 @@ impl WasmChannelHost {
                  ptr: i32,
                  len: i32|
                  -> i32 {
-                    let max_len = caller.data().policy.max_request_bytes.min(16 * 1024);
+                    let max_len = CHANNEL_LOG_MAX_BYTES;
                     if let Ok(bytes) =
                         read_caller_bytes(&mut caller, ptr, len, max_len, "channel log message")
                     {

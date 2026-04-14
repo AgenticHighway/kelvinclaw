@@ -3,8 +3,7 @@ use chrono::{Datelike, Timelike, Utc};
 use kelvin_core::{KelvinError, KelvinResult};
 
 use super::MINUTE_MS;
-
-const MAX_CRON_SCAN_MINUTES: usize = 1_051_200;
+use crate::consts::MAX_CRON_SCAN_MINUTES;
 
 #[derive(Debug, Clone)]
 pub(crate) struct CronSchedule {

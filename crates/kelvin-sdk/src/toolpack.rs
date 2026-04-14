@@ -16,18 +16,14 @@ use kelvin_core::{
     ToolCallResult, ToolRegistry, KELVIN_CORE_API_VERSION,
 };
 
+use crate::consts::{
+    DEFAULT_FETCH_MAX_BYTES, DEFAULT_FETCH_TIMEOUT_MS, DEFAULT_FS_WRITE_SCOPE,
+    DEFAULT_READ_MAX_BYTES, DEFAULT_WEB_ALLOW_HOSTS, ENV_TOOLPACK_ENABLE_FS_WRITE,
+    ENV_TOOLPACK_ENABLE_SCHEDULER_WRITE, ENV_TOOLPACK_ENABLE_SESSION_CLEAR,
+    ENV_TOOLPACK_ENABLE_WEB_FETCH, ENV_TOOLPACK_WEB_ALLOW_HOSTS, MAX_APPROVAL_REASON_LEN,
+    SENSITIVE_PATHS_COMPARE, SENSITIVE_PATHS_PREFIX,
+};
 use crate::{NewScheduledTask, ScheduleReplyTarget, SchedulerStore};
-
-const DEFAULT_READ_MAX_BYTES: usize = 64 * 1024;
-const DEFAULT_FETCH_MAX_BYTES: usize = 128 * 1024;
-const DEFAULT_FETCH_TIMEOUT_MS: u64 = 3_000;
-const DEFAULT_WEB_ALLOW_HOSTS: &str = "docs.rs,crates.io,raw.githubusercontent.com,api.openai.com";
-
-const ENV_TOOLPACK_ENABLE_FS_WRITE: &str = "KELVIN_TOOLPACK_ENABLE_FS_WRITE";
-const ENV_TOOLPACK_ENABLE_WEB_FETCH: &str = "KELVIN_TOOLPACK_ENABLE_WEB_FETCH";
-const ENV_TOOLPACK_ENABLE_SCHEDULER_WRITE: &str = "KELVIN_TOOLPACK_ENABLE_SCHEDULER_WRITE";
-const ENV_TOOLPACK_ENABLE_SESSION_CLEAR: &str = "KELVIN_TOOLPACK_ENABLE_SESSION_CLEAR";
-const ENV_TOOLPACK_WEB_ALLOW_HOSTS: &str = "KELVIN_TOOLPACK_WEB_ALLOW_HOSTS";
 
 /// ### Brief
 ///
@@ -303,10 +299,8 @@ fn normalize_workspace_relative_path(path: &str, field_name: &str) -> KelvinResu
 /// true if path is sensitive
 fn deny_sensitive_read_path(path: &str) -> bool {
     let lower = path.to_ascii_lowercase();
-    lower == ".env"
-        || lower.starts_with(".env.")
-        || lower.starts_with(".git/")
-        || lower.starts_with(".kelvin/plugins/")
+    SENSITIVE_PATHS_COMPARE.iter().any(|&p| p == lower)
+        || SENSITIVE_PATHS_PREFIX.iter().any(|&p| lower.starts_with(p))
 }
 
 /// ### Brief
@@ -372,7 +366,8 @@ fn require_sensitive_approval(
             "sensitive operation '{capability}' requires non-empty approval.reason"
         )));
     }
-    if reason.chars().count() > 256 || reason.chars().any(|ch| ch.is_control()) {
+    if reason.chars().count() > MAX_APPROVAL_REASON_LEN || reason.chars().any(|ch| ch.is_control())
+    {
         return Err(KelvinError::InvalidInput(format!(
             "approval.reason for '{capability}' is invalid"
         )));
@@ -553,9 +548,7 @@ struct SafeFsWriteTool {
 /// implement flag function for checking allowed write paths
 impl SafeFsWriteTool {
     fn write_scope_allowed(path: &str) -> bool {
-        path.starts_with(".kelvin/sandbox/")
-            || path.starts_with("memory/")
-            || path.starts_with("notes/")
+        DEFAULT_FS_WRITE_SCOPE.iter().any(|&p| path.starts_with(p))
     }
 }
 
@@ -1286,13 +1279,13 @@ fn manifest(
     PluginManifest {
         id: id.to_string(),
         name: name.to_string(),
-        version: "0.1.0".to_string(),
+        version: env!("CARGO_PKG_VERSION").to_string(),
         api_version: KELVIN_CORE_API_VERSION.to_string(),
         description: Some(description.to_string()),
         homepage: Some("https://github.com/agentichighway/kelvinclaw".to_string()),
         capabilities,
         experimental: false,
-        min_core_version: Some("0.1.0".to_string()),
+        min_core_version: None,
         max_core_version: None,
     }
 }
@@ -1406,7 +1399,22 @@ mod tests {
 
     use crate::SchedulerStore;
 
-    use super::load_default_toolpack_plugins;
+    use super::{deny_sensitive_read_path, load_default_toolpack_plugins};
+
+    #[test]
+    fn deny_sensitive_read_path_allows_normal_file() {
+        assert!(!deny_sensitive_read_path("notes/meeting.md"));
+    }
+
+    #[test]
+    fn deny_sensitive_read_path_blocks_env_file() {
+        assert!(deny_sensitive_read_path(".env"));
+    }
+
+    #[test]
+    fn deny_sensitive_read_path_blocks_kelvin_plugins_dir() {
+        assert!(deny_sensitive_read_path(".kelvin/plugins/my-plugin.wasm"));
+    }
 
     fn unique_workspace() -> std::path::PathBuf {
         let millis = SystemTime::now()

@@ -3,6 +3,8 @@ use std::sync::OnceLock;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use async_trait::async_trait;
+
+pub mod consts;
 use aws_config::BehaviorVersion;
 use aws_sdk_kms::primitives::Blob;
 use aws_sdk_kms::types::{MessageType, SigningAlgorithmSpec};
@@ -58,14 +60,14 @@ pub struct MemoryClientConfig {
 impl Default for MemoryClientConfig {
     fn default() -> Self {
         Self {
-            endpoint: "http://127.0.0.1:50051".to_string(),
-            issuer: "kelvin-root".to_string(),
-            audience: "kelvin-memory-controller".to_string(),
-            subject: "kelvin-root-memory-client".to_string(),
-            tenant_id: "default".to_string(),
-            workspace_id: "default".to_string(),
-            session_id: "default".to_string(),
-            module_id: "memory.echo".to_string(),
+            endpoint: consts::DEFAULT_ENDPOINT.to_string(),
+            issuer: consts::DEFAULT_ISSUER.to_string(),
+            audience: consts::DEFAULT_AUDIENCE.to_string(),
+            subject: consts::DEFAULT_SUBJECT.to_string(),
+            tenant_id: consts::DEFAULT_TENANT_ID.to_string(),
+            workspace_id: consts::DEFAULT_WORKSPACE_ID.to_string(),
+            session_id: consts::DEFAULT_SESSION_ID.to_string(),
+            module_id: consts::DEFAULT_MODULE_ID.to_string(),
             signing_key_pem: String::new(),
             signing_key_path: String::new(),
             signing_kms_key_id: String::new(),
@@ -78,9 +80,9 @@ impl Default for MemoryClientConfig {
             tls_client_key_pem: String::new(),
             tls_client_key_path: String::new(),
             allow_insecure_non_loopback: false,
-            timeout_ms: 2_000,
-            max_bytes: 1024 * 1024,
-            max_results: 20,
+            timeout_ms: consts::DEFAULT_TIMEOUT_MS,
+            max_bytes: consts::DEFAULT_MAX_BYTES,
+            max_results: consts::DEFAULT_MAX_RESULTS,
         }
     }
 }
@@ -88,115 +90,115 @@ impl Default for MemoryClientConfig {
 impl MemoryClientConfig {
     pub fn from_env() -> Self {
         let mut cfg = Self::default();
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_RPC_ENDPOINT") {
+        if let Ok(value) = std::env::var(consts::ENV_MEMORY_RPC_ENDPOINT) {
             if !value.trim().is_empty() {
                 cfg.endpoint = value;
             }
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_RPC_ISSUER") {
+        if let Ok(value) = std::env::var(consts::ENV_MEMORY_RPC_ISSUER) {
             if !value.trim().is_empty() {
                 cfg.issuer = value;
             }
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_RPC_AUDIENCE") {
+        if let Ok(value) = std::env::var(consts::ENV_MEMORY_RPC_AUDIENCE) {
             if !value.trim().is_empty() {
                 cfg.audience = value;
             }
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_RPC_SUBJECT") {
+        if let Ok(value) = std::env::var(consts::ENV_MEMORY_RPC_SUBJECT) {
             if !value.trim().is_empty() {
                 cfg.subject = value;
             }
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_TENANT_ID") {
+        if let Ok(value) = std::env::var(consts::ENV_MEMORY_TENANT_ID) {
             if !value.trim().is_empty() {
                 cfg.tenant_id = value;
             }
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_WORKSPACE_ID") {
+        if let Ok(value) = std::env::var(consts::ENV_MEMORY_WORKSPACE_ID) {
             if !value.trim().is_empty() {
                 cfg.workspace_id = value;
             }
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_SESSION_ID") {
+        if let Ok(value) = std::env::var(consts::ENV_MEMORY_SESSION_ID) {
             if !value.trim().is_empty() {
                 cfg.session_id = value;
             }
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_MODULE_ID") {
+        if let Ok(value) = std::env::var(consts::ENV_MEMORY_MODULE_ID) {
             if !value.trim().is_empty() {
                 cfg.module_id = value;
             }
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_SIGNING_KEY_PEM") {
+        if let Ok(value) = std::env::var(consts::ENV_MEMORY_SIGNING_KEY_PEM) {
             if !value.trim().is_empty() {
                 cfg.signing_key_pem = value;
             }
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_SIGNING_KEY_PATH") {
+        if let Ok(value) = std::env::var(consts::ENV_MEMORY_SIGNING_KEY_PATH) {
             if !value.trim().is_empty() {
                 cfg.signing_key_path = value;
             }
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_SIGNING_KMS_KEY_ID") {
+        if let Ok(value) = std::env::var(consts::ENV_MEMORY_SIGNING_KMS_KEY_ID) {
             if !value.trim().is_empty() {
                 cfg.signing_kms_key_id = value;
             }
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_SIGNING_KMS_REGION") {
+        if let Ok(value) = std::env::var(consts::ENV_MEMORY_SIGNING_KMS_REGION) {
             if !value.trim().is_empty() {
                 cfg.signing_kms_region = value;
             }
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_RPC_TLS_CA_PEM") {
+        if let Ok(value) = std::env::var(consts::ENV_MEMORY_RPC_TLS_CA_PEM) {
             if !value.trim().is_empty() {
                 cfg.tls_ca_pem = value;
             }
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_RPC_TLS_CA_PATH") {
+        if let Ok(value) = std::env::var(consts::ENV_MEMORY_RPC_TLS_CA_PATH) {
             if !value.trim().is_empty() {
                 cfg.tls_ca_path = value;
             }
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_RPC_TLS_DOMAIN_NAME") {
+        if let Ok(value) = std::env::var(consts::ENV_MEMORY_RPC_TLS_DOMAIN_NAME) {
             if !value.trim().is_empty() {
                 cfg.tls_domain_name = value;
             }
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_RPC_TLS_CLIENT_CERT_PEM") {
+        if let Ok(value) = std::env::var(consts::ENV_MEMORY_RPC_TLS_CLIENT_CERT_PEM) {
             if !value.trim().is_empty() {
                 cfg.tls_client_cert_pem = value;
             }
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_RPC_TLS_CLIENT_CERT_PATH") {
+        if let Ok(value) = std::env::var(consts::ENV_MEMORY_RPC_TLS_CLIENT_CERT_PATH) {
             if !value.trim().is_empty() {
                 cfg.tls_client_cert_path = value;
             }
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_RPC_TLS_CLIENT_KEY_PEM") {
+        if let Ok(value) = std::env::var(consts::ENV_MEMORY_RPC_TLS_CLIENT_KEY_PEM) {
             if !value.trim().is_empty() {
                 cfg.tls_client_key_pem = value;
             }
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_RPC_TLS_CLIENT_KEY_PATH") {
+        if let Ok(value) = std::env::var(consts::ENV_MEMORY_RPC_TLS_CLIENT_KEY_PATH) {
             if !value.trim().is_empty() {
                 cfg.tls_client_key_path = value;
             }
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_RPC_ALLOW_INSECURE_NON_LOOPBACK") {
+        if let Ok(value) = std::env::var(consts::ENV_MEMORY_RPC_ALLOW_INSECURE_NON_LOOPBACK) {
             cfg.allow_insecure_non_loopback = parse_bool(value.trim());
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_TIMEOUT_MS") {
+        if let Ok(value) = std::env::var(consts::ENV_MEMORY_TIMEOUT_MS) {
             if let Ok(parsed) = value.parse::<u64>() {
                 cfg.timeout_ms = parsed;
             }
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_MAX_BYTES") {
+        if let Ok(value) = std::env::var(consts::ENV_MEMORY_MAX_BYTES) {
             if let Ok(parsed) = value.parse::<u64>() {
                 cfg.max_bytes = parsed;
             }
         }
-        if let Ok(value) = std::env::var("KELVIN_MEMORY_MAX_RESULTS") {
+        if let Ok(value) = std::env::var(consts::ENV_MEMORY_MAX_RESULTS) {
             if let Ok(parsed) = value.parse::<u32>() {
                 cfg.max_results = parsed;
             }
@@ -237,7 +239,7 @@ impl MemoryClientConfig {
             ))
         })?;
         let scheme = parsed.scheme().to_ascii_lowercase();
-        if scheme != "http" && scheme != "https" {
+        if scheme != consts::DEFAULT_HTTP_SCHEME && scheme != consts::DEFAULT_HTTPS_SCHEME {
             return Err(KelvinError::InvalidInput(
                 "memory rpc endpoint must use http:// or https://".to_string(),
             ));
@@ -245,7 +247,10 @@ impl MemoryClientConfig {
         let host = parsed.host_str().ok_or_else(|| {
             KelvinError::InvalidInput("memory rpc endpoint host is missing".to_string())
         })?;
-        if scheme == "http" && !self.allow_insecure_non_loopback && !is_loopback_host(host) {
+        if scheme == consts::DEFAULT_HTTP_SCHEME
+            && !self.allow_insecure_non_loopback
+            && !is_loopback_host(host)
+        {
             return Err(KelvinError::InvalidInput(format!(
                 "refusing insecure non-loopback memory rpc endpoint '{host}'. use https:// or set KELVIN_MEMORY_RPC_ALLOW_INSECURE_NON_LOOPBACK=true only on trusted networks"
             )));
@@ -286,16 +291,20 @@ impl RpcMemoryManager {
     ) -> KelvinResult<RequestContext> {
         let now = now_secs();
         let allowed_capabilities = match op {
-            MemoryOperation::Upsert | MemoryOperation::Delete => vec!["memory_crud".to_string()],
-            MemoryOperation::Query | MemoryOperation::Read => vec!["memory_read".to_string()],
-            MemoryOperation::Health => vec!["memory_health".to_string()],
+            MemoryOperation::Upsert | MemoryOperation::Delete => {
+                vec![consts::CAPABILITY_MEMORY_CRUD.to_string()]
+            }
+            MemoryOperation::Query | MemoryOperation::Read => {
+                vec![consts::CAPABILITY_MEMORY_READ.to_string()]
+            }
+            MemoryOperation::Health => vec![consts::CAPABILITY_MEMORY_HEALTH.to_string()],
         };
         let claims = DelegationClaims {
             iss: self.cfg.issuer.clone(),
             sub: self.cfg.subject.clone(),
             aud: self.cfg.audience.clone(),
             jti: format!("{}-{request_id}", op.as_str()),
-            exp: now.saturating_add(60),
+            exp: now.saturating_add(consts::TOKEN_EXPIRY_OFFSET_SECS as usize),
             nbf: now.saturating_sub(1),
             tenant_id: self.cfg.tenant_id.clone(),
             workspace_id: self.cfg.workspace_id.clone(),
@@ -407,10 +416,10 @@ impl MemorySearchManager for RpcMemoryManager {
 
     fn status(&self) -> MemoryProviderStatus {
         MemoryProviderStatus {
-            backend: "rpc".to_string(),
-            provider: "kelvin-memory-controller".to_string(),
+            backend: consts::BACKEND_TYPE.to_string(),
+            provider: consts::PROVIDER_NAME.to_string(),
             model: None,
-            requested_provider: Some("memory-controller".to_string()),
+            requested_provider: Some(consts::REQUESTED_PROVIDER_NAME.to_string()),
             files: None,
             chunks: None,
             dirty: false,
@@ -531,10 +540,7 @@ async fn resolve_delegation_token_signer(
 }
 
 fn parse_bool(value: &str) -> bool {
-    matches!(
-        value.to_ascii_lowercase().as_str(),
-        "1" | "true" | "yes" | "on"
-    )
+    consts::BOOL_TRUE_VALUES.contains(&value.to_ascii_lowercase().as_str())
 }
 
 fn validate_required_field(label: &str, value: &str) -> KelvinResult<()> {
@@ -577,7 +583,9 @@ fn validate_signing_config(cfg: &MemoryClientConfig) -> KelvinResult<()> {
 
 fn is_loopback_host(host: &str) -> bool {
     let normalized = host.trim().to_ascii_lowercase();
-    normalized == "localhost" || normalized == "127.0.0.1" || normalized == "::1"
+    normalized == consts::LOOPBACK_NAME
+        || normalized == consts::LOOPBACK_IPV4
+        || normalized == consts::LOOPBACK_IPV6
 }
 
 fn ensure_rustls_crypto_provider() {
@@ -692,14 +700,14 @@ fn endpoint_uses_tls(endpoint: &str) -> bool {
     endpoint
         .trim_start()
         .to_ascii_lowercase()
-        .starts_with("https://")
+        .starts_with(consts::HTTPS_PREFIX)
 }
 
 fn infer_tls_domain_name(endpoint: &str) -> Option<String> {
     let rest = endpoint
         .trim_start()
         .to_ascii_lowercase()
-        .strip_prefix("https://")?
+        .strip_prefix(consts::HTTPS_PREFIX)?
         .to_string();
     let authority = rest.split('/').next().unwrap_or_default();
     let host_port = authority.rsplit('@').next().unwrap_or(authority);

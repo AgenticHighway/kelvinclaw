@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::consts::*;
 use crate::KelvinResult;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -57,8 +58,8 @@ pub struct MemoryProviderStatus {
 impl Default for MemoryProviderStatus {
     fn default() -> Self {
         Self {
-            backend: "builtin".to_string(),
-            provider: "unknown".to_string(),
+            backend: MEMORY_DEFAULT_BACKEND.to_string(),
+            provider: MEMORY_DEFAULT_PROVIDER.to_string(),
             model: None,
             requested_provider: None,
             files: None,
@@ -80,8 +81,8 @@ pub struct MemorySearchOptions {
 impl Default for MemorySearchOptions {
     fn default() -> Self {
         Self {
-            max_results: 6,
-            min_score_milli: 0,
+            max_results: MEMORY_DEFAULT_MAX_RESULTS,
+            min_score_milli: MEMORY_DEFAULT_MIN_SCORE_MILLI,
             session_key: None,
         }
     }

@@ -15,35 +15,35 @@ mod tools;
 /// How many visual lines the current input occupies inside the box.
 /// `inner_width` = box width minus 2 border columns.
 fn input_line_count(input: &str, inner_width: u16) -> u16 {
-    if inner_width < 3 {
+    if inner_width < crate::consts::MIN_INNER_WIDTH {
         return 1;
     }
-    let prefix: usize = 2; // "> "
+    let prefix: usize = crate::consts::INPUT_PREFIX_WIDTH;
     let first_cap = (inner_width as usize).saturating_sub(prefix);
     if input.len() <= first_cap {
         1
     } else {
         let rest = input.len() - first_cap;
         let subsequent = rest.div_ceil(inner_width as usize);
-        (1 + subsequent).min(5) as u16 // cap at 5 content lines
+        (1 + subsequent).min(crate::consts::MAX_INPUT_CONTENT_LINES as usize) as u16
     }
 }
 
 pub fn render(f: &mut Frame, app: &mut App) {
     let area = f.area();
-    let inner_width = area.width.saturating_sub(2);
+    let inner_width = area.width.saturating_sub(crate::consts::INPUT_BORDER_WIDTH);
     let display = app.display_input();
     let content_lines = input_line_count(&display, inner_width);
-    let input_height = content_lines + 2; // + 2 for borders
+    let input_height = content_lines + crate::consts::INPUT_BORDER_WIDTH;
 
     if app.tools_visible {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
                 Constraint::Min(0),
-                Constraint::Percentage(25),
+                Constraint::Percentage(crate::consts::TOOLS_AREA_PERCENTAGE),
                 Constraint::Length(input_height),
-                Constraint::Length(1),
+                Constraint::Length(crate::consts::STATUS_BAR_HEIGHT),
             ])
             .split(area);
 
@@ -60,7 +60,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
             .constraints([
                 Constraint::Min(0),
                 Constraint::Length(input_height),
-                Constraint::Length(1),
+                Constraint::Length(crate::consts::STATUS_BAR_HEIGHT),
             ])
             .split(area);
 

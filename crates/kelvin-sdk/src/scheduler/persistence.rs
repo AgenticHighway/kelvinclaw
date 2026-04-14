@@ -8,9 +8,7 @@ use serde_json::Value;
 use kelvin_core::{now_ms, KelvinError, KelvinResult};
 
 use super::{NewScheduledTask, ScheduleAuditEntry, ScheduleSlotRecord, ScheduledTask};
-
-const MAX_AUDIT_ENTRIES: usize = 4_096;
-const MAX_SLOT_ENTRIES: usize = 4_096;
+use crate::consts::{MAX_AUDIT_ENTRIES, MAX_SLOT_ENTRIES};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub(super) struct SchedulerState {

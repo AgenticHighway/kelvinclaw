@@ -77,7 +77,7 @@ impl ModelProvider for EchoModelProvider {
             let preview = input
                 .memory_snippets
                 .iter()
-                .take(2)
+                .take(crate::consts::MEMORY_PREVIEW_LIMIT)
                 .map(|item| format!("- {item}"))
                 .collect::<Vec<_>>()
                 .join("\n");
@@ -93,19 +93,24 @@ impl ModelProvider for EchoModelProvider {
             )
         };
 
-        let token_estimate = (input.user_prompt.len() + assistant_text.len()) as u64 / 4;
+        let token_estimate = (input.user_prompt.len() + assistant_text.len()) as u64
+            / crate::consts::TOKEN_ESTIMATION_DIVISOR;
         let usage = ModelUsage {
-            input_tokens: Some((input.user_prompt.len() as u64 / 4).max(1)),
-            output_tokens: Some((assistant_text.len() as u64 / 4).max(1)),
+            input_tokens: Some(
+                (input.user_prompt.len() as u64 / crate::consts::TOKEN_ESTIMATION_DIVISOR).max(1),
+            ),
+            output_tokens: Some(
+                (assistant_text.len() as u64 / crate::consts::TOKEN_ESTIMATION_DIVISOR).max(1),
+            ),
             total_tokens: Some(token_estimate.max(1)),
         };
 
         Ok(ModelOutput {
             assistant_text,
             stop_reason: Some(if tool_calls.is_empty() {
-                "completed".to_string()
+                crate::consts::STOP_REASON_COMPLETED.to_string()
             } else {
-                "tool_calls".to_string()
+                crate::consts::STOP_REASON_TOOL_CALLS.to_string()
             }),
             tool_calls,
             usage: Some(usage),

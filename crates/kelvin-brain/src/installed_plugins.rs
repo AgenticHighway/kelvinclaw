@@ -25,15 +25,7 @@ use kelvin_wasm::{
     model_abi, ClawCall, ModelSandboxPolicy, SandboxPolicy, WasmModelHost, WasmSkillHost,
 };
 
-const DEFAULT_TOOL_RUNTIME_KIND: &str = "wasm_tool_v1";
-const DEFAULT_MODEL_RUNTIME_KIND: &str = "wasm_model_v1";
-const DEFAULT_TIMEOUT_MS: u64 = 30_000;
-const DEFAULT_MAX_RETRIES: u32 = 0;
-const DEFAULT_MAX_CALLS_PER_MINUTE: usize = 120;
-const DEFAULT_CIRCUIT_BREAKER_FAILURES: u32 = 3;
-const DEFAULT_CIRCUIT_BREAKER_COOLDOWN_MS: u64 = 30_000;
-const DEFAULT_PLUGIN_HOME_RELATIVE: &str = ".kelvinclaw/plugins";
-const DEFAULT_TRUST_POLICY_RELATIVE: &str = ".kelvinclaw/trusted_publishers.json";
+use crate::consts;
 
 /// ### Brief
 ///
@@ -122,7 +114,7 @@ impl InstalledPluginLoaderConfig {
     pub fn new(plugin_home: impl Into<PathBuf>) -> Self {
         Self {
             plugin_home: plugin_home.into(),
-            core_version: "0.1.0".to_string(),
+            core_version: env!("CARGO_PKG_VERSION").to_string(),
             security_policy: PluginSecurityPolicy::default(),
             trust_policy: PublisherTrustPolicy::default(),
         }
@@ -136,10 +128,10 @@ impl InstalledPluginLoaderConfig {
 /// ### Returns
 /// env var for KELVIN_PLUGIN_HOME as PathBuf
 pub fn default_plugin_home() -> KelvinResult<PathBuf> {
-    if let Some(path) = env_path("KELVIN_PLUGIN_HOME") {
+    if let Some(path) = env_path(consts::ENV_KELVIN_PLUGIN_HOME) {
         return Ok(path);
     }
-    Ok(resolve_home_dir()?.join(DEFAULT_PLUGIN_HOME_RELATIVE))
+    Ok(resolve_home_dir()?.join(consts::DEFAULT_PLUGIN_HOME_RELATIVE))
 }
 
 /// ### Brief
@@ -149,10 +141,10 @@ pub fn default_plugin_home() -> KelvinResult<PathBuf> {
 /// ### Returns
 /// env var for KELVIN_TRUST_POLICY_PATH as PathBuf
 pub fn default_trust_policy_path() -> KelvinResult<PathBuf> {
-    if let Some(path) = env_path("KELVIN_TRUST_POLICY_PATH") {
+    if let Some(path) = env_path(consts::ENV_KELVIN_TRUST_POLICY_PATH) {
         return Ok(path);
     }
-    Ok(resolve_home_dir()?.join(DEFAULT_TRUST_POLICY_RELATIVE))
+    Ok(resolve_home_dir()?.join(consts::DEFAULT_TRUST_POLICY_RELATIVE))
 }
 
 /// ### Brief
@@ -246,11 +238,11 @@ pub struct OperationalControls {
 impl Default for OperationalControls {
     fn default() -> Self {
         Self {
-            timeout_ms: DEFAULT_TIMEOUT_MS,
-            max_retries: DEFAULT_MAX_RETRIES,
-            max_calls_per_minute: DEFAULT_MAX_CALLS_PER_MINUTE,
-            circuit_breaker_failures: DEFAULT_CIRCUIT_BREAKER_FAILURES,
-            circuit_breaker_cooldown_ms: DEFAULT_CIRCUIT_BREAKER_COOLDOWN_MS,
+            timeout_ms: consts::DEFAULT_TIMEOUT_MS,
+            max_retries: consts::DEFAULT_MAX_RETRIES,
+            max_calls_per_minute: consts::DEFAULT_MAX_CALLS_PER_MINUTE,
+            circuit_breaker_failures: consts::DEFAULT_CIRCUIT_BREAKER_FAILURES,
+            circuit_breaker_cooldown_ms: consts::DEFAULT_CIRCUIT_BREAKER_COOLDOWN_MS,
         }
     }
 }
@@ -506,7 +498,7 @@ impl PublisherTrustPolicy {
         manifest_bytes: &[u8],
         version_dir: &Path,
     ) -> KelvinResult<()> {
-        let signature_path = version_dir.join("plugin.sig");
+        let signature_path = version_dir.join(consts::PLUGIN_SIGNATURE_FILENAME);
         let has_signature = signature_path.is_file();
         let quality_tier = manifest.quality_tier();
 
@@ -541,7 +533,7 @@ impl PublisherTrustPolicy {
             return Ok(());
         }
 
-        if quality_tier == "unsigned_local" && !has_signature {
+        if quality_tier == consts::QUALITY_TIER_UNSIGNED_LOCAL && !has_signature {
             if let Some(publisher) = manifest.publisher.as_deref() {
                 if self.trusted_publishers.contains_key(publisher) {
                     return Err(KelvinError::InvalidInput(format!(
@@ -762,23 +754,23 @@ impl Default for OperationalControlsManifest {
 }
 
 fn default_timeout_ms() -> u64 {
-    DEFAULT_TIMEOUT_MS
+    consts::DEFAULT_TIMEOUT_MS
 }
 
 fn default_max_retries() -> u32 {
-    DEFAULT_MAX_RETRIES
+    consts::DEFAULT_MAX_RETRIES
 }
 
 fn default_max_calls_per_minute() -> usize {
-    DEFAULT_MAX_CALLS_PER_MINUTE
+    consts::DEFAULT_MAX_CALLS_PER_MINUTE
 }
 
 fn default_circuit_breaker_failures() -> u32 {
-    DEFAULT_CIRCUIT_BREAKER_FAILURES
+    consts::DEFAULT_CIRCUIT_BREAKER_FAILURES
 }
 
 fn default_circuit_breaker_cooldown_ms() -> u64 {
-    DEFAULT_CIRCUIT_BREAKER_COOLDOWN_MS
+    consts::DEFAULT_CIRCUIT_BREAKER_COOLDOWN_MS
 }
 
 /// ### Brief
@@ -809,7 +801,7 @@ impl InstalledPluginPackageManifest {
     fn runtime_kind(&self) -> &str {
         self.runtime
             .as_deref()
-            .unwrap_or(DEFAULT_TOOL_RUNTIME_KIND)
+            .unwrap_or(consts::DEFAULT_TOOL_RUNTIME_KIND)
             .trim()
     }
 
@@ -819,7 +811,7 @@ impl InstalledPluginPackageManifest {
     fn quality_tier(&self) -> &str {
         self.quality_tier
             .as_deref()
-            .unwrap_or("unsigned_local")
+            .unwrap_or(consts::QUALITY_TIER_UNSIGNED_LOCAL)
             .trim()
     }
 
@@ -1150,7 +1142,7 @@ impl InstalledWasmTool {
             state.consecutive_failures = 0;
         }
 
-        let window = Duration::from_secs(60);
+        let window = Duration::from_secs(consts::MEMORY_WINDOW_SECS);
         while let Some(ts) = state.call_timestamps.front() {
             if now.duration_since(*ts) > window {
                 state.call_timestamps.pop_front();
@@ -1347,7 +1339,7 @@ impl InstalledWasmModelProvider {
             state.consecutive_failures = 0;
         }
 
-        let window = Duration::from_secs(60);
+        let window = Duration::from_secs(consts::MEMORY_WINDOW_SECS);
         while let Some(ts) = state.call_timestamps.front() {
             if now.duration_since(*ts) > window {
                 state.call_timestamps.pop_front();
@@ -2461,10 +2453,14 @@ fn load_one_plugin(
     }
 
     let runtime_kind = package_manifest.runtime_kind();
-    if runtime_kind != DEFAULT_TOOL_RUNTIME_KIND && runtime_kind != DEFAULT_MODEL_RUNTIME_KIND {
+    if runtime_kind != consts::DEFAULT_TOOL_RUNTIME_KIND
+        && runtime_kind != consts::DEFAULT_MODEL_RUNTIME_KIND
+    {
         return Err(KelvinError::InvalidInput(format!(
             "unsupported plugin runtime '{}'; expected '{}' or '{}'",
-            runtime_kind, DEFAULT_TOOL_RUNTIME_KIND, DEFAULT_MODEL_RUNTIME_KIND
+            runtime_kind,
+            consts::DEFAULT_TOOL_RUNTIME_KIND,
+            consts::DEFAULT_MODEL_RUNTIME_KIND
         )));
     }
 
@@ -2501,14 +2497,16 @@ fn load_one_plugin(
     let mut tool = None;
     let mut model_provider = None;
 
-    if runtime_kind == DEFAULT_TOOL_RUNTIME_KIND {
+    if runtime_kind == consts::DEFAULT_TOOL_RUNTIME_KIND {
         if !package_manifest
             .capabilities
             .contains(&PluginCapability::ToolProvider)
         {
             return Err(KelvinError::InvalidInput(format!(
                 "plugin '{}' runtime '{}' requires capability '{}'",
-                package_manifest.id, DEFAULT_TOOL_RUNTIME_KIND, "tool_provider"
+                package_manifest.id,
+                consts::DEFAULT_TOOL_RUNTIME_KIND,
+                "tool_provider"
             )));
         }
 
@@ -2518,7 +2516,8 @@ fn load_one_plugin(
         {
             return Err(KelvinError::InvalidInput(format!(
                 "plugin '{}' declares unsupported capability 'fs_write' for runtime '{}'",
-                package_manifest.id, DEFAULT_TOOL_RUNTIME_KIND
+                package_manifest.id,
+                consts::DEFAULT_TOOL_RUNTIME_KIND
             )));
         }
 
@@ -2528,7 +2527,8 @@ fn load_one_plugin(
         {
             return Err(KelvinError::InvalidInput(format!(
                 "plugin '{}' declares unsupported capability 'command_execution' for runtime '{}'",
-                package_manifest.id, DEFAULT_TOOL_RUNTIME_KIND
+                package_manifest.id,
+                consts::DEFAULT_TOOL_RUNTIME_KIND
             )));
         }
 
@@ -2558,7 +2558,9 @@ fn load_one_plugin(
         {
             return Err(KelvinError::InvalidInput(format!(
                 "plugin '{}' runtime '{}' requires capability '{}'",
-                package_manifest.id, DEFAULT_MODEL_RUNTIME_KIND, "model_provider"
+                package_manifest.id,
+                consts::DEFAULT_MODEL_RUNTIME_KIND,
+                "model_provider"
             )));
         }
         if package_manifest
@@ -2573,7 +2575,7 @@ fn load_one_plugin(
         {
             return Err(KelvinError::InvalidInput(format!(
                 "plugin '{}' runtime '{}' only supports model_provider and optional network_egress capabilities",
-                package_manifest.id, DEFAULT_MODEL_RUNTIME_KIND
+                package_manifest.id, consts::DEFAULT_MODEL_RUNTIME_KIND
             )));
         }
 
@@ -2756,7 +2758,8 @@ fn normalize_scopes(manifest: &InstalledPluginPackageManifest) -> KelvinResult<C
     let has_network = manifest
         .capabilities
         .contains(&PluginCapability::NetworkEgress);
-    let runtime_requires_network_scope = manifest.runtime_kind() == DEFAULT_MODEL_RUNTIME_KIND;
+    let runtime_requires_network_scope =
+        manifest.runtime_kind() == consts::DEFAULT_MODEL_RUNTIME_KIND;
     let network_scope_required = has_network || runtime_requires_network_scope;
 
     let mut fs_read_paths = Vec::new();
@@ -2826,35 +2829,45 @@ fn normalize_controls(
     manifest: &InstalledPluginPackageManifest,
 ) -> KelvinResult<OperationalControls> {
     let controls = &manifest.operational_controls;
-    if controls.timeout_ms == 0 || controls.timeout_ms > 600_000 {
+    if controls.timeout_ms == 0 || controls.timeout_ms > consts::OPERATIONAL_MAX_TIMEOUT {
         return Err(KelvinError::InvalidInput(format!(
-            "plugin '{}' timeout_ms must be between 1 and 600000",
-            manifest.id
+            "plugin '{}' timeout_ms must be between 1 and {}",
+            manifest.id,
+            consts::OPERATIONAL_MAX_TIMEOUT
         )));
     }
-    if controls.max_retries > 5 {
+    if controls.max_retries > consts::OPERATIONAL_MAX_RETRIES {
         return Err(KelvinError::InvalidInput(format!(
-            "plugin '{}' max_retries must be <= 5",
-            manifest.id
+            "plugin '{}' max_retries must be <= {}",
+            manifest.id,
+            consts::OPERATIONAL_MAX_RETRIES
         )));
     }
-    if controls.max_calls_per_minute == 0 || controls.max_calls_per_minute > 10_000 {
-        return Err(KelvinError::InvalidInput(format!(
-            "plugin '{}' max_calls_per_minute must be between 1 and 10000",
-            manifest.id
-        )));
-    }
-    if controls.circuit_breaker_failures == 0 || controls.circuit_breaker_failures > 100 {
-        return Err(KelvinError::InvalidInput(format!(
-            "plugin '{}' circuit_breaker_failures must be between 1 and 100",
-            manifest.id
-        )));
-    }
-    if controls.circuit_breaker_cooldown_ms < 100 || controls.circuit_breaker_cooldown_ms > 600_000
+    if controls.max_calls_per_minute == 0
+        || controls.max_calls_per_minute > consts::OPERATIONAL_MAX_CALLS_PER_MINUTE
     {
         return Err(KelvinError::InvalidInput(format!(
-            "plugin '{}' circuit_breaker_cooldown_ms must be between 100 and 600000",
-            manifest.id
+            "plugin '{}' max_calls_per_minute must be between 1 and {}",
+            manifest.id,
+            consts::OPERATIONAL_MAX_CALLS_PER_MINUTE
+        )));
+    }
+    if controls.circuit_breaker_failures == 0
+        || controls.circuit_breaker_failures > consts::OPERATIONAL_MAX_CIRCUIT_BREAKER_FAILURES
+    {
+        return Err(KelvinError::InvalidInput(format!(
+            "plugin '{}' circuit_breaker_failures must be between 1 and {}",
+            manifest.id,
+            consts::OPERATIONAL_MAX_CIRCUIT_BREAKER_FAILURES
+        )));
+    }
+    if controls.circuit_breaker_cooldown_ms < 100
+        || controls.circuit_breaker_cooldown_ms > consts::OPERATIONAL_MAX_CIRCUIT_BREAKER_COOLDOWN
+    {
+        return Err(KelvinError::InvalidInput(format!(
+            "plugin '{}' circuit_breaker_cooldown_ms must be between 100 and {}",
+            manifest.id,
+            consts::OPERATIONAL_MAX_CIRCUIT_BREAKER_COOLDOWN
         )));
     }
 
@@ -3246,6 +3259,7 @@ fn claw_call_json(call: &ClawCall) -> serde_json::Value {
 
 #[cfg(test)]
 mod tests {
+    use crate::consts;
     use std::path::Path;
     use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -3304,8 +3318,11 @@ mod tests {
             let signature = key.sign(&manifest_bytes);
             let signature_base64 =
                 base64::engine::general_purpose::STANDARD.encode(signature.to_bytes());
-            std::fs::write(version_dir.join("plugin.sig"), signature_base64)
-                .expect("write signature");
+            std::fs::write(
+                version_dir.join(consts::PLUGIN_SIGNATURE_FILENAME),
+                signature_base64,
+            )
+            .expect("write signature");
         }
     }
 
@@ -3581,7 +3598,7 @@ mod tests {
             serde_json::to_value(openrouter_profile()).expect("serialize openrouter profile");
         manifest["model_name"] = json!("openai/gpt-4.1-mini");
         manifest["publisher"] = serde_json::Value::Null;
-        manifest["quality_tier"] = json!("unsigned_local");
+        manifest["quality_tier"] = json!(consts::QUALITY_TIER_UNSIGNED_LOCAL);
         manifest["capability_scopes"]["network_allow_hosts"] = json!(["openrouter.ai"]);
 
         write_installed_plugin(

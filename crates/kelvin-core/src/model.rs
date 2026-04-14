@@ -2,10 +2,10 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::consts::*;
 use crate::{KelvinError, KelvinResult, SessionMessage, ToolDefinition};
 
-pub const OPENAI_RESPONSES_PROFILE_ID: &str = "openai.responses";
-pub const ANTHROPIC_MESSAGES_PROFILE_ID: &str = "anthropic.messages";
+pub use crate::consts::{ANTHROPIC_MESSAGES_PROFILE_ID, OPENAI_RESPONSES_PROFILE_ID};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ModelUsage {
@@ -118,33 +118,33 @@ impl ModelProviderProfile {
         let profile = match id.trim() {
             OPENAI_RESPONSES_PROFILE_ID => Self {
                 id: OPENAI_RESPONSES_PROFILE_ID.to_string(),
-                provider_name: "openai".to_string(),
+                provider_name: OPENAI_PROVIDER_NAME.to_string(),
                 protocol_family: ModelProviderProtocolFamily::OpenAiResponses,
-                api_key_env: Some("OPENAI_API_KEY".to_string()),
-                base_url_env: "OPENAI_BASE_URL".to_string(),
-                default_base_url: "https://api.openai.com".to_string(),
-                endpoint_path: "v1/responses".to_string(),
-                auth_header: "authorization".to_string(),
+                api_key_env: Some(OPENAI_API_KEY_ENV.to_string()),
+                base_url_env: OPENAI_BASE_URL_ENV.to_string(),
+                default_base_url: OPENAI_DEFAULT_BASE_URL.to_string(),
+                endpoint_path: OPENAI_ENDPOINT_PATH.to_string(),
+                auth_header: OPENAI_AUTH_HEADER.to_string(),
                 auth_scheme: ModelProviderAuthScheme::Bearer,
                 static_headers: Vec::new(),
-                default_allow_hosts: vec!["api.openai.com".to_string()],
+                default_allow_hosts: vec![OPENAI_ALLOW_HOST.to_string()],
                 dynamic_base_url: false,
             },
             ANTHROPIC_MESSAGES_PROFILE_ID => Self {
                 id: ANTHROPIC_MESSAGES_PROFILE_ID.to_string(),
-                provider_name: "anthropic".to_string(),
+                provider_name: ANTHROPIC_PROVIDER_NAME.to_string(),
                 protocol_family: ModelProviderProtocolFamily::AnthropicMessages,
-                api_key_env: Some("ANTHROPIC_API_KEY".to_string()),
-                base_url_env: "ANTHROPIC_BASE_URL".to_string(),
-                default_base_url: "https://api.anthropic.com".to_string(),
-                endpoint_path: "v1/messages".to_string(),
-                auth_header: "x-api-key".to_string(),
+                api_key_env: Some(ANTHROPIC_API_KEY_ENV.to_string()),
+                base_url_env: ANTHROPIC_BASE_URL_ENV.to_string(),
+                default_base_url: ANTHROPIC_DEFAULT_BASE_URL.to_string(),
+                endpoint_path: ANTHROPIC_ENDPOINT_PATH.to_string(),
+                auth_header: ANTHROPIC_AUTH_HEADER.to_string(),
                 auth_scheme: ModelProviderAuthScheme::Raw,
                 static_headers: vec![ModelProviderHeader {
-                    name: "anthropic-version".to_string(),
-                    value: "2023-06-01".to_string(),
+                    name: ANTHROPIC_VERSION_HEADER_NAME.to_string(),
+                    value: ANTHROPIC_VERSION_HEADER_VALUE.to_string(),
                 }],
-                default_allow_hosts: vec!["api.anthropic.com".to_string()],
+                default_allow_hosts: vec![ANTHROPIC_ALLOW_HOST.to_string()],
                 dynamic_base_url: false,
             },
             _ => return None,
@@ -154,15 +154,15 @@ impl ModelProviderProfile {
 
     pub fn default_model_name(&self) -> &'static str {
         match self.protocol_family {
-            ModelProviderProtocolFamily::OpenAiResponses => "gpt-4.1-mini",
+            ModelProviderProtocolFamily::OpenAiResponses => OPENAI_DEFAULT_MODEL,
             ModelProviderProtocolFamily::OpenAiChatCompletions => {
-                if self.provider_name == "openrouter" {
-                    "openai/gpt-4.1-mini"
+                if self.provider_name == OPENROUTER_PROVIDER_NAME {
+                    OPENROUTER_DEFAULT_MODEL
                 } else {
                     "default"
                 }
             }
-            ModelProviderProtocolFamily::AnthropicMessages => "claude-haiku-4-5-20251001",
+            ModelProviderProtocolFamily::AnthropicMessages => ANTHROPIC_DEFAULT_MODEL,
         }
     }
 }
@@ -205,7 +205,7 @@ fn validate_header_name(label: &str, value: &str) -> KelvinResult<()> {
 
 fn validate_http_url(label: &str, value: &str) -> KelvinResult<()> {
     let value = value.trim();
-    if !(value.starts_with("https://") || value.starts_with("http://")) {
+    if !(value.starts_with(HTTPS_SCHEME) || value.starts_with(HTTP_SCHEME)) {
         return Err(KelvinError::InvalidInput(format!(
             "{label} must start with http:// or https://"
         )));
