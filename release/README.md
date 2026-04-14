@@ -8,24 +8,19 @@ KelvinClaw is a secure, stable, and modular harness for agentic AI workflows.
 tar -xzf kelvinclaw-<version>-linux-<arch>.tar.gz
 cd kelvinclaw-<version>-linux-<arch>
 
-./kelvin init
-./kelvin
+./bin/kelvin init    # interactive first-run setup (provider, API key, token)
+kelvin               # start the full stack and open the TUI
 ```
 
-On first run, `kelvin init` writes `~/.kelvinclaw/.env`, generates a gateway token, and helps you choose a provider. `./kelvin` then ensures a trust policy exists and bootstraps the `kelvin.cli` toolpack plus the configured model provider into `~/.kelvinclaw` when needed.
-
-### Prerequisites
-
-- `curl`
-- `tar`
-- `awk`
-- `ca-certificates` (on minimal Linux images)
+`kelvin init` writes `~/.kelvinclaw/.env`, generates auth keys, and creates a permissive trust policy. After that, bare `kelvin` starts the gateway and memory controller as background daemons, then opens the terminal UI.
 
 ---
 
 ## Configuration
 
-All launchers auto-read `.env` files in this order:
+`kelvin init` handles first-run configuration interactively. To edit settings afterward, update `~/.kelvinclaw/.env`.
+
+`.env` files are loaded in this order (first match per key wins):
 
 1. `~/.kelvinclaw/.env.local`
 2. `~/.kelvinclaw/.env`
@@ -34,66 +29,100 @@ All launchers auto-read `.env` files in this order:
 
 `~/.kelvinclaw/.env` is the canonical config path for release and Homebrew installs.
 
-The recommended path is to let `kelvin init` create `~/.kelvinclaw/.env` for you:
-
-```bash
-./kelvin init
-```
-
-You can still copy `.env.example` manually if you want a project-local config.
+Variables already in the environment are never overwritten.
 
 Key variables:
 
 | Variable | Description |
 |---|---|
 | `KELVIN_MODEL_PROVIDER` | Plugin ID of the active model provider |
+| `KELVIN_GATEWAY_TOKEN` | Auth token for gateway and TUI |
 | `ANTHROPIC_API_KEY` | Required when using `kelvin.anthropic` |
 | `OPENAI_API_KEY` | Required when using `kelvin.openai` |
 | `OPENROUTER_API_KEY` | Required when using `kelvin.openrouter` |
-| `KELVIN_GATEWAY_TOKEN` | Auth token for gateway and TUI (generate with `openssl rand -hex 32`) |
 | `BRAVE_API_KEY` | Required when using `kelvin.websearch` |
-| `KELVIN_PLUGIN_INDEX_URL` | Plugin index URL (required for `kpm install`, `search`, `update`) |
+| `KELVIN_PLUGIN_INDEX_URL` | Plugin index URL |
 
 ---
 
-## kelvin-gateway
+## kelvin — Unified CLI
 
-Start and manage the KelvinClaw gateway daemon.
+All lifecycle and plugin operations go through the single `kelvin` binary.
+
+### Stack management
 
 ```bash
-./kelvin-gateway start              # start as background daemon
-./kelvin-gateway start --foreground # run attached to terminal
-./kelvin-gateway stop
-./kelvin-gateway restart
-./kelvin-gateway status             # show pid, provider, uptime, log path
-./kelvin-gateway start -- --bind 0.0.0.0:34617  # pass args to the gateway binary
+kelvin                          # start full stack (gateway + memory) and open TUI
+kelvin start                    # start daemons in background, print status
+kelvin start --no-memory        # start gateway only
+kelvin stop                     # stop all background daemons
+kelvin tui                      # open TUI (gateway must already be running)
 ```
 
----
-
-## kelvin-tui
-
-Launch the terminal user interface. The gateway must be running first.
+### Gateway
 
 ```bash
-./kelvin-tui
+kelvin gateway start            # start gateway daemon
+kelvin gateway start --foreground
+kelvin gateway start -- --bind 0.0.0.0:34617   # pass args to gateway binary
+kelvin gateway stop
+kelvin gateway restart
+kelvin gateway status
+kelvin gateway approve-pairing <code>
 ```
 
----
-
-## kpm — Plugin Manager
-
-Install, manage, and explore KelvinClaw plugins.
+### Memory controller
 
 ```bash
-./kpm install kelvin.anthropic     # install a plugin
-./kpm install kelvin.websearch
-./kpm list                         # list installed plugins
-./kpm status                       # show active provider and installed plugins
-./kpm search <query>               # search the plugin index
-./kpm info <plugin-id>             # show plugin details
-./kpm update                       # update all installed plugins
-./kpm uninstall <plugin-id>        # remove a plugin
+kelvin memory start
+kelvin memory stop
+kelvin memory restart
+kelvin memory status
+```
+
+### Plugin manager (`kpm`)
+
+`kelvin plugin` and `kelvin kpm` are interchangeable.
+
+```bash
+kelvin plugin install kelvin.anthropic
+kelvin plugin install kelvin.websearch
+kelvin plugin install --package ./my-plugin-0.1.0.tar.gz
+kelvin plugin list
+kelvin plugin status
+kelvin plugin search <query>
+kelvin plugin info <plugin-id>
+kelvin plugin update
+kelvin plugin update <plugin-id> --dry-run
+kelvin plugin uninstall <plugin-id>
+kelvin plugin uninstall <plugin-id> --yes
+```
+
+### Diagnostics
+
+```bash
+kelvin medkit           # offline diagnostics (env, plugins, daemons)
+kelvin medkit --fix     # attempt to fix problems automatically
+kelvin medkit --json    # machine-readable output
+kelvin doctor           # live WebSocket probe of running gateway
+```
+
+### System service
+
+```bash
+kelvin service install-systemd      # install systemd user unit
+kelvin service render-systemd       # print unit to stdout
+kelvin service install-launchd      # install launchd plist (macOS)
+kelvin service render-launchd       # print plist to stdout
+```
+
+### Shell completions
+
+```bash
+kelvin completions bash             # print completion script
+kelvin completions zsh
+kelvin completions fish
+kelvin completions --write bash     # write to default location
 ```
 
 ---
@@ -102,7 +131,7 @@ Install, manage, and explore KelvinClaw plugins.
 
 ### Model Providers
 
-Install one of the following to use a real LLM. The default `kelvin.echo` requires no API key and echoes responses back — useful for testing.
+Install one of the following to use a real LLM. The default `kelvin.echo` requires no API key — useful for testing.
 
 | Plugin ID | Provider | Required env var |
 |---|---|---|
@@ -110,12 +139,11 @@ Install one of the following to use a real LLM. The default `kelvin.echo` requir
 | `kelvin.anthropic` | Anthropic Claude | `ANTHROPIC_API_KEY` |
 | `kelvin.openai` | OpenAI | `OPENAI_API_KEY` |
 | `kelvin.openrouter` | OpenRouter | `OPENROUTER_API_KEY` |
-
-Install a model provider and set it in `.env`:
+| `kelvin.ollama` | Ollama (local) | — |
 
 ```bash
-./kpm install kelvin.anthropic
-# then in .env:
+kelvin plugin install kelvin.anthropic
+# then in ~/.kelvinclaw/.env:
 # KELVIN_MODEL_PROVIDER=kelvin.anthropic
 # ANTHROPIC_API_KEY=sk-ant-...
 ```
@@ -126,15 +154,9 @@ Install a model provider and set it in `.env`:
 |---|---|---|
 | `kelvin.websearch` | Web search via Brave Search API | `BRAVE_API_KEY` |
 
-```bash
-./kpm install kelvin.websearch
-# then in .env:
-# BRAVE_API_KEY=...
-```
-
 ### CLI Plugin
 
-`kelvin.cli` is the built-in CLI interaction plugin. It is auto-bootstrapped on first run and does not need to be installed manually.
+`kelvin.cli` is auto-installed on first run and does not need to be installed manually.
 
 ---
 
@@ -142,15 +164,24 @@ Install a model provider and set it in `.env`:
 
 ```
 kelvinclaw-<version>-<platform>/
-  bin/                   # compiled binaries (kelvin-host, kelvin-gateway, kelvin-tui, ...)
-  share/                 # support scripts and plugin env
-  kelvin                 # launcher
-  kelvin-gateway         # gateway service manager launcher
-  kpm                    # plugin manager launcher
-  kelvin-tui             # TUI launcher
-  .env.example           # configuration template
+  bin/
+    kelvin                  # unified CLI — the primary entrypoint
+    kelvin-gateway          # gateway daemon binary
+    kelvin-tui              # terminal UI binary
+    kelvin-host             # host binary
+    kelvin-memory-controller
+    kelvin-registry
+  share/
+    official-first-party-plugins.env
+  .env.example              # configuration template
   LICENSE
   README.md
+```
+
+Add `bin/` to your `PATH` (the installer does this automatically):
+
+```bash
+export PATH="$HOME/.kelvinclaw/bin:$PATH"
 ```
 
 ---
