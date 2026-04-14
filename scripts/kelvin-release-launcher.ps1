@@ -7,6 +7,8 @@ if (Test-Path (Join-Path $PSScriptRoot "bin\\kelvin-host.exe")) {
 }
 
 $PluginManifestPath = Join-Path $RootDir "share\\official-first-party-plugins.env"
+$DefaultPluginIndexUrl = "https://raw.githubusercontent.com/AgenticHighway/kelvinclaw-plugins/main/index.json"
+$DefaultOllamaBaseUrl = "http://localhost:11434"
 $_LaunchEnvPaths = @(
     (Join-Path (Get-Location).Path ".env.local"),
     (Join-Path (Get-Location).Path ".env"),
@@ -16,11 +18,12 @@ $_LaunchEnvPaths = @(
 
 function Show-Usage {
 @"
-Usage: .\kelvin.cmd [kelvin-host args]
+Usage: .\kelvin.cmd [init [options] | kelvin-host args]
 
 Release-bundle launcher for KelvinClaw on Windows.
 
 Behavior:
+  - kelvin init writes ~/.kelvinclaw/.env for first-run setup
   - with no args, installs required official plugins on first run
   - starts interactive mode in a terminal
   - falls back to a default prompt when not attached to a console
@@ -32,6 +35,14 @@ Environment:
   KELVIN_STATE_DIR
   KELVIN_DEFAULT_PROMPT
   OPENAI_API_KEY
+"@
+}
+
+function Show-InitUsage {
+@"
+Usage: .\kelvin.cmd init [--provider <echo|openai|anthropic|openrouter|ollama>] [--force]
+
+Initialize KelvinClaw's user config in ~/.kelvinclaw/.env.
 "@
 }
 
@@ -50,6 +61,106 @@ function Strip-WrappingQuotes([string]$Value) {
         if (($Value.StartsWith('"') -and $Value.EndsWith('"')) -or ($Value.StartsWith("'") -and $Value.EndsWith("'"))) {
             return $Value.Substring(1, $Value.Length - 2)
         }
+    }
+    return $Value
+}
+
+function Get-ConfigTemplatePath {
+    $ReleaseTemplate = Join-Path $RootDir "release\env.example"
+    if (Test-Path $ReleaseTemplate) {
+        return $ReleaseTemplate
+    }
+
+    $RootTemplate = Join-Path $RootDir ".env.example"
+    if (Test-Path $RootTemplate) {
+        return $RootTemplate
+    }
+
+    throw "Missing KelvinClaw config template (.env.example)"
+}
+
+function New-GatewayToken {
+    $Bytes = New-Object byte[] 32
+    [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($Bytes)
+    return ([System.BitConverter]::ToString($Bytes)).Replace("-", "").ToLowerInvariant()
+}
+
+function Set-EnvValueInFile([string]$Path, [string]$Key, [string]$Value) {
+    $Lines = if (Test-Path $Path) { Get-Content $Path } else { @() }
+    $Pattern = "^\s*" + [regex]::Escape($Key) + "\s*="
+    $Replacement = "$Key=$Value"
+    $Replaced = $false
+
+    for ($Index = 0; $Index -lt $Lines.Count; $Index++) {
+        if ($Lines[$Index] -match $Pattern) {
+            $Lines[$Index] = $Replacement
+            $Replaced = $true
+            break
+        }
+    }
+
+    if (-not $Replaced) {
+        $Lines += $Replacement
+    }
+
+    Set-Content -Path $Path -Value $Lines
+}
+
+function Resolve-InitProvider([string]$Provider) {
+    switch ($Provider.ToLowerInvariant()) {
+        "echo" { return "echo" }
+        "kelvin.echo" { return "echo" }
+        "openai" { return "openai" }
+        "kelvin.openai" { return "openai" }
+        "anthropic" { return "anthropic" }
+        "kelvin.anthropic" { return "anthropic" }
+        "openrouter" { return "openrouter" }
+        "kelvin.openrouter" { return "openrouter" }
+        "ollama" { return "ollama" }
+        "kelvin.ollama" { return "ollama" }
+        default {
+            throw "Unsupported provider: $Provider. Expected one of: echo, openai, anthropic, openrouter, ollama"
+        }
+    }
+}
+
+function Select-InitProvider {
+    Write-Host "[kelvin init] Choose a provider:"
+    Write-Host "  1) kelvin.echo (Recommended)"
+    Write-Host "  2) kelvin.openai"
+    Write-Host "  3) kelvin.anthropic"
+    Write-Host "  4) kelvin.openrouter"
+    Write-Host "  5) kelvin.ollama"
+    $Selection = (Read-Host "[kelvin init] Provider [1]").Trim()
+
+    switch ($Selection) {
+        "" { return "echo" }
+        "1" { return "echo" }
+        "2" { return "openai" }
+        "3" { return "anthropic" }
+        "4" { return "openrouter" }
+        "5" { return "ollama" }
+        default { return (Resolve-InitProvider $Selection) }
+    }
+}
+
+function Read-SecretValue([string]$Prompt) {
+    $SecureValue = Read-Host $Prompt -AsSecureString
+    $Ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecureValue)
+    try {
+        return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($Ptr)
+    }
+    finally {
+        if ($Ptr -ne [IntPtr]::Zero) {
+            [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($Ptr)
+        }
+    }
+}
+
+function Read-ValueWithDefault([string]$Prompt, [string]$Default) {
+    $Value = (Read-Host "$Prompt [$Default]").Trim()
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return $Default
     }
     return $Value
 }
@@ -220,10 +331,106 @@ function Bootstrap-OfficialPlugins {
     }
 }
 
+function Invoke-KelvinInit([string[]]$InitArgs) {
+    $Force = $false
+    $Provider = $null
+
+    for ($Index = 0; $Index -lt $InitArgs.Length; $Index++) {
+        switch ($InitArgs[$Index]) {
+            "--force" {
+                $Force = $true
+            }
+            "--provider" {
+                if ($Index + 1 -ge $InitArgs.Length) {
+                    throw "missing value for --provider"
+                }
+                $Provider = Resolve-InitProvider $InitArgs[$Index + 1]
+                $Index++
+            }
+            "-h" {
+                Show-InitUsage
+                return
+            }
+            "--help" {
+                Show-InitUsage
+                return
+            }
+            default {
+                throw "unknown init argument: $($InitArgs[$Index])"
+            }
+        }
+    }
+
+    $KelvinHome = if ($env:KELVIN_HOME) { $env:KELVIN_HOME } else { Join-Path $HOME ".kelvinclaw" }
+    $ConfigEnvPath = Join-Path $KelvinHome ".env"
+    if (-not $Provider) {
+        $Provider = if ([Environment]::UserInteractive) { Select-InitProvider } else { "echo" }
+    }
+
+    if ((Test-Path $ConfigEnvPath) -and -not $Force) {
+        throw "$ConfigEnvPath already exists. Re-run with 'kelvin init --force' to overwrite it."
+    }
+
+    New-Item -ItemType Directory -Force -Path $KelvinHome | Out-Null
+    Copy-Item (Get-ConfigTemplatePath) $ConfigEnvPath -Force
+
+    Set-EnvValueInFile -Path $ConfigEnvPath -Key "KELVIN_GATEWAY_TOKEN" -Value (New-GatewayToken)
+    $PluginIndexUrl = if ($env:KELVIN_PLUGIN_INDEX_URL) { $env:KELVIN_PLUGIN_INDEX_URL } else { $DefaultPluginIndexUrl }
+    Set-EnvValueInFile -Path $ConfigEnvPath -Key "KELVIN_PLUGIN_INDEX_URL" -Value $PluginIndexUrl
+
+    switch ($Provider) {
+        "echo" {
+            Set-EnvValueInFile -Path $ConfigEnvPath -Key "KELVIN_MODEL_PROVIDER" -Value "kelvin.echo"
+        }
+        "openai" {
+            $OpenAIKey = if ($env:OPENAI_API_KEY) { $env:OPENAI_API_KEY } elseif ([Environment]::UserInteractive) { Read-SecretValue "[kelvin init] OpenAI API key" } else { throw "OPENAI_API_KEY must be set for non-interactive openai init" }
+            if ([string]::IsNullOrWhiteSpace($OpenAIKey)) {
+                throw "OPENAI_API_KEY cannot be empty"
+            }
+            Set-EnvValueInFile -Path $ConfigEnvPath -Key "KELVIN_MODEL_PROVIDER" -Value "kelvin.openai"
+            Set-EnvValueInFile -Path $ConfigEnvPath -Key "OPENAI_API_KEY" -Value $OpenAIKey.Trim()
+        }
+        "anthropic" {
+            $AnthropicKey = if ($env:ANTHROPIC_API_KEY) { $env:ANTHROPIC_API_KEY } elseif ([Environment]::UserInteractive) { Read-SecretValue "[kelvin init] Anthropic API key" } else { throw "ANTHROPIC_API_KEY must be set for non-interactive anthropic init" }
+            if ([string]::IsNullOrWhiteSpace($AnthropicKey)) {
+                throw "ANTHROPIC_API_KEY cannot be empty"
+            }
+            Set-EnvValueInFile -Path $ConfigEnvPath -Key "KELVIN_MODEL_PROVIDER" -Value "kelvin.anthropic"
+            Set-EnvValueInFile -Path $ConfigEnvPath -Key "ANTHROPIC_API_KEY" -Value $AnthropicKey.Trim()
+        }
+        "openrouter" {
+            $OpenRouterKey = if ($env:OPENROUTER_API_KEY) { $env:OPENROUTER_API_KEY } elseif ([Environment]::UserInteractive) { Read-SecretValue "[kelvin init] OpenRouter API key" } else { throw "OPENROUTER_API_KEY must be set for non-interactive openrouter init" }
+            if ([string]::IsNullOrWhiteSpace($OpenRouterKey)) {
+                throw "OPENROUTER_API_KEY cannot be empty"
+            }
+            Set-EnvValueInFile -Path $ConfigEnvPath -Key "KELVIN_MODEL_PROVIDER" -Value "kelvin.openrouter"
+            Set-EnvValueInFile -Path $ConfigEnvPath -Key "OPENROUTER_API_KEY" -Value $OpenRouterKey.Trim()
+        }
+        "ollama" {
+            $OllamaBaseUrl = if ($env:OLLAMA_BASE_URL) { $env:OLLAMA_BASE_URL } elseif ([Environment]::UserInteractive) { Read-ValueWithDefault "[kelvin init] Ollama base URL" $DefaultOllamaBaseUrl } else { $DefaultOllamaBaseUrl }
+            if ([string]::IsNullOrWhiteSpace($OllamaBaseUrl)) {
+                throw "OLLAMA_BASE_URL cannot be empty"
+            }
+            Set-EnvValueInFile -Path $ConfigEnvPath -Key "KELVIN_MODEL_PROVIDER" -Value "kelvin.ollama"
+            Set-EnvValueInFile -Path $ConfigEnvPath -Key "OLLAMA_BASE_URL" -Value $OllamaBaseUrl.Trim()
+        }
+    }
+
+    Write-Host "[kelvin init] Wrote $ConfigEnvPath"
+    Write-Host "[kelvin init] Next step: kelvin"
+}
+
 $CliArgs = $args
-if ($CliArgs.Length -gt 0 -and ($CliArgs[0] -eq "-h" -or $CliArgs[0] -eq "--help")) {
-    Show-Usage
-    exit 0
+if ($CliArgs.Length -gt 0) {
+    if ($CliArgs[0] -eq "-h" -or $CliArgs[0] -eq "--help") {
+        Show-Usage
+        exit 0
+    }
+    if ($CliArgs[0] -eq "init") {
+        $InitArgs = if ($CliArgs.Length -gt 1) { $CliArgs[1..($CliArgs.Length - 1)] } else { @() }
+        Invoke-KelvinInit $InitArgs
+        exit 0
+    }
 }
 
 $_LaunchDotenv = Load-Dotenv

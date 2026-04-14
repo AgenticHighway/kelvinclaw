@@ -8,12 +8,11 @@ KelvinClaw is a secure, stable, and modular harness for agentic AI workflows.
 tar -xzf kelvinclaw-<version>-linux-<arch>.tar.gz
 cd kelvinclaw-<version>-linux-<arch>
 
-cp .env.example .env          # configure provider and API key
-./kelvin-gateway start        # start gateway daemon
-./kelvin-tui                  # launch the terminal UI
+./kelvin init
+./kelvin
 ```
 
-On first run, `kelvin-gateway start` fetches the official trust policy and bootstraps required plugins into `~/.kelvinclaw`.
+On first run, `kelvin init` writes `~/.kelvinclaw/.env`, generates a gateway token, and helps you choose a provider. `./kelvin` then bootstraps required plugins into `~/.kelvinclaw`.
 
 ### Prerequisites
 
@@ -33,12 +32,13 @@ All launchers auto-read `.env` files in this order:
 3. `~/.kelvinclaw/.env.local`
 4. `~/.kelvinclaw/.env`
 
-Copy `.env.example` to `.env` and set your model provider and API key:
+The recommended path is to let `kelvin init` create `~/.kelvinclaw/.env` for you:
 
 ```bash
-cp .env.example .env
-$EDITOR .env
+./kelvin init
 ```
+
+You can still copy `.env.example` manually if you want a project-local config.
 
 Key variables:
 

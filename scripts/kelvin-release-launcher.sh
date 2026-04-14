@@ -10,6 +10,7 @@ fi
 KELVIN_HOME_DEFAULT="${HOME}/.kelvinclaw"
 KELVIN_HOME="${KELVIN_HOME:-${KELVIN_HOME_DEFAULT}}"
 KELVIN_HOME="${KELVIN_HOME/#\~/${HOME}}"
+CONFIG_ENV_PATH="${KELVIN_HOME}/.env"
 PLUGIN_HOME="${KELVIN_PLUGIN_HOME:-${KELVIN_HOME}/plugins}"
 PLUGIN_HOME="${PLUGIN_HOME/#\~/${HOME}}"
 TRUST_POLICY_PATH="${KELVIN_TRUST_POLICY_PATH:-${KELVIN_HOME}/trusted_publishers.json}"
@@ -17,6 +18,8 @@ TRUST_POLICY_PATH="${TRUST_POLICY_PATH/#\~/${HOME}}"
 STATE_DIR="${KELVIN_STATE_DIR:-${KELVIN_HOME}/state}"
 STATE_DIR="${STATE_DIR/#\~/${HOME}}"
 DEFAULT_PROMPT="${KELVIN_DEFAULT_PROMPT:-What is KelvinClaw?}"
+DEFAULT_PLUGIN_INDEX_URL="https://raw.githubusercontent.com/AgenticHighway/kelvinclaw-plugins/main/index.json"
+DEFAULT_OLLAMA_BASE_URL="http://localhost:11434"
 PLUGIN_MANIFEST_PATH="${ROOT_DIR}/share/official-first-party-plugins.env"
 ENV_SEARCH_PATHS=(
   "${PWD}/.env.local"
@@ -27,11 +30,12 @@ ENV_SEARCH_PATHS=(
 
 usage() {
   cat <<'USAGE'
-Usage: ./kelvin [kelvin-host args]
+Usage: ./kelvin [init [options] | kelvin-host args]
 
 Release-bundle launcher for KelvinClaw.
 
 Behavior:
+  - `kelvin init` writes ~/.kelvinclaw/.env for first-run setup
   - with no args, installs required official plugins on first run
   - starts interactive mode on a TTY
   - falls back to a default prompt when stdin/stdout are not TTYs
@@ -49,6 +53,19 @@ The launcher also reads OPENAI_API_KEY from:
   - ./.env
   - ~/.kelvinclaw/.env.local
   - ~/.kelvinclaw/.env
+USAGE
+}
+
+show_init_usage() {
+  cat <<'USAGE'
+Usage: ./kelvin init [--provider <echo|openai|anthropic|openrouter|ollama>] [--force]
+
+Initialize KelvinClaw's user config in ~/.kelvinclaw/.env.
+
+Options:
+  --provider <name>  Preselect a provider instead of prompting.
+  --force            Overwrite an existing ~/.kelvinclaw/.env.
+  -h, --help         Show this help.
 USAGE
 }
 
@@ -87,6 +104,247 @@ strip_wrapping_quotes() {
     return
   fi
   printf '%s' "${value}"
+}
+
+read_secret_value() {
+  local prompt="$1"
+  local value=""
+  printf '%s' "${prompt}" >&2
+  IFS= read -r -s value
+  printf '\n' >&2
+  printf '%s' "${value}"
+}
+
+read_value_with_default() {
+  local prompt="$1"
+  local default_value="$2"
+  local value=""
+  printf '%s [%s]: ' "${prompt}" "${default_value}" >&2
+  IFS= read -r value
+  value="$(trim_whitespace "${value}")"
+  if [[ -z "${value}" ]]; then
+    printf '%s' "${default_value}"
+    return 0
+  fi
+  printf '%s' "${value}"
+}
+
+config_template_path() {
+  if [[ -f "${ROOT_DIR}/release/env.example" ]]; then
+    printf '%s\n' "${ROOT_DIR}/release/env.example"
+    return 0
+  fi
+  if [[ -f "${ROOT_DIR}/.env.example" ]]; then
+    printf '%s\n' "${ROOT_DIR}/.env.example"
+    return 0
+  fi
+  echo "Missing KelvinClaw config template (.env.example)" >&2
+  exit 1
+}
+
+generate_gateway_token() {
+  if command -v openssl >/dev/null 2>&1; then
+    openssl rand -hex 32
+    return 0
+  fi
+  if command -v python3 >/dev/null 2>&1; then
+    python3 -c 'import secrets; print(secrets.token_hex(32))'
+    return 0
+  fi
+  echo "Missing required command: openssl or python3" >&2
+  exit 1
+}
+
+replace_or_append_env_line() {
+  local file="$1"
+  local key="$2"
+  local value="$3"
+  local temp_file=""
+  temp_file="$(mktemp)"
+  awk -v key="${key}" -v value="${value}" '
+    BEGIN { replaced = 0 }
+    $0 ~ "^[[:space:]]*" key "[[:space:]]*=" {
+      print key "=" value
+      replaced = 1
+      next
+    }
+    { print }
+    END {
+      if (!replaced) {
+        print key "=" value
+      }
+    }
+  ' "${file}" > "${temp_file}"
+  mv "${temp_file}" "${file}"
+}
+
+normalize_init_provider() {
+  case "$1" in
+    echo|kelvin.echo) printf '%s\n' 'echo' ;;
+    openai|kelvin.openai) printf '%s\n' 'openai' ;;
+    anthropic|kelvin.anthropic) printf '%s\n' 'anthropic' ;;
+    openrouter|kelvin.openrouter) printf '%s\n' 'openrouter' ;;
+    ollama|kelvin.ollama) printf '%s\n' 'ollama' ;;
+    *)
+      echo "Unsupported provider: $1" >&2
+      echo "Expected one of: echo, openai, anthropic, openrouter, ollama" >&2
+      exit 1
+      ;;
+  esac
+}
+
+prompt_for_init_provider() {
+  local selection=""
+  cat <<'PROMPT' >&2
+[kelvin init] Choose a provider:
+  1) kelvin.echo (Recommended)
+  2) kelvin.openai
+  3) kelvin.anthropic
+  4) kelvin.openrouter
+  5) kelvin.ollama
+PROMPT
+  printf '[kelvin init] Provider [1]: ' >&2
+  IFS= read -r selection
+  selection="$(trim_whitespace "${selection}")"
+  case "${selection}" in
+    ""|1) printf '%s\n' 'echo' ;;
+    2) printf '%s\n' 'openai' ;;
+    3) printf '%s\n' 'anthropic' ;;
+    4) printf '%s\n' 'openrouter' ;;
+    5) printf '%s\n' 'ollama' ;;
+    *)
+      normalize_init_provider "${selection}"
+      ;;
+  esac
+}
+
+run_init() {
+  local force="0"
+  local provider=""
+  local provider_id=""
+  local config_template=""
+  local gateway_token=""
+  local plugin_index_url="${KELVIN_PLUGIN_INDEX_URL:-${DEFAULT_PLUGIN_INDEX_URL}}"
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --force)
+        force="1"
+        shift
+        ;;
+      --provider)
+        provider="$(normalize_init_provider "${2:?missing value for --provider}")"
+        shift 2
+        ;;
+      -h|--help)
+        show_init_usage
+        exit 0
+        ;;
+      *)
+        echo "error: unknown init argument: $1" >&2
+        show_init_usage >&2
+        exit 1
+        ;;
+    esac
+  done
+
+  if [[ -z "${provider}" ]]; then
+    if [[ -t 0 && -t 1 ]]; then
+      provider="$(prompt_for_init_provider)"
+    else
+      provider="echo"
+    fi
+  fi
+
+  mkdir -p "${KELVIN_HOME}"
+  if [[ -f "${CONFIG_ENV_PATH}" && "${force}" != "1" ]]; then
+    echo "error: ${CONFIG_ENV_PATH} already exists" >&2
+    echo "Run 'kelvin init --force' to overwrite it." >&2
+    exit 1
+  fi
+
+  config_template="$(config_template_path)"
+  cp "${config_template}" "${CONFIG_ENV_PATH}"
+
+  gateway_token="$(generate_gateway_token)"
+  replace_or_append_env_line "${CONFIG_ENV_PATH}" "KELVIN_GATEWAY_TOKEN" "${gateway_token}"
+  replace_or_append_env_line "${CONFIG_ENV_PATH}" "KELVIN_PLUGIN_INDEX_URL" "${plugin_index_url}"
+
+  case "${provider}" in
+    echo)
+      provider_id="kelvin.echo"
+      ;;
+    openai)
+      local openai_api_key="${OPENAI_API_KEY:-}"
+      if [[ -z "${openai_api_key}" ]]; then
+        if [[ ! -t 0 || ! -t 1 ]]; then
+          echo "error: OPENAI_API_KEY must be set for non-interactive openai init" >&2
+          exit 1
+        fi
+        openai_api_key="$(read_secret_value "[kelvin init] OpenAI API key: ")"
+      fi
+      openai_api_key="$(trim_whitespace "${openai_api_key}")"
+      if [[ -z "${openai_api_key}" ]]; then
+        echo "error: OPENAI_API_KEY cannot be empty" >&2
+        exit 1
+      fi
+      replace_or_append_env_line "${CONFIG_ENV_PATH}" "OPENAI_API_KEY" "${openai_api_key}"
+      provider_id="kelvin.openai"
+      ;;
+    anthropic)
+      local anthropic_api_key="${ANTHROPIC_API_KEY:-}"
+      if [[ -z "${anthropic_api_key}" ]]; then
+        if [[ ! -t 0 || ! -t 1 ]]; then
+          echo "error: ANTHROPIC_API_KEY must be set for non-interactive anthropic init" >&2
+          exit 1
+        fi
+        anthropic_api_key="$(read_secret_value "[kelvin init] Anthropic API key: ")"
+      fi
+      anthropic_api_key="$(trim_whitespace "${anthropic_api_key}")"
+      if [[ -z "${anthropic_api_key}" ]]; then
+        echo "error: ANTHROPIC_API_KEY cannot be empty" >&2
+        exit 1
+      fi
+      replace_or_append_env_line "${CONFIG_ENV_PATH}" "ANTHROPIC_API_KEY" "${anthropic_api_key}"
+      provider_id="kelvin.anthropic"
+      ;;
+    openrouter)
+      local openrouter_api_key="${OPENROUTER_API_KEY:-}"
+      if [[ -z "${openrouter_api_key}" ]]; then
+        if [[ ! -t 0 || ! -t 1 ]]; then
+          echo "error: OPENROUTER_API_KEY must be set for non-interactive openrouter init" >&2
+          exit 1
+        fi
+        openrouter_api_key="$(read_secret_value "[kelvin init] OpenRouter API key: ")"
+      fi
+      openrouter_api_key="$(trim_whitespace "${openrouter_api_key}")"
+      if [[ -z "${openrouter_api_key}" ]]; then
+        echo "error: OPENROUTER_API_KEY cannot be empty" >&2
+        exit 1
+      fi
+      replace_or_append_env_line "${CONFIG_ENV_PATH}" "OPENROUTER_API_KEY" "${openrouter_api_key}"
+      provider_id="kelvin.openrouter"
+      ;;
+    ollama)
+      local ollama_base_url="${OLLAMA_BASE_URL:-${DEFAULT_OLLAMA_BASE_URL}}"
+      if [[ -t 0 && -t 1 ]]; then
+        ollama_base_url="$(read_value_with_default "[kelvin init] Ollama base URL" "${ollama_base_url}")"
+      fi
+      ollama_base_url="$(trim_whitespace "${ollama_base_url}")"
+      if [[ -z "${ollama_base_url}" ]]; then
+        echo "error: OLLAMA_BASE_URL cannot be empty" >&2
+        exit 1
+      fi
+      replace_or_append_env_line "${CONFIG_ENV_PATH}" "OLLAMA_BASE_URL" "${ollama_base_url}"
+      provider_id="kelvin.ollama"
+      ;;
+  esac
+
+  replace_or_append_env_line "${CONFIG_ENV_PATH}" "KELVIN_MODEL_PROVIDER" "${provider_id}"
+
+  echo "[kelvin init] Wrote ${CONFIG_ENV_PATH}"
+  echo "[kelvin init] Provider: ${provider_id}"
+  echo "[kelvin init] Next step: kelvin"
 }
 
 load_env_var_from_file() {
@@ -257,6 +515,11 @@ bootstrap_official_plugins() {
 
 if [[ $# -gt 0 ]]; then
   case "$1" in
+    init)
+      shift
+      run_init "$@"
+      exit 0
+      ;;
     -h|--help)
       usage
       exit 0

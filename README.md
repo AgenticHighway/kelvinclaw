@@ -53,9 +53,8 @@ or continue with echo mode if you don't have a key.
 ```bash
 brew tap AgenticHighway/tap
 brew install kelvinclaw
-cp "$(brew --prefix)/opt/kelvinclaw/libexec/kelvinclaw/.env.example" .env
-kelvin-gateway start
-kelvin-tui
+kelvin init
+kelvin
 ```
 
 ### More Options
@@ -117,13 +116,14 @@ The intended Unix end-user entrypoint is:
 ```bash
 tar -xzf kelvinclaw-<version>-linux-<arch>.tar.gz
 cd kelvinclaw-<version>-linux-<arch>
-cp .env.example .env   # configure provider and API key
-./kelvin-gateway start # start gateway daemon
-./kelvin-tui           # launch the TUI
+./kelvin init
+./kelvin
 ```
 
-On first run, `kelvin-gateway start` fetches the official trust policy and
-bootstraps required plugins from the plugin index into `~/.kelvinclaw`.
+On first run, `kelvin init` writes `~/.kelvinclaw/.env`, generates a gateway
+token, and helps select a provider. `kelvin` then fetches the official trust
+policy and bootstraps required plugins from the plugin index into
+`~/.kelvinclaw`.
 
 Additional published first-party model plugins can be installed with `kpm`:
 
