@@ -535,7 +535,7 @@ fn check_binaries(mk: &mut Medkit) {
         ),
         ("kelvin-tui", "cargo build -p kelvin-tui"),
     ] {
-        let bin = bin_dir.join(name);
+        let bin = bin_dir.join(format!("{}{}", name, std::env::consts::EXE_SUFFIX));
         if bin.exists() {
             mk.pass(format!("{} binary: built", name));
         } else {

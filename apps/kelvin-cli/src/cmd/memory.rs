@@ -4,7 +4,6 @@ use crate::cli::{MemoryCmd, MemoryStartArgs};
 use crate::paths;
 use crate::proc;
 
-const MEMORY_BINARY: &str = "kelvin-memory-controller";
 const GRACE_MS: u64 = 3000;
 
 pub fn run(sub: MemoryCmd) -> Result<()> {
@@ -17,7 +16,7 @@ pub fn run(sub: MemoryCmd) -> Result<()> {
 }
 
 pub fn memory_binary() -> std::path::PathBuf {
-    paths::binary_dir().join(MEMORY_BINARY)
+    paths::binary_dir().join(format!("kelvin-memory-controller{}", std::env::consts::EXE_SUFFIX))
 }
 
 pub fn build_memory_env() -> anyhow::Result<Vec<(String, String)>> {

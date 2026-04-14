@@ -19,7 +19,7 @@ pub fn run(args: TuiArgs) -> Result<()> {
         );
     }
 
-    let tui_bin = paths::binary_dir().join("kelvin-tui");
+    let tui_bin = paths::binary_dir().join(format!("kelvin-tui{}", std::env::consts::EXE_SUFFIX));
     if !tui_bin.exists() {
         bail!(
             "kelvin-tui binary not found at {}\nRun `cargo build -p kelvin-tui` first.",

@@ -4,7 +4,6 @@ use crate::cli::{GatewayCmd, GatewayStartArgs};
 use crate::paths;
 use crate::proc;
 
-const GATEWAY_BINARY: &str = "kelvin-gateway";
 const GRACE_MS: u64 = 3000;
 
 pub fn run(sub: GatewayCmd) -> Result<()> {
@@ -18,7 +17,7 @@ pub fn run(sub: GatewayCmd) -> Result<()> {
 }
 
 fn gateway_binary() -> std::path::PathBuf {
-    paths::binary_dir().join(GATEWAY_BINARY)
+    paths::binary_dir().join(format!("kelvin-gateway{}", std::env::consts::EXE_SUFFIX))
 }
 
 fn cmd_start(args: GatewayStartArgs) -> Result<()> {

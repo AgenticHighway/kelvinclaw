@@ -53,7 +53,7 @@ pub async fn run() -> Result<()> {
     }
 
     // exec into kelvin-tui.
-    let tui_bin = paths::binary_dir().join("kelvin-tui");
+    let tui_bin = paths::binary_dir().join(format!("kelvin-tui{}", std::env::consts::EXE_SUFFIX));
     if !tui_bin.exists() {
         eprintln!(
             "[kelvin] ERROR: kelvin-tui binary not found at {}",

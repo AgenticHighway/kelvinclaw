@@ -74,7 +74,7 @@ pub fn stop(pid: u32, grace_ms: u64) -> Result<()> {
                 OpenProcess, TerminateProcess, PROCESS_TERMINATE,
             };
             let handle = OpenProcess(PROCESS_TERMINATE, 0, pid);
-            if handle != 0 {
+            if handle != std::ptr::null_mut() {
                 TerminateProcess(handle, 1);
                 windows_sys::Win32::Foundation::CloseHandle(handle);
             }
