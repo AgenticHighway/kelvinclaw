@@ -9,7 +9,7 @@ tar -xzf kelvinclaw-<version>-linux-<arch>.tar.gz
 cd kelvinclaw-<version>-linux-<arch>
 
 ./bin/kelvin init    # interactive first-run setup (provider, API key, token)
-kelvin               # start the full stack and open the TUI
+./bin/kelvin         # start the full stack and open the TUI
 ```
 
 `kelvin init` writes `~/.kelvinclaw/.env`, generates auth keys, and creates a permissive trust policy. After that, bare `kelvin` starts the gateway and memory controller as background daemons, then opens the terminal UI.
@@ -48,6 +48,14 @@ Key variables:
 ## kelvin — Unified CLI
 
 All lifecycle and plugin operations go through the single `kelvin` binary.
+
+Add `bin/` to your `PATH` so you can use `kelvin` without a path prefix:
+
+```bash
+export PATH="/path/to/kelvinclaw-<version>-<platform>/bin:$PATH"
+```
+
+The examples below assume `kelvin` is on your `PATH`.
 
 ### Stack management
 
@@ -178,10 +186,10 @@ kelvinclaw-<version>-<platform>/
   README.md
 ```
 
-Add `bin/` to your `PATH` (the installer does this automatically):
+Add `bin/` to your `PATH` to use `kelvin` from any directory:
 
 ```bash
-export PATH="$HOME/.kelvinclaw/bin:$PATH"
+export PATH="/path/to/kelvinclaw-<version>-<platform>/bin:$PATH"
 ```
 
 ---

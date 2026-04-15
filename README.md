@@ -108,8 +108,9 @@ configured.
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/AgenticHighway/kelvinclaw/main/install.sh | bash
-kelvin init    # interactive first-run setup
-kelvin         # start full stack and open TUI
+# Add the install directory to PATH, then:
+./bin/kelvin init    # interactive first-run setup
+./bin/kelvin         # start full stack and open TUI
 ```
 
 Or from a downloaded tarball:
@@ -118,13 +119,19 @@ Or from a downloaded tarball:
 tar -xzf kelvinclaw-<version>-linux-<arch>.tar.gz
 cd kelvinclaw-<version>-linux-<arch>
 ./bin/kelvin init
-kelvin
+./bin/kelvin
 ```
 
 `kelvin init` writes `~/.kelvinclaw/.env`, generates auth keys, writes a permissive trust policy,
 and optionally installs shell completions. After that, bare `kelvin` starts the gateway and memory
 controller as background daemons, installs any required plugins from the plugin index, then opens
 the terminal UI.
+
+Add `bin/` to your `PATH` to use `kelvin` without a prefix. The examples below assume this is done:
+
+```bash
+export PATH="/path/to/kelvinclaw-<version>-<platform>/bin:$PATH"
+```
 
 Plugin management from the release bundle:
 
