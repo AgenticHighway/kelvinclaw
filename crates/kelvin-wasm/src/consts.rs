@@ -97,19 +97,26 @@ pub const KNOWN_INTERPRETERS: &[&str] = &[
     "pwsh",
 ];
 
-/// Argument flags that enable inline code execution for interpreters.
-/// Any argument starting with one of these (exact or `=`-suffixed) is rejected
-/// when the command is a known interpreter.
-pub const INTERPRETER_INLINE_FLAGS: &[&str] = &[
-    "-c",        // python, bash, sh, zsh, etc.
-    "-e",        // ruby, perl, node (--eval shorthand)
-    "-E",        // perl (like -e but with extra features)
-    "-r",        // php (-r 'code')
-    "-p",        // node (--print shorthand — eval + print)
+/// Long-form flags that enable inline code execution for interpreters.
+/// These are checked as exact matches or with `=` suffix.
+pub const INTERPRETER_LONG_FLAGS: &[&str] = &[
     "--eval",    // node
     "--print",   // node
     "--command", // powershell
     "-Command",  // powershell
+];
+
+/// Single-character flag letters that enable inline code execution.
+/// POSIX shells allow combining short flags (e.g. `bash -xc 'code'`),
+/// so we check whether ANY of these characters appear anywhere inside a
+/// combined short-flag group (an arg starting with `-` followed by
+/// multiple ASCII letters).
+pub const INTERPRETER_INLINE_CHARS: &[char] = &[
+    'c', // python, bash, sh, zsh, etc.
+    'e', // ruby, perl, node
+    'E', // perl (like -e but with extra features)
+    'r', // php (-r 'code')
+    'p', // node (--print shorthand — eval + print)
 ];
 
 // --- Network/Hosts ---
