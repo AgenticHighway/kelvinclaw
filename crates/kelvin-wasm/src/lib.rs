@@ -854,16 +854,15 @@ fn link_claw_imports(linker: &mut Linker<HostState>, policy: &SandboxPolicy) -> 
                     // environment (only PATH is inherited so the command can be
                     // resolved).
                     let result = tokio::task::block_in_place(|| {
-                        let child = Command::new(basename)
+                        let mut child = match Command::new(basename)
                             .args(&args)
                             .env_clear()
                             .env("PATH", std::env::var("PATH").unwrap_or_default())
                             .stdin(std::process::Stdio::null())
                             .stdout(std::process::Stdio::piped())
                             .stderr(std::process::Stdio::piped())
-                            .spawn();
-
-                        let mut child = match child {
+                            .spawn()
+                        {
                             Ok(c) => c,
                             Err(e) => {
                                 return serde_json::json!({
@@ -875,56 +874,39 @@ fn link_claw_imports(linker: &mut Linker<HostState>, policy: &SandboxPolicy) -> 
                             }
                         };
 
+                        // Take stdout/stderr handles and drain them on dedicated
+                        // threads to avoid the classic pipe-buffer deadlock: if the
+                        // child writes more than the OS pipe buffer (~64 KB) without
+                        // anyone reading, its write() blocks and try_wait() would
+                        // never see an exit.
+                        let stdout_handle = child.stdout.take();
+                        let stderr_handle = child.stderr.take();
+
+                        let stdout_thread = std::thread::spawn(move || {
+                            let mut buf = Vec::new();
+                            if let Some(mut r) = stdout_handle {
+                                let _ = std::io::Read::read_to_end(&mut r, &mut buf);
+                            }
+                            buf
+                        });
+                        let stderr_thread = std::thread::spawn(move || {
+                            let mut buf = Vec::new();
+                            if let Some(mut r) = stderr_handle {
+                                let _ = std::io::Read::read_to_end(&mut r, &mut buf);
+                            }
+                            buf
+                        });
+
                         let timeout = std::time::Duration::from_secs(timeout_secs);
                         let start = std::time::Instant::now();
-                        loop {
+                        let exit_status = loop {
                             match child.try_wait() {
-                                Ok(Some(status)) => {
-                                    let output = child.wait_with_output().unwrap_or_else(|_| {
-                                        std::process::Output {
-                                            status,
-                                            stdout: Vec::new(),
-                                            stderr: Vec::new(),
-                                        }
-                                    });
-                                    let max_out = consts::SHELL_EXEC_MAX_OUTPUT_BYTES;
-                                    let stdout_raw = String::from_utf8_lossy(&output.stdout);
-                                    let stderr_raw = String::from_utf8_lossy(&output.stderr);
-                                    let stdout = if stdout_raw.len() > max_out {
-                                        let mut end = max_out / 2;
-                                        while end > 0 && !stdout_raw.is_char_boundary(end) {
-                                            end -= 1;
-                                        }
-                                        format!("{}...[truncated]", &stdout_raw[..end])
-                                    } else {
-                                        stdout_raw.into_owned()
-                                    };
-                                    let stderr = if stderr_raw.len() > max_out {
-                                        let mut end = max_out / 2;
-                                        while end > 0 && !stderr_raw.is_char_boundary(end) {
-                                            end -= 1;
-                                        }
-                                        format!("{}...[truncated]", &stderr_raw[..end])
-                                    } else {
-                                        stderr_raw.into_owned()
-                                    };
-                                    return serde_json::json!({
-                                        "exit_code": status.code().unwrap_or(-1),
-                                        "stdout": stdout,
-                                        "stderr": stderr,
-                                    })
-                                    .to_string();
-                                }
+                                Ok(Some(status)) => break Some(status),
                                 Ok(None) => {
                                     if start.elapsed() >= timeout {
                                         let _ = child.kill();
                                         let _ = child.wait();
-                                        return serde_json::json!({
-                                            "exit_code": -1,
-                                            "stdout": "",
-                                            "stderr": "command timed out"
-                                        })
-                                        .to_string();
+                                        break None;
                                     }
                                     std::thread::sleep(std::time::Duration::from_millis(50));
                                 }
@@ -936,6 +918,66 @@ fn link_claw_imports(linker: &mut Linker<HostState>, policy: &SandboxPolicy) -> 
                                     })
                                     .to_string();
                                 }
+                            }
+                        };
+
+                        let stdout_bytes = stdout_thread.join().unwrap_or_default();
+                        let stderr_bytes = stderr_thread.join().unwrap_or_default();
+
+                        match exit_status {
+                            None => {
+                                serde_json::json!({
+                                    "exit_code": -1,
+                                    "stdout": "",
+                                    "stderr": "command timed out"
+                                })
+                                .to_string()
+                            }
+                            Some(status) => {
+                                // Enforce a *combined* output budget across both
+                                // streams, splitting evenly when both exceed half.
+                                let max_out = consts::SHELL_EXEC_MAX_OUTPUT_BYTES;
+                                let stdout_raw = String::from_utf8_lossy(&stdout_bytes);
+                                let stderr_raw = String::from_utf8_lossy(&stderr_bytes);
+
+                                let half = max_out / 2;
+                                let (stdout_budget, stderr_budget) =
+                                    if stdout_raw.len() <= half {
+                                        // stdout is small — give stderr the remainder
+                                        (stdout_raw.len(), max_out.saturating_sub(stdout_raw.len()))
+                                    } else if stderr_raw.len() <= half {
+                                        // stderr is small — give stdout the remainder
+                                        (max_out.saturating_sub(stderr_raw.len()), stderr_raw.len())
+                                    } else {
+                                        // both large — split evenly
+                                        (half, half)
+                                    };
+
+                                let stdout = if stdout_raw.len() > stdout_budget {
+                                    let mut end = stdout_budget;
+                                    while end > 0 && !stdout_raw.is_char_boundary(end) {
+                                        end -= 1;
+                                    }
+                                    format!("{}...[truncated]", &stdout_raw[..end])
+                                } else {
+                                    stdout_raw.into_owned()
+                                };
+                                let stderr = if stderr_raw.len() > stderr_budget {
+                                    let mut end = stderr_budget;
+                                    while end > 0 && !stderr_raw.is_char_boundary(end) {
+                                        end -= 1;
+                                    }
+                                    format!("{}...[truncated]", &stderr_raw[..end])
+                                } else {
+                                    stderr_raw.into_owned()
+                                };
+
+                                serde_json::json!({
+                                    "exit_code": status.code().unwrap_or(-1),
+                                    "stdout": stdout,
+                                    "stderr": stderr,
+                                })
+                                .to_string()
                             }
                         }
                     });
