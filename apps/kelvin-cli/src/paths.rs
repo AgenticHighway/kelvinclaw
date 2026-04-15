@@ -102,6 +102,11 @@ pub fn dotenv_path() -> PathBuf {
     kelvin_home().join(".env")
 }
 
+/// Returns the launcher-managed preferences path: {kelvin_home}/preferences.env
+pub fn preferences_path() -> PathBuf {
+    kelvin_home().join("preferences.env")
+}
+
 /// Returns the directory containing the current executable (sibling of bin/)
 pub fn binary_dir() -> PathBuf {
     std::env::current_exe()

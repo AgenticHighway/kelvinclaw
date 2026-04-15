@@ -4,6 +4,7 @@ mod cmd;
 mod env;
 mod keys;
 mod paths;
+mod prefs;
 mod proc;
 mod tty;
 
@@ -25,7 +26,16 @@ fn main() {
 }
 
 async fn async_main() {
-    let cli = Cli::parse();
+    let raw_args: Vec<String> = std::env::args().collect();
+    if raw_args.len() == 2 && raw_args[1] == "/help" {
+        if let Err(e) = bare::run_shell_help() {
+            eprintln!("error: {}", e);
+            std::process::exit(1);
+        }
+        return;
+    }
+
+    let cli = Cli::parse_from(raw_args);
 
     let result = match cli.command {
         None => bare::run().await.map(|_| ()),

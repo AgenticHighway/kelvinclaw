@@ -9,10 +9,13 @@ tar -xzf kelvinclaw-<version>-linux-<arch>.tar.gz
 cd kelvinclaw-<version>-linux-<arch>
 
 ./bin/kelvin init    # interactive first-run setup (provider, API key, token)
-./bin/kelvin         # start the full stack and open the TUI
+./bin/kelvin         # choose CLI chat or TUI on first run
 ```
 
-`kelvin init` writes `~/.kelvinclaw/.env`, generates auth keys, and creates a permissive trust policy. After that, bare `kelvin` starts the gateway and memory controller as background daemons, then opens the terminal UI.
+`kelvin init` writes `~/.kelvinclaw/.env`, generates auth keys, and creates a permissive trust policy.
+After that, the first interactive bare `kelvin` launch asks whether you want CLI chat or the TUI app,
+remembers that choice in `~/.kelvinclaw/preferences.env`, and routes future `kelvin` launches there by default.
+Run `kelvin /help` from the shell to show the interactive quickstart.
 
 ---
 
@@ -28,6 +31,10 @@ cd kelvinclaw-<version>-linux-<arch>
 4. `./.env`
 
 `~/.kelvinclaw/.env` is the canonical config path for release and Homebrew installs.
+
+Kelvin stores remembered launcher preferences separately in:
+
+1. `~/.kelvinclaw/preferences.env`
 
 Variables already in the environment are never overwritten.
 

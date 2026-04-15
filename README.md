@@ -54,6 +54,10 @@ kelvin
 ```
 
 Homebrew and release installs now treat `~/.kelvinclaw/.env` as the canonical config path.
+On the first interactive `kelvin` launch, Kelvin asks whether you want **CLI chat**
+or the **TUI app**, remembers that choice in `~/.kelvinclaw/preferences.env`, and
+routes future `kelvin` launches there by default. Run `kelvin /help` to print the
+interactive quickstart from the shell.
 
 ### More Options
 
@@ -100,7 +104,7 @@ configured.
 curl -sSL https://raw.githubusercontent.com/AgenticHighway/kelvinclaw/main/install.sh | bash
 # Add the install directory to PATH, then:
 ./bin/kelvin init    # interactive first-run setup
-./bin/kelvin         # start full stack and open TUI
+./bin/kelvin         # choose CLI chat or TUI on first run
 ```
 
 Or from a downloaded tarball:
@@ -113,9 +117,11 @@ cd kelvinclaw-<version>-linux-<arch>
 ```
 
 `kelvin init` writes `~/.kelvinclaw/.env`, generates auth keys, writes a permissive trust policy,
-and optionally installs shell completions. After that, bare `kelvin` starts the gateway and memory
-controller as background daemons, installs any required plugins from the plugin index, then opens
-the terminal UI.
+and optionally installs shell completions. After that, the first interactive bare `kelvin` launch
+asks whether you want CLI chat or the TUI app, remembers that choice in
+`~/.kelvinclaw/preferences.env`, and launches the selected experience. The CLI chat path
+bootstraps `kelvin.cli` plus the configured model provider before opening `kelvin-host`;
+the TUI path starts the gateway and memory controller as needed before opening `kelvin-tui`.
 
 Add `bin/` to your `PATH` to use `kelvin` without a prefix. The examples below assume this is done:
 
@@ -153,6 +159,7 @@ kelvin service install-launchd     # launchd plist (macOS)
 Diagnostics:
 
 ```bash
+kelvin /help           # print the interactive quickstart from the shell
 kelvin medkit          # offline checks — env, keys, plugins, daemons
 kelvin medkit --fix    # attempt automatic repairs
 kelvin doctor          # live WebSocket probe of running gateway
