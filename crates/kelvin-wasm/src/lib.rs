@@ -1177,17 +1177,32 @@ fn is_interpreter_inline_exec(command: &str, args: &[String]) -> bool {
                 return true;
             }
         }
-        // Check short flags — including combined groups like "-xc".
-        // Only check the chars relevant to THIS interpreter.
+        // Check short flags — including combined groups like "-xc" and
+        // concatenated flag+code like "-cimport os" (Python/Perl accept
+        // this form for inline execution).
+        //
+        // Strategy: extract the leading alphabetic prefix after the dash,
+        // then check whether any inline-code char for THIS interpreter
+        // appears in that prefix.  This catches:
+        //   -c           (exact short flag)
+        //   -xc          (combined POSIX flags)
+        //   -cprint(42)  (flag + concatenated code — prefix is "cprint",
+        //                 but we only need the flag chars in the prefix)
         if !inline_chars.is_empty() {
             if let Some(rest) = a.strip_prefix('-') {
-                if !rest.is_empty()
-                    && !rest.starts_with('-')
-                    && rest.chars().all(|ch| ch.is_ascii_alphabetic())
-                {
-                    for &flag_char in inline_chars {
-                        if rest.contains(flag_char) {
-                            return true;
+                if !rest.is_empty() && !rest.starts_with('-') {
+                    // Collect the leading run of ASCII-alphabetic chars.
+                    // For "-xc", prefix = "xc".
+                    // For "-cimport os; ...", prefix = "cimport".
+                    let alpha_prefix: String = rest
+                        .chars()
+                        .take_while(|ch| ch.is_ascii_alphabetic())
+                        .collect();
+                    if !alpha_prefix.is_empty() {
+                        for &flag_char in inline_chars {
+                            if alpha_prefix.contains(flag_char) {
+                                return true;
+                            }
                         }
                     }
                 }
@@ -2119,6 +2134,26 @@ mod tests {
         assert!(is_interpreter_inline_exec(
             "php",
             &["-r".into(), "echo 1;".into()]
+        ));
+
+        // Concatenated flag+code in a single arg — interpreters like
+        // Python and Perl accept e.g. python3 "-cimport os; os.system('id')".
+        assert!(is_interpreter_inline_exec(
+            "python3",
+            &["-cimport os; os.system('id')".into()]
+        ));
+        assert!(is_interpreter_inline_exec(
+            "perl",
+            &["-eprint 'bypassed'".into()]
+        ));
+        assert!(is_interpreter_inline_exec(
+            "python",
+            &["-cprint(42)".into()]
+        ));
+        // Combined flags + concatenated code
+        assert!(is_interpreter_inline_exec(
+            "bash",
+            &["-xc echo pwned".into()]
         ));
     }
 
