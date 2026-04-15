@@ -67,6 +67,51 @@ pub const SHELL_EXEC_DEFAULT_TIMEOUT_SECS: u64 = 10;
 /// Maximum combined stdout + stderr bytes returned to the guest.
 pub const SHELL_EXEC_MAX_OUTPUT_BYTES: usize = 64 * 1024;
 
+// --- Interpreter Guard ---
+/// Known script interpreters that can execute arbitrary code.
+/// When one of these is the command basename, inline-code flags are blocked.
+pub const KNOWN_INTERPRETERS: &[&str] = &[
+    "python",
+    "python3",
+    "python2",
+    "node",
+    "nodejs",
+    "bash",
+    "sh",
+    "zsh",
+    "dash",
+    "ksh",
+    "csh",
+    "tcsh",
+    "fish",
+    "ruby",
+    "irb",
+    "perl",
+    "perl5",
+    "php",
+    "lua",
+    "luajit",
+    "Rscript",
+    "julia",
+    "powershell",
+    "pwsh",
+];
+
+/// Argument flags that enable inline code execution for interpreters.
+/// Any argument starting with one of these (exact or `=`-suffixed) is rejected
+/// when the command is a known interpreter.
+pub const INTERPRETER_INLINE_FLAGS: &[&str] = &[
+    "-c",        // python, bash, sh, zsh, etc.
+    "-e",        // ruby, perl, node (--eval shorthand)
+    "-E",        // perl (like -e but with extra features)
+    "-r",        // php (-r 'code')
+    "-p",        // node (--print shorthand — eval + print)
+    "--eval",    // node
+    "--print",   // node
+    "--command", // powershell
+    "-Command",  // powershell
+];
+
 // --- Network/Hosts ---
 pub const DEFAULT_OPENAI_HOST: &str = "api.openai.com";
 
