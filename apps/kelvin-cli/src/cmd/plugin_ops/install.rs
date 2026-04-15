@@ -1,5 +1,5 @@
 use std::io::Read;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use anyhow::{bail, Context, Result};
 use sha2::{Digest, Sha256};
@@ -242,7 +242,7 @@ fn extract_tarball(tarball: &Path, dest: &Path) -> Result<()> {
         .context("failed to read tarball entries")?
     {
         let mut entry = entry.context("failed to read tarball entry")?;
-        let entry_path = entry.path().context("invalid entry path")?;
+        let entry_path = entry.path().context("invalid entry path")?.into_owned();
 
         // Skip AppleDouble files (._*) and .DS_Store.
         let file_name = entry_path
@@ -360,7 +360,9 @@ fn merge_trust_policy(trust_url: &str) -> Result<()> {
         serde_json::json!({"require_signature": false, "publishers": []})
     };
 
-    // Merge require_signature: base && incoming (strict wins).
+    // Merge require_signature: base && incoming.
+    // A plugin's index trust policy cannot escalate the user's local setting;
+    // strict is only preserved when both sides are strict.
     let base_strict = base
         .get("require_signature")
         .and_then(|v| v.as_bool())
@@ -369,7 +371,7 @@ fn merge_trust_policy(trust_url: &str) -> Result<()> {
         .get("require_signature")
         .and_then(|v| v.as_bool())
         .unwrap_or(false);
-    base["require_signature"] = serde_json::Value::Bool(base_strict || incoming_strict);
+    base["require_signature"] = serde_json::Value::Bool(base_strict && incoming_strict);
 
     // Merge publishers by id (incoming wins for duplicates).
     let base_pubs = base
