@@ -395,6 +395,9 @@ impl WasmSkillTool {
         if let Some(value) = self.optional_u64(args, consts::FIELD_FUEL_BUDGET)? {
             policy.fuel_budget = value;
         }
+        if let Some(cmds) = self.optional_string_array(args, consts::FIELD_SHELL_ALLOW_COMMANDS)? {
+            policy.shell_allow_commands = cmds;
+        }
 
         Ok(policy)
     }
@@ -586,6 +589,9 @@ fn claw_call_label(call: &ClawCall) -> String {
         ClawCall::NetworkSend { packet } => format!("network_send({packet})"),
         ClawCall::HttpCall { url } => format!("http_call({url})"),
         ClawCall::EnvAccess { key } => format!("env_access({key})"),
+        ClawCall::ShellExec { command, args } => {
+            format!("shell_exec({command} {})", args.join(" "))
+        }
     }
 }
 
@@ -618,6 +624,11 @@ fn claw_call_json(call: &ClawCall) -> Value {
         ClawCall::EnvAccess { key } => json!({
             consts::JSON_KEY_KIND: consts::CLAW_KIND_ENV_ACCESS,
             "key": key,
+        }),
+        ClawCall::ShellExec { command, args } => json!({
+            consts::JSON_KEY_KIND: consts::CLAW_KIND_SHELL_EXEC,
+            "command": command,
+            "args": args,
         }),
     }
 }

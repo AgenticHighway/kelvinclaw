@@ -29,6 +29,7 @@ pub const FIELD_ALLOW_FS_READ: &str = "allow_fs_read";
 pub const FIELD_NETWORK_ALLOW_HOSTS: &str = "network_allow_hosts";
 pub const FIELD_MAX_MODULE_BYTES: &str = "max_module_bytes";
 pub const FIELD_FUEL_BUDGET: &str = "fuel_budget";
+pub const FIELD_SHELL_ALLOW_COMMANDS: &str = "shell_allow_commands";
 
 // --- Tool Loop Detection ---
 pub const TOOL_LOOP_DETECTOR_THRESHOLD: usize = 3;
@@ -84,6 +85,7 @@ pub const CLAW_KIND_FS_READ: &str = "fs_read";
 pub const CLAW_KIND_NETWORK_SEND: &str = "network_send";
 pub const CLAW_KIND_HTTP_CALL: &str = "http_call";
 pub const CLAW_KIND_ENV_ACCESS: &str = "env_access";
+pub const CLAW_KIND_SHELL_EXEC: &str = "shell_exec";
 
 // --- Ed25519 Key Constants ---
 pub const ED25519_KEY_SIZE_BYTES: usize = 32;

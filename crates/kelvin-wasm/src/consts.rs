@@ -13,6 +13,7 @@ pub const CLAW_HANDLE_TOOL_CALL: &str = "handle_tool_call";
 pub const CLAW_IMPORT_LOG: &str = "log";
 pub const CLAW_HTTP_CALL: &str = "http_call";
 pub const CLAW_GET_ENV: &str = "get_env";
+pub const CLAW_SHELL_EXEC: &str = "shell_exec";
 
 // --- ABI: Model Host ---
 pub const MODEL_ABI_VERSION: &str = "1.0.0";
@@ -59,6 +60,62 @@ pub const MAX_FUEL_BUDGET: u64 = 100_000_000;
 // --- Timeouts ---
 pub const MODEL_DEFAULT_TIMEOUT_MS: u64 = 30_000;
 pub const HTTP_CALL_TIMEOUT_SECS: u64 = 30;
+/// Hard upper bound on shell_exec timeout to prevent runaway processes.
+pub const SHELL_EXEC_MAX_TIMEOUT_SECS: u64 = 30;
+/// Default timeout applied when the guest does not specify one.
+pub const SHELL_EXEC_DEFAULT_TIMEOUT_SECS: u64 = 10;
+/// Maximum combined stdout + stderr bytes returned to the guest.
+pub const SHELL_EXEC_MAX_OUTPUT_BYTES: usize = 64 * 1024;
+
+// --- Interpreter Guard ---
+/// Per-interpreter mapping of single-character flags that enable inline code
+/// execution.  Each interpreter only checks the chars relevant to *its own*
+/// semantics, avoiding false positives (e.g. `bash -r` means restricted mode,
+/// not inline code; `bash -p` means privileged mode).
+///
+/// An empty char slice means the interpreter has no short inline-exec flags
+/// (e.g. PowerShell uses long-form `-Command` / `--command` only).
+///
+/// This table doubles as the known-interpreter list: any command whose
+/// lowercase basename matches an entry is subject to the inline-code guard.
+pub const INTERPRETER_INLINE_MAP: &[(&str, &[char])] = &[
+    // POSIX shells: only -c is inline-exec
+    ("bash", &['c']),
+    ("sh", &['c']),
+    ("zsh", &['c']),
+    ("dash", &['c']),
+    ("ksh", &['c']),
+    ("csh", &['c']),
+    ("tcsh", &['c']),
+    ("fish", &['c']),
+    // Python: -c 'code'
+    ("python", &['c']),
+    ("python3", &['c']),
+    ("python2", &['c']),
+    // Node.js: -e (--eval), -p (--print)
+    ("node", &['e', 'p']),
+    ("nodejs", &['e', 'p']),
+    // Ruby: -e 'code'
+    ("ruby", &['e']),
+    ("irb", &['e']),
+    // Perl: -e 'code', -E 'code' (with extra features)
+    ("perl", &['e', 'E']),
+    ("perl5", &['e', 'E']),
+    // PHP: -r 'code'
+    ("php", &['r']),
+    // Lua: -e 'code'
+    ("lua", &['e']),
+    ("luajit", &['e']),
+    // R: -e 'code'
+    ("Rscript", &['e']),
+    // Julia: -e 'code'
+    ("julia", &['e']),
+    // PowerShell: handled via dedicated prefix-of-"-Command" check in
+    // is_interpreter_inline_exec (case-insensitive, covers -c, -C, -co,
+    // -Com, -COMMAND, etc.).  No short inline_chars needed.
+    ("powershell", &[]),
+    ("pwsh", &[]),
+];
 
 // --- Network/Hosts ---
 pub const DEFAULT_OPENAI_HOST: &str = "api.openai.com";
