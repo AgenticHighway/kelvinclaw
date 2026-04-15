@@ -1144,22 +1144,32 @@ fn shell_command_allowed(command: &str, allowed: &[String]) -> bool {
 /// interpreters to execute arbitrary code.  Without this, a plugin allowed to
 /// run `python` could call `python -c "import os; os.system('...')"`.
 ///
+/// Uses a per-interpreter mapping so that flags with different meanings across
+/// interpreters do not cause false positives (e.g. `bash -r` is restricted
+/// mode, not inline code; `bash -p` is privileged mode).
+///
 /// POSIX shells allow combining single-character flags, so `bash -xc 'code'`
 /// is equivalent to `bash -x -c 'code'`.  We detect inline-code characters
 /// inside any combined short-flag group (an arg matching `-[a-zA-Z]+`).
+const INTERPRETER_LONG_FLAGS: &[&str] = &["--eval", "--print", "--command", "-Command"];
+
 fn is_interpreter_inline_exec(command: &str, args: &[String]) -> bool {
     let cmd_lower = command.to_ascii_lowercase();
-    let is_interpreter = consts::KNOWN_INTERPRETERS
+    // Look up the per-interpreter inline-char set; returns None if not
+    // a known interpreter (→ allowed).
+    let inline_chars: &[char] = match consts::INTERPRETER_INLINE_MAP
         .iter()
-        .any(|i| cmd_lower == i.to_ascii_lowercase());
-    if !is_interpreter {
-        return false;
-    }
+        .find(|(name, _)| cmd_lower == name.to_ascii_lowercase())
+    {
+        Some((_, chars)) => chars,
+        None => return false,
+    };
+
     for arg in args {
         let a = arg.trim();
         // Check long-form flags: case-insensitive exact match or --flag=value.
         // PowerShell accepts -Command, -COMMAND, -command, etc.
-        for flag in consts::INTERPRETER_LONG_FLAGS {
+        for flag in INTERPRETER_LONG_FLAGS {
             if a.eq_ignore_ascii_case(flag)
                 || a.to_ascii_lowercase()
                     .starts_with(&format!("{}=", flag.to_ascii_lowercase()))
@@ -1168,16 +1178,17 @@ fn is_interpreter_inline_exec(command: &str, args: &[String]) -> bool {
             }
         }
         // Check short flags — including combined groups like "-xc".
-        // A combined short-flag group starts with a single '-' followed
-        // by multiple ASCII letters (e.g. "-xc", "-lc", "-ic").
-        if let Some(rest) = a.strip_prefix('-') {
-            if !rest.is_empty()
-                && !rest.starts_with('-')
-                && rest.chars().all(|ch| ch.is_ascii_alphabetic())
-            {
-                for &flag_char in consts::INTERPRETER_INLINE_CHARS {
-                    if rest.contains(flag_char) {
-                        return true;
+        // Only check the chars relevant to THIS interpreter.
+        if !inline_chars.is_empty() {
+            if let Some(rest) = a.strip_prefix('-') {
+                if !rest.is_empty()
+                    && !rest.starts_with('-')
+                    && rest.chars().all(|ch| ch.is_ascii_alphabetic())
+                {
+                    for &flag_char in inline_chars {
+                        if rest.contains(flag_char) {
+                            return true;
+                        }
                     }
                 }
             }
@@ -2080,6 +2091,34 @@ mod tests {
         assert!(is_interpreter_inline_exec(
             "node",
             &["--EVAL=console.log(1)".into()]
+        ));
+
+        // Per-interpreter mapping: flags that mean something else for other
+        // interpreters must NOT be falsely blocked.
+        // bash -r = restricted mode (not inline code)
+        assert!(!is_interpreter_inline_exec(
+            "bash",
+            &["-r".into(), "script.sh".into()]
+        ));
+        // bash -p = privileged mode (not inline code)
+        assert!(!is_interpreter_inline_exec(
+            "bash",
+            &["-p".into(), "script.sh".into()]
+        ));
+        // node -r = --require (preload module, not inline code)
+        assert!(!is_interpreter_inline_exec(
+            "node",
+            &["-r".into(), "module".into(), "app.js".into()]
+        ));
+        // perl -p = auto-print loop (not inline code without -e)
+        assert!(!is_interpreter_inline_exec(
+            "perl",
+            &["-p".into(), "script.pl".into()]
+        ));
+        // php -r IS inline code and must still be blocked
+        assert!(is_interpreter_inline_exec(
+            "php",
+            &["-r".into(), "echo 1;".into()]
         ));
     }
 

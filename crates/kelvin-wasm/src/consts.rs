@@ -68,55 +68,51 @@ pub const SHELL_EXEC_DEFAULT_TIMEOUT_SECS: u64 = 10;
 pub const SHELL_EXEC_MAX_OUTPUT_BYTES: usize = 64 * 1024;
 
 // --- Interpreter Guard ---
-/// Known script interpreters that can execute arbitrary code.
-/// When one of these is the command basename, inline-code flags are blocked.
-pub const KNOWN_INTERPRETERS: &[&str] = &[
-    "python",
-    "python3",
-    "python2",
-    "node",
-    "nodejs",
-    "bash",
-    "sh",
-    "zsh",
-    "dash",
-    "ksh",
-    "csh",
-    "tcsh",
-    "fish",
-    "ruby",
-    "irb",
-    "perl",
-    "perl5",
-    "php",
-    "lua",
-    "luajit",
-    "Rscript",
-    "julia",
-    "powershell",
-    "pwsh",
-];
-
-/// Long-form flags that enable inline code execution for interpreters.
-/// These are checked as exact matches or with `=` suffix.
-pub const INTERPRETER_LONG_FLAGS: &[&str] = &[
-    "--eval",    // node
-    "--print",   // node
-    "--command", // powershell
-    "-Command",  // powershell
-];
-
-/// Single-character flag letters that enable inline code execution.
-/// POSIX shells allow combining short flags (e.g. `bash -xc 'code'`),
-/// so we check whether ANY of these characters appear anywhere inside a
-/// combined short-flag group (an arg starting with `-` followed by
-/// multiple ASCII letters).
-pub const INTERPRETER_INLINE_CHARS: &[char] = &[
-    'c', // python, bash, sh, zsh, etc.
-    'e', // ruby, perl, node
-    'E', // perl (like -e but with extra features)
-    'r', // php (-r 'code')
-    'p', // node (--print shorthand — eval + print)
+/// Per-interpreter mapping of single-character flags that enable inline code
+/// execution.  Each interpreter only checks the chars relevant to *its own*
+/// semantics, avoiding false positives (e.g. `bash -r` means restricted mode,
+/// not inline code; `bash -p` means privileged mode).
+///
+/// An empty char slice means the interpreter has no short inline-exec flags
+/// (e.g. PowerShell uses long-form `-Command` / `--command` only).
+///
+/// This table doubles as the known-interpreter list: any command whose
+/// lowercase basename matches an entry is subject to the inline-code guard.
+pub const INTERPRETER_INLINE_MAP: &[(&str, &[char])] = &[
+    // POSIX shells: only -c is inline-exec
+    ("bash", &['c']),
+    ("sh", &['c']),
+    ("zsh", &['c']),
+    ("dash", &['c']),
+    ("ksh", &['c']),
+    ("csh", &['c']),
+    ("tcsh", &['c']),
+    ("fish", &['c']),
+    // Python: -c 'code'
+    ("python", &['c']),
+    ("python3", &['c']),
+    ("python2", &['c']),
+    // Node.js: -e (--eval), -p (--print)
+    ("node", &['e', 'p']),
+    ("nodejs", &['e', 'p']),
+    // Ruby: -e 'code'
+    ("ruby", &['e']),
+    ("irb", &['e']),
+    // Perl: -e 'code', -E 'code' (with extra features)
+    ("perl", &['e', 'E']),
+    ("perl5", &['e', 'E']),
+    // PHP: -r 'code'
+    ("php", &['r']),
+    // Lua: -e 'code'
+    ("lua", &['e']),
+    ("luajit", &['e']),
+    // R: -e 'code'
+    ("Rscript", &['e']),
+    // Julia: -e 'code'
+    ("julia", &['e']),
+    // PowerShell: long-form only (-Command / --command)
+    ("powershell", &[]),
+    ("pwsh", &[]),
 ];
 
 // --- Network/Hosts ---
