@@ -46,6 +46,7 @@ build_release_binaries() {
     --locked \
     --release \
     --target "${target}" \
+    -p kelvin-cli \
     -p kelvin-host \
     -p kelvin-gateway \
     -p kelvin-registry \
@@ -131,20 +132,19 @@ smoke_test_archive() {
   local archive_path="$1"
   local root_name="$2"
   local bin_suffix="$3"
-  local launcher_path="$4"
   local work_dir=""
 
   work_dir="$(mktemp -d)"
   tar -xzf "${archive_path}" -C "${work_dir}"
-  "${work_dir}/${root_name}/${launcher_path}" --help >/dev/null
+  "${work_dir}/${root_name}/bin/kelvin${bin_suffix}" --help >/dev/null
+  "${work_dir}/${root_name}/bin/kelvin${bin_suffix}" plugin --help >/dev/null
+  "${work_dir}/${root_name}/bin/kelvin${bin_suffix}" gateway --help >/dev/null
+  "${work_dir}/${root_name}/bin/kelvin${bin_suffix}" memory --help >/dev/null
   "${work_dir}/${root_name}/bin/kelvin-host${bin_suffix}" --help >/dev/null
   "${work_dir}/${root_name}/bin/kelvin-gateway${bin_suffix}" --help >/dev/null
   "${work_dir}/${root_name}/bin/kelvin-registry${bin_suffix}" --help >/dev/null
   "${work_dir}/${root_name}/bin/kelvin-memory-controller${bin_suffix}" --help >/dev/null
   "${work_dir}/${root_name}/bin/kelvin-tui${bin_suffix}" --help >/dev/null
-  "${work_dir}/${root_name}/kelvin-gateway" --help >/dev/null
-  "${work_dir}/${root_name}/kpm" --help >/dev/null
-  "${work_dir}/${root_name}/kelvin-tui" --help >/dev/null
   rm -rf "${work_dir}"
 }
 
@@ -173,7 +173,7 @@ create_deb_package() {
 
   mkdir -p "${install_root}" "${package_root}/usr/bin" "${package_root}/DEBIAN"
   cp -R "${stage_root}/." "${install_root}/"
-  ln -s ../lib/kelvinclaw/kelvin "${package_root}/usr/bin/kelvin"
+  ln -s ../lib/kelvinclaw/bin/kelvin "${package_root}/usr/bin/kelvin"
 
   cat > "${package_root}/DEBIAN/control" <<EOF
 Package: kelvinclaw
@@ -193,7 +193,7 @@ EOF
 
   mkdir -p "${extract_root}"
   dpkg-deb -x "${deb_path}" "${extract_root}"
-  "${extract_root}/usr/lib/kelvinclaw/kelvin" --help >/dev/null
+  "${extract_root}/usr/lib/kelvinclaw/bin/kelvin" --help >/dev/null
   "${extract_root}/usr/lib/kelvinclaw/bin/kelvin-host" --help >/dev/null
   "${extract_root}/usr/lib/kelvinclaw/bin/kelvin-gateway" --help >/dev/null
   "${extract_root}/usr/lib/kelvinclaw/bin/kelvin-registry" --help >/dev/null
@@ -277,6 +277,7 @@ rustup target add "${TARGET}" >/dev/null
 
 build_release_binaries "${TARGET}" "${TARGET_DIR}"
 
+cp "${TARGET_DIR}/${TARGET}/release/kelvin" "${STAGE_ROOT}/bin/"
 cp "${TARGET_DIR}/${TARGET}/release/kelvin-host" "${STAGE_ROOT}/bin/"
 cp "${TARGET_DIR}/${TARGET}/release/kelvin-gateway" "${STAGE_ROOT}/bin/"
 cp "${TARGET_DIR}/${TARGET}/release/kelvin-registry" "${STAGE_ROOT}/bin/"
@@ -285,16 +286,8 @@ cp "${TARGET_DIR}/${TARGET}/release/kelvin-tui" "${STAGE_ROOT}/bin/"
 cp "${ROOT_DIR}/LICENSE" "${STAGE_ROOT}/"
 cp "${ROOT_DIR}/release/README.md" "${STAGE_ROOT}/"
 cp "${ROOT_DIR}/release/env.example" "${STAGE_ROOT}/.env.example"
-cp "${ROOT_DIR}/scripts/kelvin-release-launcher.sh" "${STAGE_ROOT}/kelvin"
-cp "${ROOT_DIR}/scripts/kelvin-gateway.sh" "${STAGE_ROOT}/kelvin-gateway"
-cp "${ROOT_DIR}/scripts/kpm.sh" "${STAGE_ROOT}/kpm"
-cp "${ROOT_DIR}/scripts/kelvin-tui.sh" "${STAGE_ROOT}/kelvin-tui"
 cp "${ROOT_DIR}/release/official-first-party-plugins.env" "${STAGE_ROOT}/share/official-first-party-plugins.env"
-mkdir -p "${STAGE_ROOT}/share/scripts"
-cp "${ROOT_DIR}/scripts/plugin-index-install.sh" "${STAGE_ROOT}/share/scripts/"
-cp "${ROOT_DIR}/scripts/plugin-install.sh" "${STAGE_ROOT}/share/scripts/"
-chmod +x "${STAGE_ROOT}/kelvin" "${STAGE_ROOT}/kelvin-gateway" "${STAGE_ROOT}/kpm" "${STAGE_ROOT}/kelvin-tui"
-chmod +x "${STAGE_ROOT}/share/scripts/"*.sh
+chmod +x "${STAGE_ROOT}/bin/"*
 
 if command -v xattr >/dev/null 2>&1; then
   xattr -rc "${STAGE_ROOT}" >/dev/null 2>&1 || true
@@ -314,7 +307,7 @@ if [[ "${SKIP_SMOKE_TEST}" == "true" ]]; then
 elif [[ "$(target_architecture "${TARGET}")" != "$(host_architecture)" ]]; then
   echo "Skipping archive smoke test for cross-arch target ${TARGET} on host $(host_architecture)"
 else
-  smoke_test_archive "${ARCHIVE_PATH}" "${ARCHIVE_ROOT}" "" "kelvin"
+  smoke_test_archive "${ARCHIVE_PATH}" "${ARCHIVE_ROOT}" ""
 fi
 
 if [[ "${EMIT_DEB}" == "true" ]]; then

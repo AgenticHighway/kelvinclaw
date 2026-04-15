@@ -12,7 +12,7 @@ where no clipboard daemon is available.
 Start the gateway (if not already running):
 
 ```bash
-scripts/kelvin-local-profile.sh start
+scripts/kelvin-dev-stack.sh start
 ```
 
 Then launch the TUI:

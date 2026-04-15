@@ -22,7 +22,7 @@ repo-local Cargo registry/git/target caches for fast iteration.
 ## Option 1: Scaffold a New Model Plugin
 
 ```bash
-scripts/kelvin-plugin.sh new \
+scripts/kelvin-plugin-dev.sh new \
   --id acme.anthropic \
   --name "Acme Anthropic Model Plugin" \
   --runtime wasm_model_v1 \
@@ -41,29 +41,29 @@ Then iterate with:
 ```bash
 cd ./plugin-acme.anthropic
 ./build.sh
-../scripts/kelvin-plugin.sh test --manifest ./plugin.json
-../scripts/kelvin-plugin.sh pack --manifest ./plugin.json
-../scripts/kelvin-plugin.sh install --package ./dist/acme.anthropic-0.1.0.tar.gz
-../scripts/kelvin-plugin.sh verify --package ./dist/acme.anthropic-0.1.0.tar.gz
-../scripts/kelvin-plugin.sh smoke --manifest ./plugin.json
+../scripts/kelvin-plugin-dev.sh test --manifest ./plugin.json
+../scripts/kelvin-plugin-dev.sh pack --manifest ./plugin.json
+../scripts/kelvin-plugin-dev.sh install --package ./dist/acme.anthropic-0.1.0.tar.gz
+../scripts/kelvin-plugin-dev.sh verify --package ./dist/acme.anthropic-0.1.0.tar.gz
+../scripts/kelvin-plugin-dev.sh smoke --manifest ./plugin.json
 ```
 
 The same flow in Docker:
 
 ```bash
 scripts/plugin-author-docker.sh -- bash -lc '
-  scripts/kelvin-plugin.sh new \
+  scripts/kelvin-plugin-dev.sh new \
     --id acme.anthropic \
     --name "Acme Anthropic Model Plugin" \
     --runtime wasm_model_v1 \
     --provider-profile anthropic.messages
   cd ./plugin-acme.anthropic
   ./build.sh
-  ../scripts/kelvin-plugin.sh test --manifest ./plugin.json
-  ../scripts/kelvin-plugin.sh pack --manifest ./plugin.json
-  ../scripts/kelvin-plugin.sh install --package ./dist/acme.anthropic-0.1.0.tar.gz
-  ../scripts/kelvin-plugin.sh verify --package ./dist/acme.anthropic-0.1.0.tar.gz
-  ../scripts/kelvin-plugin.sh smoke --manifest ./plugin.json
+  ../scripts/kelvin-plugin-dev.sh test --manifest ./plugin.json
+  ../scripts/kelvin-plugin-dev.sh pack --manifest ./plugin.json
+  ../scripts/kelvin-plugin-dev.sh install --package ./dist/acme.anthropic-0.1.0.tar.gz
+  ../scripts/kelvin-plugin-dev.sh verify --package ./dist/acme.anthropic-0.1.0.tar.gz
+  ../scripts/kelvin-plugin-dev.sh smoke --manifest ./plugin.json
 '
 ```
 
@@ -87,7 +87,7 @@ For a non-builtin provider that still fits an existing protocol family, scaffold
 the structured profile directly:
 
 ```bash
-scripts/kelvin-plugin.sh new \
+scripts/kelvin-plugin-dev.sh new \
   --id acme.openrouter \
   --name "Acme OpenRouter" \
   --runtime wasm_model_v1 \
@@ -107,8 +107,8 @@ scripts/kelvin-plugin.sh new \
 Local development plugins can stay `unsigned_local`:
 
 ```bash
-scripts/kelvin-plugin.sh install --package ./dist/acme.anthropic-0.1.0.tar.gz
-scripts/kelvin-plugin.sh smoke --manifest ./plugin.json
+scripts/kelvin-plugin-dev.sh install --package ./dist/acme.anthropic-0.1.0.tar.gz
+scripts/kelvin-plugin-dev.sh smoke --manifest ./plugin.json
 ```
 
 Kelvin prints a warning for `unsigned_local`, but still installs the package so

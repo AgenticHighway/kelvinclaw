@@ -4,23 +4,25 @@ This flow is for end users who should not need Rust or `cargo`.
 
 ## Goal
 
-- run Kelvin from a prebuilt/minimal runtime image
-- complete first-time setup in an interactive terminal
-- install required plugins from a remote plugin repository index
+- run Kelvin from a prebuilt Docker runtime image
+- complete first-time setup via Docker Compose
+- plugins are installed automatically from the index and from image-baked artifacts
 
-## Build and Run Local Runtime Image
+## Docker Compose Setup
 
 ```bash
-scripts/run-runtime-container.sh
+git clone https://github.com/AgenticHighway/kelvinclaw.git
+cd kelvinclaw
+cp .env.example .env
+docker compose up -d
 ```
 
-What this does:
+The `kelvin-init` container runs automatically before the gateway and:
 
-- builds `docker/Dockerfile.runtime` (minimal runtime image)
-- starts an interactive container
-- runs `scripts/kelvin-setup.sh` automatically
-- installs required plugin `kelvin.cli` from the configured index URL (default or override)
-- optionally installs `kelvin.browser.automation` when `KELVIN_SETUP_INSTALL_BROWSER_AUTOMATION=1`
+- creates `trusted_publishers.json` if it does not exist
+- installs the configured model provider plugin from the index (default: `kelvin.echo`)
+- installs `kelvin.cli` from the index
+- installs all locally-built plugins baked into the image with `--force`
 
 Container defaults:
 
@@ -28,31 +30,39 @@ Container defaults:
 - `KELVIN_PLUGIN_HOME=/kelvin/plugins`
 - `KELVIN_TRUST_POLICY_PATH=/kelvin/trusted_publishers.json`
 
-The script mounts:
-
-- repo `.kelvin/` -> `/kelvin` (persists setup/plugins between runs)
-- repo root -> `/workspace`
-
 ## Running Kelvin in the Container
 
-After setup:
+After startup:
 
 ```bash
-kelvin-host --prompt "What is KelvinClaw?" --timeout-ms 3000
+docker compose run kelvin-host --prompt "What is KelvinClaw?" --timeout-ms 3000
 ```
 
-## Non-Interactive Setup
+Launch the TUI:
 
 ```bash
-scripts/kelvin-setup.sh --non-interactive
+docker compose --profile tui run --rm kelvin-tui
 ```
 
-Default plugin index URL:
+## Interactive One-Off Container
 
-- `https://raw.githubusercontent.com/agentichighway/kelvinclaw-plugins/main/index.json`
+```bash
+docker compose run kelvin-host
+```
+
+## Configuring Providers
+
+Set `KELVIN_MODEL_PROVIDER` in `.env`:
+
+```bash
+KELVIN_MODEL_PROVIDER=kelvin.anthropic
+ANTHROPIC_API_KEY=<your-key>
+```
+
+The init container installs the selected provider plugin automatically on startup.
 
 ## Security Notes
 
-- `scripts/plugin-index-install.sh` requires `sha256` in index entries and fails closed on mismatch.
-- Plugin install path uses `scripts/plugin-install.sh` (manifest + payload checks).
+- `kelvin plugin install` requires `sha256` in index entries and fails closed on mismatch.
+- Install-time manifest and payload checks run on every package.
 - Runtime admission still enforces trusted publisher signatures via trust policy at load time.

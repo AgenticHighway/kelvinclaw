@@ -56,10 +56,10 @@ scripts/quickstart.sh --mode docker
 Local profile lifecycle:
 
 ```bash
-scripts/kelvin-local-profile.sh start
-scripts/kelvin-local-profile.sh status
-scripts/kelvin-local-profile.sh doctor
-scripts/kelvin-local-profile.sh stop
+scripts/kelvin-dev-stack.sh start
+scripts/kelvin-dev-stack.sh status
+scripts/kelvin-dev-stack.sh doctor
+scripts/kelvin-dev-stack.sh stop
 ```
 
 ## Track 1: Docker-Only
@@ -76,13 +76,9 @@ Bootstrap:
 ```bash
 git clone https://github.com/AgenticHighway/kelvinclaw.git
 cd kelvinclaw
-scripts/run-runtime-container.sh
-```
-
-Verify:
-
-```bash
-scripts/verify-onboarding.sh --track beginner
+cp .env.example .env
+docker compose up -d
+docker compose run kelvin-host --prompt "hello"
 ```
 
 ## Track 2: Rust Developer
@@ -93,10 +89,6 @@ Prerequisites:
 
 - `rustup`
 - `cargo`
-- `jq`
-- `curl`
-- `tar`
-- `openssl`
 
 Bootstrap:
 
@@ -104,13 +96,7 @@ Bootstrap:
 git clone https://github.com/AgenticHighway/kelvinclaw.git
 cd kelvinclaw
 scripts/quickstart.sh --mode local
-scripts/test-sdk.sh
-```
-
-Verify:
-
-```bash
-scripts/verify-onboarding.sh --track rust
+cargo test -p kelvin-sdk
 ```
 
 ## Track 3: Rust + WASM Plugin Author
@@ -129,14 +115,8 @@ Bootstrap:
 ```bash
 CARGO_TARGET_DIR=target/echo-wasm-skill cargo build --target wasm32-unknown-unknown --manifest-path examples/echo-wasm-skill/Cargo.toml
 cargo run -p kelvin-wasm --bin kelvin-wasm-runner -- --wasm target/echo-wasm-skill/wasm32-unknown-unknown/debug/echo_wasm_skill.wasm --policy-preset locked_down
-kelvin plugin new --id acme.echo --name "Acme Echo" --runtime wasm_tool_v1
-kelvin plugin test --manifest ./plugin-acme.echo/plugin.json
-```
-
-Verify:
-
-```bash
-scripts/verify-onboarding.sh --track wasm
+scripts/kelvin-plugin-dev.sh new --id acme.echo --name "Acme Echo" --runtime wasm_tool_v1
+scripts/kelvin-plugin-dev.sh test --manifest ./plugin-acme.echo/plugin.json
 ```
 
 ## Common Runtime Commands
@@ -161,33 +141,18 @@ KELVIN_GATEWAY_TOKEN=change-me cargo run -p kelvin-gateway -- --bind 127.0.0.1:3
 
 ## Install First-Party Plugins
 
-Using `kpm` from a release bundle (requires `KELVIN_PLUGIN_INDEX_URL`):
+Using `kelvin plugin` (or `kelvin kpm`):
 
 ```bash
-./kpm install kelvin.cli
-./kpm install kelvin.anthropic
-./kpm install kelvin.openai
-./kpm search   # list all available plugins
+kelvin plugin install kelvin.cli
+kelvin plugin install kelvin.anthropic
+kelvin plugin install kelvin.openai
+kelvin plugin search   # list all available plugins
 ```
 
-Using individual install scripts (dev environment only):
-
-```bash
-scripts/install-kelvin-cli-plugin.sh
-scripts/install-kelvin-anthropic-plugin.sh
-scripts/install-kelvin-openai-plugin.sh
-```
-
-See [Plugin System](Plugin-System) for the full `kpm` reference.
+See [Plugin System](Plugin-System) for the full plugin CLI reference.
 
 ## Verification
-
-Targeted onboarding:
-
-```bash
-scripts/verify-onboarding.sh --track daily
-scripts/verify-onboarding.sh --track all
-```
 
 Broader validation:
 

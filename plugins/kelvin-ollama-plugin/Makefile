@@ -1,5 +1,5 @@
 # Makefile for Kelvin Ollama Model Plugin
-# Convenience wrapper around the common kelvin-plugin.sh development commands.
+# Convenience wrapper around the common kelvin-plugin-dev.sh development commands.
 # Run 'make help' to list available targets.
 
 PLUGIN_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -16,16 +16,16 @@ build:          ## Compile WASM and update entrypoint_sha256 in plugin.json
 	@bash $(PLUGIN_DIR)build.sh
 
 test: build     ## Validate plugin manifest structure
-	@$(SCRIPTS)/kelvin-plugin.sh test --manifest $(MANIFEST)
+	@$(SCRIPTS)/kelvin-plugin-dev.sh test --manifest $(MANIFEST)
 
 pack: build     ## Create distributable .tar.gz package in dist/
-	@$(SCRIPTS)/kelvin-plugin.sh pack --manifest $(MANIFEST)
+	@$(SCRIPTS)/kelvin-plugin-dev.sh pack --manifest $(MANIFEST)
 
 install: pack   ## Install plugin into the local Kelvin plugin home
-	@$(SCRIPTS)/kelvin-plugin.sh install --package $(PACKAGE)
+	@$(SCRIPTS)/kelvin-plugin-dev.sh install --package $(PACKAGE)
 
 smoke: build    ## Run a live inference smoke test (API key env var must be set)
-	@$(SCRIPTS)/kelvin-plugin.sh smoke --manifest $(MANIFEST)
+	@$(SCRIPTS)/kelvin-plugin-dev.sh smoke --manifest $(MANIFEST)
 
 clean:          ## Remove build artifacts (target/, dist/, payload/*.wasm)
 	@rm -rf $(PLUGIN_DIR)target $(PLUGIN_DIR)dist $(PLUGIN_DIR)payload/*.wasm

@@ -100,7 +100,7 @@ Needed:
 
 Now implemented:
 
-- `scripts/kelvin-local-profile.sh` for local background memory+gateway lifecycle
+- `scripts/kelvin-dev-stack.sh` for local background memory+gateway lifecycle
 - actionable machine-readable doctor checks with remediation hints
 - canonical quickstart flow (`scripts/quickstart.sh`)
 
@@ -189,15 +189,15 @@ Implemented:
   - `kelvin plugin verify`
 - plugin author templates under `templates/plugin-author-kit/`
 - plugin quality tier conventions (`unsigned_local`, `signed_community`, `signed_trusted`)
-- plugin discovery helper (`scripts/plugin-discovery.sh`)
+- plugin discovery via `kelvin plugin search` / `kelvin plugin info`
 - hosted registry service (`apps/kelvin-registry`) with:
   - `GET /healthz`
   - `GET /v1/index.json`
   - `GET /v1/plugins`
   - `GET /v1/plugins/{plugin_id}`
   - `GET /v1/trust-policy`
-- plugin update-check helper (`scripts/plugin-update-check.sh`)
-- trust policy lifecycle ops (`scripts/plugin-trust.sh`) for:
+- plugin update-check via `kelvin plugin update --dry-run`
+- trust policy lifecycle ops (direct JSON editing of `trusted_publishers.json`) for:
   - key rotation
   - revocation
   - plugin publisher pinning

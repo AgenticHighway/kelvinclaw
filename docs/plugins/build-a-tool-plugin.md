@@ -22,7 +22,7 @@ repo-local Cargo registry/git/target caches for fast iteration.
 ## Option 1: Scaffold a New Tool Plugin
 
 ```bash
-scripts/kelvin-plugin.sh new \
+scripts/kelvin-plugin-dev.sh new \
   --id acme.websearch \
   --name "Acme Web Search" \
   --runtime wasm_tool_v1
@@ -53,17 +53,17 @@ Or equivalently with the script directly:
 ```bash
 cd ./plugin-acme.websearch
 ./build.sh
-../scripts/kelvin-plugin.sh test --manifest ./plugin.json
-../scripts/kelvin-plugin.sh pack --manifest ./plugin.json
-../scripts/kelvin-plugin.sh install --package ./dist/acme.websearch-0.1.0.tar.gz
-../scripts/kelvin-plugin.sh smoke --manifest ./plugin.json
+../scripts/kelvin-plugin-dev.sh test --manifest ./plugin.json
+../scripts/kelvin-plugin-dev.sh pack --manifest ./plugin.json
+../scripts/kelvin-plugin-dev.sh install --package ./dist/acme.websearch-0.1.0.tar.gz
+../scripts/kelvin-plugin-dev.sh smoke --manifest ./plugin.json
 ```
 
 The same flow in Docker:
 
 ```bash
 scripts/plugin-author-docker.sh -- bash -lc '
-  scripts/kelvin-plugin.sh new \
+  scripts/kelvin-plugin-dev.sh new \
     --id acme.websearch \
     --name "Acme Web Search" \
     --runtime wasm_tool_v1
@@ -156,8 +156,8 @@ any network call. See [Tool Plugin ABI](tool-plugin-abi.md) for full details.
 Local development plugins can stay `unsigned_local`:
 
 ```bash
-scripts/kelvin-plugin.sh install --package ./dist/acme.websearch-0.1.0.tar.gz
-scripts/kelvin-plugin.sh smoke --manifest ./plugin.json
+scripts/kelvin-plugin-dev.sh install --package ./dist/acme.websearch-0.1.0.tar.gz
+scripts/kelvin-plugin-dev.sh smoke --manifest ./plugin.json
 ```
 
 Kelvin prints a warning for `unsigned_local`, but still installs the package so you can

@@ -44,9 +44,9 @@ cargo test -p kelvin-gateway
 Plugin authoring:
 
 ```bash
-scripts/kelvin-plugin.sh new --id acme.echo --name "Acme Echo" --runtime wasm_tool_v1
-scripts/kelvin-plugin.sh test --manifest ./plugin-acme.echo/plugin.json
-scripts/kelvin-plugin.sh pack --manifest ./plugin-acme.echo/plugin.json
+scripts/kelvin-plugin-dev.sh new --id acme.echo --name "Acme Echo" --runtime wasm_tool_v1
+scripts/kelvin-plugin-dev.sh test --manifest ./plugin-acme.echo/plugin.json
+scripts/kelvin-plugin-dev.sh pack --manifest ./plugin-acme.echo/plugin.json
 ```
 
 Docs and operator surface work should keep the repository docs, runbooks, and wiki in sync.

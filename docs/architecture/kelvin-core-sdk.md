@@ -127,7 +127,7 @@ Detailed security/stability test coverage matrix:
 SDK certification command:
 
 ```bash
-scripts/test-sdk.sh
+cargo test -p kelvin-sdk
 ```
 
 ## 9. Installed Plugin Runtime (SDK Path)

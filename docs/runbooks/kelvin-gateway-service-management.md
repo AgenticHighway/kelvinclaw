@@ -1,41 +1,54 @@
 # Kelvin Gateway Service Management
 
-KelvinClaw now ships two supported service-management layers for `kelvin-gateway`:
+KelvinClaw ships two supported service-management layers for `kelvin-gateway`:
 
-- ad hoc local background management via `scripts/kelvin-gateway-daemon.sh`
-- user-service definitions for `systemd` and `launchd` via `scripts/kelvin-gateway-service.sh`
+- ad hoc local background management via `kelvin gateway start/stop/status`
+- user-service definitions for `systemd` and `launchd` via `kelvin service`
 
-The service definitions execute `scripts/kelvin-gateway-service-run.sh`, which:
+## Ad Hoc Background Management
 
-- sources an optional env file (`KELVIN_GATEWAY_SERVICE_ENV_FILE`, default `./.env`)
-- builds `target/debug/kelvin-gateway` if it is missing and Cargo is available
-- starts the gateway in the foreground with persisted state and HTTP ingress enabled by default
+Start the gateway in daemon mode:
+
+```bash
+kelvin gateway start
+```
+
+Run attached to the terminal (foreground):
+
+```bash
+kelvin gateway start --foreground
+```
+
+Status, restart, and stop:
+
+```bash
+kelvin gateway status
+kelvin gateway restart
+kelvin gateway stop
+```
+
+Pass extra flags to the gateway binary after `--`:
+
+```bash
+kelvin gateway start -- --bind 0.0.0.0:34617
+```
+
+State files: `$KELVIN_HOME/gateway.pid`, `$KELVIN_HOME/logs/gateway.log`
 
 ## systemd user service
 
 Render the unit:
 
 ```bash
-scripts/kelvin-gateway-service.sh render-systemd-user
+kelvin service render-systemd
 ```
 
 Install the unit into `~/.config/systemd/user/kelvin-gateway.service`:
 
 ```bash
-scripts/kelvin-gateway-service.sh install-systemd-user
+kelvin service install-systemd
 systemctl --user daemon-reload
 systemctl --user enable --now kelvin-gateway.service
-```
-
-Override paths and binds if needed:
-
-```bash
-scripts/kelvin-gateway-service.sh install-systemd-user \
-  --env-file "$PWD/.env" \
-  --workspace "$PWD" \
-  --state-dir "$PWD/.kelvin/gateway-state" \
-  --bind 127.0.0.1:34617 \
-  --ingress-bind 127.0.0.1:34618
 ```
 
 ## launchd user agent
@@ -43,23 +56,22 @@ scripts/kelvin-gateway-service.sh install-systemd-user \
 Render the plist:
 
 ```bash
-scripts/kelvin-gateway-service.sh render-launchd
+kelvin service render-launchd
 ```
 
 Install the LaunchAgent into `~/Library/LaunchAgents/dev.kelvinclaw.gateway.plist`:
 
 ```bash
-scripts/kelvin-gateway-service.sh install-launchd
+kelvin service install-launchd
 launchctl bootout gui/$(id -u) dev.kelvinclaw.gateway 2>/dev/null || true
 launchctl bootstrap gui/$(id -u) "$HOME/Library/LaunchAgents/dev.kelvinclaw.gateway.plist"
 ```
 
-Launchd logs default to `./.kelvin/gateway-daemon/kelvin-gateway.out.log` and
-`./.kelvin/gateway-daemon/kelvin-gateway.err.log`.
+If installed via Homebrew, `brew services start kelvin` is also available.
 
 ## Environment model
 
-Put secrets and channel credentials in the env file consumed by the service runner, for example:
+Put secrets and channel credentials in `~/.kelvinclaw/.env` (or `KELVIN_HOME/.env`), for example:
 
 - `KELVIN_GATEWAY_TOKEN`
 - `KELVIN_GATEWAY_TLS_CERT_PATH`
@@ -68,10 +80,8 @@ Put secrets and channel credentials in the env file consumed by the service runn
 - `KELVIN_SLACK_SIGNING_SECRET`
 - `KELVIN_DISCORD_INTERACTIONS_PUBLIC_KEY`
 
-The service wrapper separately accepts non-secret runtime defaults:
+Common runtime defaults:
 
-- `KELVIN_GATEWAY_SERVICE_BINARY`
-- `KELVIN_GATEWAY_SERVICE_ENV_FILE`
 - `KELVIN_GATEWAY_WORKSPACE`
 - `KELVIN_GATEWAY_STATE_DIR`
 - `KELVIN_GATEWAY_BIND`

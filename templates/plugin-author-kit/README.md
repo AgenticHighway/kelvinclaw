@@ -5,17 +5,17 @@ This template directory is a reference starting point for third-party plugin aut
 Primary command flow:
 
 ```bash
-scripts/kelvin-plugin.sh new --id acme.echo --name "Acme Echo" --runtime wasm_tool_v1
-scripts/kelvin-plugin.sh test --manifest ./plugin-acme.echo/plugin.json
-scripts/kelvin-plugin.sh pack --manifest ./plugin-acme.echo/plugin.json
-scripts/kelvin-plugin.sh install --package ./plugin-acme.echo/dist/acme.echo-0.1.0.tar.gz
-scripts/kelvin-plugin.sh verify --package ./plugin-acme.echo/dist/acme.echo-0.1.0.tar.gz
+scripts/kelvin-plugin-dev.sh new --id acme.echo --name "Acme Echo" --runtime wasm_tool_v1
+scripts/kelvin-plugin-dev.sh test --manifest ./plugin-acme.echo/plugin.json
+scripts/kelvin-plugin-dev.sh pack --manifest ./plugin-acme.echo/plugin.json
+scripts/kelvin-plugin-dev.sh install --package ./plugin-acme.echo/dist/acme.echo-0.1.0.tar.gz
+scripts/kelvin-plugin-dev.sh verify --package ./plugin-acme.echo/dist/acme.echo-0.1.0.tar.gz
 ```
 
 For model plugins, the supported local runtime loop is:
 
 ```bash
-scripts/kelvin-plugin.sh smoke --manifest ./plugin.json
+scripts/kelvin-plugin-dev.sh smoke --manifest ./plugin.json
 ```
 
 For working model-plugin source, also see:

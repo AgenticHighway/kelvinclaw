@@ -1,27 +1,27 @@
 # Operations and Runbooks
 
-This page groups the operator-facing scripts, background-service helpers, and runbooks that matter once KelvinClaw is running continuously.
+This page groups the operator-facing commands, background-service helpers, and runbooks that matter once KelvinClaw is running continuously.
 
 ## Local Daily-Driver Operations
 
 Start the local profile:
 
 ```bash
-scripts/kelvin-local-profile.sh start
+scripts/kelvin-dev-stack.sh start
 ```
 
 Inspect and validate:
 
 ```bash
-scripts/kelvin-local-profile.sh status
-scripts/kelvin-local-profile.sh doctor
-scripts/kelvin-doctor.sh
+scripts/kelvin-dev-stack.sh status
+scripts/kelvin-dev-stack.sh doctor
+kelvin doctor
 ```
 
 Stop:
 
 ```bash
-scripts/kelvin-local-profile.sh stop
+scripts/kelvin-dev-stack.sh stop
 ```
 
 ## Gateway Service Management
@@ -29,40 +29,33 @@ scripts/kelvin-local-profile.sh stop
 Release bundle (lifecycle manager with PID/log management):
 
 ```bash
-./kelvin-gateway start             # daemon mode — PID file + log file
-./kelvin-gateway start --foreground # run attached to terminal
-./kelvin-gateway status            # pid, provider, uptime, log path
-./kelvin-gateway stop
-./kelvin-gateway restart
-./kelvin-gateway start -- --bind 0.0.0.0:34617  # extra gateway flags after --
+kelvin gateway start             # daemon mode — PID file + log file
+kelvin gateway start --foreground # run attached to terminal
+kelvin gateway status            # pid, provider, uptime, log path
+kelvin gateway stop
+kelvin gateway restart
+kelvin gateway start -- --bind 0.0.0.0:34617  # extra gateway flags after --
 ```
 
 State files: `$KELVIN_HOME/gateway.pid`, `$KELVIN_HOME/logs/gateway.log`
 
-Ad hoc daemon (dev/source tree):
-
-```bash
-scripts/kelvin-gateway-daemon.sh
-```
-
 Render or install a user service:
 
 ```bash
-scripts/kelvin-gateway-service.sh render-systemd-user
-scripts/kelvin-gateway-service.sh install-systemd-user
-scripts/kelvin-gateway-service.sh render-launchd
-scripts/kelvin-gateway-service.sh install-launchd
+kelvin service render-systemd
+kelvin service install-systemd
+kelvin service render-launchd
+kelvin service install-launchd
 ```
 
 The service runner:
 
-- sources an env file
-- builds `kelvin-gateway` if needed
+- reads configuration from `~/.kelvinclaw/.env`
 - starts the gateway in the foreground with persistent state
 
 ## Important Environment Variables
 
-Secrets and credentials usually belong in the service env file:
+Secrets and credentials belong in `~/.kelvinclaw/.env`:
 
 - `KELVIN_GATEWAY_TOKEN`
 - `KELVIN_GATEWAY_TLS_CERT_PATH`
@@ -101,8 +94,6 @@ scripts/docker-cache-prune.sh --max-age-days 14
 - `scripts/memory-rollout-check.sh`
 - `scripts/first-run-success-rate.sh`
 - `scripts/remote-test.sh`
-- `scripts/run-runtime-container.sh`
-- `scripts/runtime-entrypoint.sh`
 
 ## Reference
 

@@ -87,17 +87,17 @@ scripts/quickstart.sh --mode docker
 Local profile lifecycle:
 
 ```bash
-scripts/kelvin-local-profile.sh start
-scripts/kelvin-local-profile.sh status
-scripts/kelvin-local-profile.sh doctor
-scripts/kelvin-local-profile.sh stop
+scripts/kelvin-dev-stack.sh start
+scripts/kelvin-dev-stack.sh status
+scripts/kelvin-dev-stack.sh doctor
+scripts/kelvin-dev-stack.sh stop
 ```
 
 Run modes:
 
 - single prompt: `kelvin-host --prompt "hello"`
 - interactive chat: `kelvin-host --interactive`
-- daemon mode: `scripts/kelvin-local-profile.sh start` (gateway + memory controller background services)
+- daemon mode: `scripts/kelvin-dev-stack.sh start` (gateway + memory controller background services)
 
 ## Terminal UI (`kelvin-tui`)
 
@@ -108,14 +108,14 @@ with KelvinClaw when the local profile is running.
 Start the local profile, then launch the TUI:
 
 ```bash
-scripts/kelvin-local-profile.sh start
+scripts/kelvin-dev-stack.sh start
 cargo run -p kelvin-tui
 ```
 
 Or with a release binary:
 
 ```bash
-scripts/kelvin-local-profile.sh start
+scripts/kelvin-dev-stack.sh start
 ./kelvin-tui
 ```
 
@@ -151,19 +151,9 @@ Steps:
 ```bash
 git clone <repo-url>
 cd kelvinclaw
-scripts/run-runtime-container.sh
-```
-
-Optional browser automation profile during container setup:
-
-```bash
-KELVIN_SETUP_INSTALL_BROWSER_AUTOMATION=1 scripts/run-runtime-container.sh
-```
-
-Verification:
-
-```bash
-scripts/verify-onboarding.sh --track beginner
+cp .env.example .env
+docker compose up -d
+docker compose run kelvin-host --prompt "hello"
 ```
 
 Expected result:
@@ -180,10 +170,6 @@ Prerequisites:
 
 - `git`
 - `rustup` + `cargo`
-- `jq`
-- `curl`
-- `tar`
-- `openssl`
 
 Steps:
 
@@ -191,7 +177,7 @@ Steps:
 git clone <repo-url>
 cd kelvinclaw
 scripts/quickstart.sh --mode local
-scripts/test-sdk.sh
+cargo test -p kelvin-sdk
 ```
 
 Verification:
@@ -235,8 +221,8 @@ cd kelvinclaw
 CARGO_TARGET_DIR=target/echo-wasm-skill cargo build --target wasm32-unknown-unknown --manifest-path plugins/examples/echo-wasm-skill/Cargo.toml
 cargo run -p kelvin-wasm --bin kelvin-wasm-runner -- --wasm target/echo-wasm-skill/wasm32-unknown-unknown/debug/echo_wasm_skill.wasm --policy-preset locked_down
 export PATH="$PWD/scripts:$PATH"
-kelvin plugin new --id acme.echo --name "Acme Echo" --runtime wasm_tool_v1
-kelvin plugin test --manifest ./plugin-acme.echo/plugin.json
+scripts/kelvin-plugin-dev.sh new --id acme.echo --name "Acme Echo" --runtime wasm_tool_v1
+scripts/kelvin-plugin-dev.sh test --manifest ./plugin-acme.echo/plugin.json
 ```
 
 For the supported model-plugin contributor path, use:
@@ -264,7 +250,7 @@ Expected result:
 - Sample WASM skill builds successfully.
 - WASM runner executes the module under sandbox policy.
 - Plugin author commands scaffold and validate plugin package structure without touching root crates.
-- `kelvin plugin install` and `kelvin plugin smoke` cover the local package-install and model-runtime smoke path without requiring host flag memorization.
+- `kelvin plugin install` and `kelvin plugin status` cover the local package-install and model-runtime path.
 - Model plugins can be scaffolded, built, packed, and locally installed through the same public SDK surface.
 
 ## Verify All Tracks
@@ -282,9 +268,9 @@ scripts/verify-onboarding.sh --track daily
 
 - First-party plugins (`kelvin.cli`, `kelvin.anthropic`, `kelvin.openrouter`, `kelvin.echo`)
   are built from source in `plugins/` and baked into the Docker runtime image at build time.
-  No external index or signing infrastructure is required for the Docker flow.
+  The `kelvin-init` container installs them on startup — no external index or signing
+  infrastructure is required for the Docker flow.
 - Community and third-party plugins can be installed by setting `KELVIN_PLUGIN_INDEX_URL`
   to point at a community-hosted `index.json`. Signature enforcement is off by default;
   trust policy files can be added to re-enable it per deployment.
-- First-party CLI plugin installation uses the same installed-plugin flow as other plugins.
 - Onboarding verification intentionally checks runtime behavior and SDK tests, not only tool presence.

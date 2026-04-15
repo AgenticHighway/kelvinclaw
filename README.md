@@ -44,9 +44,8 @@ ANTHROPIC_API_KEY=sk-ant-your-api-key-here
 scripts/quickstart.sh --mode local
 ```
 
-Requires Rust toolchain, `jq`, `curl`, `tar`, and `openssl`.
-The quickstart prompts you to pick a model provider (OpenAI, Anthropic, OpenRouter)
-or continue with echo mode if you don't have a key.
+Requires Rust toolchain. The quickstart prompts you to pick a model provider
+(OpenAI, Anthropic, OpenRouter) or continue with echo mode if you don't have a key.
 
 ### Install via Homebrew
 
@@ -84,19 +83,11 @@ scripts/plugin-author-docker.sh -- bash
 
 ## Release Executables
 
-Tagged releases publish executable bundles for:
-
-- `kelvin-host`
-- `kelvin-gateway`
-- `kelvin-memory-controller`
-- `kelvin-registry`
-- `kelvin-tui`
-- top-level launchers: `./kelvin`, `./kelvin-gateway`, `./kpm`, `./kelvin-tui`
+Tagged releases publish executable bundles for all major platforms.
 
 The release workflow produces:
 
-- `linux-x86_64` and `linux-arm64` tarballs
-- `amd64` and `arm64` Debian packages
+- `linux-x86_64` and `linux-arm64` tarballs + Debian packages
 - `macos-x86_64` and `macos-arm64` tarballs
 - `windows-x86_64` zip bundles
 - matching SHA-256 files for every artifact
@@ -113,69 +104,90 @@ Tagged releases also refresh the Homebrew tap formula in
 `AgenticHighway/homebrew-tap` when the `HOMEBREW_TAP_TOKEN` repository secret is
 configured.
 
-The intended Unix end-user entrypoint is:
+### End-user install (Unix)
+
+```bash
+curl -sSL https://raw.githubusercontent.com/AgenticHighway/kelvinclaw/main/install.sh | bash
+# Add the install directory to PATH, then:
+./bin/kelvin init    # interactive first-run setup
+./bin/kelvin         # start full stack and open TUI
+```
+
+Or from a downloaded tarball:
 
 ```bash
 tar -xzf kelvinclaw-<version>-linux-<arch>.tar.gz
 cd kelvinclaw-<version>-linux-<arch>
-./kelvin init
-./kelvin
+./bin/kelvin init
+./bin/kelvin
 ```
 
-On first run, `kelvin init` writes `~/.kelvinclaw/.env`, generates a gateway
-token, and helps select a provider. `kelvin` then ensures a trust policy exists
-and bootstraps the `kelvin.cli` toolpack plus the configured model provider
-from the plugin index into `~/.kelvinclaw` when needed.
+`kelvin init` writes `~/.kelvinclaw/.env`, generates auth keys, writes a permissive trust policy,
+and optionally installs shell completions. After that, bare `kelvin` starts the gateway and memory
+controller as background daemons, installs any required plugins from the plugin index, then opens
+the terminal UI.
 
-Additional published first-party model plugins can be installed with `kpm`:
+Add `bin/` to your `PATH` to use `kelvin` without a prefix. The examples below assume this is done:
 
 ```bash
-./kpm install kelvin.anthropic
-./kpm install kelvin.openrouter
-./kpm list
+export PATH="/path/to/kelvinclaw-<version>-<platform>/bin:$PATH"
 ```
 
-Windows bundles ship `kelvin.cmd`, `kelvin-gateway.cmd`, `kpm.cmd`, and
-`kelvin-tui.cmd` at the archive root. For manual validation without publishing
-a GitHub Release, run the `Release Executables` workflow with
-`workflow_dispatch`.
-
-Release prerequisites:
-
-- `curl`
-- `tar`
-- `awk`
-- `ca-certificates` on minimal Linux images
-
-API key and provider configuration — all launchers auto-read `.env` and `.env.local`:
-
-- copy `.env.example` to `.env` and set `KELVIN_MODEL_PROVIDER` + your API key
-- or export vars before running any launcher
-- supported in `./.env`, `./.env.local`, `~/.kelvinclaw/.env`, `~/.kelvinclaw/.env.local`
-
-Gateway service management from the release bundle:
+Plugin management from the release bundle:
 
 ```bash
-./kelvin-gateway start             # start as background daemon
-./kelvin-gateway start --foreground # run attached to terminal
-./kelvin-gateway status            # show pid, provider, uptime, log path
-./kelvin-gateway stop
-./kelvin-gateway restart
-./kelvin-gateway start -- --bind 0.0.0.0:34617  # pass args to gateway binary
+kelvin plugin install kelvin.anthropic
+kelvin plugin install kelvin.openrouter
+kelvin plugin list
+kelvin plugin update
 ```
 
-Validated public onboarding today:
+Gateway lifecycle:
 
-- Linux release bundles are validated end to end on fresh Ubuntu with `curl`
-  and `ca-certificates` installed.
-- The `./kelvin-gateway start` + `./kelvin-tui` flow fetches trust metadata,
-  installs official plugins via the plugin index, and completes a real
-  OpenAI-backed run when `OPENAI_API_KEY` is configured.
+```bash
+kelvin gateway start
+kelvin gateway start --foreground
+kelvin gateway status
+kelvin gateway stop
+kelvin gateway restart
+kelvin gateway start -- --bind 0.0.0.0:34617
+```
+
+System service (optional):
+
+```bash
+kelvin service install-systemd     # systemd user unit
+kelvin service install-launchd     # launchd plist (macOS)
+```
+
+Diagnostics:
+
+```bash
+kelvin medkit          # offline checks — env, keys, plugins, daemons
+kelvin medkit --fix    # attempt automatic repairs
+kelvin doctor          # live WebSocket probe of running gateway
+```
+
+`.env` load order (first match per key wins):
+
+1. `~/.kelvinclaw/.env.local`
+2. `~/.kelvinclaw/.env`
+3. `./.env.local`
+4. `./.env`
+
+Variables already in the process environment are never overwritten.
+
+Validated public onboarding:
+
+- Linux release bundles are validated end to end on fresh Ubuntu.
+- The `kelvin init` + `kelvin` flow installs required plugins from the official index
+  and completes a real OpenAI-backed run when `OPENAI_API_KEY` is configured.
 - macOS and Windows artifacts are published from CI, but the fully documented
   and validated public onboarding path today is Linux-first.
 
 ## Repository Layout
 
+- `apps/kelvin-cli`: unified `kelvin` binary (start, stop, init, gateway, plugin, medkit, doctor, …)
 - `apps/kelvin-host`: thin trusted host executable
 - `apps/kelvin-gateway`: secure WebSocket control-plane gateway
 - `crates/*`: core contracts, runtime, SDK, memory API/client/controller, and execution engine
@@ -232,6 +244,7 @@ Workspace crates:
 
 Apps:
 
+- `apps/kelvin-cli`: unified CLI binary (`kelvin`)
 - `apps/kelvin-host`: thin host executable for Kelvin SDK
 - `apps/kelvin-gateway`: WebSocket gateway over SDK runtime
 
@@ -303,26 +316,25 @@ The fallback manager mimics KelvinClaw's primary->fallback behavior.
 ## CLI Example
 
 ```bash
-scripts/install-kelvin-cli-plugin.sh
-KELVIN_PLUGIN_HOME=.kelvin/plugins \
-KELVIN_TRUST_POLICY_PATH=.kelvin/trusted_publishers.json \
-CARGO_TARGET_DIR=target/try-kelvin-cli cargo run -p kelvin-host -- --prompt "hello" --workspace /path/to/workspace --memory fallback
+kelvin plugin install kelvin.cli
+KELVIN_PLUGIN_HOME=~/.kelvinclaw/plugins \
+KELVIN_TRUST_POLICY_PATH=~/.kelvinclaw/trusted_publishers.json \
+cargo run -p kelvin-host -- --prompt "hello" --workspace /path/to/workspace --memory fallback
 ```
 
 OpenAI provider path:
 
 ```bash
-scripts/install-kelvin-openai-plugin.sh
+kelvin plugin install kelvin.openai
 OPENAI_API_KEY=<your_key> \
-KELVIN_PLUGIN_HOME=.kelvin/plugins \
-KELVIN_TRUST_POLICY_PATH=.kelvin/trusted_publishers.json \
-CARGO_TARGET_DIR=target/try-kelvin-cli cargo run -p kelvin-host -- --prompt "hello" --model-provider kelvin.openai --workspace /path/to/workspace --memory fallback
+KELVIN_PLUGIN_HOME=~/.kelvinclaw/plugins \
+KELVIN_TRUST_POLICY_PATH=~/.kelvinclaw/trusted_publishers.json \
+cargo run -p kelvin-host -- --prompt "hello" --model-provider kelvin.openai --workspace /path/to/workspace --memory fallback
 ```
 
-Anthropic provider status:
+Anthropic provider:
 
-- the runtime contract and install path are now published in the official plugin index
-- use [docs/anthropic-plugin-install-and-run.md](docs/plugins/anthropic-plugin-install-and-run.md) for the supported Anthropic flow
+- see [docs/anthropic-plugin-install-and-run.md](docs/plugins/anthropic-plugin-install-and-run.md)
 
 The CLI executable is only a thin launcher. Runtime behavior is composed in `kelvin-sdk`, and
 the CLI path executes through an installed plugin (`kelvin_cli`) loaded through the
@@ -397,29 +409,25 @@ Methods available over the socket:
 - `schedule.list`
 - `schedule.history`
 
-Operational scripts:
+Operational scripts (dev / CI):
 
-- `scripts/kelvin-gateway-daemon.sh start|stop|status|logs|health`
-- `scripts/kelvin-gateway-service.sh render-systemd-user|install-systemd-user|render-launchd|install-launchd`
-- `scripts/kelvin-gateway-service-run.sh`
-- `scripts/kelvin-local-profile.sh start|stop|status|doctor`
+- `scripts/kelvin-dev-stack.sh start|stop|status|doctor`
 - `scripts/quickstart.sh --mode local|docker`
 - `scripts/docker-cache-prune.sh [--dry-run]`
-- `scripts/kelvin-doctor.sh`
-- `scripts/kelvin-webchat.sh [port]`
 
-`kelvin-doctor` and gateway `--doctor` output machine-readable checks with remediation hints.
+For end-user stack management use the `kelvin` CLI (`kelvin start`, `kelvin stop`, `kelvin gateway`, `kelvin medkit`, `kelvin doctor`).
 
 ## Runtime Container (No Rust Toolchain Required)
 
-For end users, run the minimal runtime container and complete first-time setup interactively:
+For end users, run KelvinClaw via Docker Compose:
 
 ```bash
-scripts/run-runtime-container.sh
+cp .env.example .env
+docker compose up -d
 ```
 
-This opens a setup wizard in-container, installs required plugins from the remote plugin index,
-and prepares a persistent runtime home under `.kelvin/`.
+The init container installs required plugins automatically and prepares a persistent runtime
+home on the `kelvin-home` volume.
 
 After setup:
 
@@ -466,57 +474,32 @@ Notes:
 - `scripts/remote-test.sh` reads `REMOTE_TEST_HOST`, `REMOTE_TEST_REMOTE_DIR`, and `REMOTE_TEST_DOCKER_IMAGE` from `.env`/`.env.local`.
 - `.env` files are parsed as key/value data and are not executed as shell code.
 
-## Plugin Install (No Build Required)
+## Plugin Management
 
-Install Kelvin's first-party CLI plugin package:
-
-```bash
-scripts/install-kelvin-cli-plugin.sh
-```
-
-Install optional browser automation plugin profile:
+Plugin operations are handled by the `kelvin` CLI:
 
 ```bash
-scripts/install-kelvin-browser-plugin.sh
+kelvin plugin install kelvin.cli
+kelvin plugin install --package ./dist/acme.echo-1.0.0.tar.gz
+kelvin plugin list
+kelvin plugin status
+kelvin plugin search <query>
+kelvin plugin info <plugin-id>
+kelvin plugin update
+kelvin plugin uninstall acme.echo --yes
 ```
 
 Default index:
 
 - `https://raw.githubusercontent.com/agentichighway/kelvinclaw-plugins/main/index.json`
 
-Install a prebuilt plugin package:
+Override with `KELVIN_PLUGIN_INDEX_URL`.
 
-```bash
-scripts/plugin-install.sh --package ./dist/acme.echo-1.0.0.tar.gz
-```
-
-List installed plugins:
-
-```bash
-scripts/plugin-list.sh
-scripts/plugin-list.sh --json
-```
-
-Uninstall plugin:
-
-```bash
-scripts/plugin-uninstall.sh --id acme.echo --version 1.0.0
-scripts/plugin-uninstall.sh --id acme.echo --purge
-```
-
-Run installer tests:
+Installer tests:
 
 ```bash
 scripts/test-plugin-install.sh
 scripts/test-cli-plugin-integration.sh
-```
-
-Plugin discovery:
-
-```bash
-scripts/plugin-discovery.sh
-scripts/plugin-discovery.sh --plugin kelvin.cli
-scripts/plugin-update-check.sh --json
 ```
 
 Hosted registry service:
@@ -525,9 +508,6 @@ Hosted registry service:
 cargo run -p kelvin-registry -- \
   --index ./index.json \
   --bind 127.0.0.1:34619
-
-scripts/plugin-discovery.sh --registry-url http://127.0.0.1:34619
-scripts/plugin-update-check.sh --registry-url http://127.0.0.1:34619 --json
 ```
 
 ## Installed Plugin Runtime (Secure Loader)
@@ -569,27 +549,20 @@ scripts/plugin-sign.sh \
 
 KMS-backed signing is also supported for first-party releases (see internal runbook).
 
-Trust policy operations:
-
-```bash
-scripts/plugin-trust.sh show
-scripts/plugin-trust.sh rotate-key --publisher acme --public-key <base64>
-scripts/plugin-trust.sh revoke --publisher acme
-scripts/plugin-trust.sh pin --plugin acme.echo --publisher acme
-```
+Trust policy is stored at `~/.kelvinclaw/trusted_publishers.json`. The `kelvin plugin install` command merges publisher public keys from the index entry's `trust_policy_url` automatically. Edit the file directly for manual trust operations; see `trusted_publishers.example.json` for the schema.
 
 GitHub Actions automation:
 
 - `.github/workflows/memory-kms-smoke.yml` runs the live AWS KMS memory signer
   roundtrip through GitHub OIDC on a Blacksmith runner.
 
-Plugin author workflow:
+Plugin author workflow (uses `scripts/kelvin-plugin-dev.sh`):
 
 ```bash
 export PATH="$PWD/scripts:$PATH"
-kelvin plugin new --id acme.echo --name "Acme Echo" --runtime wasm_tool_v1
-kelvin plugin test --manifest ./plugin-acme.echo/plugin.json
-kelvin plugin pack --manifest ./plugin-acme.echo/plugin.json
+kelvin-plugin new --id acme.echo --name "Acme Echo" --runtime wasm_tool_v1
+kelvin-plugin test --manifest ./plugin-acme.echo/plugin.json
+kelvin-plugin pack --manifest ./plugin-acme.echo/plugin.json
 kelvin plugin install --package ./plugin-acme.echo/dist/acme.echo-0.1.0.tar.gz
 kelvin plugin verify --package ./plugin-acme.echo/dist/acme.echo-0.1.0.tar.gz
 ```
@@ -598,14 +571,14 @@ Model-plugin author workflow:
 
 ```bash
 export PATH="$PWD/scripts:$PATH"
-kelvin plugin new --id acme.anthropic --name "Acme Anthropic" --runtime wasm_model_v1 --provider-profile anthropic.messages
+kelvin-plugin new --id acme.anthropic --name "Acme Anthropic" --runtime wasm_model_v1 --provider-profile anthropic.messages
 cd ./plugin-acme.anthropic
 ./build.sh
-kelvin plugin test --manifest ./plugin.json
-kelvin plugin pack --manifest ./plugin.json
+kelvin-plugin test --manifest ./plugin.json
+kelvin-plugin pack --manifest ./plugin.json
 kelvin plugin install --package ./dist/acme.anthropic-0.1.0.tar.gz
 kelvin plugin verify --package ./dist/acme.anthropic-0.1.0.tar.gz
-kelvin plugin smoke --manifest ./plugin.json
+kelvin-plugin smoke --manifest ./plugin.json
 ```
 
 Community/local plugins can stay `unsigned_local`. Kelvin warns on install, but

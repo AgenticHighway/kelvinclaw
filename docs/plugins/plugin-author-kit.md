@@ -26,7 +26,7 @@ kelvin plugin smoke
 Equivalent direct command:
 
 ```bash
-scripts/kelvin-plugin.sh <new|test|pack|install|index-install|verify|smoke> ...
+scripts/kelvin-plugin-dev.sh <new|test|pack|install|index-install|verify|smoke> ...
 ```
 
 If you want a reproducible container instead of local Rust setup, use the
@@ -41,11 +41,11 @@ That is the supported Docker authoring path for plugin contributors.
 ## Minimal Flow
 
 ```bash
-scripts/kelvin-plugin.sh new --id acme.echo --name "Acme Echo" --runtime wasm_tool_v1
-scripts/kelvin-plugin.sh test --manifest ./plugin-acme.echo/plugin.json
-scripts/kelvin-plugin.sh pack --manifest ./plugin-acme.echo/plugin.json
-scripts/kelvin-plugin.sh install --package ./plugin-acme.echo/dist/acme.echo-0.1.0.tar.gz
-scripts/kelvin-plugin.sh verify --package ./plugin-acme.echo/dist/acme.echo-0.1.0.tar.gz
+scripts/kelvin-plugin-dev.sh new --id acme.echo --name "Acme Echo" --runtime wasm_tool_v1
+scripts/kelvin-plugin-dev.sh test --manifest ./plugin-acme.echo/plugin.json
+scripts/kelvin-plugin-dev.sh pack --manifest ./plugin-acme.echo/plugin.json
+scripts/kelvin-plugin-dev.sh install --package ./plugin-acme.echo/dist/acme.echo-0.1.0.tar.gz
+scripts/kelvin-plugin-dev.sh verify --package ./plugin-acme.echo/dist/acme.echo-0.1.0.tar.gz
 ```
 
 For model plugins, use the dedicated guide:
@@ -102,9 +102,9 @@ install for that quality tier, but still allows the plugin to install.
 The supported local loop is:
 
 ```bash
-scripts/kelvin-plugin.sh pack --manifest ./plugin.json
-scripts/kelvin-plugin.sh install --package ./dist/<id>-<version>.tar.gz
-scripts/kelvin-plugin.sh smoke --manifest ./plugin.json
+scripts/kelvin-plugin-dev.sh pack --manifest ./plugin.json
+scripts/kelvin-plugin-dev.sh install --package ./dist/<id>-<version>.tar.gz
+scripts/kelvin-plugin-dev.sh smoke --manifest ./plugin.json
 ```
 
 `smoke` runs `./build.sh` when present, packs the plugin, installs it into a
@@ -125,7 +125,7 @@ scripts/plugin-sign.sh \
 `kelvin plugin test` checks plugin compatibility against one or more core versions:
 
 ```bash
-scripts/kelvin-plugin.sh test --manifest ./plugin.json --core-versions "0.1.0,0.2.0"
+scripts/kelvin-plugin-dev.sh test --manifest ./plugin.json --core-versions "0.1.0,0.2.0"
 ```
 
 This is deterministic and intended for CI gates.

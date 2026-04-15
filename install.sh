@@ -142,12 +142,6 @@ if [[ -d "${EXTRACT_DIR}/bin" ]]; then
   chmod +x "${BIN_DIR}/"*
 fi
 
-# Copy launcher script
-if [[ -f "${EXTRACT_DIR}/kelvin" ]]; then
-  cp -f "${EXTRACT_DIR}/kelvin" "${INSTALL_DIR}/kelvin"
-  chmod +x "${INSTALL_DIR}/kelvin"
-fi
-
 # Copy share/ (plugin manifest, etc.)
 if [[ -d "${EXTRACT_DIR}/share" ]]; then
   mkdir -p "${INSTALL_DIR}/share"
@@ -177,13 +171,13 @@ case "${SHELL_NAME}" in
   *)    PROFILE_FILE="${HOME}/.profile" ;;
 esac
 
-PATH_LINE="export PATH=\"${INSTALL_DIR}:\${PATH}\""
+PATH_LINE="export PATH=\"${BIN_DIR}:\${PATH}\""
 if [[ "${SHELL_NAME}" == "fish" ]]; then
-  PATH_LINE="set -gx PATH ${INSTALL_DIR} \$PATH"
+  PATH_LINE="set -gx PATH ${BIN_DIR} \$PATH"
 fi
 
 PATH_ADDED=0
-if [[ -n "${PROFILE_FILE}" ]] && ! grep -qF "${INSTALL_DIR}" "${PROFILE_FILE}" 2>/dev/null; then
+if [[ -n "${PROFILE_FILE}" ]] && ! grep -qF "${BIN_DIR}" "${PROFILE_FILE}" 2>/dev/null; then
   printf '\n# KelvinClaw\n%s\n' "${PATH_LINE}" >> "${PROFILE_FILE}"
   PATH_ADDED=1
 fi
@@ -192,20 +186,17 @@ fi
 info ""
 info "KelvinClaw v${VERSION} installed to ${INSTALL_DIR}"
 info ""
-info "Binaries:"
+info "Binaries in ${BIN_DIR}/:"
 ls -1 "${BIN_DIR}/" 2>/dev/null | while read -r f; do
   info "  ${BIN_DIR}/${f}"
 done
-if [[ -f "${INSTALL_DIR}/kelvin" ]]; then
-  info "  ${INSTALL_DIR}/kelvin  (launcher)"
-fi
 info ""
 
 if [[ "${PATH_ADDED}" == "1" ]]; then
-  info "Added ${INSTALL_DIR} to PATH in ${PROFILE_FILE}"
+  info "Added ${BIN_DIR} to PATH in ${PROFILE_FILE}"
   info "Run: source ${PROFILE_FILE}  (or open a new terminal)"
-elif echo "${PATH}" | tr ':' '\n' | grep -qF "${INSTALL_DIR}"; then
-  info "${INSTALL_DIR} is already in your PATH"
+elif echo "${PATH}" | tr ':' '\n' | grep -qF "${BIN_DIR}"; then
+  info "${BIN_DIR} is already in your PATH"
 else
   info "Add to your PATH:"
   info "  ${PATH_LINE}"
@@ -213,6 +204,6 @@ fi
 
 info ""
 info "Get started:"
-info "  kelvin --help"
-info "  kelvin medkit"
+info "  kelvin init    # configure API keys and provider"
+info "  kelvin         # start the full stack"
 info ""

@@ -3,12 +3,13 @@
 Kelvin runtime can install plugins from a remote index using:
 
 ```bash
-scripts/plugin-index-install.sh --plugin <id>
+kelvin plugin install <id>
 ```
 
 Default index URL:
 
 - `https://raw.githubusercontent.com/agentichighway/kelvinclaw-plugins/main/index.json`
+- Override with `KELVIN_PLUGIN_INDEX_URL`
 
 ## Schema
 
@@ -44,10 +45,9 @@ Field requirements:
 
 Selection behavior:
 
-- `--plugin <id>` required
-- `--version <version>` optional
+- `kelvin plugin install <id>` required
+- `kelvin plugin install <id> --version <version>` optional
 - if version is omitted, installer chooses the highest dotted semver release
-- optional minimum quality gate via `--min-quality-tier` or `KELVIN_PLUGIN_MIN_QUALITY_TIER`
 
 ## Hosted Registry API
 
@@ -63,9 +63,9 @@ Example:
 
 ```bash
 cargo run -p kelvin-registry -- --index ./index.json --bind 127.0.0.1:34619
-scripts/plugin-discovery.sh --registry-url http://127.0.0.1:34619
-scripts/plugin-index-install.sh --plugin kelvin.cli --registry-url http://127.0.0.1:34619
-scripts/plugin-update-check.sh --registry-url http://127.0.0.1:34619 --json
+KELVIN_PLUGIN_INDEX_URL=http://127.0.0.1:34619/v1/index.json kelvin plugin search
+KELVIN_PLUGIN_INDEX_URL=http://127.0.0.1:34619/v1/index.json kelvin plugin install kelvin.cli
+KELVIN_PLUGIN_INDEX_URL=http://127.0.0.1:34619/v1/index.json kelvin plugin update --dry-run
 ```
 
 ## Trust Policy
@@ -79,11 +79,9 @@ This keeps runtime signature verification strict by default.
 
 ## Discovery
 
-Registry discovery helper:
-
 ```bash
-scripts/plugin-discovery.sh
-scripts/plugin-discovery.sh --plugin kelvin.cli
-scripts/plugin-discovery.sh --json
-scripts/plugin-update-check.sh --json
+kelvin plugin search
+kelvin plugin search kelvin.cli
+kelvin plugin info kelvin.cli
+kelvin plugin update --dry-run
 ```

@@ -1,0 +1,12 @@
+pub mod completions;
+pub mod doctor;
+pub mod gateway;
+pub mod init;
+pub mod medkit;
+pub mod memory;
+pub mod plugin;
+pub mod plugin_ops;
+pub mod service;
+pub mod start;
+pub mod stop;
+pub mod tui;
