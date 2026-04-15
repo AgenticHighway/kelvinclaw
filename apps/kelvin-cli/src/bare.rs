@@ -179,8 +179,15 @@ async fn launch_tui_mode() -> Result<()> {
 fn configured_model_provider() -> Option<String> {
     std::env::var("KELVIN_MODEL_PROVIDER")
         .ok()
-        .map(|value| value.trim().to_string())
-        .filter(|value| !value.is_empty())
+        .and_then(|value| normalize_model_provider(&value))
+}
+
+fn normalize_model_provider(value: &str) -> Option<String> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() || trimmed == "kelvin.echo" {
+        return None;
+    }
+    Some(trimmed.to_string())
 }
 
 fn host_args(workspace_dir: &Path, state_dir: &Path, model_provider: Option<&str>) -> Vec<String> {
@@ -293,6 +300,16 @@ mod tests {
                 "--state-dir",
                 "/tmp/state",
             ]
+        );
+    }
+
+    #[test]
+    fn normalize_model_provider_treats_echo_as_builtin_default() {
+        assert_eq!(normalize_model_provider("kelvin.echo"), None);
+        assert_eq!(normalize_model_provider(" "), None);
+        assert_eq!(
+            normalize_model_provider("kelvin.openai"),
+            Some("kelvin.openai".to_string())
         );
     }
 
