@@ -51,7 +51,7 @@ This file defines default expectations for coding agents working in this reposit
     - Iteration/testing: use cached layers (`scripts/test-docker.sh`).
     - Final push validation: run a clean rebuild from zero (`scripts/test-docker.sh --final`).
 - Standard SDK lane:
-    - `scripts/test-sdk.sh`
+    - `cargo test -p kelvin-sdk`
 - Targeted Rust lane:
     - `cargo test -p kelvin-core -p kelvin-wasm -p kelvin-brain -p kelvin-sdk --lib`
 - Run formatting checks before finalizing:

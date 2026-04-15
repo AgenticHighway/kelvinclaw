@@ -173,12 +173,6 @@ Reference template:
 
 ## Verification
 
-Run plugin lifecycle tests:
-
-```bash
-scripts/test-plugin-install.sh
-```
-
 Authoring/packaging flow:
 
 ```bash

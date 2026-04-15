@@ -102,7 +102,7 @@ Now implemented:
 
 - `scripts/kelvin-dev-stack.sh` for local background memory+gateway lifecycle
 - actionable machine-readable doctor checks with remediation hints
-- canonical quickstart flow (`scripts/quickstart.sh`)
+- canonical quickstart flow (`docker compose up -d` / `kelvin start`)
 
 ### 3) Control UI and Operator Observability
 

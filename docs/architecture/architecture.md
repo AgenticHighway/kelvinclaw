@@ -239,6 +239,5 @@ Not yet implemented:
 
 ## Operational Notes
 
-- Local remote-test helper: `scripts/remote-test.sh`
 - Remote host can be provided by `--host` or `REMOTE_TEST_HOST` (including `.env` convenience loading)
 - Build/test can run natively on ARM64 EC2 or inside Docker mode

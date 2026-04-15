@@ -92,8 +92,6 @@ scripts/docker-cache-prune.sh --max-age-days 14
 ## Useful Operational Scripts
 
 - `scripts/memory-rollout-check.sh`
-- `scripts/first-run-success-rate.sh`
-- `scripts/remote-test.sh`
 
 ## Reference
 

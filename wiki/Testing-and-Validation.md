@@ -64,9 +64,7 @@ cargo test -p kelvin-registry
 Plugin lifecycle:
 
 ```bash
-scripts/test-plugin-install.sh
 scripts/test-plugin-author-kit.sh
-scripts/test-plugin-trust.sh
 scripts/test-plugin-abi-compat.sh
 ```
 

@@ -30,8 +30,7 @@ KelvinClaw is structured so contributors can work safely on isolated modules wit
 Runtime contributors:
 
 ```bash
-scripts/quickstart.sh --mode local
-scripts/test-sdk.sh
+cargo test -p kelvin-sdk
 cargo test --workspace --tests
 ```
 

@@ -30,7 +30,7 @@ COPY . .
 RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
     --mount=type=cache,target=/usr/local/cargo/git,sharing=locked \
     --mount=type=cache,target=/work/target \
-    scripts/test-sdk.sh
+    cargo test -p kelvin-sdk
 
 FROM deps AS full
 COPY . .
@@ -45,4 +45,4 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
     cargo outdated && \
     cargo test -p kelvin-core -p kelvin-wasm -p kelvin-brain -p kelvin-sdk --lib && \
     cargo test --workspace --tests && \
-    scripts/test-sdk.sh
+    cargo test -p kelvin-sdk
