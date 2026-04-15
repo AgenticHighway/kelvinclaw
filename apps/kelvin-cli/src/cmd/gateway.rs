@@ -36,15 +36,12 @@ fn cmd_start(args: GatewayStartArgs) -> Result<()> {
     let state_dir = paths::state_dir();
     std::fs::create_dir_all(&state_dir)?;
 
-    let model_provider =
-        std::env::var("KELVIN_MODEL_PROVIDER").unwrap_or_else(|_| "kelvin.echo".to_string());
+    let mut gateway_args = vec!["--state-dir".to_string(), state_dir.to_string_lossy().to_string()];
 
-    let mut gateway_args = vec![
-        "--model-provider".to_string(),
-        model_provider,
-        "--state-dir".to_string(),
-        state_dir.to_string_lossy().to_string(),
-    ];
+    if let Some(model_provider) = configured_model_provider_arg() {
+        gateway_args.push("--model-provider".to_string());
+        gateway_args.push(model_provider);
+    }
 
     if let Ok(token) = std::env::var("KELVIN_GATEWAY_TOKEN") {
         if !token.is_empty() {
@@ -223,4 +220,39 @@ fn format_uptime(secs: u64) -> String {
         return format!("{}m {}s", m, s);
     }
     format!("{}s", s)
+}
+
+fn configured_model_provider_arg() -> Option<String> {
+    let value = std::env::var("KELVIN_MODEL_PROVIDER").ok()?;
+    let trimmed = value.trim();
+    if trimmed.is_empty() || trimmed == "kelvin.echo" {
+        return None;
+    }
+    Some(trimmed.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::configured_model_provider_arg;
+
+    #[test]
+    fn configured_model_provider_arg_treats_echo_as_builtin_default() {
+        unsafe {
+            std::env::set_var("KELVIN_MODEL_PROVIDER", "kelvin.echo");
+        }
+        assert_eq!(configured_model_provider_arg(), None);
+
+        unsafe {
+            std::env::set_var("KELVIN_MODEL_PROVIDER", "kelvin.openai");
+        }
+        assert_eq!(
+            configured_model_provider_arg(),
+            Some("kelvin.openai".to_string())
+        );
+
+        unsafe {
+            std::env::remove_var("KELVIN_MODEL_PROVIDER");
+        }
+        assert_eq!(configured_model_provider_arg(), None);
+    }
 }
