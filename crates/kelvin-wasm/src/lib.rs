@@ -827,6 +827,18 @@ fn link_claw_imports(linker: &mut Linker<HostState>, policy: &SandboxPolicy) -> 
                         })
                         .unwrap_or_default();
 
+                    // Interpreter guard: block inline code execution flags
+                    // (e.g. `python -c "code"`, `node --eval "code"`) to prevent
+                    // plugins from using allowed interpreters for arbitrary execution.
+                    if is_interpreter_inline_exec(basename, &args) {
+                        return write_resp_to_buf(
+                            &mut caller,
+                            &serde_json::json!({"exit_code": -1, "stdout": "", "stderr": "inline code execution via interpreter flags is not allowed"}).to_string(),
+                            resp_ptr,
+                            resp_max_len,
+                        );
+                    }
+
                     caller.data_mut().record(ClawCall::ShellExec {
                         command: basename.to_string(),
                         args: args.clone(),
@@ -1055,6 +1067,32 @@ fn shell_command_allowed(command: &str, allowed: &[String]) -> bool {
         }
         if cmd == p {
             return true;
+        }
+    }
+    false
+}
+
+/// Returns `true` if `command` is a known script interpreter and any of `args`
+/// contains an inline-code execution flag (e.g. `-c`, `-e`, `--eval`).
+///
+/// This is a deterministic guard that prevents plugins from using allowed
+/// interpreters to execute arbitrary code.  Without this, a plugin allowed to
+/// run `python` could call `python -c "import os; os.system('...')"`.
+fn is_interpreter_inline_exec(command: &str, args: &[String]) -> bool {
+    let cmd_lower = command.to_ascii_lowercase();
+    let is_interpreter = consts::KNOWN_INTERPRETERS
+        .iter()
+        .any(|i| cmd_lower == i.to_ascii_lowercase());
+    if !is_interpreter {
+        return false;
+    }
+    for arg in args {
+        let a = arg.trim();
+        for flag in consts::INTERPRETER_INLINE_FLAGS {
+            // Exact match (e.g. "-c") or flag=value (e.g. "--eval=code")
+            if a == *flag || a.starts_with(&format!("{flag}=")) {
+                return true;
+            }
         }
     }
     false
@@ -1841,5 +1879,117 @@ mod tests {
             .as_str()
             .unwrap_or("")
             .contains("absolute paths"));
+    }
+
+    #[test]
+    fn interpreter_inline_exec_checks() {
+        use super::is_interpreter_inline_exec;
+
+        // Known interpreter with inline flag → blocked
+        assert!(is_interpreter_inline_exec(
+            "python",
+            &["-c".into(), "import os".into()]
+        ));
+        assert!(is_interpreter_inline_exec(
+            "python3",
+            &["-c".into(), "print('hi')".into()]
+        ));
+        assert!(is_interpreter_inline_exec(
+            "node",
+            &["--eval".into(), "console.log(1)".into()]
+        ));
+        assert!(is_interpreter_inline_exec(
+            "bash",
+            &["-c".into(), "echo hi".into()]
+        ));
+        assert!(is_interpreter_inline_exec(
+            "ruby",
+            &["-e".into(), "puts 1".into()]
+        ));
+        assert!(is_interpreter_inline_exec(
+            "perl",
+            &["-E".into(), "say 1".into()]
+        ));
+        assert!(is_interpreter_inline_exec(
+            "php",
+            &["-r".into(), "echo 1;".into()]
+        ));
+        // --eval=code style
+        assert!(is_interpreter_inline_exec(
+            "node",
+            &["--eval=console.log(1)".into()]
+        ));
+
+        // Known interpreter WITHOUT inline flag → allowed
+        assert!(!is_interpreter_inline_exec("python", &["script.py".into()]));
+        assert!(!is_interpreter_inline_exec(
+            "node",
+            &["app.js".into(), "--port".into(), "3000".into()]
+        ));
+
+        // Non-interpreter with same flags → allowed (not our concern)
+        assert!(!is_interpreter_inline_exec(
+            "echo",
+            &["-c".into(), "hello".into()]
+        ));
+        assert!(!is_interpreter_inline_exec(
+            "grep",
+            &["-e".into(), "pattern".into()]
+        ));
+
+        // Case-insensitive interpreter matching
+        assert!(is_interpreter_inline_exec(
+            "Python3",
+            &["-c".into(), "code".into()]
+        ));
+
+        // Empty args → allowed
+        assert!(!is_interpreter_inline_exec("python", &[]));
+    }
+
+    #[test]
+    fn shell_exec_rejects_interpreter_inline_code() {
+        let wasm = parse_wat(
+            r#"
+            (module
+              (import "claw" "shell_exec" (func $shell_exec (param i32 i32 i32 i32) (result i32)))
+              (memory (export "memory") 2)
+              (data (i32.const 0) "{\"command\":\"python3\",\"args\":[\"-c\",\"import os\"]}")
+              (global $bump (mut i32) (i32.const 4096))
+              (func $alloc (export "alloc") (param $len i32) (result i32)
+                (local $ptr i32)
+                (local.set $ptr (global.get $bump))
+                (global.set $bump (i32.add (global.get $bump) (local.get $len)))
+                (local.get $ptr)
+              )
+              (func (export "dealloc") (param i32 i32))
+              (func (export "handle_tool_call") (param $in_ptr i32) (param $in_len i32) (result i64)
+                (local $written i32)
+                (local.set $written
+                  (call $shell_exec (i32.const 0) (i32.const 47) (i32.const 8192) (i32.const 8192))
+                )
+                (i64.or
+                  (i64.shl (i64.extend_i32_u (i32.const 8192)) (i64.const 32))
+                  (i64.extend_i32_u (local.get $written))
+                )
+              )
+            )
+            "#,
+        );
+        let host = WasmSkillHost::try_new().expect("host");
+        let policy = SandboxPolicy {
+            shell_allow_commands: vec!["python3".into()],
+            ..SandboxPolicy::locked_down()
+        };
+        let result = host
+            .run_bytes_with_input(&wasm, r#"{}"#, policy)
+            .expect("should not trap");
+        let output = result.output_json.expect("output_json");
+        let v: serde_json::Value = serde_json::from_str(&output).expect("valid json");
+        assert_eq!(v["exit_code"], -1);
+        assert!(v["stderr"]
+            .as_str()
+            .unwrap_or("")
+            .contains("inline code execution"));
     }
 }
