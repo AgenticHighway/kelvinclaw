@@ -125,6 +125,14 @@ pub fn start_gateway_daemon() -> Result<()> {
     let home = paths::kelvin_home();
     crate::keys::ensure_memory_keys(&home)?;
 
+    let pid_file = paths::gateway_pid_path();
+    if let Some(pid) = proc::read_pid_file(&pid_file) {
+        if proc::is_running(pid) {
+            println!("[kelvin] gateway already running (pid={})", pid);
+            return Ok(());
+        }
+    }
+
     run(GatewayCmd::Start(GatewayStartArgs {
         foreground: false,
         gateway_args: vec![],
