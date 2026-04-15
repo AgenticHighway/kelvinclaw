@@ -25,8 +25,8 @@ authors = ["KelvinClaw Contributors"]
 
 [workspace.dependencies]
 async-trait = "0.1"
-aws-config = "1"
-aws-sdk-kms = "1"
+aws-config = { version = "1", default-features = false, features = ["credentials-process", "default-https-client", "rt-tokio", "sso"] }
+aws-sdk-kms = { version = "1", default-features = false, features = ["default-https-client", "rt-tokio"] }
 aws-types = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
