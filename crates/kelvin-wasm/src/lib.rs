@@ -817,15 +817,26 @@ fn link_claw_imports(linker: &mut Linker<HostState>, policy: &SandboxPolicy) -> 
                         );
                     }
 
-                    let args: Vec<String> = req
-                        .get("args")
-                        .and_then(|v| v.as_array())
-                        .map(|arr| {
-                            arr.iter()
-                                .filter_map(|v| v.as_str().map(String::from))
-                                .collect()
-                        })
-                        .unwrap_or_default();
+                    let args: Vec<String> = match req.get("args").and_then(|v| v.as_array()) {
+                        Some(arr) => {
+                            let mut out = Vec::with_capacity(arr.len());
+                            for v in arr {
+                                match v.as_str() {
+                                    Some(s) => out.push(s.to_string()),
+                                    None => {
+                                        return write_resp_to_buf(
+                                            &mut caller,
+                                            &serde_json::json!({"exit_code": -1, "stdout": "", "stderr": "all entries in 'args' must be strings"}).to_string(),
+                                            resp_ptr,
+                                            resp_max_len,
+                                        );
+                                    }
+                                }
+                            }
+                            out
+                        }
+                        None => Vec::new(),
+                    };
 
                     // Interpreter guard: block inline code execution flags
                     // (e.g. `python -c "code"`, `node --eval "code"`) to prevent
@@ -1146,9 +1157,13 @@ fn is_interpreter_inline_exec(command: &str, args: &[String]) -> bool {
     }
     for arg in args {
         let a = arg.trim();
-        // Check long-form flags: exact match or --flag=value
+        // Check long-form flags: case-insensitive exact match or --flag=value.
+        // PowerShell accepts -Command, -COMMAND, -command, etc.
         for flag in consts::INTERPRETER_LONG_FLAGS {
-            if a == *flag || a.starts_with(&format!("{flag}=")) {
+            if a.eq_ignore_ascii_case(flag)
+                || a.to_ascii_lowercase()
+                    .starts_with(&format!("{}=", flag.to_ascii_lowercase()))
+            {
                 return true;
             }
         }
@@ -2046,6 +2061,25 @@ mod tests {
         assert!(!is_interpreter_inline_exec(
             "python",
             &["-u".into(), "script.py".into()]
+        ));
+
+        // Case-insensitive long flags — PowerShell accepts -Command,
+        // -COMMAND, -command, etc.
+        assert!(is_interpreter_inline_exec(
+            "powershell",
+            &["-COMMAND".into(), "Get-Process".into()]
+        ));
+        assert!(is_interpreter_inline_exec(
+            "pwsh",
+            &["--COMMAND".into(), "code".into()]
+        ));
+        assert!(is_interpreter_inline_exec(
+            "powershell",
+            &["-command".into(), "code".into()]
+        ));
+        assert!(is_interpreter_inline_exec(
+            "node",
+            &["--EVAL=console.log(1)".into()]
         ));
     }
 
