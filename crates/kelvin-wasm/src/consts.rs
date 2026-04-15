@@ -110,9 +110,10 @@ pub const INTERPRETER_INLINE_MAP: &[(&str, &[char])] = &[
     ("Rscript", &['e']),
     // Julia: -e 'code'
     ("julia", &['e']),
-    // PowerShell: long-form only (-Command / --command)
-    ("powershell", &[]),
-    ("pwsh", &[]),
+    // PowerShell: -c is short for -Command (case-sensitive 'c' avoids
+    // false positives on -ConfigurationFile which starts with uppercase C)
+    ("powershell", &['c']),
+    ("pwsh", &['c']),
 ];
 
 // --- Network/Hosts ---
