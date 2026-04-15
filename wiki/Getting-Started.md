@@ -41,16 +41,10 @@ docker compose run kelvin-tui
 
 ## Quick Start Paths
 
-Daily-driver local profile:
+Docker (recommended):
 
 ```bash
-scripts/quickstart.sh --mode local
-```
-
-Docker-only profile:
-
-```bash
-scripts/quickstart.sh --mode docker
+cp .env.example .env && docker compose up -d
 ```
 
 Local profile lifecycle:
@@ -95,7 +89,7 @@ Bootstrap:
 ```bash
 git clone https://github.com/AgenticHighway/kelvinclaw.git
 cd kelvinclaw
-scripts/quickstart.sh --mode local
+kelvin init
 cargo test -p kelvin-sdk
 ```
 
@@ -124,7 +118,7 @@ scripts/kelvin-plugin-dev.sh test --manifest ./plugin-acme.echo/plugin.json
 Single prompt:
 
 ```bash
-scripts/try-kelvin.sh "hello"
+cargo run -p kelvin-host -- --prompt "hello" --memory fallback
 ```
 
 Interactive host:

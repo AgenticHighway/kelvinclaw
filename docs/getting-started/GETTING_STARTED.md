@@ -72,16 +72,10 @@ docker compose --profile tui run --rm kelvin-tui
 
 ## Canonical Quick Start (Daily Driver MVP)
 
-Local profile (gateway + memory controller + SDK runtime):
+Docker profile (recommended):
 
 ```bash
-scripts/quickstart.sh --mode local
-```
-
-Docker profile:
-
-```bash
-scripts/quickstart.sh --mode docker
+cp .env.example .env && docker compose up -d
 ```
 
 Local profile lifecycle:
@@ -176,14 +170,7 @@ Steps:
 ```bash
 git clone <repo-url>
 cd kelvinclaw
-scripts/quickstart.sh --mode local
 cargo test -p kelvin-sdk
-```
-
-Verification:
-
-```bash
-scripts/verify-onboarding.sh --track rust
 ```
 
 Expected result:
@@ -242,7 +229,9 @@ scripts/plugin-author-docker.sh -- scripts/test-plugin-author-kit.sh
 Verification:
 
 ```bash
-scripts/verify-onboarding.sh --track wasm
+scripts/kelvin-plugin-dev.sh test --manifest ./plugin-acme.echo/plugin.json
+kelvin plugin install --package ./plugin-acme.echo/dist/acme.echo-0.1.0.tar.gz
+kelvin plugin list
 ```
 
 Expected result:
@@ -252,17 +241,6 @@ Expected result:
 - Plugin author commands scaffold and validate plugin package structure without touching root crates.
 - `kelvin plugin install` and `kelvin plugin status` cover the local package-install and model-runtime path.
 - Model plugins can be scaffolded, built, packed, and locally installed through the same public SDK surface.
-
-## Verify All Tracks
-
-Run full onboarding verification:
-
-```bash
-scripts/verify-onboarding.sh --track all
-scripts/verify-onboarding.sh --track daily
-```
-
-`all` runs `beginner`, `rust`, and `wasm`. `daily` validates the default daily-driver local profile with a time-to-first-success threshold.
 
 ## Security and Stability Notes
 

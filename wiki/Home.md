@@ -26,8 +26,9 @@ KelvinClaw keeps trusted code in the host/runtime path and pushes installable ex
 Quick start:
 
 ```bash
-scripts/quickstart.sh --mode local
-scripts/quickstart.sh --mode docker
+cp .env.example .env
+docker compose up -d
+docker compose --profile tui run --rm kelvin-tui
 ```
 
 Local profile lifecycle:

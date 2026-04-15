@@ -41,11 +41,8 @@ ANTHROPIC_API_KEY=sk-ant-your-api-key-here
 ### Quick Try (local Rust)
 
 ```bash
-scripts/quickstart.sh --mode local
+cargo run -p kelvin-host -- --prompt "hello kelvin" --memory fallback
 ```
-
-Requires Rust toolchain. The quickstart prompts you to pick a model provider
-(OpenAI, Anthropic, OpenRouter) or continue with echo mode if you don't have a key.
 
 ### Install via Homebrew
 
@@ -65,14 +62,7 @@ Choose the onboarding path for your experience level:
 - [docs/GETTING_STARTED.md](docs/getting-started/GETTING_STARTED.md)
 - latest public release: [GitHub Releases](https://github.com/AgenticHighway/kelvinclaw/releases/latest)
 
-Verify a specific path:
-
-```bash
-scripts/verify-onboarding.sh --track beginner
-scripts/verify-onboarding.sh --track rust
-scripts/verify-onboarding.sh --track wasm
-scripts/verify-onboarding.sh --track daily
-```
+See [docs/getting-started/GETTING_STARTED.md](docs/getting-started/GETTING_STARTED.md) for track-specific setup guides.
 
 Plugin authors who prefer Docker over local Rust setup should use the official
 Rust Bookworm image through:
@@ -343,7 +333,7 @@ same secure installed-plugin path as third-party plugins.
 Quick run:
 
 ```bash
-scripts/try-kelvin.sh "hello"
+cargo run -p kelvin-host -- --prompt "hello" --memory fallback
 ```
 
 Interactive mode:
@@ -412,7 +402,6 @@ Methods available over the socket:
 Operational scripts (dev / CI):
 
 - `scripts/kelvin-dev-stack.sh start|stop|status|doctor`
-- `scripts/quickstart.sh --mode local|docker`
 - `scripts/docker-cache-prune.sh [--dry-run]`
 
 For end-user stack management use the `kelvin` CLI (`kelvin start`, `kelvin stop`, `kelvin gateway`, `kelvin medkit`, `kelvin doctor`).
@@ -456,22 +445,11 @@ Privacy-conscious remote setup:
 ```bash
 cp .env.example .env
 $EDITOR .env
-scripts/remote-test.sh --docker
-```
-
-Additional variants:
-
-```bash
-REMOTE_TEST_HOST=your-user@your-host scripts/remote-test.sh
-REMOTE_TEST_REMOTE_DIR=~/work/kelvinclaw scripts/remote-test.sh --native
-scripts/remote-test.sh --docker
-scripts/remote-test.sh --host your-user@your-host --cargo-args '-- --nocapture'
 ```
 
 Notes:
 
 - `.env` and `.env.local` are gitignored; keep personal hosts/IPs there only.
-- `scripts/remote-test.sh` reads `REMOTE_TEST_HOST`, `REMOTE_TEST_REMOTE_DIR`, and `REMOTE_TEST_DOCKER_IMAGE` from `.env`/`.env.local`.
 - `.env` files are parsed as key/value data and are not executed as shell code.
 
 ## Plugin Management
@@ -494,13 +472,6 @@ Default index:
 - `https://raw.githubusercontent.com/agentichighway/kelvinclaw-plugins/main/index.json`
 
 Override with `KELVIN_PLUGIN_INDEX_URL`.
-
-Installer tests:
-
-```bash
-scripts/test-plugin-install.sh
-scripts/test-cli-plugin-integration.sh
-```
 
 Hosted registry service:
 
@@ -625,7 +596,7 @@ cargo test --workspace
 SDK certification lane:
 
 ```bash
-scripts/test-sdk.sh
+cargo test -p kelvin-sdk
 ```
 
 Docker:

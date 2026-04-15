@@ -64,7 +64,7 @@ Keep commits scoped and atomic. Only stage files relevant to the change.
 ### Testing
 
 - Add tests for new logic, data transformations, and workflow paths
-- Run `scripts/test-sdk.sh` for the SDK certification lane
+- Run `cargo test -p kelvin-sdk` for the SDK certification lane
 - Run `scripts/test-docker.sh` for Docker-based verification
 
 ## Architecture
