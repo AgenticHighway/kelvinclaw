@@ -10,9 +10,26 @@ use super::download;
 pub fn install_package(tarball: &Path, plugin_home: &Path, force: bool) -> Result<()> {
     let work_dir = tempdir()?;
     extract_tarball(tarball, &work_dir)?;
+    install_from_extracted_dir(&work_dir, plugin_home, force)
+}
 
-    let manifest_path = work_dir.join("plugin.json");
-    let payload_dir = work_dir.join("payload");
+/// Installs a plugin from an already-extracted plugin directory.
+///
+/// The directory must contain `plugin.json` and `payload/` at its root — the
+/// same layout that results from unpacking a plugin tarball. This is used by
+/// the Docker init container to install locally-built plugins baked into the
+/// image without re-packaging them.
+pub fn install_from_dir(src: &Path, plugin_home: &Path, force: bool) -> Result<()> {
+    if !src.is_dir() {
+        bail!("not a directory: {}", src.display());
+    }
+    install_from_extracted_dir(src, plugin_home, force)
+}
+
+/// Core install logic operating on an already-extracted plugin directory.
+fn install_from_extracted_dir(src: &Path, plugin_home: &Path, force: bool) -> Result<()> {
+    let manifest_path = src.join("plugin.json");
+    let payload_dir = src.join("payload");
 
     if !manifest_path.exists() {
         bail!("invalid package: missing plugin.json");
@@ -133,7 +150,7 @@ pub fn install_package(tarball: &Path, plugin_home: &Path, force: bool) -> Resul
     copy_dir_all(&payload_dir, &install_dir.join("payload"))?;
 
     // Copy signature if present.
-    let sig_path = work_dir.join("plugin.sig");
+    let sig_path = src.join("plugin.sig");
     if sig_path.exists() {
         std::fs::copy(&sig_path, install_dir.join("plugin.sig"))?;
     }

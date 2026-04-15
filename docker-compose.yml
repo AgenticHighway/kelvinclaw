@@ -43,9 +43,16 @@ services:
             RUST_LOG: ${RUST_LOG:-info}
         entrypoint: ["/bin/sh", "-c"]
         command:
-            - >-
-              /usr/local/bin/kelvin plugin install "${KELVIN_MODEL_PROVIDER:-kelvin.echo}" &&
+            - |
+              set -e
+              mkdir -p /kelvin/plugins
+              [ -f /kelvin/trusted_publishers.json ] || \
+                printf '{"require_signature":false,"publishers":[]}' > /kelvin/trusted_publishers.json
+              /usr/local/bin/kelvin plugin install "${KELVIN_MODEL_PROVIDER:-kelvin.echo}"
               /usr/local/bin/kelvin plugin install kelvin.cli
+              for d in /opt/kelvin/plugins-builtin/*/; do
+                [ -f "$${d}plugin.json" ] && /usr/local/bin/kelvin plugin install --from-dir "$$d" --force
+              done
         volumes:
             - kelvin-home:/kelvin
         networks:

@@ -147,11 +147,14 @@ pub enum PluginCmd {
 
 #[derive(Args, Debug, Clone)]
 pub struct PluginInstallArgs {
-    /// Plugin ID from the index (omit when using --package)
+    /// Plugin ID from the index (omit when using --package or --from-dir)
     pub id: Option<String>,
     /// Install a local tarball instead of downloading from index
     #[arg(long)]
     pub package: Option<std::path::PathBuf>,
+    /// Install from an already-extracted plugin directory (plugin.json + payload/)
+    #[arg(long)]
+    pub from_dir: Option<std::path::PathBuf>,
     /// Specific version to install
     #[arg(long)]
     pub version: Option<String>,

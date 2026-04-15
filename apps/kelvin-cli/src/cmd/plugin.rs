@@ -26,6 +26,14 @@ fn cmd_install(args: PluginInstallArgs) -> Result<()> {
     let plugin_home = paths::plugin_home();
     std::fs::create_dir_all(&plugin_home)?;
 
+    if let Some(dir) = args.from_dir {
+        if !dir.exists() {
+            bail!("directory not found: {}", dir.display());
+        }
+        super::plugin_ops::install_from_dir(&dir, &plugin_home, args.force)?;
+        return Ok(());
+    }
+
     if let Some(pkg) = args.package {
         // Local package install.
         if !pkg.exists() {
@@ -35,9 +43,9 @@ fn cmd_install(args: PluginInstallArgs) -> Result<()> {
         return Ok(());
     }
 
-    let id = args
-        .id
-        .ok_or_else(|| anyhow::anyhow!("provide a plugin <id> or --package <path>"))?;
+    let id = args.id.ok_or_else(|| {
+        anyhow::anyhow!("provide a plugin <id>, --package <path>, or --from-dir <path>")
+    })?;
     let url = index_url();
     super::plugin_ops::install_from_index(
         &id,
