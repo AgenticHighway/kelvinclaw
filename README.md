@@ -123,9 +123,9 @@ cd kelvinclaw-<version>-linux-<arch>
 ```
 
 On first run, `kelvin init` writes `~/.kelvinclaw/.env`, generates a gateway
-token, and helps select a provider. `kelvin` then fetches the official trust
-policy and bootstraps required plugins from the plugin index into
-`~/.kelvinclaw`.
+token, and helps select a provider. `kelvin` then ensures a trust policy exists
+and bootstraps the `kelvin.cli` toolpack plus the configured model provider
+from the plugin index into `~/.kelvinclaw` when needed.
 
 Additional published first-party model plugins can be installed with `kpm`:
 

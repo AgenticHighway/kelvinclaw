@@ -12,7 +12,7 @@ cd kelvinclaw-<version>-linux-<arch>
 ./kelvin
 ```
 
-On first run, `kelvin init` writes `~/.kelvinclaw/.env`, generates a gateway token, and helps you choose a provider. `./kelvin` then bootstraps required plugins into `~/.kelvinclaw`.
+On first run, `kelvin init` writes `~/.kelvinclaw/.env`, generates a gateway token, and helps you choose a provider. `./kelvin` then ensures a trust policy exists and bootstraps the `kelvin.cli` toolpack plus the configured model provider into `~/.kelvinclaw` when needed.
 
 ### Prerequisites
 
