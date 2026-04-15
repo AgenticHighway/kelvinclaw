@@ -71,20 +71,7 @@ pub fn run(args: InitArgs) -> Result<()> {
 
     println!("\n[kelvin] configuration written to: {}", dot_env.display());
 
-    // Shell completions (opt-in).
-    let install_completions = if args.with_completions {
-        true
-    } else if crate::tty::is_interactive() {
-        dialoguer::Confirm::new()
-            .with_prompt("Install shell completions?")
-            .default(false)
-            .interact()
-            .unwrap_or(false)
-    } else {
-        false
-    };
-
-    if install_completions {
+    if args.with_completions {
         if let Err(e) = super::completions::install_for_current_shell() {
             eprintln!("[kelvin] warning: could not install completions: {}", e);
         }

@@ -185,7 +185,7 @@ pub struct PluginUpdateArgs {
 
 #[derive(Args, Debug)]
 pub struct InitArgs {
-    /// Also install shell completions after setup
+    /// Install shell completions after setup
     #[arg(long)]
     pub with_completions: bool,
     /// Skip confirmation prompt and overwrite existing config

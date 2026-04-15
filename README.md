@@ -116,12 +116,13 @@ cd kelvinclaw-<version>-linux-<arch>
 ./bin/kelvin
 ```
 
-`kelvin init` writes `~/.kelvinclaw/.env`, generates auth keys, writes a permissive trust policy,
-and optionally installs shell completions. After that, the first interactive bare `kelvin` launch
-asks whether you want CLI chat or the TUI app, remembers that choice in
+`kelvin init` writes `~/.kelvinclaw/.env`, generates auth keys, and writes a permissive trust policy.
+After that, the first interactive bare `kelvin` launch asks whether you want CLI chat or the TUI app, remembers that choice in
 `~/.kelvinclaw/preferences.env`, and launches the selected experience. The CLI chat path
 bootstraps `kelvin.cli` plus the configured model provider before opening `kelvin-host`;
 the TUI path starts the gateway and memory controller as needed before opening `kelvin-tui`.
+Pass `kelvin init --with-completions` to install shell completions during setup, or use
+`kelvin completions <shell> --write` later.
 
 Add `bin/` to your `PATH` to use `kelvin` without a prefix. The examples below assume this is done:
 
