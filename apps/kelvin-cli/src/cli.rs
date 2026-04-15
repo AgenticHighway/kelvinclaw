@@ -14,7 +14,7 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
-    /// Start the full stack (memory + gateway) in the background, then open the TUI
+    /// Start the full stack (memory + gateway) in the background
     Start(StartArgs),
     /// Stop all background daemons (gateway + memory)
     Stop,

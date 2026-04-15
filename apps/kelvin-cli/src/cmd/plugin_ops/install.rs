@@ -207,19 +207,28 @@ pub fn install_from_index(
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
-fn tempdir() -> Result<PathBuf> {
-    let dir = std::env::temp_dir().join(format!(
-        "kelvin-plugin-{}",
-        uuid::Uuid::new_v4()
-            .to_string()
-            .split('-')
-            .next()
-            .unwrap_or("tmp")
-    ));
-    std::fs::create_dir_all(&dir)?;
-    Ok(dir)
+struct TempInstallDir(tempfile::TempDir);
+
+impl std::ops::Deref for TempInstallDir {
+    type Target = Path;
+
+    fn deref(&self) -> &Self::Target {
+        self.0.path()
+    }
 }
 
+impl AsRef<Path> for TempInstallDir {
+    fn as_ref(&self) -> &Path {
+        self.0.path()
+    }
+}
+
+fn tempdir() -> Result<TempInstallDir> {
+    let dir = tempfile::Builder::new()
+        .prefix("kelvin-plugin-")
+        .tempdir()?;
+    Ok(TempInstallDir(dir))
+}
 fn extract_tarball(tarball: &Path, dest: &Path) -> Result<()> {
     let file = std::fs::File::open(tarball)
         .with_context(|| format!("failed to open tarball {}", tarball.display()))?;
@@ -244,13 +253,15 @@ fn extract_tarball(tarball: &Path, dest: &Path) -> Result<()> {
             continue;
         }
 
-        let out_path = dest.join(&entry_path);
-        if let Some(parent) = out_path.parent() {
-            std::fs::create_dir_all(parent)?;
+        let unpacked = entry
+            .unpack_in(dest)
+            .with_context(|| format!("failed to extract {}", entry_path.display()))?;
+        if !unpacked {
+            bail!(
+                "refusing to extract tar entry outside destination: {}",
+                entry_path.display()
+            );
         }
-        entry
-            .unpack(&out_path)
-            .with_context(|| format!("failed to extract {}", out_path.display()))?;
     }
     Ok(())
 }

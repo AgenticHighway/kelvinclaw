@@ -11,11 +11,20 @@ use clap::Parser;
 
 use cli::{Cli, Commands};
 
-#[tokio::main]
-async fn main() {
-    // Load dotenv before parsing args so env vars are available to clap.
+fn main() {
+    // Load dotenv before parsing args so env vars are available to clap,
+    // and before initializing the Tokio runtime.
     env::load_dotenv();
 
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .expect("failed to build Tokio runtime");
+
+    runtime.block_on(async_main());
+}
+
+async fn async_main() {
     let cli = Cli::parse();
 
     let result = match cli.command {
