@@ -1177,6 +1177,19 @@ fn is_interpreter_inline_exec(command: &str, args: &[String]) -> bool {
                 return true;
             }
         }
+
+        // PowerShell-specific: any case-insensitive prefix of "-command"
+        // with at least 2 chars (dash + one letter) is an inline-exec flag.
+        // This covers -c, -C, -co, -Com, -COMM, -Command, etc. without
+        // false-positiving on unrelated flags like -ConfigurationFile
+        // (which is NOT a prefix of "-command").
+        if cmd_lower == "powershell" || cmd_lower == "pwsh" {
+            let a_lower = a.to_ascii_lowercase();
+            if a_lower.len() >= 2 && "-command".starts_with(&a_lower) {
+                return true;
+            }
+        }
+
         // Check short flags — including combined groups like "-xc" and
         // concatenated flag+code like "-cimport os" (Python/Perl accept
         // this form for inline execution).
@@ -2111,6 +2124,24 @@ mod tests {
         assert!(is_interpreter_inline_exec(
             "powershell",
             &["-c".into(), "Write-Host hi".into()]
+        ));
+        // PowerShell -C (uppercase) also maps to -Command
+        assert!(is_interpreter_inline_exec(
+            "pwsh",
+            &["-C".into(), "Get-Process".into()]
+        ));
+        // PowerShell prefix abbreviations: -co, -Com, -COMM, etc.
+        assert!(is_interpreter_inline_exec(
+            "powershell",
+            &["-co".into(), "code".into()]
+        ));
+        assert!(is_interpreter_inline_exec(
+            "pwsh",
+            &["-Com".into(), "code".into()]
+        ));
+        assert!(is_interpreter_inline_exec(
+            "powershell",
+            &["-COMMAN".into(), "code".into()]
         ));
         assert!(is_interpreter_inline_exec(
             "node",

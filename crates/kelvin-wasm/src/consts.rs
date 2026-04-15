@@ -110,10 +110,11 @@ pub const INTERPRETER_INLINE_MAP: &[(&str, &[char])] = &[
     ("Rscript", &['e']),
     // Julia: -e 'code'
     ("julia", &['e']),
-    // PowerShell: -c is short for -Command (case-sensitive 'c' avoids
-    // false positives on -ConfigurationFile which starts with uppercase C)
-    ("powershell", &['c']),
-    ("pwsh", &['c']),
+    // PowerShell: handled via dedicated prefix-of-"-Command" check in
+    // is_interpreter_inline_exec (case-insensitive, covers -c, -C, -co,
+    // -Com, -COMMAND, etc.).  No short inline_chars needed.
+    ("powershell", &[]),
+    ("pwsh", &[]),
 ];
 
 // --- Network/Hosts ---
