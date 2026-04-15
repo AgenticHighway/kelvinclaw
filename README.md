@@ -411,7 +411,7 @@ Methods available over the socket:
 
 Operational scripts (dev / CI):
 
-- `scripts/kelvin-local-profile.sh start|stop|status|doctor`
+- `scripts/kelvin-dev-stack.sh start|stop|status|doctor`
 - `scripts/quickstart.sh --mode local|docker`
 - `scripts/docker-cache-prune.sh [--dry-run]`
 
@@ -555,7 +555,7 @@ GitHub Actions automation:
 - `.github/workflows/memory-kms-smoke.yml` runs the live AWS KMS memory signer
   roundtrip through GitHub OIDC on a Blacksmith runner.
 
-Plugin author workflow (uses `scripts/kelvin-plugin.sh`):
+Plugin author workflow (uses `scripts/kelvin-plugin-dev.sh`):
 
 ```bash
 export PATH="$PWD/scripts:$PATH"

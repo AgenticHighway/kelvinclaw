@@ -9,9 +9,9 @@ Quick commands:
 
 ```bash
 ./build.sh
-../../scripts/kelvin-plugin.sh test --manifest ./plugin.json
-../../scripts/kelvin-plugin.sh pack --manifest ./plugin.json
-../../scripts/kelvin-plugin.sh verify --package ./dist/kelvin.openrouter-0.1.0.tar.gz
+../../scripts/kelvin-plugin-dev.sh test --manifest ./plugin.json
+../../scripts/kelvin-plugin-dev.sh pack --manifest ./plugin.json
+../../scripts/kelvin-plugin-dev.sh verify --package ./dist/kelvin.openrouter-0.1.0.tar.gz
 ```
 
 For local development this plugin intentionally stays `unsigned_local`. Kelvin

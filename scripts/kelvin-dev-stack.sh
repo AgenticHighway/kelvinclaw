@@ -29,7 +29,7 @@ MEMORY_MODULE_WAT="${KELVIN_MEMORY_MODULE_WAT:-${ROOT_DIR}/crates/kelvin-memory-
 
 usage() {
   cat <<'USAGE'
-Usage: scripts/kelvin-local-profile.sh <command>
+Usage: scripts/kelvin-dev-stack.sh <command>
 
 Run Kelvin's default local profile:
   - memory controller (data plane)
@@ -49,7 +49,7 @@ USAGE
 require_cmd() {
   local name="$1"
   if ! command -v "${name}" >/dev/null 2>&1; then
-    echo "[kelvin-local-profile] missing required command: ${name}" >&2
+    echo "[kelvin-dev-stack] missing required command: ${name}" >&2
     exit 1
   fi
 }
@@ -74,7 +74,7 @@ validate_gateway_exposure() {
   fi
 
   if [[ -z "${KELVIN_GATEWAY_TOKEN:-}" ]]; then
-    echo "[kelvin-local-profile] refusing public gateway bind without KELVIN_GATEWAY_TOKEN" >&2
+    echo "[kelvin-dev-stack] refusing public gateway bind without KELVIN_GATEWAY_TOKEN" >&2
     exit 1
   fi
 
@@ -84,12 +84,12 @@ validate_gateway_exposure() {
 
   case "${KELVIN_GATEWAY_ALLOW_INSECURE_PUBLIC_BIND:-0}" in
     1|true|TRUE|yes|YES|on|ON)
-      echo "[kelvin-local-profile] warning: explicit insecure public bind override enabled" >&2
+      echo "[kelvin-dev-stack] warning: explicit insecure public bind override enabled" >&2
       return 0
       ;;
   esac
 
-  echo "[kelvin-local-profile] refusing public gateway bind without TLS; set KELVIN_GATEWAY_TLS_CERT_PATH and KELVIN_GATEWAY_TLS_KEY_PATH or explicitly opt into KELVIN_GATEWAY_ALLOW_INSECURE_PUBLIC_BIND=1" >&2
+  echo "[kelvin-dev-stack] refusing public gateway bind without TLS; set KELVIN_GATEWAY_TLS_CERT_PATH and KELVIN_GATEWAY_TLS_KEY_PATH or explicitly opt into KELVIN_GATEWAY_ALLOW_INSECURE_PUBLIC_BIND=1" >&2
   exit 1
 }
 
@@ -114,7 +114,7 @@ write_memory_dev_keys() {
   local ssl_bin
   ssl_bin="$(resolve_openssl)"
   if ! "${ssl_bin}" genpkey -algorithm ed25519 -out /dev/null 2>/dev/null; then
-    echo "[kelvin-local-profile] openssl at '${ssl_bin}' does not support ed25519." >&2
+    echo "[kelvin-dev-stack] openssl at '${ssl_bin}' does not support ed25519." >&2
     echo "  On macOS, install OpenSSL 3 via Homebrew:  brew install openssl@3" >&2
     exit 1
   fi
@@ -125,7 +125,7 @@ write_memory_dev_keys() {
 
 ensure_prereqs() {
   ensure_rust_toolchain_path || {
-    echo "[kelvin-local-profile] cargo/rustup not found" >&2
+    echo "[kelvin-dev-stack] cargo/rustup not found" >&2
     exit 1
   }
   require_cmd cargo
@@ -142,32 +142,37 @@ ensure_prereqs() {
   # distribution flow is in place).
   if [[ ! -f "${TRUST_POLICY_PATH}" ]]; then
     echo '{"require_signature":false,"publishers":[]}' > "${TRUST_POLICY_PATH}"
-    echo "[kelvin-local-profile] wrote default trust policy: ${TRUST_POLICY_PATH}"
+    echo "[kelvin-dev-stack] wrote default trust policy: ${TRUST_POLICY_PATH}"
   fi
 }
 
 build_local_profile_binaries() {
-  echo "[kelvin-local-profile] building local profile binaries"
+  echo "[kelvin-dev-stack] building local profile binaries"
   (cd "${ROOT_DIR}" && cargo build -p kelvin-memory-controller >/dev/null)
   (cd "${ROOT_DIR}" && cargo build -p kelvin-gateway --features memory_rpc >/dev/null)
   if [[ ! -x "${MEMORY_BIN}" ]]; then
-    echo "[kelvin-local-profile] missing built memory controller binary: ${MEMORY_BIN}" >&2
+    echo "[kelvin-dev-stack] missing built memory controller binary: ${MEMORY_BIN}" >&2
     exit 1
   fi
   if [[ ! -x "${GATEWAY_BIN}" ]]; then
-    echo "[kelvin-local-profile] missing built gateway binary: ${GATEWAY_BIN}" >&2
+    echo "[kelvin-dev-stack] missing built gateway binary: ${GATEWAY_BIN}" >&2
     exit 1
   fi
 }
 
+_kelvin_plugin_install() {
+  local plugin_id="$1"
+  KELVIN_PLUGIN_HOME="${PLUGIN_HOME}" \
+  KELVIN_TRUST_POLICY_PATH="${TRUST_POLICY_PATH}" \
+    cargo run -q -p kelvin-cli -- plugin install "${plugin_id}"
+}
+
 install_required_plugins() {
   if [[ -d "${PLUGIN_HOME}/kelvin.cli/current" ]]; then
-    echo "[kelvin-local-profile] plugin already installed: kelvin.cli"
+    echo "[kelvin-dev-stack] plugin already installed: kelvin.cli"
   else
-    echo "[kelvin-local-profile] installing required plugin: kelvin.cli"
-    "${ROOT_DIR}/scripts/install-kelvin-cli-plugin.sh" \
-      --plugin-home "${PLUGIN_HOME}" \
-      --trust-policy-path "${TRUST_POLICY_PATH}"
+    echo "[kelvin-dev-stack] installing required plugin: kelvin.cli"
+    _kelvin_plugin_install kelvin.cli
   fi
 
   # Determine which model plugin to install.
@@ -186,63 +191,55 @@ install_required_plugins() {
   case "${model_plugin}" in
     kelvin.openai)
       if [[ -d "${PLUGIN_HOME}/kelvin.openai/current" ]]; then
-        echo "[kelvin-local-profile] plugin already installed: kelvin.openai"
+        echo "[kelvin-dev-stack] plugin already installed: kelvin.openai"
       else
-        echo "[kelvin-local-profile] installing model plugin: kelvin.openai"
-        "${ROOT_DIR}/scripts/install-kelvin-openai-plugin.sh" \
-          --plugin-home "${PLUGIN_HOME}" \
-          --trust-policy-path "${TRUST_POLICY_PATH}"
+        echo "[kelvin-dev-stack] installing model plugin: kelvin.openai"
+        _kelvin_plugin_install kelvin.openai
       fi
       ;;
     kelvin.anthropic)
       if [[ -d "${PLUGIN_HOME}/kelvin.anthropic/current" ]]; then
-        echo "[kelvin-local-profile] plugin already installed: kelvin.anthropic"
+        echo "[kelvin-dev-stack] plugin already installed: kelvin.anthropic"
       else
-        echo "[kelvin-local-profile] installing model plugin: kelvin.anthropic"
-        "${ROOT_DIR}/scripts/install-kelvin-anthropic-plugin.sh" \
-          --plugin-home "${PLUGIN_HOME}" \
-          --trust-policy-path "${TRUST_POLICY_PATH}"
+        echo "[kelvin-dev-stack] installing model plugin: kelvin.anthropic"
+        _kelvin_plugin_install kelvin.anthropic
       fi
       ;;
     kelvin.openrouter)
       if [[ -d "${PLUGIN_HOME}/kelvin.openrouter/current" ]]; then
-        echo "[kelvin-local-profile] plugin already installed: kelvin.openrouter"
+        echo "[kelvin-dev-stack] plugin already installed: kelvin.openrouter"
       else
-        echo "[kelvin-local-profile] installing model plugin: kelvin.openrouter"
-        "${ROOT_DIR}/scripts/install-kelvin-openrouter-plugin.sh" \
-          --plugin-home "${PLUGIN_HOME}" \
-          --trust-policy-path "${TRUST_POLICY_PATH}"
+        echo "[kelvin-dev-stack] installing model plugin: kelvin.openrouter"
+        _kelvin_plugin_install kelvin.openrouter
       fi
       ;;
     *)
-      echo "[kelvin-local-profile] no model plugin to install; gateway will use built-in echo provider"
+      echo "[kelvin-dev-stack] no model plugin to install; gateway will use built-in echo provider"
       ;;
   esac
 
   if [[ "${KELVIN_INSTALL_BROWSER_PLUGIN:-0}" == "1" ]]; then
     if [[ -d "${PLUGIN_HOME}/kelvin.browser.automation/current" ]]; then
-      echo "[kelvin-local-profile] plugin already installed: kelvin.browser.automation"
+      echo "[kelvin-dev-stack] plugin already installed: kelvin.browser.automation"
     else
-      echo "[kelvin-local-profile] installing optional plugin: kelvin.browser.automation"
-      "${ROOT_DIR}/scripts/install-kelvin-browser-plugin.sh" \
-        --plugin-home "${PLUGIN_HOME}" \
-        --trust-policy-path "${TRUST_POLICY_PATH}"
+      echo "[kelvin-dev-stack] installing optional plugin: kelvin.browser.automation"
+      _kelvin_plugin_install kelvin.browser.automation
     fi
   fi
 }
 
 start_memory_controller() {
   if is_running "${MEMORY_PID_FILE}"; then
-    echo "[kelvin-local-profile] memory controller already running (pid $(cat "${MEMORY_PID_FILE}"))"
+    echo "[kelvin-dev-stack] memory controller already running (pid $(cat "${MEMORY_PID_FILE}"))"
     return 0
   fi
 
   if [[ ! -f "${MEMORY_MODULE_MANIFEST}" ]]; then
-    echo "[kelvin-local-profile] missing memory module manifest: ${MEMORY_MODULE_MANIFEST}" >&2
+    echo "[kelvin-dev-stack] missing memory module manifest: ${MEMORY_MODULE_MANIFEST}" >&2
     exit 1
   fi
   if [[ ! -f "${MEMORY_MODULE_WAT}" ]]; then
-    echo "[kelvin-local-profile] missing memory module wat: ${MEMORY_MODULE_WAT}" >&2
+    echo "[kelvin-dev-stack] missing memory module wat: ${MEMORY_MODULE_WAT}" >&2
     exit 1
   fi
 
@@ -257,16 +254,16 @@ start_memory_controller() {
   )
   sleep 0.6
   if ! is_running "${MEMORY_PID_FILE}"; then
-    echo "[kelvin-local-profile] memory controller failed to start; see ${MEMORY_LOG_FILE}" >&2
+    echo "[kelvin-dev-stack] memory controller failed to start; see ${MEMORY_LOG_FILE}" >&2
     rm -f "${MEMORY_PID_FILE}"
     exit 1
   fi
-  echo "[kelvin-local-profile] memory controller started (pid $(cat "${MEMORY_PID_FILE}"))"
+  echo "[kelvin-dev-stack] memory controller started (pid $(cat "${MEMORY_PID_FILE}"))"
 }
 
 start_gateway() {
   if is_running "${GATEWAY_PID_FILE}"; then
-    echo "[kelvin-local-profile] gateway already running (pid $(cat "${GATEWAY_PID_FILE}"))"
+    echo "[kelvin-dev-stack] gateway already running (pid $(cat "${GATEWAY_PID_FILE}"))"
     return 0
   fi
 
@@ -305,10 +302,10 @@ start_gateway() {
     fi
   fi
   if [[ -n "${model_provider}" && "${model_provider}" != "kelvin.echo" ]]; then
-    echo "[kelvin-local-profile] using model provider: ${model_provider}" >&2
+    echo "[kelvin-dev-stack] using model provider: ${model_provider}" >&2
     gateway_args+=(--model-provider "${model_provider}")
   else
-    echo "[kelvin-local-profile] no model provider set, gateway will default to echo" >&2
+    echo "[kelvin-dev-stack] no model provider set, gateway will default to echo" >&2
   fi
 
   (
@@ -326,11 +323,11 @@ start_gateway() {
   )
   sleep 0.6
   if ! is_running "${GATEWAY_PID_FILE}"; then
-    echo "[kelvin-local-profile] gateway failed to start; see ${GATEWAY_LOG_FILE}" >&2
+    echo "[kelvin-dev-stack] gateway failed to start; see ${GATEWAY_LOG_FILE}" >&2
     rm -f "${GATEWAY_PID_FILE}"
     exit 1
   fi
-  echo "[kelvin-local-profile] gateway started (pid $(cat "${GATEWAY_PID_FILE}"))"
+  echo "[kelvin-dev-stack] gateway started (pid $(cat "${GATEWAY_PID_FILE}"))"
 }
 
 stop_process() {
@@ -338,7 +335,7 @@ stop_process() {
   local pid_file="$2"
   if ! is_running "${pid_file}"; then
     rm -f "${pid_file}"
-    echo "[kelvin-local-profile] ${name} not running"
+    echo "[kelvin-dev-stack] ${name} not running"
     return 0
   fi
   local pid
@@ -347,29 +344,22 @@ stop_process() {
   for _ in {1..40}; do
     if ! kill -0 "${pid}" >/dev/null 2>&1; then
       rm -f "${pid_file}"
-      echo "[kelvin-local-profile] ${name} stopped"
+      echo "[kelvin-dev-stack] ${name} stopped"
       return 0
     fi
     sleep 0.1
   done
   kill -9 "${pid}" >/dev/null 2>&1 || true
   rm -f "${pid_file}"
-  echo "[kelvin-local-profile] ${name} force-stopped"
+  echo "[kelvin-dev-stack] ${name} force-stopped"
 }
 
 doctor_profile() {
+  local -a doctor_args=(--doctor --endpoint "ws://${GATEWAY_BIND}")
   if [[ -n "${KELVIN_GATEWAY_TOKEN:-}" ]]; then
-    "${ROOT_DIR}/scripts/kelvin-doctor.sh" \
-      --endpoint "ws://${GATEWAY_BIND}" \
-      --plugin-home "${PLUGIN_HOME}" \
-      --trust-policy "${TRUST_POLICY_PATH}" \
-      --token "${KELVIN_GATEWAY_TOKEN}"
-    return 0
+    doctor_args+=(--token "${KELVIN_GATEWAY_TOKEN}")
   fi
-  "${ROOT_DIR}/scripts/kelvin-doctor.sh" \
-    --endpoint "ws://${GATEWAY_BIND}" \
-    --plugin-home "${PLUGIN_HOME}" \
-    --trust-policy "${TRUST_POLICY_PATH}"
+  "${GATEWAY_BIN}" "${doctor_args[@]}"
 }
 
 wait_until_ready() {
@@ -379,7 +369,7 @@ wait_until_ready() {
     fi
     sleep 0.5
   done
-  echo "[kelvin-local-profile] profile started but doctor check did not pass yet" >&2
+  echo "[kelvin-dev-stack] profile started but doctor check did not pass yet" >&2
   return 1
 }
 
@@ -391,9 +381,9 @@ start_profile() {
   start_gateway
   wait_until_ready || true
   status_profile
-  echo "[kelvin-local-profile] quick run:"
-  echo "  scripts/try-kelvin.sh \"What is KelvinClaw?\""
-  echo "[kelvin-local-profile] interactive mode:"
+  echo "[kelvin-dev-stack] quick run:"
+  echo "  KELVIN_PLUGIN_HOME=\"${PLUGIN_HOME}\" KELVIN_TRUST_POLICY_PATH=\"${TRUST_POLICY_PATH}\" cargo run -p kelvin-host -- --prompt \"What is KelvinClaw?\" --workspace \"${ROOT_DIR}\" --state-dir \"${STATE_DIR}\""
+  echo "[kelvin-dev-stack] interactive mode:"
   echo "  source scripts/lib/rust-toolchain-path.sh && ensure_rust_toolchain_path && KELVIN_PLUGIN_HOME=\"${PLUGIN_HOME}\" KELVIN_TRUST_POLICY_PATH=\"${TRUST_POLICY_PATH}\" cargo run -p kelvin-host -- --interactive --workspace \"${ROOT_DIR}\" --state-dir \"${STATE_DIR}\""
 }
 
@@ -404,19 +394,19 @@ stop_profile() {
 
 status_profile() {
   if is_running "${MEMORY_PID_FILE}"; then
-    echo "[kelvin-local-profile] memory controller: running (pid $(cat "${MEMORY_PID_FILE}")) addr=${MEMORY_ADDR}"
+    echo "[kelvin-dev-stack] memory controller: running (pid $(cat "${MEMORY_PID_FILE}")) addr=${MEMORY_ADDR}"
   else
-    echo "[kelvin-local-profile] memory controller: stopped"
+    echo "[kelvin-dev-stack] memory controller: stopped"
   fi
   if is_running "${GATEWAY_PID_FILE}"; then
-    echo "[kelvin-local-profile] gateway: running (pid $(cat "${GATEWAY_PID_FILE}")) ws=ws://${GATEWAY_BIND}"
+    echo "[kelvin-dev-stack] gateway: running (pid $(cat "${GATEWAY_PID_FILE}")) ws=ws://${GATEWAY_BIND}"
   else
-    echo "[kelvin-local-profile] gateway: stopped"
+    echo "[kelvin-dev-stack] gateway: stopped"
   fi
-  echo "[kelvin-local-profile] plugin_home=${PLUGIN_HOME}"
-  echo "[kelvin-local-profile] trust_policy=${TRUST_POLICY_PATH}"
-  echo "[kelvin-local-profile] state_dir=${STATE_DIR}"
-  echo "[kelvin-local-profile] logs: ${MEMORY_LOG_FILE} | ${GATEWAY_LOG_FILE}"
+  echo "[kelvin-dev-stack] plugin_home=${PLUGIN_HOME}"
+  echo "[kelvin-dev-stack] trust_policy=${TRUST_POLICY_PATH}"
+  echo "[kelvin-dev-stack] state_dir=${STATE_DIR}"
+  echo "[kelvin-dev-stack] logs: ${MEMORY_LOG_FILE} | ${GATEWAY_LOG_FILE}"
 }
 
 main() {
@@ -446,7 +436,9 @@ main() {
       doctor_profile
       ;;
     medkit)
-      "${ROOT_DIR}/scripts/kelvin-medkit.sh" "$@"
+      KELVIN_PLUGIN_HOME="${PLUGIN_HOME}" \
+      KELVIN_TRUST_POLICY_PATH="${TRUST_POLICY_PATH}" \
+        cargo run -q -p kelvin-cli -- medkit "$@"
       ;;
     *)
       usage

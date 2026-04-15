@@ -16,14 +16,14 @@ Kelvin plugin manifests may declare `quality_tier`:
 
 ## Verification
 
-`scripts/kelvin-plugin.sh verify` enforces tier-specific checks.
+`scripts/kelvin-plugin-dev.sh verify` enforces tier-specific checks.
 `scripts/plugin-install.sh` prints an install-time warning for `unsigned_local`
 and `signed_community`, but does not block local installation.
 
 For trusted tier:
 
 ```bash
-scripts/kelvin-plugin.sh verify \
+scripts/kelvin-plugin-dev.sh verify \
   --package ./dist/acme.echo-1.0.0.tar.gz \
   --trust-policy ./trusted_publishers.json
 ```

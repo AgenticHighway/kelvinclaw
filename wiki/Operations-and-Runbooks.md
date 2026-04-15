@@ -7,21 +7,21 @@ This page groups the operator-facing scripts, background-service helpers, and ru
 Start the local profile:
 
 ```bash
-scripts/kelvin-local-profile.sh start
+scripts/kelvin-dev-stack.sh start
 ```
 
 Inspect and validate:
 
 ```bash
-scripts/kelvin-local-profile.sh status
-scripts/kelvin-local-profile.sh doctor
+scripts/kelvin-dev-stack.sh status
+scripts/kelvin-dev-stack.sh doctor
 scripts/kelvin-doctor.sh
 ```
 
 Stop:
 
 ```bash
-scripts/kelvin-local-profile.sh stop
+scripts/kelvin-dev-stack.sh stop
 ```
 
 ## Gateway Service Management

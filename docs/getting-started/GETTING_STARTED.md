@@ -87,17 +87,17 @@ scripts/quickstart.sh --mode docker
 Local profile lifecycle:
 
 ```bash
-scripts/kelvin-local-profile.sh start
-scripts/kelvin-local-profile.sh status
-scripts/kelvin-local-profile.sh doctor
-scripts/kelvin-local-profile.sh stop
+scripts/kelvin-dev-stack.sh start
+scripts/kelvin-dev-stack.sh status
+scripts/kelvin-dev-stack.sh doctor
+scripts/kelvin-dev-stack.sh stop
 ```
 
 Run modes:
 
 - single prompt: `kelvin-host --prompt "hello"`
 - interactive chat: `kelvin-host --interactive`
-- daemon mode: `scripts/kelvin-local-profile.sh start` (gateway + memory controller background services)
+- daemon mode: `scripts/kelvin-dev-stack.sh start` (gateway + memory controller background services)
 
 ## Terminal UI (`kelvin-tui`)
 
@@ -108,14 +108,14 @@ with KelvinClaw when the local profile is running.
 Start the local profile, then launch the TUI:
 
 ```bash
-scripts/kelvin-local-profile.sh start
+scripts/kelvin-dev-stack.sh start
 cargo run -p kelvin-tui
 ```
 
 Or with a release binary:
 
 ```bash
-scripts/kelvin-local-profile.sh start
+scripts/kelvin-dev-stack.sh start
 ./kelvin-tui
 ```
 

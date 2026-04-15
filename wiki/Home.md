@@ -33,10 +33,10 @@ scripts/quickstart.sh --mode docker
 Local profile lifecycle:
 
 ```bash
-scripts/kelvin-local-profile.sh start
-scripts/kelvin-local-profile.sh status
-scripts/kelvin-local-profile.sh doctor
-scripts/kelvin-local-profile.sh stop
+scripts/kelvin-dev-stack.sh start
+scripts/kelvin-dev-stack.sh status
+scripts/kelvin-dev-stack.sh doctor
+scripts/kelvin-dev-stack.sh stop
 ```
 
 Gateway:

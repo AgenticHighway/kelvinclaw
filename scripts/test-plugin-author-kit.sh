@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PLUGIN_CLI="${ROOT_DIR}/scripts/kelvin-plugin.sh"
+PLUGIN_CLI="${ROOT_DIR}/scripts/kelvin-plugin-dev.sh"
 
 require_cmd() {
   local name="$1"

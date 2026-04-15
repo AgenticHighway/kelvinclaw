@@ -207,10 +207,10 @@ scripts/test-plugin-install.sh
 Authoring/packaging flow:
 
 ```bash
-scripts/kelvin-plugin.sh new --id acme.echo --name "Acme Echo" --runtime wasm_tool_v1
-scripts/kelvin-plugin.sh test --manifest ./plugin-acme.echo/plugin.json
-scripts/kelvin-plugin.sh pack --manifest ./plugin-acme.echo/plugin.json
-scripts/kelvin-plugin.sh verify --package ./plugin-acme.echo/dist/acme.echo-0.1.0.tar.gz
+scripts/kelvin-plugin-dev.sh new --id acme.echo --name "Acme Echo" --runtime wasm_tool_v1
+scripts/kelvin-plugin-dev.sh test --manifest ./plugin-acme.echo/plugin.json
+scripts/kelvin-plugin-dev.sh pack --manifest ./plugin-acme.echo/plugin.json
+scripts/kelvin-plugin-dev.sh verify --package ./plugin-acme.echo/dist/acme.echo-0.1.0.tar.gz
 ```
 
 Trust policy operations:

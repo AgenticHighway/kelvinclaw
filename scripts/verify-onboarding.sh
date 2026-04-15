@@ -164,14 +164,14 @@ run_daily() {
   max_ttfs="${KELVIN_DAILY_MAX_TTFS_SECS:-900}"
 
   cleanup_daily() {
-    (cd "${ROOT_DIR}" && scripts/kelvin-local-profile.sh stop >/dev/null 2>&1) || true
+    (cd "${ROOT_DIR}" && scripts/kelvin-dev-stack.sh stop >/dev/null 2>&1) || true
   }
   trap cleanup_daily RETURN
 
   (
     cd "${ROOT_DIR}"
-    scripts/kelvin-local-profile.sh start
-    scripts/kelvin-local-profile.sh doctor
+    scripts/kelvin-dev-stack.sh start
+    scripts/kelvin-dev-stack.sh doctor
   )
 
   local log_path

@@ -100,7 +100,7 @@ Needed:
 
 Now implemented:
 
-- `scripts/kelvin-local-profile.sh` for local background memory+gateway lifecycle
+- `scripts/kelvin-dev-stack.sh` for local background memory+gateway lifecycle
 - actionable machine-readable doctor checks with remediation hints
 - canonical quickstart flow (`scripts/quickstart.sh`)
 
