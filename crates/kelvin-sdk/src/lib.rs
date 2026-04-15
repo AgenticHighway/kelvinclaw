@@ -1526,31 +1526,47 @@ impl KelvinSdkRuntime {
 
         #[cfg(feature = "memory_rpc")]
         let memory: Arc<dyn MemorySearchManager> = {
-            let mut rpc_cfg = MemoryClientConfig::from_env();
-            rpc_cfg.workspace_id = config.workspace_dir.to_string_lossy().to_string();
-            rpc_cfg.session_id = config.default_session_id.clone();
-            match RpcMemoryManager::connect(rpc_cfg).await {
-                Ok(manager) => {
-                    println!("using rpc memory manager");
-                    Arc::new(manager)
+            if MemoryClientConfig::rpc_requested_from_env() {
+                let mut rpc_cfg = MemoryClientConfig::from_env();
+                rpc_cfg.workspace_id = config.workspace_dir.to_string_lossy().to_string();
+                rpc_cfg.session_id = config.default_session_id.clone();
+                match RpcMemoryManager::connect(rpc_cfg).await {
+                    Ok(manager) => {
+                        println!("using rpc memory manager");
+                        Arc::new(manager)
+                    }
+                    Err(err) => {
+                        #[cfg(feature = "memory_legacy_fallback")]
+                        {
+                            eprintln!(
+                                "warning: rpc memory unavailable, falling back to legacy in-proc memory: {err}"
+                            );
+                            MemoryFactory::build(
+                                &config.workspace_dir,
+                                config.memory_mode.as_backend_kind(),
+                            )
+                        }
+                        #[cfg(not(feature = "memory_legacy_fallback"))]
+                        {
+                            return Err(KelvinError::Backend(format!(
+                                "memory controller unavailable and legacy fallback disabled: {err}"
+                            )));
+                        }
+                    }
                 }
-                Err(err) => {
-                    #[cfg(feature = "memory_legacy_fallback")]
-                    {
-                        eprintln!(
-                            "warning: rpc memory unavailable, falling back to legacy in-proc memory: {err}"
-                        );
-                        MemoryFactory::build(
-                            &config.workspace_dir,
-                            config.memory_mode.as_backend_kind(),
-                        )
-                    }
-                    #[cfg(not(feature = "memory_legacy_fallback"))]
-                    {
-                        return Err(KelvinError::Backend(format!(
-                            "memory controller unavailable and legacy fallback disabled: {err}"
-                        )));
-                    }
+            } else {
+                #[cfg(feature = "memory_legacy_fallback")]
+                {
+                    MemoryFactory::build(
+                        &config.workspace_dir,
+                        config.memory_mode.as_backend_kind(),
+                    )
+                }
+                #[cfg(not(feature = "memory_legacy_fallback"))]
+                {
+                    return Err(KelvinError::Backend(
+                        "memory controller not configured and legacy fallback disabled".to_string(),
+                    ));
                 }
             }
         };

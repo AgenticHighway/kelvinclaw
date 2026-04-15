@@ -4,6 +4,10 @@ use crate::cli::StartArgs;
 use crate::paths;
 use crate::proc;
 
+const DEFAULT_PLUGIN_INDEX_URL: &str =
+    "https://raw.githubusercontent.com/AgenticHighway/kelvinclaw-plugins/main/index.json";
+const KELVIN_CLI_PLUGIN_ID: &str = "kelvin.cli";
+
 pub fn run(args: StartArgs) -> Result<()> {
     ensure_config()?;
     ensure_trust_policy()?;
@@ -55,32 +59,39 @@ pub fn ensure_trust_policy() -> Result<()> {
 pub fn ensure_plugin() -> Result<()> {
     let provider =
         std::env::var("KELVIN_MODEL_PROVIDER").unwrap_or_else(|_| "kelvin.echo".to_string());
-    // Echo doesn't need a plugin.
-    if provider == "kelvin.echo" {
+    ensure_plugin_installed(&provider)
+}
+
+pub fn ensure_cli_plugin() -> Result<()> {
+    ensure_plugin_installed(KELVIN_CLI_PLUGIN_ID)
+}
+
+fn ensure_plugin_installed(plugin_id: &str) -> Result<()> {
+    if plugin_id == "kelvin.echo" {
         return Ok(());
     }
 
     let plugin_home = paths::plugin_home();
-    let current = plugin_home.join(&provider).join("current");
+    let current = plugin_home.join(plugin_id).join("current");
     if current.exists() {
         return Ok(());
     }
 
-    // Attempt to install it.
-    let index_url = std::env::var("KELVIN_PLUGIN_INDEX_URL").unwrap_or_else(|_| {
-        "https://raw.githubusercontent.com/AgenticHighway/kelvinclaw-plugins/main/index.json"
-            .to_string()
-    });
+    let index_url = std::env::var("KELVIN_PLUGIN_INDEX_URL")
+        .unwrap_or_else(|_| DEFAULT_PLUGIN_INDEX_URL.to_string());
 
-    println!("[kelvin] installing model provider: {}", provider);
+    println!("[kelvin] installing plugin: {}", plugin_id);
     std::fs::create_dir_all(&plugin_home)?;
-    super::plugin_ops::install_from_index(&provider, None, &plugin_home, &index_url, false)
-        .with_context(|| {
-            format!(
+    super::plugin_ops::install_from_index(plugin_id, None, &plugin_home, &index_url, false)
+        .with_context(|| match plugin_id {
+            KELVIN_CLI_PLUGIN_ID => "failed to install required CLI plugin 'kelvin.cli'. \
+                Set KELVIN_PLUGIN_INDEX_URL or install the plugin manually."
+                .to_string(),
+            other => format!(
                 "failed to install model provider plugin '{}'. \
                 Set KELVIN_PLUGIN_INDEX_URL or choose a different KELVIN_MODEL_PROVIDER.",
-                provider
-            )
+                other
+            ),
         })
 }
 

@@ -28,6 +28,7 @@ pub const ARG_MAX_SESSION_HISTORY: &str = "--max-session-history";
 pub const ARG_COMPACT_TO: &str = "--compact-to";
 
 // --- Interactive Mode ---
+pub const HELP_COMMAND: &str = "/help";
 pub const EXIT_COMMAND_LOWERCASE: &str = "/exit";
 pub const EXIT_COMMAND_QUIT: &str = "/quit";
 pub const INTERACTIVE_PROMPT: &str = "kelvin> ";

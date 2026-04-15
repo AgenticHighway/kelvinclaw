@@ -88,6 +88,10 @@ impl Default for MemoryClientConfig {
 }
 
 impl MemoryClientConfig {
+    pub fn rpc_requested_from_env() -> bool {
+        memory_rpc_requested_with(|name| std::env::var(name).ok())
+    }
+
     pub fn from_env() -> Self {
         let mut cfg = Self::default();
         if let Ok(value) = std::env::var(consts::ENV_MEMORY_RPC_ENDPOINT) {
@@ -257,6 +261,17 @@ impl MemoryClientConfig {
         }
         Ok(())
     }
+}
+
+fn memory_rpc_requested_with<F>(mut lookup: F) -> bool
+where
+    F: FnMut(&str) -> Option<String>,
+{
+    consts::RPC_OPT_IN_ENV_VARS.iter().any(|name| {
+        lookup(name)
+            .map(|value| !value.trim().is_empty())
+            .unwrap_or(false)
+    })
 }
 
 pub struct RpcMemoryManager {
@@ -766,6 +781,7 @@ fn now_secs() -> usize {
 #[cfg(test)]
 mod tests {
     use super::MemoryClientConfig;
+    use std::collections::HashMap;
 
     #[test]
     fn config_validate_rejects_http_non_loopback_by_default() {
@@ -813,5 +829,21 @@ mod tests {
             .validate()
             .expect_err("mixed signing inputs should fail");
         assert!(err.to_string().contains("cannot set both"));
+    }
+
+    #[test]
+    fn rpc_requested_with_returns_false_when_no_opt_in_env_is_set() {
+        let env: HashMap<&str, &str> = HashMap::new();
+        assert!(!super::memory_rpc_requested_with(|name| {
+            env.get(name).map(|value| value.to_string())
+        }));
+    }
+
+    #[test]
+    fn rpc_requested_with_returns_true_when_signing_env_is_set() {
+        let env = HashMap::from([("KELVIN_MEMORY_SIGNING_KEY_PATH", "/tmp/memory-key.pem")]);
+        assert!(super::memory_rpc_requested_with(|name| {
+            env.get(name).map(|value| value.to_string())
+        }));
     }
 }
