@@ -71,21 +71,15 @@ TRUST_POLICY_PATH="${WORK_DIR}/trusted_publishers.json"
 WORKSPACE="${WORK_DIR}/workspace"
 mkdir -p "${PLUGIN_HOME}" "${WORKSPACE}"
 
-install_args=(
-  --plugin "${PLUGIN_ID}"
-  --plugin-home "${PLUGIN_HOME}"
-  --trust-policy-path "${TRUST_POLICY_PATH}"
-)
-if [[ -n "${REGISTRY_URL}" ]]; then
-  install_args+=(--registry-url "${REGISTRY_URL}")
-else
-  install_args+=(--index-url "${INDEX_URL}")
-fi
+# Install via `kelvin plugin install`. Home/trust-policy/index-url are env vars.
+# --registry-url has no equivalent in the kelvin CLI and is not used.
+(cd "${ROOT_DIR}" && \
+  KELVIN_PLUGIN_HOME="${PLUGIN_HOME}" \
+  KELVIN_TRUST_POLICY_PATH="${TRUST_POLICY_PATH}" \
+  KELVIN_PLUGIN_INDEX_URL="${INDEX_URL}" \
+  cargo run -q -p kelvin-cli -- plugin install "${PLUGIN_ID}")
 
-"${ROOT_DIR}/scripts/plugin-index-install.sh" "${install_args[@]}"
-
-installed_json="$("${ROOT_DIR}/scripts/plugin-list.sh" --plugin-home "${PLUGIN_HOME}" --json)"
-if ! jq -e --arg id "${PLUGIN_ID}" 'map(select(.id == $id)) | length > 0' <<< "${installed_json}" >/dev/null; then
+if [[ ! -d "${PLUGIN_HOME}/${PLUGIN_ID}/current" ]]; then
   echo "Installed plugin '${PLUGIN_ID}' was not found in plugin home." >&2
   exit 1
 fi

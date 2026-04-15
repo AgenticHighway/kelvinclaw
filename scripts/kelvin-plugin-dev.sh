@@ -1149,12 +1149,12 @@ cmd_list() {
       *) extra+=("$1"); shift ;;
     esac
   done
-  KELVIN_PLUGIN_HOME="${plugin_home:-${KELVIN_PLUGIN_HOME:-}}" \
-    exec cargo run -q -p kelvin-cli -- plugin list "${extra[@]+"${extra[@]}"}"
+  local effective_home="${plugin_home:-${KELVIN_PLUGIN_HOME:-}}"
+  (cd "${ROOT_DIR}" && KELVIN_PLUGIN_HOME="${effective_home}" cargo run -q -p kelvin-cli -- plugin list "${extra[@]+"${extra[@]}"}")
 }
 
 cmd_search() {
-  exec cargo run -q -p kelvin-cli -- plugin search "$@"
+  (cd "${ROOT_DIR}" && cargo run -q -p kelvin-cli -- plugin search "$@")
 }
 
 new_usage() {
@@ -1839,6 +1839,10 @@ cmd_verify() {
       echo "Package not found: ${package}" >&2
       exit 1
     }
+    # Resolve to absolute path before any cd.
+    if [[ "${package}" != /* ]]; then
+      package="$(cd "$(dirname "${package}")" && pwd)/$(basename "${package}")"
+    fi
     tar -xzf "${package}" -C "${work_dir}"
     manifest="${work_dir}/plugin.json"
   fi
@@ -1894,7 +1898,7 @@ cmd_verify() {
 
   if [[ -n "${package}" ]]; then
     local dry_home="${work_dir}/dry-home"
-    KELVIN_PLUGIN_HOME="${dry_home}" cargo run -q -p kelvin-cli -- plugin install --package "${package}" >/dev/null
+    (cd "${ROOT_DIR}" && KELVIN_PLUGIN_HOME="${dry_home}" cargo run -q -p kelvin-cli -- plugin install --package "${package}") >/dev/null
   fi
 
   if [[ "${json_output}" == "1" ]]; then
@@ -1932,17 +1936,26 @@ cmd_install() {
     esac
   done
   # Translate --plugin-home to env var; remaining args (--package, --force) pass through.
+  # Resolve --package values to absolute paths before cd-ing to ROOT_DIR.
   local plugin_home="" filtered_args=()
   for ((i=0; i<${#args[@]}; i++)); do
     if [[ "${args[$i]}" == "--plugin-home" ]]; then
       plugin_home="${args[$((i+1))]}"
       ((i++))
+    elif [[ "${args[$i]}" == "--package" ]]; then
+      local pkg_path="${args[$((i+1))]}"
+      # Resolve to absolute path relative to the caller's CWD (before any cd).
+      if [[ "${pkg_path}" != /* ]]; then
+        pkg_path="$(cd "$(dirname "${pkg_path}")" && pwd)/$(basename "${pkg_path}")"
+      fi
+      filtered_args+=("--package" "${pkg_path}")
+      ((i++))
     else
       filtered_args+=("${args[$i]}")
     fi
   done
-  KELVIN_PLUGIN_HOME="${plugin_home:-${KELVIN_PLUGIN_HOME:-}}" \
-    exec cargo run -q -p kelvin-cli -- plugin install "${filtered_args[@]+"${filtered_args[@]}"}"
+  local effective_home="${plugin_home:-${KELVIN_PLUGIN_HOME:-}}"
+  (cd "${ROOT_DIR}" && KELVIN_PLUGIN_HOME="${effective_home}" cargo run -q -p kelvin-cli -- plugin install "${filtered_args[@]+"${filtered_args[@]}"}")
 }
 
 cmd_index_install() {
@@ -1988,10 +2001,12 @@ cmd_index_install() {
     esac
   done
   [[ -n "${plugin_id}" ]] || { echo "missing --plugin <id>" >&2; index_install_usage; exit 1; }
-  KELVIN_PLUGIN_HOME="${plugin_home:-${KELVIN_PLUGIN_HOME:-}}" \
-  KELVIN_TRUST_POLICY_PATH="${trust_policy:-${KELVIN_TRUST_POLICY_PATH:-}}" \
-  KELVIN_PLUGIN_INDEX_URL="${index_url:-${KELVIN_PLUGIN_INDEX_URL:-}}" \
-    exec cargo run -q -p kelvin-cli -- plugin install "${plugin_id}" "${install_args[@]+"${install_args[@]}"}"
+  local eff_home="${plugin_home:-${KELVIN_PLUGIN_HOME:-}}"
+  local eff_trust="${trust_policy:-${KELVIN_TRUST_POLICY_PATH:-}}"
+  local eff_index="${index_url:-${KELVIN_PLUGIN_INDEX_URL:-}}"
+  (cd "${ROOT_DIR}" && KELVIN_PLUGIN_HOME="${eff_home}" KELVIN_TRUST_POLICY_PATH="${eff_trust}" \
+    KELVIN_PLUGIN_INDEX_URL="${eff_index}" \
+    cargo run -q -p kelvin-cli -- plugin install "${plugin_id}" "${install_args[@]+"${install_args[@]}"}")
 }
 
 cmd_smoke() {
@@ -2069,13 +2084,13 @@ cmd_smoke() {
   fi
 
   cmd_pack --manifest "${manifest}" --output "${package_path}" --core-versions "${core_versions}" >/dev/null
-  KELVIN_PLUGIN_HOME="${plugin_home}" \
-    cargo run -q -p kelvin-cli -- plugin install --package "${package_path}" --force >/dev/null
+  (cd "${ROOT_DIR}" && KELVIN_PLUGIN_HOME="${plugin_home}" \
+    cargo run -q -p kelvin-cli -- plugin install --package "${package_path}" --force) >/dev/null
 
   if [[ "${skip_cli_install}" != "1" && ! -d "${plugin_home}/kelvin.cli/current" ]]; then
-    KELVIN_PLUGIN_HOME="${plugin_home}" \
+    (cd "${ROOT_DIR}" && KELVIN_PLUGIN_HOME="${plugin_home}" \
     KELVIN_TRUST_POLICY_PATH="${trust_policy}" \
-      cargo run -q -p kelvin-cli -- plugin install kelvin.cli --force >/dev/null
+      cargo run -q -p kelvin-cli -- plugin install kelvin.cli --force) >/dev/null
   fi
 
   set +e

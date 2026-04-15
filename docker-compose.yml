@@ -1,5 +1,5 @@
 services:
-    # Interactive runtime container — use with: docker compose run kelvin-host kelvin-host --prompt "..."
+    # Interactive runtime container — use with: docker compose run kelvin-host --prompt "..."
     kelvin-host:
         build:
             context: .
@@ -41,7 +41,11 @@ services:
             OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-}
             BRAVE_API_KEY: ${BRAVE_API_KEY:-}
             RUST_LOG: ${RUST_LOG:-info}
-        entrypoint: ["/opt/kelvin/scripts/gateway-plugin-init.sh"]
+        entrypoint: ["/bin/sh", "-c"]
+        command:
+            - >-
+              /usr/local/bin/kelvin plugin install "${KELVIN_MODEL_PROVIDER:-kelvin.echo}" &&
+              /usr/local/bin/kelvin plugin install kelvin.cli
         volumes:
             - kelvin-home:/kelvin
         networks:

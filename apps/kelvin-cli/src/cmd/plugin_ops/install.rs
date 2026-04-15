@@ -115,10 +115,11 @@ pub fn install_package(tarball: &Path, plugin_home: &Path, force: bool) -> Resul
     let current_link = plugin_home.join(plugin_id).join("current");
 
     if install_dir.exists() && !force {
-        bail!(
-            "plugin already installed at {}. Use --force to overwrite.",
-            install_dir.display()
+        eprintln!(
+            "[kelvin] plugin {}@{} already installed, skipping (use --force to reinstall)",
+            plugin_id, plugin_version
         );
+        return Ok(());
     }
 
     std::fs::create_dir_all(plugin_home.join(plugin_id))?;
@@ -178,6 +179,15 @@ pub fn install_from_index(
         .get("version")
         .and_then(|v| v.as_str())
         .ok_or_else(|| anyhow::anyhow!("index entry missing 'version'"))?;
+
+    let install_dir = plugin_home.join(plugin_id).join(selected_version);
+    if install_dir.exists() && !force {
+        eprintln!(
+            "[kelvin] plugin {}@{} already installed, skipping (use --force to reinstall)",
+            plugin_id, selected_version
+        );
+        return Ok(());
+    }
 
     eprintln!(
         "[kelvin] installing plugin id={} version={}",
