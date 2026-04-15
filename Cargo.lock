@@ -2333,7 +2333,7 @@ dependencies = [
 
 [[package]]
 name = "kelvin-brain"
-version = "0.2.6"
+version = "0.2.7"
 dependencies = [
  "async-trait",
  "base64",
@@ -2353,7 +2353,7 @@ dependencies = [
 
 [[package]]
 name = "kelvin-cli"
-version = "0.2.6"
+version = "0.2.7"
 dependencies = [
  "anyhow",
  "base64",
@@ -2387,7 +2387,7 @@ dependencies = [
 
 [[package]]
 name = "kelvin-core"
-version = "0.2.6"
+version = "0.2.7"
 dependencies = [
  "async-trait",
  "semver",
@@ -2399,7 +2399,7 @@ dependencies = [
 
 [[package]]
 name = "kelvin-gateway"
-version = "0.2.6"
+version = "0.2.7"
 dependencies = [
  "axum",
  "ed25519-dalek",
@@ -2422,7 +2422,7 @@ dependencies = [
 
 [[package]]
 name = "kelvin-host"
-version = "0.2.6"
+version = "0.2.7"
 dependencies = [
  "kelvin-core",
  "kelvin-sdk",
@@ -2431,7 +2431,7 @@ dependencies = [
 
 [[package]]
 name = "kelvin-memory"
-version = "0.2.6"
+version = "0.2.7"
 dependencies = [
  "async-trait",
  "kelvin-core",
@@ -2442,7 +2442,7 @@ dependencies = [
 
 [[package]]
 name = "kelvin-memory-api"
-version = "0.2.6"
+version = "0.2.7"
 dependencies = [
  "base64",
  "jsonwebtoken",
@@ -2460,7 +2460,7 @@ dependencies = [
 
 [[package]]
 name = "kelvin-memory-client"
-version = "0.2.6"
+version = "0.2.7"
 dependencies = [
  "async-trait",
  "aws-config",
@@ -2483,7 +2483,7 @@ dependencies = [
 
 [[package]]
 name = "kelvin-memory-controller"
-version = "0.2.6"
+version = "0.2.7"
 dependencies = [
  "async-trait",
  "jsonwebtoken",
@@ -2503,14 +2503,14 @@ dependencies = [
 
 [[package]]
 name = "kelvin-memory-module-sdk"
-version = "0.2.6"
+version = "0.2.7"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "kelvin-registry"
-version = "0.2.6"
+version = "0.2.7"
 dependencies = [
  "axum",
  "kelvin-core",
@@ -2523,7 +2523,7 @@ dependencies = [
 
 [[package]]
 name = "kelvin-sdk"
-version = "0.2.6"
+version = "0.2.7"
 dependencies = [
  "async-trait",
  "base64",
@@ -2547,7 +2547,7 @@ dependencies = [
 
 [[package]]
 name = "kelvin-tui"
-version = "0.2.6"
+version = "0.2.7"
 dependencies = [
  "crossterm 0.28.1",
  "futures-util",
@@ -2562,7 +2562,7 @@ dependencies = [
 
 [[package]]
 name = "kelvin-wasm"
-version = "0.2.6"
+version = "0.2.7"
 dependencies = [
  "kelvin-core",
  "reqwest",
