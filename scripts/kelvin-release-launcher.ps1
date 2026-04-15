@@ -227,6 +227,16 @@ function Prompt-ForOpenAIKey([string[]]$CliArgs) {
     }
 }
 
+function Resolve-LaunchModelProvider {
+    if ($env:KELVIN_MODEL_PROVIDER) {
+        return $env:KELVIN_MODEL_PROVIDER
+    }
+    if ($env:OPENAI_API_KEY) {
+        return "kelvin.openai"
+    }
+    return ""
+}
+
 function Plugin-CurrentVersion([string]$PluginId) {
     $CurrentDir = Join-Path (Join-Path $PluginHome $PluginId) "current"
     $ManifestPath = Join-Path $CurrentDir "plugin.json"
@@ -243,8 +253,13 @@ function Ensure-TrustPolicy([string]$TrustPolicyUrl) {
         return
     }
     New-Item -ItemType Directory -Force -Path (Split-Path -Parent $TrustPolicyPath) | Out-Null
-    Write-Host "[kelvin] fetching official trust policy"
-    Invoke-WebRequest -Uri $TrustPolicyUrl -OutFile $TrustPolicyPath
+    if ($TrustPolicyUrl) {
+        Write-Host "[kelvin] fetching official trust policy"
+        Invoke-WebRequest -Uri $TrustPolicyUrl -OutFile $TrustPolicyPath
+        return
+    }
+    '{"require_signature":false,"publishers":[]}' | Set-Content -NoNewline $TrustPolicyPath
+    Write-Host "[kelvin] wrote permissive trust policy: $TrustPolicyPath"
 }
 
 function Extract-PackageCleanly([string]$TarballPath, [string]$ExtractDir) {
@@ -311,18 +326,38 @@ function Load-PluginManifest {
     return $Values
 }
 
+function Resolve-PluginIndexEntry([string]$PluginId, [string]$IndexUrl) {
+    if (-not $IndexUrl) {
+        throw "KELVIN_PLUGIN_INDEX_URL must be set to install '$PluginId'"
+    }
+
+    Write-Host "[kelvin] fetching plugin index"
+    $IndexJson = Invoke-RestMethod -Uri $IndexUrl -TimeoutSec 15
+    $Entries = @($IndexJson.plugins | Where-Object { $_.id -eq $PluginId })
+    if ($Entries.Count -eq 0) {
+        throw "Plugin not found in index: $PluginId"
+    }
+
+    return $Entries | Sort-Object {
+        $v = $_.version -replace '[+\-].*$', ''
+        try { [System.Version]$v } catch { [System.Version]"0.0.0" }
+    } | Select-Object -Last 1
+}
+
 function Bootstrap-OfficialPlugins {
     Require-Command "tar"
     $Manifest = Load-PluginManifest
 
-    Install-OfficialPlugin `
-        -PluginId "kelvin.cli" `
-        -Version $Manifest["KELVIN_CLI_VERSION"] `
-        -PackageUrl $Manifest["KELVIN_CLI_PACKAGE_URL"] `
-        -ExpectedSha $Manifest["KELVIN_CLI_SHA256"] `
-        -TrustPolicyUrl $Manifest["OFFICIAL_TRUST_POLICY_URL"]
+    if (-not [string]::IsNullOrWhiteSpace($Manifest["KELVIN_CLI_VERSION"])) {
+        Install-OfficialPlugin `
+            -PluginId "kelvin.cli" `
+            -Version $Manifest["KELVIN_CLI_VERSION"] `
+            -PackageUrl $Manifest["KELVIN_CLI_PACKAGE_URL"] `
+            -ExpectedSha $Manifest["KELVIN_CLI_SHA256"] `
+            -TrustPolicyUrl $Manifest["OFFICIAL_TRUST_POLICY_URL"]
+    }
 
-    if ($env:OPENAI_API_KEY) {
+    if ($env:OPENAI_API_KEY -and -not [string]::IsNullOrWhiteSpace($Manifest["KELVIN_OPENAI_VERSION"])) {
         Install-OfficialPlugin `
             -PluginId "kelvin.openai" `
             -Version $Manifest["KELVIN_OPENAI_VERSION"] `
@@ -330,6 +365,36 @@ function Bootstrap-OfficialPlugins {
             -ExpectedSha $Manifest["KELVIN_OPENAI_SHA256"] `
             -TrustPolicyUrl $Manifest["OFFICIAL_TRUST_POLICY_URL"]
     }
+}
+
+function Ensure-PluginInstalled([string]$PluginId) {
+    $CurrentVersion = Plugin-CurrentVersion $PluginId
+    if ($CurrentVersion) {
+        Ensure-TrustPolicy $null
+        return
+    }
+
+    Require-Command "tar"
+    $IndexUrl = if ($env:KELVIN_PLUGIN_INDEX_URL) { $env:KELVIN_PLUGIN_INDEX_URL } else { $DefaultPluginIndexUrl }
+    $Entry = Resolve-PluginIndexEntry -PluginId $PluginId -IndexUrl $IndexUrl
+    Write-Host "[kelvin] bootstrapping plugin: $PluginId"
+    Install-OfficialPlugin `
+        -PluginId $PluginId `
+        -Version $Entry.version `
+        -PackageUrl $Entry.package_url `
+        -ExpectedSha $Entry.sha256 `
+        -TrustPolicyUrl $Entry.trust_policy_url
+}
+
+function Ensure-RequiredPlugins([string]$PluginId) {
+    Ensure-PluginInstalled "kelvin.cli"
+
+    if ([string]::IsNullOrWhiteSpace($PluginId) -or $PluginId -eq "kelvin.echo") {
+        Ensure-TrustPolicy $null
+        return
+    }
+
+    Ensure-PluginInstalled $PluginId
 }
 
 function Invoke-KelvinInit([string[]]$InitArgs) {
@@ -450,15 +515,17 @@ foreach ($KV in $_LaunchDotenv.GetEnumerator()) {
 }
 
 Prompt-ForOpenAIKey $CliArgs
+$LaunchModelProvider = Resolve-LaunchModelProvider
 Bootstrap-OfficialPlugins
+Ensure-RequiredPlugins $LaunchModelProvider
 
 New-Item -ItemType Directory -Force -Path $StateDir | Out-Null
 $env:KELVIN_PLUGIN_HOME = $PluginHome
 $env:KELVIN_TRUST_POLICY_PATH = $TrustPolicyPath
 
 $DefaultHostArgs = @()
-if ($env:OPENAI_API_KEY) {
-    $DefaultHostArgs += @("--model-provider", "kelvin.openai")
+if ($LaunchModelProvider) {
+    $DefaultHostArgs += @("--model-provider", $LaunchModelProvider)
 }
 
 $HostBinary = Join-Path $RootDir "bin\\kelvin-host.exe"

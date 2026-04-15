@@ -406,6 +406,18 @@ prompt_for_openai_api_key() {
   fi
 }
 
+resolve_launch_model_provider() {
+  if [[ -n "${KELVIN_MODEL_PROVIDER:-}" ]]; then
+    printf '%s\n' "${KELVIN_MODEL_PROVIDER}"
+    return 0
+  fi
+  if [[ -n "${OPENAI_API_KEY:-}" ]]; then
+    printf '%s\n' 'kelvin.openai'
+    return 0
+  fi
+  printf '%s\n' ''
+}
+
 plugin_current_version() {
   local plugin_id="$1"
   local current_link="${PLUGIN_HOME}/${plugin_id}/current"
@@ -426,8 +438,13 @@ ensure_trust_policy() {
     return 0
   fi
   mkdir -p "$(dirname "${TRUST_POLICY_PATH}")"
-  echo "[kelvin] fetching official trust policy"
-  curl -fsSL "${OFFICIAL_TRUST_POLICY_URL}" -o "${TRUST_POLICY_PATH}"
+  if [[ -n "${OFFICIAL_TRUST_POLICY_URL:-}" ]]; then
+    echo "[kelvin] fetching official trust policy"
+    curl -fsSL "${OFFICIAL_TRUST_POLICY_URL}" -o "${TRUST_POLICY_PATH}"
+    return 0
+  fi
+  printf '%s' '{"require_signature":false,"publishers":[]}' > "${TRUST_POLICY_PATH}"
+  echo "[kelvin] wrote permissive trust policy: ${TRUST_POLICY_PATH}"
 }
 
 extract_package_cleanly() {
@@ -493,6 +510,41 @@ install_official_plugin() {
   rm -rf "${work_dir}"
 }
 
+install_plugin_from_index() {
+  local plugin_id="$1"
+  local index_url="${KELVIN_PLUGIN_INDEX_URL:-${DEFAULT_PLUGIN_INDEX_URL}}"
+
+  echo "[kelvin] bootstrapping plugin: ${plugin_id}"
+  "${ROOT_DIR}/share/scripts/plugin-index-install.sh" \
+    --plugin "${plugin_id}" \
+    --index-url "${index_url}" \
+    --plugin-home "${PLUGIN_HOME}" \
+    --trust-policy-path "${TRUST_POLICY_PATH}"
+}
+
+ensure_plugin_installed() {
+  local plugin_id="$1"
+  if plugin_current_version "${plugin_id}" >/dev/null 2>&1; then
+    ensure_trust_policy
+    return 0
+  fi
+
+  install_plugin_from_index "${plugin_id}"
+}
+
+ensure_required_plugins() {
+  local plugin_id="$1"
+
+  ensure_plugin_installed "kelvin.cli"
+
+  if [[ -z "${plugin_id}" || "${plugin_id}" == "kelvin.echo" ]]; then
+    ensure_trust_policy
+    return 0
+  fi
+
+  ensure_plugin_installed "${plugin_id}"
+}
+
 bootstrap_official_plugins() {
   require_cmd curl
   require_cmd tar
@@ -530,32 +582,28 @@ fi
 
 load_dotenv
 prompt_for_openai_api_key "$@"
+LAUNCH_MODEL_PROVIDER="$(resolve_launch_model_provider)"
 
 bootstrap_official_plugins
+ensure_required_plugins "${LAUNCH_MODEL_PROVIDER}"
 
 mkdir -p "${STATE_DIR}"
 export KELVIN_PLUGIN_HOME="${PLUGIN_HOME}"
 export KELVIN_TRUST_POLICY_PATH="${TRUST_POLICY_PATH}"
 
-DEFAULT_HOST_ARGS=()
-if [[ -n "${OPENAI_API_KEY:-}" ]]; then
-  DEFAULT_HOST_ARGS+=(--model-provider kelvin.openai)
-fi
-
 if [[ $# -eq 0 ]]; then
-  if [[ -t 0 && -t 1 ]]; then
-    exec "${ROOT_DIR}/bin/kelvin-host" \
-      "${DEFAULT_HOST_ARGS[@]}" \
-      --interactive \
-      --workspace "$(pwd)" \
-      --state-dir "${STATE_DIR}"
+  HOST_CMD=("${ROOT_DIR}/bin/kelvin-host")
+  if [[ -n "${LAUNCH_MODEL_PROVIDER}" ]]; then
+    HOST_CMD+=(--model-provider "${LAUNCH_MODEL_PROVIDER}")
   fi
 
-  exec "${ROOT_DIR}/bin/kelvin-host" \
-    "${DEFAULT_HOST_ARGS[@]}" \
-    --prompt "${DEFAULT_PROMPT}" \
-    --workspace "$(pwd)" \
-    --state-dir "${STATE_DIR}"
+  if [[ -t 0 && -t 1 ]]; then
+    HOST_CMD+=(--interactive --workspace "$(pwd)" --state-dir "${STATE_DIR}")
+    exec "${HOST_CMD[@]}"
+  fi
+
+  HOST_CMD+=(--prompt "${DEFAULT_PROMPT}" --workspace "$(pwd)" --state-dir "${STATE_DIR}")
+  exec "${HOST_CMD[@]}"
 fi
 
 exec "${ROOT_DIR}/bin/kelvin-host" "$@"
