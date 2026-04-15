@@ -330,17 +330,17 @@ async fn main() {
                 eprintln!("error: {err}");
                 if err.to_string().contains(consts::KELVIN_CLI_PLUGIN_ID) {
                     eprintln!(
-                        "hint: install the CLI plugin with scripts/install-kelvin-cli-plugin.sh"
+                        "hint: install the CLI plugin with: kelvin plugin install kelvin.cli"
                     );
                 }
                 if err.to_string().contains(consts::OPENAI_API_KEY_VAR) {
                     eprintln!(
-                        "hint: set OPENAI_API_KEY and install the OpenAI model plugin with scripts/install-kelvin-openai-plugin.sh"
+                        "hint: set OPENAI_API_KEY and install the OpenAI model plugin with: kelvin plugin install kelvin.openai"
                     );
                 }
                 if err.to_string().contains(consts::ANTHROPIC_API_KEY_VAR) {
                     eprintln!(
-                        "hint: set ANTHROPIC_API_KEY and install the Anthropic model plugin with scripts/install-kelvin-anthropic-plugin.sh"
+                        "hint: set ANTHROPIC_API_KEY and install the Anthropic model plugin with: kelvin plugin install kelvin.anthropic"
                     );
                 }
                 std::process::exit(consts::EXIT_FAILURE);

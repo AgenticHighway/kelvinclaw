@@ -13,23 +13,20 @@ This guide runs Kelvin with the first-party OpenAI model plugin on the SDK path.
 Install the CLI plugin:
 
 ```bash
-scripts/install-kelvin-cli-plugin.sh
+kelvin plugin install kelvin.cli
 ```
 
 Install the OpenAI model plugin:
 
 ```bash
-scripts/install-kelvin-openai-plugin.sh
+kelvin plugin install kelvin.openai
 ```
 
 Default index URL:
 
 - `https://raw.githubusercontent.com/agentichighway/kelvinclaw-plugins/main/index.json`
 
-Both installers support overrides:
-
-- `KELVIN_PLUGIN_HOME`
-- `KELVIN_TRUST_POLICY_PATH`
+Both use `KELVIN_PLUGIN_HOME` and `KELVIN_TRUST_POLICY_PATH` if set.
 
 ## Run Kelvin with OpenAI Provider
 

@@ -1510,7 +1510,7 @@ impl KelvinSdkRuntime {
         let cli_plugin_tool = if config.require_cli_plugin_tool {
             Some(installed_tools.get(crate::consts::PLUGIN_TOOL_KELVIN_CLI).ok_or_else(|| {
                 KelvinError::NotFound(
-                    "required plugin tool 'kelvin_cli' not found; install it with scripts/install-kelvin-cli-plugin.sh"
+                    "required plugin tool 'kelvin_cli' not found; install it with: kelvin plugin install kelvin.cli"
                         .to_string(),
                 )
             })?)

@@ -35,7 +35,7 @@ SDK lane is the recommended default for ecosystem extensions.
 Run SDK certification checks with:
 
 ```bash
-scripts/test-sdk.sh
+cargo test -p kelvin-sdk
 ```
 
-This script runs the SDK-focused test suite that verifies admission controls, projection safety, determinism, and concurrency behavior.
+This runs the SDK-focused test suite that verifies admission controls, projection safety, determinism, and concurrency behavior.

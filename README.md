@@ -419,14 +419,15 @@ For end-user stack management use the `kelvin` CLI (`kelvin start`, `kelvin stop
 
 ## Runtime Container (No Rust Toolchain Required)
 
-For end users, run the minimal runtime container and complete first-time setup interactively:
+For end users, run KelvinClaw via Docker Compose:
 
 ```bash
-scripts/run-runtime-container.sh
+cp .env.example .env
+docker compose up -d
 ```
 
-This opens a setup wizard in-container, installs required plugins from the remote plugin index,
-and prepares a persistent runtime home under `.kelvin/`.
+The init container installs required plugins automatically and prepares a persistent runtime
+home on the `kelvin-home` volume.
 
 After setup:
 

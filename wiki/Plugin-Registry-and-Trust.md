@@ -24,31 +24,32 @@ Install-time validation checks:
 Install from a package:
 
 ```bash
-scripts/plugin-install.sh --package ./dist/acme.echo-1.0.0.tar.gz
+kelvin plugin install --package ./dist/acme.echo-1.0.0.tar.gz
 ```
 
-Install from a community index (requires `KELVIN_PLUGIN_INDEX_URL` to be set):
+Install from a community index:
 
 ```bash
 KELVIN_PLUGIN_INDEX_URL=https://your-host/index.json \
-  scripts/plugin-index-install.sh --plugin some.community.plugin
+  kelvin plugin install some.community.plugin
 ```
 
 First-party plugins (`kelvin.cli`, `kelvin.anthropic`, `kelvin.openrouter`, `kelvin.echo`)
-are baked into the Docker image and do not use the index install path.
+are baked into the Docker image and installed by the `kelvin-init` container on startup.
 
 Discover available plugins:
 
 ```bash
-scripts/plugin-discovery.sh
-scripts/plugin-discovery.sh --plugin kelvin.cli
-scripts/plugin-discovery.sh --json
+kelvin plugin search
+kelvin plugin search kelvin.cli
+kelvin plugin info kelvin.cli
 ```
 
 Check for updates:
 
 ```bash
-scripts/plugin-update-check.sh --json
+kelvin plugin update --dry-run
+kelvin plugin update
 ```
 
 ## Hosted Registry Service
@@ -69,12 +70,12 @@ Endpoints:
 - `GET /v1/plugins/{plugin_id}`
 - `GET /v1/trust-policy`
 
-Use it with the plugin scripts:
+Use it with the plugin CLI:
 
 ```bash
-scripts/plugin-discovery.sh --registry-url http://127.0.0.1:34619
-scripts/plugin-index-install.sh --plugin kelvin.cli --registry-url http://127.0.0.1:34619
-scripts/plugin-update-check.sh --registry-url http://127.0.0.1:34619 --json
+KELVIN_PLUGIN_INDEX_URL=http://127.0.0.1:34619/v1/index.json kelvin plugin search
+KELVIN_PLUGIN_INDEX_URL=http://127.0.0.1:34619/v1/index.json kelvin plugin install kelvin.cli
+KELVIN_PLUGIN_INDEX_URL=http://127.0.0.1:34619/v1/index.json kelvin plugin update --dry-run
 ```
 
 ## Install Root and Selection Model
@@ -97,31 +98,28 @@ Version selection is semver-aware. If no version is specified, Kelvin selects th
 
 ## Trust Policy Operations
 
-Inspect:
+The trust policy file lives at `~/.kelvinclaw/trusted_publishers.json` (or `KELVIN_TRUST_POLICY_PATH`). Edit it directly to manage publisher trust.
 
-```bash
-scripts/plugin-trust.sh show --trust-policy ./.kelvin/trusted_publishers.json
+Reference format and fields: `trusted_publishers.example.json`
+
+The file schema:
+
+```json
+{
+  "require_signature": false,
+  "publishers": [
+    {
+      "id": "acme",
+      "public_key": "<base64-ed25519-public-key>",
+      "revoked": false
+    }
+  ]
+}
 ```
 
-Rotate key:
+`require_signature: true` enforces signature verification for all installed plugins. Set it to `false` to allow unsigned local development packages.
 
-```bash
-scripts/plugin-trust.sh rotate-key --publisher acme --public-key <base64-ed25519-public-key> --trust-policy ./.kelvin/trusted_publishers.json
-```
-
-Revoke or unrevoke:
-
-```bash
-scripts/plugin-trust.sh revoke --publisher acme --trust-policy ./.kelvin/trusted_publishers.json
-scripts/plugin-trust.sh unrevoke --publisher acme --trust-policy ./.kelvin/trusted_publishers.json
-```
-
-Pin or unpin publisher:
-
-```bash
-scripts/plugin-trust.sh pin --plugin acme.echo --publisher acme --trust-policy ./.kelvin/trusted_publishers.json
-scripts/plugin-trust.sh unpin --plugin acme.echo --trust-policy ./.kelvin/trusted_publishers.json
-```
+Publisher entries can be added, removed, or have their keys rotated by editing this file directly.
 
 ## Supply-Chain Validation
 
@@ -132,7 +130,7 @@ KelvinClaw includes:
 - plugin author verification flow
 - external ABI compatibility CI against published plugins
 
-The compatibility workflow lives in the repository’s GitHub Actions configuration and is intended to catch plugin/runtime drift before release.
+The compatibility workflow lives in the repository's GitHub Actions configuration and is intended to catch plugin/runtime drift before release.
 
 ## Related Pages
 
@@ -144,5 +142,4 @@ The compatibility workflow lives in the repository’s GitHub Actions configurat
 
 - [Plugin install flow](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/PLUGIN_INSTALL_FLOW.md)
 - [Plugin index schema](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/plugin-index-schema.md)
-- [Plugin trust operations](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/plugin-trust-operations.md)
 - [Plugin quality tiers](https://github.com/AgenticHighway/kelvinclaw/blob/main/docs/plugin-quality-tiers.md)

@@ -1,37 +1,58 @@
 # Plugin Trust Operations
 
-Use `scripts/plugin-trust.sh` for trust policy lifecycle operations.
+The trust policy file lives at `~/.kelvinclaw/trusted_publishers.json` (or `KELVIN_TRUST_POLICY_PATH`). Edit it directly to manage publisher trust.
 
-## Commands
+## File Format
 
-Show trust policy:
-
-```bash
-scripts/plugin-trust.sh show --trust-policy ./.kelvin/trusted_publishers.json
+```json
+{
+  "require_signature": false,
+  "publishers": [
+    {
+      "id": "acme",
+      "public_key": "<base64-ed25519-public-key>",
+      "revoked": false,
+      "pinned_plugins": []
+    }
+  ]
+}
 ```
 
-Rotate publisher key:
+Reference template: `trusted_publishers.example.json`
+
+## Operations
+
+**Show trust policy:**
 
 ```bash
-scripts/plugin-trust.sh rotate-key \
-  --trust-policy ./.kelvin/trusted_publishers.json \
-  --publisher acme \
-  --public-key <base64-ed25519-public-key>
+cat ~/.kelvinclaw/trusted_publishers.json
 ```
 
-Revoke / unrevoke publisher:
+**Add or rotate a publisher key:** edit the `publishers` array directly, setting `id` and `public_key`.
 
-```bash
-scripts/plugin-trust.sh revoke --publisher acme --trust-policy ./.kelvin/trusted_publishers.json
-scripts/plugin-trust.sh unrevoke --publisher acme --trust-policy ./.kelvin/trusted_publishers.json
+**Revoke a publisher:** set `"revoked": true` on the publisher entry.
+
+**Unrevoke a publisher:** set `"revoked": false`.
+
+**Pin a plugin to a publisher:** add the plugin id to the publisher's `pinned_plugins` array.
+
+```json
+{
+  "id": "acme",
+  "public_key": "...",
+  "revoked": false,
+  "pinned_plugins": ["acme.echo"]
+}
 ```
 
-Pin / unpin plugin publisher:
+**Unpin a plugin:** remove it from `pinned_plugins`.
 
-```bash
-scripts/plugin-trust.sh pin --plugin acme.echo --publisher acme --trust-policy ./.kelvin/trusted_publishers.json
-scripts/plugin-trust.sh unpin --plugin acme.echo --trust-policy ./.kelvin/trusted_publishers.json
-```
+**Enable mandatory signature verification:** set `"require_signature": true`.
+
+Note: when installing from the plugin index, `kelvin plugin install` automatically fetches
+and merges the `trust_policy_url` from the index entry if present. The merge rule keeps
+`require_signature` strict (`base && incoming`) so a plugin's index policy cannot loosen
+your local setting.
 
 ## Enforced By Runtime
 

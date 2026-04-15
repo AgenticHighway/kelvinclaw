@@ -17,7 +17,7 @@ Kelvin plugin manifests may declare `quality_tier`:
 ## Verification
 
 `scripts/kelvin-plugin-dev.sh verify` enforces tier-specific checks.
-`scripts/plugin-install.sh` prints an install-time warning for `unsigned_local`
+`kelvin plugin install` prints an install-time warning for `unsigned_local`
 and `signed_community`, but does not block local installation.
 
 For trusted tier:

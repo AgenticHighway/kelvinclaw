@@ -41,67 +41,55 @@ Optional package file:
 
 ## Install Command
 
-Install Kelvin's first-party CLI plugin package:
+Install a plugin from the index by ID:
 
 ```bash
-scripts/install-kelvin-cli-plugin.sh
+kelvin plugin install kelvin.cli
+kelvin plugin install kelvin.anthropic
+kelvin plugin install kelvin.openai
+kelvin plugin install kelvin.openrouter
+kelvin plugin install kelvin.browser
 ```
 
-Install Kelvin's first-party OpenAI model plugin package:
+Install from a local tarball:
 
 ```bash
-scripts/install-kelvin-openai-plugin.sh
-```
-
-Install Kelvin's first-party OpenRouter model plugin package:
-
-```bash
-scripts/install-kelvin-openrouter-plugin.sh
-```
-
-Install optional browser automation plugin profile:
-
-```bash
-scripts/install-kelvin-browser-plugin.sh
-```
-
-Generic package install:
-
-```bash
-scripts/plugin-install.sh --package ./dist/acme.echo-1.0.0.tar.gz
+kelvin plugin install --package ./dist/acme.echo-1.0.0.tar.gz
 ```
 
 `unsigned_local` and `signed_community` packages are still installable. Kelvin
 prints a warning so community authors can develop locally without access to the
 first-party signing platform.
 
-Install from remote plugin index:
+Install from a remote plugin index with version pinning:
 
 ```bash
-scripts/plugin-index-install.sh --plugin kelvin.cli
-scripts/plugin-update-check.sh --json
+kelvin plugin install kelvin.cli
+kelvin plugin install kelvin.cli --version 0.3.0
+kelvin plugin update --dry-run
 ```
 
 Discover index entries:
 
 ```bash
-scripts/plugin-discovery.sh
-scripts/plugin-discovery.sh --plugin kelvin.cli
+kelvin plugin search
+kelvin plugin search anthropic
+kelvin plugin info kelvin.cli
 ```
 
 Run the hosted registry service instead of a raw `index.json`:
 
 ```bash
 cargo run -p kelvin-registry -- --index ./index.json --bind 127.0.0.1:34619
-scripts/plugin-discovery.sh --registry-url http://127.0.0.1:34619
-scripts/plugin-index-install.sh --plugin kelvin.cli --registry-url http://127.0.0.1:34619
-scripts/plugin-update-check.sh --registry-url http://127.0.0.1:34619 --json
+KELVIN_PLUGIN_INDEX_URL=http://127.0.0.1:34619/v1/index.json kelvin plugin search
+KELVIN_PLUGIN_INDEX_URL=http://127.0.0.1:34619/v1/index.json kelvin plugin install kelvin.cli
+KELVIN_PLUGIN_INDEX_URL=http://127.0.0.1:34619/v1/index.json kelvin plugin update --dry-run
 ```
 
 Default index URL:
 
-- None. Set `KELVIN_PLUGIN_INDEX_URL` to point at a community or self-hosted index.
-  First-party plugins are baked into the Docker image and do not require an index.
+- `https://raw.githubusercontent.com/AgenticHighway/kelvinclaw-plugins/main/index.json`
+- Override with `KELVIN_PLUGIN_INDEX_URL`
 
 Default install location:
 
@@ -111,40 +99,27 @@ Default install location:
 Override install root:
 
 ```bash
-KELVIN_PLUGIN_HOME=./.kelvin/plugins scripts/plugin-install.sh --package ./dist/acme.echo-1.0.0.tar.gz
+KELVIN_PLUGIN_HOME=./.kelvin/plugins kelvin plugin install --package ./dist/acme.echo-1.0.0.tar.gz
 ```
 
-Optional runtime env overrides:
+Environment overrides:
 
 - `KELVIN_PLUGIN_HOME`
 - `KELVIN_TRUST_POLICY_PATH`
+- `KELVIN_PLUGIN_INDEX_URL`
 
 ## List Installed Plugins
 
-Table output:
-
 ```bash
-scripts/plugin-list.sh
-```
-
-JSON output:
-
-```bash
-scripts/plugin-list.sh --json
+kelvin plugin list
+kelvin plugin status
 ```
 
 ## Uninstall Plugin
 
-Remove one version:
-
 ```bash
-scripts/plugin-uninstall.sh --id acme.echo --version 1.0.0
-```
-
-Remove all versions for a plugin id:
-
-```bash
-scripts/plugin-uninstall.sh --id acme.echo --purge
+kelvin plugin uninstall acme.echo
+kelvin plugin uninstall acme.echo --yes   # skip confirmation prompt
 ```
 
 ## Validation Performed by Installer
@@ -213,11 +188,8 @@ scripts/kelvin-plugin-dev.sh pack --manifest ./plugin-acme.echo/plugin.json
 scripts/kelvin-plugin-dev.sh verify --package ./plugin-acme.echo/dist/acme.echo-0.1.0.tar.gz
 ```
 
-Trust policy operations:
+Trust policy operations (direct JSON editing — no CLI wrapper):
 
-```bash
-scripts/plugin-trust.sh show
-scripts/plugin-trust.sh rotate-key --publisher acme --public-key <base64>
-scripts/plugin-trust.sh revoke --publisher acme
-scripts/plugin-trust.sh pin --plugin acme.echo --publisher acme
-```
+- The trust policy lives at `~/.kelvinclaw/trusted_publishers.json` (or `KELVIN_TRUST_POLICY_PATH`).
+- Edit the file directly to add, remove, or rotate publisher entries.
+- Reference format: `trusted_publishers.example.json`

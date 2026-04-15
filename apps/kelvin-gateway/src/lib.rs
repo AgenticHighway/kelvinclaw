@@ -466,7 +466,7 @@ pub async fn run_gateway_doctor(config: GatewayDoctorConfig) -> Result<Value, St
                 config.plugin_home.to_string_lossy()
             )
         },
-        "create the plugin home and install required plugins, for example: scripts/kelvin-setup.sh --force",
+        "create the plugin home and install required plugins, for example: kelvin plugin install kelvin.cli",
     ));
     checks.push(build_doctor_check(
         "trust_policy",
@@ -488,19 +488,19 @@ pub async fn run_gateway_doctor(config: GatewayDoctorConfig) -> Result<Value, St
         "websocket_connect",
         ws_ok,
         ws_error.unwrap_or_else(|| "gateway websocket endpoint reachable".to_string()),
-        "start the gateway daemon and verify endpoint/token, for example: scripts/kelvin-gateway-daemon.sh start",
+        "start the gateway daemon and verify endpoint/token, for example: kelvin gateway start",
     ));
     checks.push(build_doctor_check(
         "gateway_connect_handshake",
         connect_ok,
         connect_error.unwrap_or_else(|| "gateway connect handshake succeeded".to_string()),
-        "verify gateway auth token and connect method parameters, then rerun scripts/kelvin-doctor.sh",
+        "verify gateway auth token and connect method parameters, then rerun kelvin doctor",
     ));
     checks.push(build_doctor_check(
         "gateway_health",
         health_ok,
         health_error.unwrap_or_else(|| "gateway health check succeeded".to_string()),
-        "inspect daemon logs and runtime state (scripts/kelvin-gateway-daemon.sh logs), then fix reported runtime errors",
+        "inspect daemon logs and runtime state (kelvin gateway status / $KELVIN_HOME/logs/gateway.log), then fix reported runtime errors",
     ));
     if let Some((ok, message)) = security_check {
         checks.push(build_doctor_check(

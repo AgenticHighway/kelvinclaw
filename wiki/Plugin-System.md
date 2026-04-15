@@ -1,6 +1,6 @@
 # Plugin System
 
-KelvinClaw’s public extension surface is the Kelvin Core SDK lane. The SDK lane is the supported path for installable tools and model providers, while the root lane is reserved for trusted maintainers.
+KelvinClaw's public extension surface is the Kelvin Core SDK lane. The SDK lane is the supported path for installable tools and model providers, while the root lane is reserved for trusted maintainers.
 
 ## Root Lane vs SDK Lane
 
@@ -86,9 +86,9 @@ Docker runtime image at build time:
 |---|---|---|---|
 | `kelvin.websearch` | `plugins/kelvin-websearch-plugin` | `tool_provider`, `network_egress` | `BRAVE_API_KEY` |
 
-`scripts/gateway-plugin-init.sh` automatically installs all builtin tool plugins at
-gateway startup by scanning for manifests with the `tool_provider` capability. No manual
-install step is needed for plugins that ship in the image.
+In Docker, the `kelvin-init` container automatically installs all builtin tool plugins
+(baked into the image at `/opt/kelvin/plugins-builtin/`) using `kelvin plugin install --from-dir`.
+No manual install step is needed for plugins that ship in the image.
 
 ## Author Workflow
 
@@ -101,10 +101,10 @@ export PATH="$PWD/scripts:$PATH"
 Create, test, package, and verify a plugin:
 
 ```bash
-kelvin plugin new --id acme.echo --name "Acme Echo" --runtime wasm_tool_v1
-kelvin plugin test --manifest ./plugin-acme.echo/plugin.json
-kelvin plugin pack --manifest ./plugin-acme.echo/plugin.json
-kelvin plugin verify --package ./plugin-acme.echo/dist/acme.echo-0.1.0.tar.gz
+scripts/kelvin-plugin-dev.sh new --id acme.echo --name "Acme Echo" --runtime wasm_tool_v1
+scripts/kelvin-plugin-dev.sh test --manifest ./plugin-acme.echo/plugin.json
+scripts/kelvin-plugin-dev.sh pack --manifest ./plugin-acme.echo/plugin.json
+scripts/kelvin-plugin-dev.sh verify --package ./plugin-acme.echo/dist/acme.echo-0.1.0.tar.gz
 ```
 
 ## First-Party Model Plugins
@@ -121,7 +121,9 @@ Bundled providers:
 | `kelvin.openrouter` | `plugins/kelvin-openrouter-plugin` | `OPENROUTER_API_KEY` |
 
 Set the active provider via `KELVIN_MODEL_PROVIDER` in `.env` or the environment before
-running `docker compose up`. The init container installs the selected plugin automatically.
+running `docker compose up`. The `kelvin-init` container installs the selected plugin from
+the index, then installs all locally-built plugins from the image with `--force` so the
+local build takes precedence.
 
 To rebuild plugins after source changes:
 
@@ -129,27 +131,28 @@ To rebuild plugins after source changes:
 docker compose build   # plugin-builder stage recompiles plugins/
 ```
 
-`kelvin.cli` (the required tool plugin) is vendored as a prebuilt tarball at
-`release/vendor/kelvin.cli-0.1.2.tar.gz` and installed by `kelvin-setup.sh` on first run.
+`kelvin.cli` is installed from the plugin index during init.
 
-## Plugin Index and kpm
+## Plugin Index and kelvin plugin
 
-Outside of Docker, plugins are installed from a plugin index served at `KELVIN_PLUGIN_INDEX_URL`.
+Outside of Docker, plugins are installed from a plugin index served at `KELVIN_PLUGIN_INDEX_URL`
+(default: `https://raw.githubusercontent.com/AgenticHighway/kelvinclaw-plugins/main/index.json`).
 The index is a JSON document listing available plugins with their metadata and download URLs.
 
-**`kpm`** (Kelvin Plugin Manager) is the command-line tool for managing plugins in release
-bundles and local environments. It is bundled in the release archive as `./kpm`.
+**`kelvin plugin`** (also available as `kelvin kpm`) is the subcommand for managing plugins.
 
 ### Subcommands
 
 ```
-kpm install <plugin-id> [--version <ver>] [--force]
-kpm uninstall <plugin-id> [--yes]
-kpm update [<plugin-id>] [--dry-run]
-kpm search [<query>]
-kpm info <plugin-id>
-kpm list
-kpm status
+kelvin plugin install <plugin-id> [--version <ver>] [--force]
+kelvin plugin install --package <tarball> [--force]
+kelvin plugin install --from-dir <dir> [--force]
+kelvin plugin uninstall <plugin-id> [--yes]
+kelvin plugin update [<plugin-id>] [--dry-run]
+kelvin plugin search [<query>]
+kelvin plugin info <plugin-id>
+kelvin plugin list
+kelvin plugin status
 ```
 
 ### Examples
@@ -157,72 +160,68 @@ kpm status
 Search for available plugins:
 
 ```bash
-export KELVIN_PLUGIN_INDEX_URL=https://example.com/plugins/index.json
-./kpm search
-./kpm search anthropic
+kelvin plugin search
+kelvin plugin search anthropic
 ```
 
 Install a plugin:
 
 ```bash
-./kpm install kelvin.anthropic
-./kpm install kelvin.anthropic --version 0.3.0
+kelvin plugin install kelvin.anthropic
+kelvin plugin install kelvin.anthropic --version 0.3.0
 ```
 
 Inspect a plugin:
 
 ```bash
-./kpm info kelvin.anthropic
+kelvin plugin info kelvin.anthropic
 ```
 
 List installed plugins and current configuration:
 
 ```bash
-./kpm list
-./kpm status
+kelvin plugin list
+kelvin plugin status
 ```
 
 Update all installed plugins:
 
 ```bash
-./kpm update
-./kpm update --dry-run   # show what would be updated without installing
+kelvin plugin update
+kelvin plugin update --dry-run   # show what would be updated without installing
 ```
 
 Remove a plugin:
 
 ```bash
-./kpm uninstall kelvin.anthropic
-./kpm uninstall kelvin.anthropic --yes   # skip confirmation prompt
+kelvin plugin uninstall kelvin.anthropic
+kelvin plugin uninstall kelvin.anthropic --yes   # skip confirmation prompt
 ```
 
 ### Environment Variables
 
 | Variable | Required for | Default |
 |---|---|---|
-| `KELVIN_PLUGIN_INDEX_URL` | install, search, info, update | — |
+| `KELVIN_PLUGIN_INDEX_URL` | install, search, info, update | `https://raw.githubusercontent.com/AgenticHighway/kelvinclaw-plugins/main/index.json` |
 | `KELVIN_HOME` | all | `~/.kelvinclaw` |
 | `KELVIN_PLUGIN_HOME` | all | `$KELVIN_HOME/plugins` |
 | `KELVIN_TRUST_POLICY_PATH` | install | `$KELVIN_HOME/trusted_publishers.json` |
 | `KELVIN_MODEL_PROVIDER` | status (informational) | `kelvin.echo` |
 
-### kelvin-gateway (service manager)
+### kelvin gateway (lifecycle manager)
 
-The `kelvin-gateway` script in the release bundle is a lifecycle manager for the gateway
-daemon. It auto-installs the configured model provider plugin if needed, then manages
-start/stop/restart/status.
+The `kelvin gateway` subcommand manages the gateway daemon lifecycle.
 
 ```bash
 export KELVIN_MODEL_PROVIDER=kelvin.anthropic
-export KELVIN_PLUGIN_INDEX_URL=https://example.com/plugins/index.json
 export ANTHROPIC_API_KEY=<your-key>
 
-./kelvin-gateway start                          # daemon mode
-./kelvin-gateway start -- --bind 0.0.0.0:34617 # with gateway args
-./kelvin-gateway start --foreground             # attached to terminal
-./kelvin-gateway status                         # show pid, provider, uptime
-./kelvin-gateway stop
-./kelvin-gateway restart
+kelvin gateway start                      # daemon mode
+kelvin gateway start -- --bind 0.0.0.0:34617  # with gateway args
+kelvin gateway start --foreground         # attached to terminal
+kelvin gateway status                     # show pid, provider, uptime
+kelvin gateway stop
+kelvin gateway restart
 ```
 
 ## Related Pages

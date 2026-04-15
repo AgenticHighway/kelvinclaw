@@ -40,25 +40,13 @@ KELVIN_TRY_TIMEOUT_MS=8000 scripts/try-kelvin.sh "longer timeout"
 
 ## 3) Validate security/stability suites
 
-Track verification command:
-
-```bash
-scripts/verify-onboarding.sh --track rust
-```
-
 SDK suites:
 
 ```bash
-scripts/test-sdk.sh
-scripts/test-cli-plugin-integration.sh
-scripts/test-docker.sh
-```
-
-Plugin author/DX scripts:
-
-```bash
+cargo test -p kelvin-sdk
 scripts/test-plugin-author-kit.sh
 scripts/test-plugin-trust.sh
+scripts/test-docker.sh
 ```
 
 Before final pushes:

@@ -1,6 +1,6 @@
 # Testing and Validation
 
-KelvinClaw’s validation strategy is deliberately broad: formatting, linting, supply-chain checks, protocol tests, workspace tests, SDK certification, E2E flows, and clean Docker validation.
+KelvinClaw's validation strategy is deliberately broad: formatting, linting, supply-chain checks, protocol tests, workspace tests, SDK certification, E2E flows, and clean Docker validation.
 
 ## Core Validation Commands
 
@@ -32,7 +32,7 @@ cargo test --workspace --tests
 SDK lane:
 
 ```bash
-scripts/test-sdk.sh
+cargo test -p kelvin-sdk
 ```
 
 End-to-end:
@@ -103,7 +103,7 @@ For a high-confidence release candidate:
 3. `cargo audit`
 4. `cargo outdated`
 5. `cargo test --workspace --tests`
-6. `scripts/test-sdk.sh`
+6. `cargo test -p kelvin-sdk`
 7. `scripts/test-e2e.sh`
 8. `scripts/test-docker.sh --final`
 

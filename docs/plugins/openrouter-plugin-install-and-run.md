@@ -14,23 +14,20 @@ path.
 Install the CLI plugin:
 
 ```bash
-scripts/install-kelvin-cli-plugin.sh
+kelvin plugin install kelvin.cli
 ```
 
 Install the OpenRouter model plugin:
 
 ```bash
-scripts/install-kelvin-openrouter-plugin.sh
+kelvin plugin install kelvin.openrouter
 ```
 
 Default index URL:
 
 - `https://raw.githubusercontent.com/agentichighway/kelvinclaw-plugins/main/index.json`
 
-Both installers support overrides:
-
-- `KELVIN_PLUGIN_HOME`
-- `KELVIN_TRUST_POLICY_PATH`
+Both use `KELVIN_PLUGIN_HOME` and `KELVIN_TRUST_POLICY_PATH` if set.
 
 ## Run Kelvin with OpenRouter Provider
 
