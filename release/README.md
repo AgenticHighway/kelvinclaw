@@ -38,6 +38,9 @@ Kelvin stores remembered launcher preferences separately in:
 
 Variables already in the environment are never overwritten.
 
+Pass `kelvin init --with-completions` to install shell completions during setup, or use
+`kelvin completions <shell> --write` later.
+
 Key variables:
 
 | Variable | Description |

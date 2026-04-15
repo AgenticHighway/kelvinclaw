@@ -55,16 +55,8 @@ fn install_completions(shell: Shell) -> Result<()> {
 
     println!("Installed {} completions to: {}", shell, dest.display());
 
-    match shell {
-        Shell::Zsh => {
-            println!("Add the following to your ~/.zshrc if not already present:");
-            println!("  fpath=(~/.zsh/completions $fpath)");
-            println!("  autoload -Uz compinit && compinit");
-        }
-        Shell::Bash => {
-            println!("Restart your shell or run: source {}", dest.display());
-        }
-        _ => {}
+    if shell == Shell::Bash {
+        println!("Restart your shell or run: source {}", dest.display());
     }
 
     Ok(())
