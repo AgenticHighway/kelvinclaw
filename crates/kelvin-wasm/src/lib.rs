@@ -879,20 +879,26 @@ fn link_claw_imports(linker: &mut Linker<HostState>, policy: &SandboxPolicy) -> 
                         // child writes more than the OS pipe buffer (~64 KB) without
                         // anyone reading, its write() blocks and try_wait() would
                         // never see an exit.
+                        //
+                        // Each reader is capped at SHELL_EXEC_MAX_OUTPUT_BYTES to
+                        // prevent a malicious command from exhausting host memory.
                         let stdout_handle = child.stdout.take();
                         let stderr_handle = child.stderr.take();
+                        let read_limit = consts::SHELL_EXEC_MAX_OUTPUT_BYTES as u64;
 
                         let stdout_thread = std::thread::spawn(move || {
                             let mut buf = Vec::new();
-                            if let Some(mut r) = stdout_handle {
-                                let _ = std::io::Read::read_to_end(&mut r, &mut buf);
+                            if let Some(r) = stdout_handle {
+                                let _ =
+                                    std::io::Read::read_to_end(&mut std::io::Read::take(r, read_limit), &mut buf);
                             }
                             buf
                         });
                         let stderr_thread = std::thread::spawn(move || {
                             let mut buf = Vec::new();
-                            if let Some(mut r) = stderr_handle {
-                                let _ = std::io::Read::read_to_end(&mut r, &mut buf);
+                            if let Some(r) = stderr_handle {
+                                let _ =
+                                    std::io::Read::read_to_end(&mut std::io::Read::take(r, read_limit), &mut buf);
                             }
                             buf
                         });
@@ -911,6 +917,12 @@ fn link_claw_imports(linker: &mut Linker<HostState>, policy: &SandboxPolicy) -> 
                                     std::thread::sleep(std::time::Duration::from_millis(50));
                                 }
                                 Err(e) => {
+                                    // Clean up child and reader threads to avoid
+                                    // orphaned processes and leaked threads.
+                                    let _ = child.kill();
+                                    let _ = child.wait();
+                                    let _ = stdout_thread.join();
+                                    let _ = stderr_thread.join();
                                     return serde_json::json!({
                                         "exit_code": -1,
                                         "stdout": "",
@@ -1120,6 +1132,10 @@ fn shell_command_allowed(command: &str, allowed: &[String]) -> bool {
 /// This is a deterministic guard that prevents plugins from using allowed
 /// interpreters to execute arbitrary code.  Without this, a plugin allowed to
 /// run `python` could call `python -c "import os; os.system('...')"`.
+///
+/// POSIX shells allow combining single-character flags, so `bash -xc 'code'`
+/// is equivalent to `bash -x -c 'code'`.  We detect inline-code characters
+/// inside any combined short-flag group (an arg matching `-[a-zA-Z]+`).
 fn is_interpreter_inline_exec(command: &str, args: &[String]) -> bool {
     let cmd_lower = command.to_ascii_lowercase();
     let is_interpreter = consts::KNOWN_INTERPRETERS
@@ -1130,10 +1146,25 @@ fn is_interpreter_inline_exec(command: &str, args: &[String]) -> bool {
     }
     for arg in args {
         let a = arg.trim();
-        for flag in consts::INTERPRETER_INLINE_FLAGS {
-            // Exact match (e.g. "-c") or flag=value (e.g. "--eval=code")
+        // Check long-form flags: exact match or --flag=value
+        for flag in consts::INTERPRETER_LONG_FLAGS {
             if a == *flag || a.starts_with(&format!("{flag}=")) {
                 return true;
+            }
+        }
+        // Check short flags — including combined groups like "-xc".
+        // A combined short-flag group starts with a single '-' followed
+        // by multiple ASCII letters (e.g. "-xc", "-lc", "-ic").
+        if let Some(rest) = a.strip_prefix('-') {
+            if !rest.is_empty()
+                && !rest.starts_with('-')
+                && rest.chars().all(|ch| ch.is_ascii_alphabetic())
+            {
+                for &flag_char in consts::INTERPRETER_INLINE_CHARS {
+                    if rest.contains(flag_char) {
+                        return true;
+                    }
+                }
             }
         }
     }
@@ -1987,6 +2018,35 @@ mod tests {
 
         // Empty args → allowed
         assert!(!is_interpreter_inline_exec("python", &[]));
+
+        // Combined POSIX short flags — e.g. bash -xc 'code' is
+        // equivalent to bash -x -c 'code' and must be blocked.
+        assert!(is_interpreter_inline_exec(
+            "bash",
+            &["-xc".into(), "echo pwned".into()]
+        ));
+        assert!(is_interpreter_inline_exec(
+            "sh",
+            &["-lc".into(), "id".into()]
+        ));
+        assert!(is_interpreter_inline_exec(
+            "zsh",
+            &["-ic".into(), "whoami".into()]
+        ));
+        // Combined flags with -e (ruby/perl/node)
+        assert!(is_interpreter_inline_exec(
+            "ruby",
+            &["-we".into(), "puts 1".into()]
+        ));
+        // Combined flags without any inline-code char → allowed
+        assert!(!is_interpreter_inline_exec(
+            "bash",
+            &["-x".into(), "script.sh".into()]
+        ));
+        assert!(!is_interpreter_inline_exec(
+            "python",
+            &["-u".into(), "script.py".into()]
+        ));
     }
 
     #[test]
