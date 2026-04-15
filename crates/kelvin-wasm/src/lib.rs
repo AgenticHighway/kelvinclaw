@@ -2103,6 +2103,15 @@ mod tests {
             "powershell",
             &["-command".into(), "code".into()]
         ));
+        // PowerShell -c is short for -Command
+        assert!(is_interpreter_inline_exec(
+            "pwsh",
+            &["-c".into(), "Get-Process".into()]
+        ));
+        assert!(is_interpreter_inline_exec(
+            "powershell",
+            &["-c".into(), "Write-Host hi".into()]
+        ));
         assert!(is_interpreter_inline_exec(
             "node",
             &["--EVAL=console.log(1)".into()]
