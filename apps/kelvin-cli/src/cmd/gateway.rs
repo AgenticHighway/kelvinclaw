@@ -36,7 +36,10 @@ fn cmd_start(args: GatewayStartArgs) -> Result<()> {
     let state_dir = paths::state_dir();
     std::fs::create_dir_all(&state_dir)?;
 
-    let mut gateway_args = vec!["--state-dir".to_string(), state_dir.to_string_lossy().to_string()];
+    let mut gateway_args = vec![
+        "--state-dir".to_string(),
+        state_dir.to_string_lossy().to_string(),
+    ];
 
     if let Some(model_provider) = configured_model_provider_arg() {
         gateway_args.push("--model-provider".to_string());
