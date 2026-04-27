@@ -770,9 +770,9 @@ mod tests {
         let home = temp_home();
         let signing_key = SigningKey::from_bytes(&[7u8; 32]);
 
-        // Point to a non-existent trust policy file.
-        let policy_path = home.join("no-such-policy.json");
-        let _ = std::fs::remove_file(&policy_path);
+        // Point to a path in a non-existent subdirectory so the file
+        // definitively does not exist, even in parallel CI environments.
+        let policy_path = home.join("does-not-exist").join("trust-policy.json");
         unsafe { std::env::set_var("KELVIN_TRUST_POLICY_PATH", &policy_path) };
 
         let manifest = serde_json::json!({
