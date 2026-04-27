@@ -1392,21 +1392,21 @@ async fn run_loop(
                         assert_markers_valid(&app.input, &app.paste_markers);
                         update_autocomplete(app);
                     }
-                    KeyCode::Tab => {
-                        if app.autocomplete_visible && !app.autocomplete_items.is_empty() {
-                            app.autocomplete_selected =
-                                (app.autocomplete_selected + 1) % app.autocomplete_items.len();
-                            sync_autocomplete_scroll(app);
-                        }
+                    KeyCode::Tab
+                        if app.autocomplete_visible && !app.autocomplete_items.is_empty() =>
+                    {
+                        app.autocomplete_selected =
+                            (app.autocomplete_selected + 1) % app.autocomplete_items.len();
+                        sync_autocomplete_scroll(app);
                     }
-                    KeyCode::BackTab => {
-                        if app.autocomplete_visible && !app.autocomplete_items.is_empty() {
-                            app.autocomplete_selected = app
-                                .autocomplete_selected
-                                .checked_sub(1)
-                                .unwrap_or(app.autocomplete_items.len() - 1);
-                            sync_autocomplete_scroll(app);
-                        }
+                    KeyCode::BackTab
+                        if app.autocomplete_visible && !app.autocomplete_items.is_empty() =>
+                    {
+                        app.autocomplete_selected = app
+                            .autocomplete_selected
+                            .checked_sub(1)
+                            .unwrap_or(app.autocomplete_items.len() - 1);
+                        sync_autocomplete_scroll(app);
                     }
                     KeyCode::Backspace => {
                         app.do_backspace();
@@ -1583,15 +1583,15 @@ async fn run_loop(
                         app.selection = None;
                     }
                 }
-                MouseEventKind::Drag(MouseButton::Left) => {
-                    if in_rect(ev.column, ev.row, app.chat_area) {
-                        let is_chat_sel =
-                            matches!(&app.selection, Some(s) if s.target == SelectionTarget::Chat);
-                        if is_chat_sel {
-                            let pos = screen_to_chat_pos(ev.column, ev.row, app);
-                            if let (Some(pos), Some(ref mut sel)) = (pos, app.selection.as_mut()) {
-                                sel.extent = pos;
-                            }
+                MouseEventKind::Drag(MouseButton::Left)
+                    if in_rect(ev.column, ev.row, app.chat_area) =>
+                {
+                    let is_chat_sel =
+                        matches!(&app.selection, Some(s) if s.target == SelectionTarget::Chat);
+                    if is_chat_sel {
+                        let pos = screen_to_chat_pos(ev.column, ev.row, app);
+                        if let (Some(pos), Some(ref mut sel)) = (pos, app.selection.as_mut()) {
+                            sel.extent = pos;
                         }
                     }
                 }
