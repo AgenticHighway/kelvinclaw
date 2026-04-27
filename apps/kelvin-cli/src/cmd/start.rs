@@ -83,7 +83,7 @@ fn ensure_plugin_installed(plugin_id: &str) -> Result<()> {
 
     println!("[kelvin] installing plugin: {}", plugin_id);
     std::fs::create_dir_all(&plugin_home)?;
-    super::plugin_ops::install_from_index(plugin_id, None, &plugin_home, &index_url, false)
+    super::plugin_ops::install_from_index(plugin_id, None, &plugin_home, &index_url, false, false)
         .with_context(|| match plugin_id {
             KELVIN_CLI_PLUGIN_ID => "failed to install required CLI plugin 'kelvin.cli'. \
                 Set KELVIN_PLUGIN_INDEX_URL or install the plugin manually."

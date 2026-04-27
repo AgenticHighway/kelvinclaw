@@ -2,15 +2,17 @@ use std::io::Read;
 use std::path::Path;
 
 use anyhow::{bail, Context, Result};
+use base64::{engine::general_purpose::STANDARD, Engine as _};
+use ed25519_dalek::{Signature, Verifier, VerifyingKey};
 use sha2::{Digest, Sha256};
 
 use super::download;
 
 /// Installs a plugin from a local tarball. Mirrors plugin-install.sh.
-pub fn install_package(tarball: &Path, plugin_home: &Path, force: bool) -> Result<()> {
+pub fn install_package(tarball: &Path, plugin_home: &Path, force: bool, strict: bool) -> Result<()> {
     let work_dir = tempdir()?;
     extract_tarball(tarball, &work_dir)?;
-    install_from_extracted_dir(&work_dir, plugin_home, force)
+    install_from_extracted_dir(&work_dir, plugin_home, force, strict)
 }
 
 /// Installs a plugin from an already-extracted plugin directory.
@@ -19,15 +21,15 @@ pub fn install_package(tarball: &Path, plugin_home: &Path, force: bool) -> Resul
 /// same layout that results from unpacking a plugin tarball. This is used by
 /// the Docker init container to install locally-built plugins baked into the
 /// image without re-packaging them.
-pub fn install_from_dir(src: &Path, plugin_home: &Path, force: bool) -> Result<()> {
+pub fn install_from_dir(src: &Path, plugin_home: &Path, force: bool, strict: bool) -> Result<()> {
     if !src.is_dir() {
         bail!("not a directory: {}", src.display());
     }
-    install_from_extracted_dir(src, plugin_home, force)
+    install_from_extracted_dir(src, plugin_home, force, strict)
 }
 
 /// Core install logic operating on an already-extracted plugin directory.
-fn install_from_extracted_dir(src: &Path, plugin_home: &Path, force: bool) -> Result<()> {
+fn install_from_extracted_dir(src: &Path, plugin_home: &Path, force: bool, strict: bool) -> Result<()> {
     let manifest_path = src.join("plugin.json");
     let payload_dir = src.join("payload");
 
@@ -128,6 +130,10 @@ fn install_from_extracted_dir(src: &Path, plugin_home: &Path, force: bool) -> Re
         _ => {}
     }
 
+    if strict {
+        verify_strict_signature(src, &manifest_bytes, plugin_id, plugin_version)?;
+    }
+
     let install_dir = plugin_home.join(plugin_id).join(plugin_version);
     let current_link = plugin_home.join(plugin_id).join("current");
 
@@ -180,6 +186,7 @@ pub fn install_from_index(
     plugin_home: &Path,
     index_url: &str,
     force: bool,
+    strict: bool,
 ) -> Result<()> {
     let index = download::fetch_index(index_url)?;
     let entry = download::select_plugin_entry(&index, plugin_id, version)?;
@@ -215,7 +222,7 @@ pub fn install_from_index(
     let tarball_path = work_dir.join("plugin.tar.gz");
     download::download_tarball(package_url, expected_sha, &tarball_path)?;
 
-    install_package(&tarball_path, plugin_home, force)?;
+    install_package(&tarball_path, plugin_home, force, strict)?;
 
     // Merge publisher trust entries from the index if a trust_policy_url is present.
     if let Some(trust_url) = entry.get("trust_policy_url").and_then(|v| v.as_str()) {
@@ -433,4 +440,341 @@ fn merge_trust_policy(trust_url: &str) -> Result<()> {
 
     eprintln!("[kelvin] merged trust policy: {}", trust_path.display());
     Ok(())
+}
+
+/// Strict-mode signature verification for `kelvin plugin install --strict`.
+///
+/// Checks that plugin.sig exists, the publisher is trusted, and the signature
+/// is a valid Ed25519 signature over the manifest bytes.
+fn verify_strict_signature(
+    src: &Path,
+    manifest_bytes: &[u8],
+    plugin_id: &str,
+    plugin_version: &str,
+) -> Result<()> {
+    let sig_path = src.join("plugin.sig");
+    if !sig_path.exists() {
+        bail!(
+            "strict install rejected: plugin '{}' is missing plugin.sig",
+            plugin_id
+        );
+    }
+
+    let signature_text = std::fs::read_to_string(&sig_path)
+        .with_context(|| format!("failed to read plugin.sig for {}", plugin_id))?;
+    let signature_base64 = signature_text.trim();
+    if signature_base64.is_empty() {
+        bail!(
+            "strict install rejected: plugin '{}' has empty plugin.sig",
+            plugin_id
+        );
+    }
+    let signature_bytes = STANDARD
+        .decode(signature_base64)
+        .with_context(|| format!("invalid plugin.sig base64 for {}", plugin_id))?;
+    let signature = Signature::from_slice(&signature_bytes)
+        .with_context(|| format!("invalid ed25519 signature for {}", plugin_id))?;
+
+    // Load trust policy.
+    let trust_path = crate::paths::trust_policy_path();
+    let trust_policy: serde_json::Value = if trust_path.exists() {
+        let bytes = std::fs::read(&trust_path)
+            .with_context(|| format!("failed to read trust policy {}", trust_path.display()))?;
+        serde_json::from_slice(&bytes)
+            .with_context(|| format!("failed to parse trust policy {}", trust_path.display()))?
+    } else {
+        bail!(
+            "strict install rejected: no trust policy found at {}. \
+             Run 'kelvin init' or add the publisher's key manually.",
+            trust_path.display()
+        );
+    };
+
+    // Get publisher from manifest.
+    let manifest: serde_json::Value = serde_json::from_slice(manifest_bytes)
+        .context("failed to re-parse plugin.json for signature verification")?;
+    let publisher = manifest
+        .get("publisher")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "strict install rejected: plugin '{}' missing 'publisher' field in manifest",
+                plugin_id
+            )
+        })?;
+
+    // Find publisher's public key.
+    let publishers = trust_policy
+        .get("publishers")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| anyhow::anyhow!("trust policy missing 'publishers' array"))?;
+
+    let pub_key_b64 = publishers
+        .iter()
+        .find(|p| p.get("id").and_then(|v| v.as_str()) == Some(publisher))
+        .and_then(|p| p.get("ed25519_public_key").and_then(|v| v.as_str()))
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "strict install rejected: publisher '{}' is not in the trust policy. \
+                 Add the key with 'kelvin plugin trust add {} --key <path>'.",
+                publisher,
+                publisher
+            )
+        })?;
+
+    let pub_key_bytes = STANDARD
+        .decode(pub_key_b64)
+        .with_context(|| format!("invalid base64 public key for publisher {}", publisher))?;
+    let pub_key_array: [u8; 32] = pub_key_bytes.try_into().map_err(|_| {
+        anyhow::anyhow!(
+            "invalid ed25519 public key length for publisher {} (expected 32 bytes)",
+            publisher
+        )
+    })?;
+    let verifying_key =
+        VerifyingKey::from_bytes(&pub_key_array).with_context(|| {
+            format!("invalid ed25519 public key for publisher {}", publisher)
+        })?;
+
+    verifying_key
+        .verify(manifest_bytes, &signature)
+        .with_context(|| {
+            format!(
+                "strict install rejected: signature verification failed for {}@{} from publisher '{}'",
+                plugin_id, plugin_version, publisher
+            )
+        })?;
+
+    eprintln!(
+        "[kelvin] strict-mode signature verified: {}@{} from publisher '{}'",
+        plugin_id, plugin_version, publisher
+    );
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ed25519_dalek::{Signer, SigningKey};
+    use std::sync::{Mutex, OnceLock};
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn env_lock() -> &'static Mutex<()> {
+        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        LOCK.get_or_init(|| Mutex::new(()))
+    }
+
+    fn temp_home() -> std::path::PathBuf {
+        let millis = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_millis())
+            .unwrap_or_default();
+        let path = std::env::temp_dir().join(format!("kelvin-cli-test-{millis}"));
+        std::fs::create_dir_all(&path).expect("create temp dir");
+        path
+    }
+
+    fn make_plugin_dir(
+        base: &Path,
+        manifest: &serde_json::Value,
+        signing_key: Option<&SigningKey>,
+    ) -> std::path::PathBuf {
+        let dir = base.join("plugin");
+        let payload = dir.join("payload");
+        std::fs::create_dir_all(&payload).expect("create payload");
+        std::fs::write(payload.join("entry.wasm"), b"wasm").expect("write wasm");
+
+        let manifest_bytes = serde_json::to_vec_pretty(manifest).expect("serialize manifest");
+        std::fs::write(dir.join("plugin.json"), &manifest_bytes).expect("write manifest");
+
+        if let Some(key) = signing_key {
+            let sig = key.sign(&manifest_bytes);
+            let sig_b64 = STANDARD.encode(sig.to_bytes());
+            std::fs::write(dir.join("plugin.sig"), sig_b64).expect("write sig");
+        }
+        dir
+    }
+
+    fn make_trust_policy(
+        home: &Path,
+        publisher_id: &str,
+        public_key_b64: &str,
+    ) -> std::path::PathBuf {
+        let policy = serde_json::json!({
+            "require_signature": false,
+            "publishers": [
+                { "id": publisher_id, "ed25519_public_key": public_key_b64 }
+            ]
+        });
+        let path = home.join("trusted_publishers.json");
+        std::fs::write(&path, serde_json::to_vec_pretty(&policy).unwrap()).expect("write policy");
+        path
+    }
+
+    #[test]
+    fn strict_verify_accepts_valid_signature() {
+        let _guard = env_lock().lock().expect("lock env");
+        let home = temp_home();
+        let signing_key = SigningKey::from_bytes(&[1u8; 32]);
+        let pub_key_b64 = STANDARD.encode(signing_key.verifying_key().as_bytes());
+        let policy_path = make_trust_policy(&home, "acme", &pub_key_b64);
+        unsafe { std::env::set_var("KELVIN_TRUST_POLICY_PATH", &policy_path) };
+
+        let manifest = serde_json::json!({
+            "id": "acme.echo",
+            "name": "Echo",
+            "version": "1.0.0",
+            "api_version": "1.0.0",
+            "capabilities": ["tool_provider"],
+            "runtime": "wasm_tool_v1",
+            "entrypoint": "entry.wasm",
+            "publisher": "acme",
+        });
+        let dir = make_plugin_dir(&home, &manifest, Some(&signing_key));
+        let manifest_bytes = serde_json::to_vec_pretty(&manifest).unwrap();
+
+        assert!(verify_strict_signature(&dir, &manifest_bytes, "acme.echo", "1.0.0").is_ok());
+    }
+
+    #[test]
+    fn strict_verify_rejects_missing_sig() {
+        let _guard = env_lock().lock().expect("lock env");
+        let home = temp_home();
+        let signing_key = SigningKey::from_bytes(&[2u8; 32]);
+        let pub_key_b64 = STANDARD.encode(signing_key.verifying_key().as_bytes());
+        let policy_path = make_trust_policy(&home, "acme", &pub_key_b64);
+        unsafe { std::env::set_var("KELVIN_TRUST_POLICY_PATH", &policy_path) };
+
+        let manifest = serde_json::json!({
+            "id": "acme.echo",
+            "name": "Echo",
+            "version": "1.0.0",
+            "api_version": "1.0.0",
+            "capabilities": ["tool_provider"],
+            "runtime": "wasm_tool_v1",
+            "entrypoint": "entry.wasm",
+            "publisher": "acme",
+        });
+        let dir = make_plugin_dir(&home, &manifest, None);
+        let manifest_bytes = serde_json::to_vec_pretty(&manifest).unwrap();
+
+        let err = verify_strict_signature(&dir, &manifest_bytes, "acme.echo", "1.0.0")
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("missing plugin.sig"), "expected missing sig error, got: {err}");
+    }
+
+    #[test]
+    fn strict_verify_rejects_untrusted_publisher() {
+        let _guard = env_lock().lock().expect("lock env");
+        let home = temp_home();
+        let signing_key = SigningKey::from_bytes(&[3u8; 32]);
+        let pub_key_b64 = STANDARD.encode(signing_key.verifying_key().as_bytes());
+        let policy_path = make_trust_policy(&home, "acme", &pub_key_b64);
+        unsafe { std::env::set_var("KELVIN_TRUST_POLICY_PATH", &policy_path) };
+
+        let manifest = serde_json::json!({
+            "id": "evil.echo",
+            "name": "Evil",
+            "version": "1.0.0",
+            "api_version": "1.0.0",
+            "capabilities": ["tool_provider"],
+            "runtime": "wasm_tool_v1",
+            "entrypoint": "entry.wasm",
+            "publisher": "evilcorp",
+        });
+        let dir = make_plugin_dir(&home, &manifest, Some(&signing_key));
+        let manifest_bytes = serde_json::to_vec_pretty(&manifest).unwrap();
+
+        let err = verify_strict_signature(&dir, &manifest_bytes, "evil.echo", "1.0.0")
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("not in the trust policy"), "expected untrusted publisher error, got: {err}");
+    }
+
+    #[test]
+    fn strict_verify_rejects_invalid_signature() {
+        let _guard = env_lock().lock().expect("lock env");
+        let home = temp_home();
+        let signing_key = SigningKey::from_bytes(&[4u8; 32]);
+        let wrong_key = SigningKey::from_bytes(&[5u8; 32]);
+        let pub_key_b64 = STANDARD.encode(signing_key.verifying_key().as_bytes());
+        let policy_path = make_trust_policy(&home, "acme", &pub_key_b64);
+        unsafe { std::env::set_var("KELVIN_TRUST_POLICY_PATH", &policy_path) };
+
+        let manifest = serde_json::json!({
+            "id": "acme.echo",
+            "name": "Echo",
+            "version": "1.0.0",
+            "api_version": "1.0.0",
+            "capabilities": ["tool_provider"],
+            "runtime": "wasm_tool_v1",
+            "entrypoint": "entry.wasm",
+            "publisher": "acme",
+        });
+        // Sign with wrong key
+        let dir = make_plugin_dir(&home, &manifest, Some(&wrong_key));
+        let manifest_bytes = serde_json::to_vec_pretty(&manifest).unwrap();
+
+        let err = verify_strict_signature(&dir, &manifest_bytes, "acme.echo", "1.0.0")
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("signature verification failed"), "expected invalid sig error, got: {err}");
+    }
+
+    #[test]
+    fn strict_verify_rejects_missing_publisher() {
+        let _guard = env_lock().lock().expect("lock env");
+        let home = temp_home();
+        let signing_key = SigningKey::from_bytes(&[6u8; 32]);
+        let pub_key_b64 = STANDARD.encode(signing_key.verifying_key().as_bytes());
+        let policy_path = make_trust_policy(&home, "acme", &pub_key_b64);
+        unsafe { std::env::set_var("KELVIN_TRUST_POLICY_PATH", &policy_path) };
+
+        let manifest = serde_json::json!({
+            "id": "acme.echo",
+            "name": "Echo",
+            "version": "1.0.0",
+            "api_version": "1.0.0",
+            "capabilities": ["tool_provider"],
+            "runtime": "wasm_tool_v1",
+            "entrypoint": "entry.wasm",
+        });
+        let dir = make_plugin_dir(&home, &manifest, Some(&signing_key));
+        let manifest_bytes = serde_json::to_vec_pretty(&manifest).unwrap();
+
+        let err = verify_strict_signature(&dir, &manifest_bytes, "acme.echo", "1.0.0")
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("missing 'publisher' field"), "expected missing publisher error, got: {err}");
+    }
+
+    #[test]
+    fn strict_verify_rejects_missing_trust_policy() {
+        let _guard = env_lock().lock().expect("lock env");
+        let home = temp_home();
+        let signing_key = SigningKey::from_bytes(&[7u8; 32]);
+
+        // Point to a non-existent trust policy file.
+        let policy_path = home.join("no-such-policy.json");
+        unsafe { std::env::set_var("KELVIN_TRUST_POLICY_PATH", &policy_path) };
+
+        let manifest = serde_json::json!({
+            "id": "acme.echo",
+            "name": "Echo",
+            "version": "1.0.0",
+            "api_version": "1.0.0",
+            "capabilities": ["tool_provider"],
+            "runtime": "wasm_tool_v1",
+            "entrypoint": "entry.wasm",
+            "publisher": "acme",
+        });
+        let dir = make_plugin_dir(&home, &manifest, Some(&signing_key));
+        let manifest_bytes = serde_json::to_vec_pretty(&manifest).unwrap();
+
+        let err = verify_strict_signature(&dir, &manifest_bytes, "acme.echo", "1.0.0")
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("no trust policy found"), "expected missing policy error, got: {err}");
+    }
 }

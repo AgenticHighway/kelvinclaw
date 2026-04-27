@@ -77,6 +77,29 @@ This file defines default expectations for coding agents working in this reposit
 - Enforce manifest capability/runtime parity and import allowlists.
 - Keep network access host-mediated with explicit allowlists.
 
+## Agent Notes for This Codebase
+
+### Plugin signing is dormant but not dead
+
+- The runtime (`kelvin-brain`) still verifies Ed25519 signatures when `plugin.sig` is present.
+- The default `require_signature: false` is intentional — end users should have zero-friction installs.
+- First-party plugins in the `kelvinclaw-plugins` repo still carry valid `plugin.sig` files.
+- The `--strict` flag on `kelvin plugin install` / `update` is the opt-in path for developers who want install-time enforcement.
+
+### Trust policy path resolution (test pitfall)
+
+`paths::trust_policy_path()` checks `KELVIN_TRUST_POLICY_PATH` first, then falls back to `{KELVIN_HOME}/trusted_publishers.json`. When writing tests that manipulate trust policy, **always set `KELVIN_TRUST_POLICY_PATH` explicitly** — do not rely on `KELVIN_HOME` alone, or the user's real `~/.kelvinclaw/trusted_publishers.json` may leak in and cause flaky failures.
+
+Use the `env_lock()` mutex pattern (see `cmd::start::tests`) when mutating env vars in tests.
+
+### Known trust-policy merge bug (#93)
+
+The merge logic in `apps/kelvin-cli/src/cmd/plugin_ops/install.rs` treats a missing `require_signature` as `false` (`unwrap_or(false)`), while the runtime treats it as `true`. This is dormant while the default remains `false`, but becomes user-facing for anyone using `--strict`. Fix it if you touch the merge logic.
+
+### Windows release packaging is separate
+
+The PowerShell `Ensure-Plugin` script in the Windows release bundle has its own trust-policy merge logic that drops `revoked_publishers` and `pinned_plugin_publishers`. It is not in this Rust repo. If you change trust-policy schema, remember the Windows installer may need a matching update.
+
 ## Commit Discipline
 
 - Keep commits scoped and atomic.

@@ -161,6 +161,9 @@ pub struct PluginInstallArgs {
     /// Overwrite an existing install
     #[arg(long)]
     pub force: bool,
+    /// Require signature verification from a trusted publisher
+    #[arg(long)]
+    pub strict: bool,
 }
 
 #[derive(Args, Debug, Clone)]
@@ -179,6 +182,9 @@ pub struct PluginUpdateArgs {
     /// Show what would be updated without installing
     #[arg(long)]
     pub dry_run: bool,
+    /// Require signature verification from a trusted publisher for updated plugins
+    #[arg(long)]
+    pub strict: bool,
 }
 
 // ── init ──────────────────────────────────────────────────────────────────────
