@@ -86,6 +86,22 @@ To build a new plugin, see:
 - [Build a Tool Plugin](docs/plugins/build-a-tool-plugin.md)
 - [Build a Model Plugin](docs/plugins/build-a-model-plugin.md)
 
+## Specs (OpenSpec)
+
+This repo uses [OpenSpec](https://github.com/Fission-AI/OpenSpec) for
+spec-driven development. Specs and change proposals live under `openspec/`
+and travel with branches; AI-tool integrations are generated locally and
+are not committed.
+
+To set up your local tooling:
+
+```bash
+npm install -g @fission-ai/openspec
+openspec init --tools <claude|cursor|codex|...>   # pick your AI tool
+```
+
+After `init`, restart your IDE so the generated slash commands register.
+
 ## Security
 
 Report security vulnerabilities privately. See [SECURITY.md](SECURITY.md)
