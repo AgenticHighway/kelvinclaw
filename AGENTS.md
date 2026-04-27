@@ -98,6 +98,28 @@ When in doubt, use an ephemeral Docker container to replicate the CI environment
 scripts/test-docker.sh
 ```
 
+## CI Troubleshooting
+
+### `Path::exists()` is unreliable in ephemeral CI runners
+
+We hit a race condition where `Path::exists()` returned `true` for a file in `/tmp` that did not actually exist, causing a "failed to parse trust policy" error instead of the expected "no trust policy found" error.
+
+**Root cause:** `exists()` is a separate syscall from `read()`. In ephemeral CI environments (overlayfs, shared tmpfs, etc.), the filesystem state can change between the two calls — or the filesystem itself can give stale answers.
+
+**Fix:** Never check `exists()` before reading. Instead, attempt the read and match on `ErrorKind::NotFound`:
+
+```rust
+let bytes = match std::fs::read(&path) {
+    Ok(b) => b,
+    Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+        bail!("file not found: {}", path.display())
+    }
+    Err(e) => return Err(e.into()),
+};
+```
+
+This applies to any file read in test code that runs in CI.
+
 ## Agent Notes for This Codebase
 
 ### Plugin signing is dormant but not dead
