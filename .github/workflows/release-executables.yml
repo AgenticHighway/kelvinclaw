@@ -143,10 +143,19 @@ jobs:
                 include:
                     - runner: macos-15-intel
                       target: x86_64-apple-darwin
-                    - runner: macos-15
+                    # Blacksmith macOS runners are Apple Silicon only, so keep
+                    # the x86_64 artifact on GitHub-hosted Intel macOS.
+                    - runner: blacksmith-6vcpu-macos-15
                       target: aarch64-apple-darwin
         steps:
             - name: Checkout
+              if: startsWith(matrix.runner, 'blacksmith-')
+              uses: useblacksmith/checkout@41cdeedae8edb2e684ba22896a5fd2a3cb85db6b
+              with:
+                  persist-credentials: false
+
+            - name: Checkout
+              if: ${{ !startsWith(matrix.runner, 'blacksmith-') }}
               uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
               with:
                   persist-credentials: false
