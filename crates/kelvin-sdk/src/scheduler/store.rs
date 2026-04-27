@@ -121,7 +121,7 @@ impl SchedulerStore {
             if let Some(schedule_id) = schedule_id {
                 slots.retain(|slot| slot.schedule_id == schedule_id);
             }
-            slots.sort_by(|left, right| right.slot_at_ms.cmp(&left.slot_at_ms));
+            slots.sort_by_key(|slot| std::cmp::Reverse(slot.slot_at_ms));
             slots.truncate(limit.max(1));
             slots
         })
@@ -137,7 +137,7 @@ impl SchedulerStore {
             if let Some(schedule_id) = schedule_id {
                 audit.retain(|entry| entry.schedule_id.as_deref() == Some(schedule_id));
             }
-            audit.sort_by(|left, right| right.ts_ms.cmp(&left.ts_ms));
+            audit.sort_by_key(|entry| std::cmp::Reverse(entry.ts_ms));
             audit.truncate(limit.max(1));
             audit
         })
