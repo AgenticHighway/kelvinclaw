@@ -526,18 +526,22 @@ fn verify_strict_signature(
 
     // Load trust policy.
     let trust_path = crate::paths::trust_policy_path();
-    let trust_policy: serde_json::Value = if trust_path.exists() {
-        let bytes = std::fs::read(&trust_path)
-            .with_context(|| format!("failed to read trust policy {}", trust_path.display()))?;
-        serde_json::from_slice(&bytes)
-            .with_context(|| format!("failed to parse trust policy {}", trust_path.display()))?
-    } else {
-        bail!(
-            "strict install rejected: no trust policy found at {}. \
-             Run 'kelvin init' or add the publisher's key manually.",
-            trust_path.display()
-        );
+    let bytes = match std::fs::read(&trust_path) {
+        Ok(b) => b,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            bail!(
+                "strict install rejected: no trust policy found at {}. \
+                 Run 'kelvin init' or add the publisher's key manually.",
+                trust_path.display()
+            );
+        }
+        Err(e) => {
+            return Err(e)
+                .with_context(|| format!("failed to read trust policy {}", trust_path.display()));
+        }
     };
+    let trust_policy: serde_json::Value = serde_json::from_slice(&bytes)
+        .with_context(|| format!("failed to parse trust policy {}", trust_path.display()))?;
 
     // Get publisher from manifest.
     let manifest: serde_json::Value = serde_json::from_slice(manifest_bytes)
