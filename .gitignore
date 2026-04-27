@@ -28,7 +28,14 @@ skills/*/Cargo.lock
 .kelvin/
 .bench/
 .cache/docker/
-.claude/
+# Ignore .claude/ except OpenSpec project commands and skills, so specs follow branches
+.claude/*
+!.claude/commands/
+!.claude/skills/
+.claude/commands/*
+!.claude/commands/opsx/
+.claude/skills/*
+!.claude/skills/openspec-*/
 
 # Plugin build artifacts
 plugins/**/dist/
