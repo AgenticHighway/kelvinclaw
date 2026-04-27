@@ -9,7 +9,12 @@ use sha2::{Digest, Sha256};
 use super::download;
 
 /// Installs a plugin from a local tarball. Mirrors plugin-install.sh.
-pub fn install_package(tarball: &Path, plugin_home: &Path, force: bool, strict: bool) -> Result<()> {
+pub fn install_package(
+    tarball: &Path,
+    plugin_home: &Path,
+    force: bool,
+    strict: bool,
+) -> Result<()> {
     let work_dir = tempdir()?;
     extract_tarball(tarball, &work_dir)?;
     install_from_extracted_dir(&work_dir, plugin_home, force, strict)
@@ -29,7 +34,12 @@ pub fn install_from_dir(src: &Path, plugin_home: &Path, force: bool, strict: boo
 }
 
 /// Core install logic operating on an already-extracted plugin directory.
-fn install_from_extracted_dir(src: &Path, plugin_home: &Path, force: bool, strict: bool) -> Result<()> {
+fn install_from_extracted_dir(
+    src: &Path,
+    plugin_home: &Path,
+    force: bool,
+    strict: bool,
+) -> Result<()> {
     let manifest_path = src.join("plugin.json");
     let payload_dir = src.join("payload");
 
@@ -531,10 +541,8 @@ fn verify_strict_signature(
             publisher
         )
     })?;
-    let verifying_key =
-        VerifyingKey::from_bytes(&pub_key_array).with_context(|| {
-            format!("invalid ed25519 public key for publisher {}", publisher)
-        })?;
+    let verifying_key = VerifyingKey::from_bytes(&pub_key_array)
+        .with_context(|| format!("invalid ed25519 public key for publisher {}", publisher))?;
 
     verifying_key
         .verify(manifest_bytes, &signature)
@@ -661,7 +669,10 @@ mod tests {
         let err = verify_strict_signature(&dir, &manifest_bytes, "acme.echo", "1.0.0")
             .unwrap_err()
             .to_string();
-        assert!(err.contains("missing plugin.sig"), "expected missing sig error, got: {err}");
+        assert!(
+            err.contains("missing plugin.sig"),
+            "expected missing sig error, got: {err}"
+        );
     }
 
     #[test]
@@ -689,7 +700,10 @@ mod tests {
         let err = verify_strict_signature(&dir, &manifest_bytes, "evil.echo", "1.0.0")
             .unwrap_err()
             .to_string();
-        assert!(err.contains("not in the trust policy"), "expected untrusted publisher error, got: {err}");
+        assert!(
+            err.contains("not in the trust policy"),
+            "expected untrusted publisher error, got: {err}"
+        );
     }
 
     #[test]
@@ -719,7 +733,10 @@ mod tests {
         let err = verify_strict_signature(&dir, &manifest_bytes, "acme.echo", "1.0.0")
             .unwrap_err()
             .to_string();
-        assert!(err.contains("signature verification failed"), "expected invalid sig error, got: {err}");
+        assert!(
+            err.contains("signature verification failed"),
+            "expected invalid sig error, got: {err}"
+        );
     }
 
     #[test]
@@ -746,7 +763,10 @@ mod tests {
         let err = verify_strict_signature(&dir, &manifest_bytes, "acme.echo", "1.0.0")
             .unwrap_err()
             .to_string();
-        assert!(err.contains("missing 'publisher' field"), "expected missing publisher error, got: {err}");
+        assert!(
+            err.contains("missing 'publisher' field"),
+            "expected missing publisher error, got: {err}"
+        );
     }
 
     #[test]
@@ -775,6 +795,9 @@ mod tests {
         let err = verify_strict_signature(&dir, &manifest_bytes, "acme.echo", "1.0.0")
             .unwrap_err()
             .to_string();
-        assert!(err.contains("no trust policy found"), "expected missing policy error, got: {err}");
+        assert!(
+            err.contains("no trust policy found"),
+            "expected missing policy error, got: {err}"
+        );
     }
 }
