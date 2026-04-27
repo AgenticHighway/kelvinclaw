@@ -30,7 +30,7 @@ fn cmd_install(args: PluginInstallArgs) -> Result<()> {
         if !dir.exists() {
             bail!("directory not found: {}", dir.display());
         }
-        super::plugin_ops::install_from_dir(&dir, &plugin_home, args.force)?;
+        super::plugin_ops::install_from_dir(&dir, &plugin_home, args.force, args.strict)?;
         return Ok(());
     }
 
@@ -39,7 +39,7 @@ fn cmd_install(args: PluginInstallArgs) -> Result<()> {
         if !pkg.exists() {
             bail!("package not found: {}", pkg.display());
         }
-        super::plugin_ops::install_package(&pkg, &plugin_home, args.force)?;
+        super::plugin_ops::install_package(&pkg, &plugin_home, args.force, args.strict)?;
         return Ok(());
     }
 
@@ -53,6 +53,7 @@ fn cmd_install(args: PluginInstallArgs) -> Result<()> {
         &plugin_home,
         &url,
         args.force,
+        args.strict,
     )
 }
 
@@ -158,7 +159,7 @@ fn cmd_update(args: PluginUpdateArgs) -> Result<()> {
         std::fs::create_dir_all(&tmp)?;
         let tarball = tmp.join("plugin.tar.gz");
         super::plugin_ops::download::download_tarball(package_url, expected_sha, &tarball)?;
-        super::plugin_ops::install_package(&tarball, &plugin_home, true)?;
+        super::plugin_ops::install_package(&tarball, &plugin_home, true, args.strict)?;
         let _ = std::fs::remove_dir_all(&tmp);
         updated += 1;
     }
