@@ -44,9 +44,7 @@ pub(super) fn save_state(path: &Path, state: &mut SchedulerState) -> KelvinResul
             .cmp(&right.schedule_id)
             .then_with(|| left.slot_at_ms.cmp(&right.slot_at_ms))
     });
-    state
-        .audit
-        .sort_by(|left, right| left.ts_ms.cmp(&right.ts_ms));
+    state.audit.sort_by_key(|entry| entry.ts_ms);
     if state.slots.len() > MAX_SLOT_ENTRIES {
         let keep_from = state.slots.len().saturating_sub(MAX_SLOT_ENTRIES);
         state.slots.drain(..keep_from);
