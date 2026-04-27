@@ -565,7 +565,6 @@ mod tests {
     use super::*;
     use ed25519_dalek::{Signer, SigningKey};
     use std::sync::{Mutex, OnceLock};
-    use std::time::{SystemTime, UNIX_EPOCH};
 
     fn env_lock() -> &'static Mutex<()> {
         static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
@@ -573,11 +572,7 @@ mod tests {
     }
 
     fn temp_home() -> std::path::PathBuf {
-        let millis = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map(|d| d.as_millis())
-            .unwrap_or_default();
-        let path = std::env::temp_dir().join(format!("kelvin-cli-test-{millis}"));
+        let path = std::env::temp_dir().join(format!("kelvin-cli-test-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&path).expect("create temp dir");
         path
     }
@@ -777,6 +772,7 @@ mod tests {
 
         // Point to a non-existent trust policy file.
         let policy_path = home.join("no-such-policy.json");
+        let _ = std::fs::remove_file(&policy_path);
         unsafe { std::env::set_var("KELVIN_TRUST_POLICY_PATH", &policy_path) };
 
         let manifest = serde_json::json!({
