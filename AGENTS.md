@@ -77,6 +77,27 @@ This file defines default expectations for coding agents working in this reposit
 - Enforce manifest capability/runtime parity and import allowlists.
 - Keep network access host-mediated with explicit allowlists.
 
+## Local-First Testing Policy
+
+**Run tests locally before pushing.** CI runners cost money and time. Do not use the remote CI as your personal test harness.
+
+Required local checks before any push:
+1. `cargo fmt --all -- --check` — formatting must pass
+2. `cargo clippy -p kelvin-cli -- -D warnings` — no warnings in touched packages
+3. `cargo test -p kelvin-cli` — all unit tests in touched packages must pass
+4. If you changed other crates, run `cargo test --workspace --lib` as well
+
+If a test passes locally but fails in CI, the most common causes are:
+- Parallel test interference (env var races, shared temp files)
+- Different filesystem behavior (`/tmp` handling, symlinks)
+- Missing binaries that the e2e tests require (e.g., `kelvin-gateway`)
+
+When in doubt, use an ephemeral Docker container to replicate the CI environment:
+```bash
+# Build and test in a clean container
+scripts/test-docker.sh
+```
+
 ## Agent Notes for This Codebase
 
 ### Plugin signing is dormant but not dead
