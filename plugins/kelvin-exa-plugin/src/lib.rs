@@ -433,11 +433,11 @@ pub extern "C" fn handle_tool_call(ptr: i32, len: i32) -> i64 {
         n.max(1).min(25) as u32
     };
 
-    // --- Optional: type (validated against allowlist) ---
+    // --- Optional: type (validated against allowlist, default to auto) ---
     let type_value = match extract_str_field(input, b"type") {
         Some(t) if allowed(t, VALID_SEARCH_TYPES) => Some(t),
         Some(_) => return error_result(b"invalid 'type' (use auto, neural, or fast)"),
-        None => None,
+        None => Some(b"auto"),
     };
 
     // --- Optional: category (validated against allowlist) ---
