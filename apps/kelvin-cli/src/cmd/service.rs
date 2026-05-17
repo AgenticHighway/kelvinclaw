@@ -42,6 +42,8 @@ WantedBy=default.target
 #[cfg(target_os = "macos")]
 fn launchd_plist(label: &str) -> String {
     let bin = kelvin_bin();
+    let log = crate::paths::gateway_log_path();
+    let log = log.to_string_lossy();
     format!(
         r#"<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -61,14 +63,15 @@ fn launchd_plist(label: &str) -> String {
     <key>KeepAlive</key>
     <true/>
     <key>StandardOutPath</key>
-    <string>~/.kelvinclaw/logs/gateway.log</string>
+    <string>{log}</string>
     <key>StandardErrorPath</key>
-    <string>~/.kelvinclaw/logs/gateway.log</string>
+    <string>{log}</string>
 </dict>
 </plist>
 "#,
         label = label,
-        bin = bin
+        bin = bin,
+        log = log
     )
 }
 

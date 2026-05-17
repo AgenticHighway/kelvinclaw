@@ -8,9 +8,6 @@ pub const DEFAULT_COMPACT_TO_MESSAGES: usize = 64;
 pub const BOOL_TRUE_VALUES: &[&str] = &["1", "true", "yes", "on"];
 pub const BOOL_FALSE_VALUES: &[&str] = &["0", "false", "no", "off"];
 
-// --- Configuration Paths ---
-pub const DEFAULT_STATE_DIR_PATH: &str = ".kelvin/state";
-
 // --- CLI Arguments ---
 pub const ARG_HELP_SHORT: &str = "-h";
 pub const ARG_HELP_LONG: &str = "--help";

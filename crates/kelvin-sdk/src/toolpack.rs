@@ -436,7 +436,7 @@ impl Tool for SafeFsReadTool {
     }
 
     fn description(&self) -> &str {
-        "Read a file from the workspace. Path must be workspace-relative. Sensitive paths (.env, .git/, .kelvin/plugins/) are denied."
+        "Read a file from the workspace. Path must be workspace-relative. Sensitive paths (.env, .git/, .kelvinclaw/plugins/) are denied."
     }
 
     fn input_schema(&self) -> serde_json::Value {
@@ -560,7 +560,7 @@ impl Tool for SafeFsWriteTool {
     }
 
     fn description(&self) -> &str {
-        "Write content to a file in the workspace. Only .kelvin/sandbox/, memory/, and notes/ roots are permitted. Requires sensitive approval."
+        "Write content to a file in the workspace. Only .kelvinclaw/sandbox/, memory/, and notes/ roots are permitted. Requires sensitive approval."
     }
 
     fn input_schema(&self) -> serde_json::Value {
@@ -569,7 +569,7 @@ impl Tool for SafeFsWriteTool {
             "properties": {
                 "path": {
                     "type": "string",
-                    "description": "Workspace-relative path to write. Must be under .kelvin/sandbox/, memory/, or notes/."
+                    "description": "Workspace-relative path to write. Must be under .kelvinclaw/sandbox/, memory/, or notes/."
                 },
                 "content": {
                     "type": "string",
@@ -619,7 +619,7 @@ impl Tool for SafeFsWriteTool {
         // check if write path allowed
         if !Self::write_scope_allowed(&path) {
             return Err(KelvinError::InvalidInput(format!(
-                "{} denied path '{}'; allowed roots are .kelvin/sandbox/, memory/, notes/",
+                "{} denied path '{}'; allowed roots are .kelvinclaw/sandbox/, memory/, notes/",
                 self.name(),
                 path
             )));
@@ -1105,12 +1105,11 @@ struct SessionToolsTool {
     policy: ToolPackPolicy,
 }
 
-/// get state path from workspace + current session id
 impl SessionToolsTool {
-    fn state_path(workspace: &str, session_id: &str) -> std::path::PathBuf {
-        Path::new(workspace)
-            .join(".kelvin/session-tools")
-            .join(format!("{session_id}.json"))
+    fn state_path(session_id: &str) -> KelvinResult<std::path::PathBuf> {
+        Ok(kelvin_brain::kelvin_home()?
+            .join("session-tools")
+            .join(format!("{session_id}.json")))
     }
 }
 
@@ -1164,7 +1163,7 @@ impl Tool for SessionToolsTool {
             .unwrap_or_else(|| "list_notes".to_string())
             .to_ascii_lowercase();
 
-        let path = Self::state_path(&input.workspace_dir, &input.session_id);
+        let path = Self::state_path(&input.session_id)?;
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)?;
         }

@@ -9,13 +9,12 @@ use bin_consts::{
     DEFAULT_BIND_ADDR, DEFAULT_FAILOVER_BACKOFF_MS, DEFAULT_FAILOVER_RETRIES,
     DEFAULT_HANDSHAKE_TIMEOUT_MS, DEFAULT_MAX_CONNECTIONS, DEFAULT_MAX_FRAME_BYTES,
     DEFAULT_MAX_MESSAGE_BYTES, DEFAULT_MAX_OUTBOUND_MESSAGES_PER_CONNECTION, DEFAULT_SESSION_ID,
-    DEFAULT_STATE_DIR_COMPONENT, DEFAULT_TIMEOUT_MS, DOCTOR_ENDPOINT, DOCTOR_PLUGIN_HOME,
-    DOCTOR_TIMEOUT_MS, DOCTOR_TRUST_POLICY_PATH, ENV_GATEWAY_ALLOW_INSECURE_PUBLIC_BIND,
-    ENV_GATEWAY_AUTH_FAILURE_BACKOFF_MS, ENV_GATEWAY_AUTH_FAILURE_THRESHOLD,
-    ENV_GATEWAY_HANDSHAKE_TIMEOUT_MS, ENV_GATEWAY_MAX_CONNECTIONS, ENV_GATEWAY_MAX_FRAME_BYTES,
-    ENV_GATEWAY_MAX_MESSAGE_BYTES, ENV_GATEWAY_MAX_OUTBOUND_MESSAGES, ENV_GATEWAY_TLS_CERT_PATH,
-    ENV_GATEWAY_TLS_KEY_PATH, ENV_GATEWAY_TOKEN, MAX_SESSION_HISTORY_MESSAGES, MAX_TOOL_ITERATIONS,
-    STATE_SUBDIR,
+    DEFAULT_TIMEOUT_MS, DOCTOR_ENDPOINT, DOCTOR_TIMEOUT_MS,
+    ENV_GATEWAY_ALLOW_INSECURE_PUBLIC_BIND, ENV_GATEWAY_AUTH_FAILURE_BACKOFF_MS,
+    ENV_GATEWAY_AUTH_FAILURE_THRESHOLD, ENV_GATEWAY_HANDSHAKE_TIMEOUT_MS,
+    ENV_GATEWAY_MAX_CONNECTIONS, ENV_GATEWAY_MAX_FRAME_BYTES, ENV_GATEWAY_MAX_MESSAGE_BYTES,
+    ENV_GATEWAY_MAX_OUTBOUND_MESSAGES, ENV_GATEWAY_TLS_CERT_PATH, ENV_GATEWAY_TLS_KEY_PATH,
+    ENV_GATEWAY_TOKEN, MAX_SESSION_HISTORY_MESSAGES, MAX_TOOL_ITERATIONS,
 };
 
 use kelvin_core::PluginSecurityPolicy;
@@ -138,8 +137,9 @@ fn parse_args() -> Result<CliConfig, String> {
     let mut approve_pairing_code: Option<String> = None;
     let mut doctor_endpoint = DOCTOR_ENDPOINT.to_string();
     let mut doctor_timeout_ms = DOCTOR_TIMEOUT_MS;
-    let mut doctor_plugin_home = PathBuf::from(DOCTOR_PLUGIN_HOME);
-    let mut doctor_trust_policy_path = PathBuf::from(DOCTOR_TRUST_POLICY_PATH);
+    let mut doctor_plugin_home = kelvin_brain::default_plugin_home().map_err(|e| e.to_string())?;
+    let mut doctor_trust_policy_path =
+        kelvin_brain::default_trust_policy_path().map_err(|e| e.to_string())?;
     let mut failover_retries = DEFAULT_FAILOVER_RETRIES;
     let mut failover_backoff_ms = DEFAULT_FAILOVER_BACKOFF_MS;
     let mut pending_failover_ids: Option<Vec<String>> = None;
@@ -544,10 +544,13 @@ async fn main() {
                 plugin_security_policy.allow_network_egress = true;
             }
 
-            let state_dir = config
-                .workspace_dir
-                .join(DEFAULT_STATE_DIR_COMPONENT)
-                .join(STATE_SUBDIR);
+            let state_dir = match kelvin_brain::default_state_dir() {
+                Ok(p) => p,
+                Err(err) => {
+                    eprintln!("error: failed to resolve state dir: {err}");
+                    std::process::exit(1);
+                }
+            };
             let runtime_config = KelvinSdkRuntimeConfig {
                 workspace_dir: config.workspace_dir,
                 default_session_id: config.default_session_id,

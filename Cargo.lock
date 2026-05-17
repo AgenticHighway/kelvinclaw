@@ -2413,6 +2413,7 @@ dependencies = [
 name = "kelvin-host"
 version = "0.2.7"
 dependencies = [
+ "kelvin-brain",
  "kelvin-core",
  "kelvin-sdk",
  "tokio",

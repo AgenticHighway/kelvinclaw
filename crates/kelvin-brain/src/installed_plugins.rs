@@ -121,30 +121,36 @@ impl InstalledPluginLoaderConfig {
     }
 }
 
-/// ### Brief
-///
-/// retrieves the KELVIN_PLUGIN_HOME env var
-///
-/// ### Returns
-/// env var for KELVIN_PLUGIN_HOME as PathBuf
+/// Returns `$KELVIN_HOME` or `~/.kelvinclaw`.
+pub fn kelvin_home() -> KelvinResult<PathBuf> {
+    if let Some(path) = env_path(consts::ENV_KELVIN_HOME) {
+        return Ok(path);
+    }
+    Ok(resolve_home_dir()?.join(".kelvinclaw"))
+}
+
+/// Returns `$KELVIN_STATE_DIR` or `{kelvin_home}/state`.
+pub fn default_state_dir() -> KelvinResult<PathBuf> {
+    if let Some(path) = env_path(consts::ENV_KELVIN_STATE_DIR) {
+        return Ok(path);
+    }
+    Ok(kelvin_home()?.join("state"))
+}
+
+/// Returns `$KELVIN_PLUGIN_HOME` or `{kelvin_home}/plugins`.
 pub fn default_plugin_home() -> KelvinResult<PathBuf> {
     if let Some(path) = env_path(consts::ENV_KELVIN_PLUGIN_HOME) {
         return Ok(path);
     }
-    Ok(resolve_home_dir()?.join(consts::DEFAULT_PLUGIN_HOME_RELATIVE))
+    Ok(kelvin_home()?.join("plugins"))
 }
 
-/// ### Brief
-///
-/// retrieves the KELVIN_TRUST_POLICY_PATH env var
-///
-/// ### Returns
-/// env var for KELVIN_TRUST_POLICY_PATH as PathBuf
+/// Returns `$KELVIN_TRUST_POLICY_PATH` or `{kelvin_home}/trusted_publishers.json`.
 pub fn default_trust_policy_path() -> KelvinResult<PathBuf> {
     if let Some(path) = env_path(consts::ENV_KELVIN_TRUST_POLICY_PATH) {
         return Ok(path);
     }
-    Ok(resolve_home_dir()?.join(consts::DEFAULT_TRUST_POLICY_RELATIVE))
+    Ok(kelvin_home()?.join("trusted_publishers.json"))
 }
 
 /// ### Brief

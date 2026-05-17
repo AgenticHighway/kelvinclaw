@@ -224,7 +224,7 @@ fn runtime_config_from_cli(config: &CliConfig) -> KelvinSdkRuntimeConfig {
         state_dir: config
             .state_dir
             .clone()
-            .or_else(|| Some(config.workspace_dir.join(consts::DEFAULT_STATE_DIR_PATH))),
+            .or_else(|| kelvin_brain::default_state_dir().ok()),
         persist_runs: config.persist_runs,
         max_session_history_messages: config.max_session_history_messages,
         compact_to_messages: config.compact_to_messages,
@@ -315,7 +315,7 @@ async fn run_single(config: CliConfig) -> Result<(), KelvinError> {
         model_provider,
         state_dir: config
             .state_dir
-            .or_else(|| Some(config.workspace_dir.join(consts::DEFAULT_STATE_DIR_PATH))),
+            .or_else(|| kelvin_brain::default_state_dir().ok()),
         persist_runs: config.persist_runs,
         max_session_history_messages: config.max_session_history_messages,
         compact_to_messages: config.compact_to_messages,

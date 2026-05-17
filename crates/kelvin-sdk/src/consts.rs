@@ -45,7 +45,7 @@ pub const SENSITIVE_PATHS_PREFIX: &[&str] =
 // why tf is this a comma-sep string
 pub const DEFAULT_WEB_ALLOW_HOSTS: &str =
     "docs.rs,crates.io,raw.githubusercontent.com,api.openai.com";
-pub const DEFAULT_FS_WRITE_SCOPE: &[&str] = &[".kelvin/sandbox/", "memory/", "notes/"];
+pub const DEFAULT_FS_WRITE_SCOPE: &[&str] = &[".kelvinclaw/sandbox/", "memory/", "notes/"];
 
 // --- Session Defaults ---
 pub const DEFAULT_SESSION_ID: &str = "main";
