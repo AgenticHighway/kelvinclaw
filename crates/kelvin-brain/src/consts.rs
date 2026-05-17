@@ -1,8 +1,10 @@
 // --- Plugin System ---
 pub const DEFAULT_TOOL_RUNTIME_KIND: &str = "wasm_tool_v1";
 pub const DEFAULT_MODEL_RUNTIME_KIND: &str = "wasm_model_v1";
-pub const DEFAULT_PLUGIN_HOME_RELATIVE: &str = ".kelvinclaw/plugins";
-pub const DEFAULT_TRUST_POLICY_RELATIVE: &str = ".kelvinclaw/trusted_publishers.json";
+
+// --- Environment Variable Names ---
+pub const ENV_KELVIN_HOME: &str = "KELVIN_HOME";
+pub const ENV_KELVIN_STATE_DIR: &str = "KELVIN_STATE_DIR";
 
 // --- Timeouts and Limits ---
 pub const DEFAULT_TIMEOUT_MS: u64 = 30_000;

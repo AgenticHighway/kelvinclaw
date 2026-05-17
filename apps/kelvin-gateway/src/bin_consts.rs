@@ -5,10 +5,7 @@ pub const DEFAULT_SESSION_ID: &str = "main";
 pub const DEFAULT_TIMEOUT_MS: u64 = 300_000;
 pub const MAX_SESSION_HISTORY_MESSAGES: usize = 128;
 pub const COMPACT_TO_MESSAGES: usize = 64;
-pub const DOCTOR_PLUGIN_HOME: &str = ".kelvin/plugins";
-pub const DOCTOR_TRUST_POLICY_PATH: &str = ".kelvin/trusted_publishers.json";
-pub const DEFAULT_STATE_DIR_COMPONENT: &str = ".kelvin";
-pub const STATE_SUBDIR: &str = "state";
+
 pub const DOCTOR_TIMEOUT_MS: u64 = 5_000;
 pub const DEFAULT_FAILOVER_RETRIES: u8 = 1;
 pub const DEFAULT_FAILOVER_BACKOFF_MS: u64 = 100;

@@ -8,8 +8,8 @@ pub mod wasm_skill_tool;
 
 pub use consts::{WASM_SKILL_PLUGIN_ID, WASM_SKILL_PLUGIN_NAME};
 pub use installed_plugins::{
-    default_plugin_home, default_trust_policy_path, load_installed_plugins,
-    load_installed_plugins_default, load_installed_tool_plugins,
+    default_plugin_home, default_state_dir, default_trust_policy_path, kelvin_home,
+    load_installed_plugins, load_installed_plugins_default, load_installed_tool_plugins,
     load_installed_tool_plugins_default, InstalledPluginLoaderConfig, LoadedInstalledPlugin,
     LoadedInstalledPlugins, PublisherTrustPolicy,
 };
