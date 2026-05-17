@@ -40,6 +40,7 @@ services:
             OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
             OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-}
             BRAVE_API_KEY: ${BRAVE_API_KEY:-}
+            EXA_API_KEY: ${EXA_API_KEY:-}
             RUST_LOG: ${RUST_LOG:-info}
         entrypoint: ["/bin/sh", "-c"]
         command:
@@ -75,6 +76,7 @@ services:
             OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
             OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-}
             BRAVE_API_KEY: ${BRAVE_API_KEY:-}
+            EXA_API_KEY: ${EXA_API_KEY:-}
             KELVIN_TELEGRAM_ENABLED: ${KELVIN_TELEGRAM_ENABLED:-false}
             KELVIN_TELEGRAM_BOT_TOKEN: ${KELVIN_TELEGRAM_BOT_TOKEN:-}
             KELVIN_TELEGRAM_WEBHOOK_SECRET_TOKEN: ${KELVIN_TELEGRAM_WEBHOOK_SECRET_TOKEN:-}

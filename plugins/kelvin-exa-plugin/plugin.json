@@ -1,0 +1,93 @@
+{
+  "id": "kelvin.exa",
+  "name": "Kelvin Exa Search",
+  "version": "0.1.0",
+  "api_version": "1.0.0",
+  "description": "AI-powered web search via the Exa /search API (https://exa.ai). Returns titles, URLs, and highlight snippets, with optional category, domain, and date filters.",
+  "homepage": "https://github.com/AgenticHighway/kelvinclaw/tree/main/plugins/kelvin-exa-plugin",
+  "capabilities": [
+    "tool_provider",
+    "network_egress",
+    "env_access"
+  ],
+  "experimental": false,
+  "min_core_version": "0.1.0",
+  "max_core_version": null,
+  "runtime": "wasm_tool_v1",
+  "entrypoint": "plugin.wasm",
+  "entrypoint_sha256": "a0d6a4ebda24d5e1d619a95f30722cd3e16a2bcd728212850c7612266e6e22c3",
+  "publisher": null,
+  "quality_tier": "unsigned_local",
+  "capability_scopes": {
+    "fs_read_paths": [],
+    "network_allow_hosts": [
+      "api.exa.ai"
+    ],
+    "env_allow": [
+      "EXA_API_KEY"
+    ]
+  },
+  "operational_controls": {
+    "timeout_ms": 30000,
+    "max_retries": 1,
+    "max_calls_per_minute": 30,
+    "circuit_breaker_failures": 5,
+    "circuit_breaker_cooldown_ms": 60000,
+    "fuel_budget": 20000000
+  },
+  "tool_name": "kelvin_exa_search",
+  "tool_input_schema": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string",
+        "description": "The search query."
+      },
+      "num_results": {
+        "type": "integer",
+        "description": "Number of results to return (1-25, default 5)."
+      },
+      "type": {
+        "type": "string",
+        "description": "Search type. One of 'auto' (default), 'neural', or 'fast'."
+      },
+      "category": {
+        "type": "string",
+        "description": "Optional category filter. One of 'company', 'research paper', 'news', 'personal site', 'financial report', or 'people'."
+      },
+      "include_domains": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Optional list of domains to include in results."
+      },
+      "exclude_domains": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Optional list of domains to exclude from results."
+      },
+      "start_published_date": {
+        "type": "string",
+        "description": "Optional ISO 8601 date — only return results published on or after this date."
+      },
+      "end_published_date": {
+        "type": "string",
+        "description": "Optional ISO 8601 date — only return results published on or before this date."
+      },
+      "livecrawl": {
+        "type": "string",
+        "description": "Live-crawl behavior. One of 'never', 'fallback', 'preferred', or 'always'."
+      },
+      "summary": {
+        "type": "boolean",
+        "description": "If true, request an LLM-generated summary alongside each result (default false)."
+      }
+    },
+    "required": [
+      "query"
+    ]
+  }
+}

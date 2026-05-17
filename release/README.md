@@ -51,6 +51,7 @@ Key variables:
 | `OPENAI_API_KEY` | Required when using `kelvin.openai` |
 | `OPENROUTER_API_KEY` | Required when using `kelvin.openrouter` |
 | `BRAVE_API_KEY` | Required when using `kelvin.websearch` |
+| `EXA_API_KEY` | Required when using `kelvin.exa` |
 | `KELVIN_PLUGIN_INDEX_URL` | Plugin index URL |
 
 ---
@@ -171,6 +172,7 @@ kelvin plugin install kelvin.anthropic
 | Plugin ID | Description | Required env var |
 |---|---|---|
 | `kelvin.websearch` | Web search via Brave Search API | `BRAVE_API_KEY` |
+| `kelvin.exa` | AI-powered web search via Exa | `EXA_API_KEY` |
 
 ### CLI Plugin
 

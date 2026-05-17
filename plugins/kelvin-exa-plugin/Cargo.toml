@@ -1,0 +1,25 @@
+# Kelvin tool plugin crate.
+# Compiled to wasm32-unknown-unknown and loaded by the Kelvin runtime as a
+# wasm_tool_v1 plugin. Distributed as a .wasm binary, not published to crates.io.
+
+[package]
+name = "kelvin-exa-plugin"
+# edition = "2021" is the minimum for stable wasm32 support.
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+# cdylib produces a .wasm with C ABI exports (alloc, dealloc, handle_tool_call).
+# Do NOT add rlib here; Kelvin loads only the .wasm cdylib.
+name = "kelvin_exa_plugin"
+crate-type = ["cdylib"]
+
+# Size optimisations — tool plugins are typically very small (<10 KiB).
+[profile.release]
+opt-level = "s"   # optimise for size
+lto = true         # link-time optimisation
+strip = true       # strip debug symbols
+
+# Empty [workspace] prevents Cargo from walking up to a parent workspace.
+[workspace]
