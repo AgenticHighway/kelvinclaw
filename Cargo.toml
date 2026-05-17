@@ -6,6 +6,7 @@ members = [
   "apps/kelvin-host",
   "apps/kelvin-registry",
   "crates/kelvin-core",
+  "crates/kelvin-commands",
   "crates/kelvin-sdk",
   "crates/kelvin-memory",
   "crates/kelvin-brain",

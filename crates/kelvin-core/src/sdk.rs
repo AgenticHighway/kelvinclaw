@@ -195,6 +195,55 @@ pub enum PluginCapability {
     EnvAccess,
 }
 
+/// Surface on which a slash command is available.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CommandSurface {
+    Tui,
+    Telegram,
+    Slack,
+    Discord,
+    WhatsApp,
+}
+
+/// Sender privilege level resolved from channel policy.
+///
+/// Variants are ordered lowest-to-highest so that `derive(Ord)` gives
+/// `Blocked < Probation < Standard < Trusted < Owner`.  All tier-gate
+/// checks use `sender_tier >= required_tier`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SenderTrustTier {
+    Blocked,
+    Probation,
+    Standard,
+    Trusted,
+    Owner,
+}
+
+impl SenderTrustTier {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Owner => "owner",
+            Self::Trusted => "trusted",
+            Self::Standard => "standard",
+            Self::Probation => "probation",
+            Self::Blocked => "blocked",
+        }
+    }
+
+    pub fn parse(input: &str) -> Option<Self> {
+        match input.trim().to_ascii_lowercase().as_str() {
+            "owner" => Some(Self::Owner),
+            "trusted" => Some(Self::Trusted),
+            "standard" => Some(Self::Standard),
+            "probation" => Some(Self::Probation),
+            "blocked" => Some(Self::Blocked),
+            _ => None,
+        }
+    }
+}
+
 /// ### Brief
 ///
 /// metadata describing a single slash command provided by the gateway or a plugin.
@@ -208,6 +257,19 @@ pub struct SlashCommandMeta {
     pub description: String,
     pub usage: Option<String>,
     pub category: String,
+    /// Surfaces on which this command is available.  An empty set means the
+    /// command is not reachable from any surface (effectively disabled).
+    #[serde(default)]
+    pub surfaces: HashSet<CommandSurface>,
+    /// Minimum sender trust tier required to execute this command via channel
+    /// ingress.  `None` means no tier restriction is applied.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub min_tier: Option<SenderTrustTier>,
+    /// When `true` the command bypasses the channel inbox queue and is
+    /// dispatched synchronously at ingress time.  When `false` it is queued
+    /// for ordered dispatch after prior messages complete.
+    #[serde(default)]
+    pub bypass_queue: bool,
 }
 
 /// ### Brief

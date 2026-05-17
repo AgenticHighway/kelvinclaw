@@ -3,7 +3,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use kelvin_core::{now_ms, KelvinError, RunOutcome};
+use kelvin_commands::{parse_slash_input, CommandRegistry};
+use kelvin_core::{now_ms, CommandSurface, KelvinError, RunOutcome, SenderTrustTier};
 use kelvin_sdk::{KelvinSdkRunRequest, KelvinSdkRuntime, ScheduleReplyTarget};
 use kelvin_wasm::{ChannelSandboxPolicy, WasmChannelHost};
 use serde::{Deserialize, Serialize};
@@ -14,6 +15,7 @@ use url::Url;
 #[derive(Debug, Clone)]
 pub struct ChannelEngine {
     routing: ChannelRoutingTable,
+    command_registry: Arc<CommandRegistry>,
     telegram: Option<TextChannelAdapter>,
     slack: Option<TextChannelAdapter>,
     discord: Option<TextChannelAdapter>,
@@ -24,6 +26,7 @@ impl ChannelEngine {
     pub fn from_env_with_state_dir(
         state_dir: Option<&Path>,
         ingress_exposure: ChannelIngressExposure,
+        command_registry: Arc<CommandRegistry>,
     ) -> KelvinErrorOr<Self> {
         let ChannelIngressExposure {
             telegram: telegram_ingress,
@@ -38,6 +41,7 @@ impl ChannelEngine {
         let whatsapp = TextChannelAdapter::whatsapp_from_env(state_dir, whatsapp_ingress)?;
         Ok(Self {
             routing,
+            command_registry,
             telegram,
             slack,
             discord,
@@ -59,6 +63,7 @@ impl ChannelEngine {
             .ingest(
                 runtime,
                 &self.routing,
+                &self.command_registry,
                 ChannelEnvelope {
                     delivery_id: request.delivery_id,
                     sender_id: request.chat_id.to_string(),
@@ -103,6 +108,7 @@ impl ChannelEngine {
             .ingest(
                 runtime,
                 &self.routing,
+                &self.command_registry,
                 ChannelEnvelope {
                     delivery_id: request.delivery_id,
                     sender_id: request.user_id,
@@ -138,6 +144,7 @@ impl ChannelEngine {
             .ingest(
                 runtime,
                 &self.routing,
+                &self.command_registry,
                 ChannelEnvelope {
                     delivery_id: request.delivery_id,
                     sender_id: request.user_id,
@@ -173,6 +180,7 @@ impl ChannelEngine {
             .ingest(
                 runtime,
                 &self.routing,
+                &self.command_registry,
                 ChannelEnvelope {
                     delivery_id: request.delivery_id,
                     sender_id: request.user_phone.clone(),
@@ -341,6 +349,15 @@ impl ChannelKind {
             Self::Slack => "slack",
             Self::Discord => "discord",
             Self::WhatsApp => "whatsapp",
+        }
+    }
+
+    fn as_command_surface(self) -> CommandSurface {
+        match self {
+            Self::Telegram => CommandSurface::Telegram,
+            Self::Slack => CommandSurface::Slack,
+            Self::Discord => CommandSurface::Discord,
+            Self::WhatsApp => CommandSurface::WhatsApp,
         }
     }
 
@@ -750,10 +767,24 @@ impl WasmChannelPolicyPlugin {
     }
 }
 
+/// Data carried when a slash command is queued for ordered dispatch
+/// (`bypass_queue: false` on its `SlashCommandMeta`).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct QueuedSlashCommand {
+    command_name: String,
+    #[serde(default)]
+    args: Value,
+    session_id: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct QueuedEnvelope {
     envelope: ChannelEnvelope,
     route: RouteDecision,
+    /// Present when this entry is a queued slash command rather than a
+    /// brain-bound message.  `None` means regular message.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    slash_command: Option<QueuedSlashCommand>,
 }
 
 #[derive(Debug, Clone)]
@@ -1164,6 +1195,7 @@ impl TextChannelAdapter {
         &mut self,
         runtime: &KelvinSdkRuntime,
         routing: &ChannelRoutingTable,
+        command_registry: &CommandRegistry,
         mut envelope: ChannelEnvelope,
     ) -> KelvinErrorOr<Value> {
         self.metrics.ingest_total = self.metrics.ingest_total.saturating_add(1);
@@ -1261,6 +1293,92 @@ impl TextChannelAdapter {
             None
         };
 
+        // Slash command detection: intercept before routing and inbox push.
+        if let Some((cmd_name, args)) = parse_slash_input(&envelope.text) {
+            if let Some(meta) = command_registry.lookup_meta(&cmd_name) {
+                let surface = self.config.kind.as_command_surface();
+                let surface_ok = meta.surfaces.is_empty() || meta.surfaces.contains(&surface);
+                if surface_ok {
+                    // Tier check.
+                    if let Some(min_tier) = meta.min_tier {
+                        if trust_tier < min_tier {
+                            self.track_delivery_id(envelope.delivery_id.clone());
+                            let _ = self
+                                .send_message_with_retry(
+                                    &envelope.account_id,
+                                    &format!("/{cmd_name} requires elevated access"),
+                                )
+                                .await;
+                            return Ok(json!({
+                                "status": "command_denied",
+                                "command": cmd_name,
+                                "delivery_id": envelope.delivery_id,
+                            }));
+                        }
+                    }
+                    let args_value = if args.is_empty() {
+                        Value::Null
+                    } else {
+                        Value::String(args)
+                    };
+                    let slash_params = super::CommandExecParams {
+                        command: cmd_name.clone(),
+                        args: args_value.clone(),
+                        session_id: envelope.session_id.clone(),
+                    };
+                    self.track_delivery_id(envelope.delivery_id.clone());
+                    if meta.bypass_queue {
+                        // Dispatch immediately, skip the inbox.
+                        let reply = match super::command_exec_payload(runtime, slash_params).await {
+                            Ok(result) => serde_json::to_string_pretty(&result)
+                                .unwrap_or_else(|_| "done".to_string()),
+                            Err(e) => format!("/{cmd_name} failed: {e}"),
+                        };
+                        let _ = self
+                            .send_message_with_retry(&envelope.account_id, &reply)
+                            .await;
+                        return Ok(json!({
+                            "status": "command_dispatched",
+                            "command": cmd_name,
+                            "delivery_id": envelope.delivery_id,
+                        }));
+                    } else {
+                        // Queue for ordered dispatch after in-flight messages drain.
+                        if self.inbox.len() >= self.config.policy.max_queue_depth {
+                            self.metrics.queue_rejected_total =
+                                self.metrics.queue_rejected_total.saturating_add(1);
+                            self.metrics.last_error = Some("channel queue is full".to_string());
+                            self.persist_state()?;
+                            return Err(KelvinError::Backend(format!(
+                                "{} channel queue is full",
+                                self.config.kind.as_str()
+                            )));
+                        }
+                        self.metrics.queued_total = self.metrics.queued_total.saturating_add(1);
+                        let current_delivery_id = envelope.delivery_id.clone();
+                        let route = routing.decide(RouteInput {
+                            channel: self.config.kind.as_str(),
+                            account_id: &envelope.account_id,
+                            requested_session_id: envelope.session_id.as_deref(),
+                            requested_workspace_dir: envelope.workspace_dir.as_deref(),
+                            sender_tier: trust_tier,
+                        });
+                        self.inbox.push_back(QueuedEnvelope {
+                            envelope,
+                            route,
+                            slash_command: Some(QueuedSlashCommand {
+                                command_name: cmd_name,
+                                args: args_value,
+                                session_id: slash_params.session_id,
+                            }),
+                        });
+                        self.persist_state()?;
+                        return self.process_inbox(runtime, &current_delivery_id).await;
+                    }
+                }
+            }
+        }
+
         let mut route = routing.decide(RouteInput {
             channel: self.config.kind.as_str(),
             account_id: &envelope.account_id,
@@ -1285,7 +1403,11 @@ impl TextChannelAdapter {
 
         self.metrics.queued_total = self.metrics.queued_total.saturating_add(1);
         let current_delivery_id = envelope.delivery_id.clone();
-        self.inbox.push_back(QueuedEnvelope { envelope, route });
+        self.inbox.push_back(QueuedEnvelope {
+            envelope,
+            route,
+            slash_command: None,
+        });
         self.persist_state()?;
         self.process_inbox(runtime, &current_delivery_id).await
     }
@@ -1326,7 +1448,7 @@ impl TextChannelAdapter {
     }
 
     fn enforce_policy(&mut self, envelope: &ChannelEnvelope) -> KelvinErrorOr<SenderTrustTier> {
-        let sender_tier = SenderTrustTier::from_policy(&self.config.policy, &envelope.sender_id);
+        let sender_tier = tier_from_policy(&self.config.policy, &envelope.sender_id);
 
         if sender_tier == SenderTrustTier::Blocked {
             self.metrics.policy_denied_total = self.metrics.policy_denied_total.saturating_add(1);
@@ -1501,6 +1623,30 @@ impl TextChannelAdapter {
         runtime: &KelvinSdkRuntime,
         entry: &QueuedEnvelope,
     ) -> KelvinErrorOr<Value> {
+        // Queued slash command — dispatch via command_exec_payload, not brain.
+        if let Some(slash) = &entry.slash_command {
+            let params = super::CommandExecParams {
+                command: slash.command_name.clone(),
+                args: slash.args.clone(),
+                session_id: slash.session_id.clone(),
+            };
+            let reply = match super::command_exec_payload(runtime, params).await {
+                Ok(result) => {
+                    serde_json::to_string_pretty(&result).unwrap_or_else(|_| "done".to_string())
+                }
+                Err(e) => format!("/{} failed: {e}", slash.command_name),
+            };
+            let _ = self
+                .send_message_with_retry(&entry.envelope.account_id, &reply)
+                .await;
+            self.persist_state()?;
+            return Ok(json!({
+                "status": "command_completed",
+                "command": slash.command_name,
+                "delivery_id": entry.envelope.delivery_id,
+            }));
+        }
+
         let sender_context = format!(
             "[Channel: {} | Sender: {} | Tier: {}]",
             self.config.kind.as_str(),
@@ -1728,50 +1874,17 @@ impl TextChannelAdapter {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-enum SenderTrustTier {
-    Owner,
-    Trusted,
-    Standard,
-    Probation,
-    Blocked,
-}
-
-impl SenderTrustTier {
-    fn as_str(self) -> &'static str {
-        match self {
-            Self::Owner => "owner",
-            Self::Trusted => "trusted",
-            Self::Standard => "standard",
-            Self::Probation => "probation",
-            Self::Blocked => "blocked",
-        }
-    }
-
-    fn parse(input: &str) -> Option<Self> {
-        match input.trim().to_ascii_lowercase().as_str() {
-            "owner" => Some(Self::Owner),
-            "trusted" => Some(Self::Trusted),
-            "standard" => Some(Self::Standard),
-            "probation" => Some(Self::Probation),
-            "blocked" => Some(Self::Blocked),
-            _ => None,
-        }
-    }
-
-    fn from_policy(policy: &ChannelPolicy, sender_id: &str) -> Self {
-        if policy.blocked_senders.contains(sender_id) {
-            Self::Blocked
-        } else if policy.owner_senders.contains(sender_id) {
-            Self::Owner
-        } else if policy.trusted_senders.contains(sender_id) {
-            Self::Trusted
-        } else if policy.probation_senders.contains(sender_id) {
-            Self::Probation
-        } else {
-            Self::Standard
-        }
+fn tier_from_policy(policy: &ChannelPolicy, sender_id: &str) -> SenderTrustTier {
+    if policy.blocked_senders.contains(sender_id) {
+        SenderTrustTier::Blocked
+    } else if policy.owner_senders.contains(sender_id) {
+        SenderTrustTier::Owner
+    } else if policy.trusted_senders.contains(sender_id) {
+        SenderTrustTier::Trusted
+    } else if policy.probation_senders.contains(sender_id) {
+        SenderTrustTier::Probation
+    } else {
+        SenderTrustTier::Standard
     }
 }
 
@@ -2232,21 +2345,12 @@ mod tests {
         };
 
         // blocked overrides trusted
-        assert_eq!(
-            SenderTrustTier::from_policy(&policy, "alice"),
-            SenderTrustTier::Blocked
-        );
+        assert_eq!(tier_from_policy(&policy, "alice"), SenderTrustTier::Blocked);
         // blocked overrides owner
+        assert_eq!(tier_from_policy(&policy, "dave"), SenderTrustTier::Blocked);
+        assert_eq!(tier_from_policy(&policy, "bob"), SenderTrustTier::Probation);
         assert_eq!(
-            SenderTrustTier::from_policy(&policy, "dave"),
-            SenderTrustTier::Blocked
-        );
-        assert_eq!(
-            SenderTrustTier::from_policy(&policy, "bob"),
-            SenderTrustTier::Probation
-        );
-        assert_eq!(
-            SenderTrustTier::from_policy(&policy, "carol"),
+            tier_from_policy(&policy, "carol"),
             SenderTrustTier::Standard
         );
 
@@ -2256,7 +2360,7 @@ mod tests {
             ..policy.clone()
         };
         assert_eq!(
-            SenderTrustTier::from_policy(&policy_owner, "dave"),
+            tier_from_policy(&policy_owner, "dave"),
             SenderTrustTier::Owner
         );
     }
