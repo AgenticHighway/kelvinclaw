@@ -437,7 +437,7 @@ pub extern "C" fn handle_tool_call(ptr: i32, len: i32) -> i64 {
     let type_value = match extract_str_field(input, b"type") {
         Some(t) if allowed(t, VALID_SEARCH_TYPES) => Some(t),
         Some(_) => return error_result(b"invalid 'type' (use auto, neural, or fast)"),
-        None => Some(b"auto"),
+        None => None,
     };
 
     // --- Optional: category (validated against allowlist) ---
