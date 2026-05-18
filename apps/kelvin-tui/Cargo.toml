@@ -19,3 +19,4 @@ serde_json = { workspace = true }
 futures-util = { workspace = true }
 uuid = { workspace = true }
 unicode-width = "0.2"
+kelvin-commands = { path = "../../crates/kelvin-commands" }

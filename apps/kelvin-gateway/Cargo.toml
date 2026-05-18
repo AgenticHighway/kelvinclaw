@@ -19,6 +19,7 @@ ed25519-dalek.workspace = true
 ring = "0.17"
 rustls = { version = "0.23", features = ["ring"] }
 kelvin-core = { path = "../../crates/kelvin-core" }
+kelvin-commands = { path = "../../crates/kelvin-commands" }
 kelvin-brain = { path = "../../crates/kelvin-brain" }
 kelvin-sdk = { path = "../../crates/kelvin-sdk", default-features = false }
 kelvin-wasm = { path = "../../crates/kelvin-wasm" }

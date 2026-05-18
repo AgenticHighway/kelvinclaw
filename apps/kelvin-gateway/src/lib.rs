@@ -19,7 +19,11 @@ use channels::{
 };
 use futures_util::{SinkExt, StreamExt};
 pub use ingress::GatewayIngressConfig;
-use kelvin_core::{now_ms, KelvinError, RunOutcome, SessionDescriptor, SlashCommandMeta};
+use kelvin_commands::CommandRegistry;
+use kelvin_core::{
+    now_ms, CommandSurface, KelvinError, RunOutcome, SenderTrustTier, SessionDescriptor,
+    SlashCommandMeta,
+};
 use kelvin_sdk::{
     KelvinSdkAcceptedRun, KelvinSdkRunRequest, KelvinSdkRuntime, KelvinSdkRuntimeConfig,
 };
@@ -723,9 +727,21 @@ pub async fn run_gateway_with_listener_secure_and_ingress(
         gateway_scheme(&security)
     );
     let channel_state_dir = runtime.state_dir().map(Path::to_path_buf);
+    let command_registry = Arc::new(build_command_registry());
+    let _ = runtime
+        .upsert_session(SessionDescriptor {
+            session_id: kelvin_sdk::consts::DEFAULT_SESSION_ID.to_string(),
+            session_key: kelvin_sdk::consts::DEFAULT_SESSION_ID.to_string(),
+            workspace_dir: runtime
+                .default_workspace_dir()
+                .to_string_lossy()
+                .to_string(),
+        })
+        .await;
     let channels = ChannelEngine::from_env_with_state_dir(
         channel_state_dir.as_deref(),
         ingress.channel_exposure(ingress_runtime.as_ref()),
+        Arc::clone(&command_registry),
     )
     .map_err(|err| format!("initialize channel engine: {err}"))?;
     let channels = Arc::new(Mutex::new(channels));
@@ -1373,47 +1389,76 @@ fn is_supported_method(method: &str) -> bool {
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
-struct CommandExecParams {
-    command: String,
+pub(crate) struct CommandExecParams {
+    pub(crate) command: String,
     #[serde(default)]
     #[allow(dead_code)] // reserved for parameterized commands (e.g. /model <provider>)
-    args: Value,
-    session_id: Option<String>,
+    pub(crate) args: Value,
+    pub(crate) session_id: Option<String>,
 }
 
 fn builtin_commands() -> Vec<SlashCommandMeta> {
+    let all: std::collections::HashSet<CommandSurface> = [
+        CommandSurface::Tui,
+        CommandSurface::Telegram,
+        CommandSurface::Slack,
+        CommandSurface::Discord,
+        CommandSurface::WhatsApp,
+    ]
+    .into_iter()
+    .collect();
+
     vec![
         SlashCommandMeta {
             name: "new".to_string(),
             description: "Create a new session".to_string(),
             usage: Some("[name]".to_string()),
             category: "session".to_string(),
+            surfaces: all.clone(),
+            min_tier: Some(SenderTrustTier::Trusted),
+            bypass_queue: false,
         },
         SlashCommandMeta {
             name: "clear".to_string(),
             description: "Clear session history".to_string(),
             usage: None,
             category: "session".to_string(),
+            surfaces: all.clone(),
+            min_tier: Some(SenderTrustTier::Trusted),
+            bypass_queue: false,
         },
         SlashCommandMeta {
             name: "tools".to_string(),
             description: "List all available tools".to_string(),
             usage: None,
             category: "tools".to_string(),
+            surfaces: all.clone(),
+            min_tier: Some(SenderTrustTier::Standard),
+            bypass_queue: false,
         },
         SlashCommandMeta {
-            name: "sessions".to_string(),
-            description: "List recent sessions".to_string(),
-            usage: None,
+            name: "session".to_string(),
+            description: "List or switch sessions".to_string(),
+            usage: Some("[id]".to_string()),
             category: "session".to_string(),
+            surfaces: all.clone(),
+            min_tier: Some(SenderTrustTier::Standard),
+            bypass_queue: false,
         },
         SlashCommandMeta {
             name: "plugins".to_string(),
             description: "List loaded plugins".to_string(),
             usage: None,
             category: "system".to_string(),
+            surfaces: [CommandSurface::Tui].into_iter().collect(),
+            min_tier: Some(SenderTrustTier::Owner),
+            bypass_queue: false,
         },
     ]
+}
+
+pub fn build_command_registry() -> CommandRegistry {
+    CommandRegistry::from_slash_meta(&builtin_commands(), None)
 }
 
 fn commands_list_payload(runtime: &kelvin_sdk::KelvinSdkRuntime) -> Value {
@@ -1425,10 +1470,12 @@ fn commands_list_payload(runtime: &kelvin_sdk::KelvinSdkRuntime) -> Value {
         "description": c.description,
         "usage": c.usage,
         "category": c.category,
+        "min_tier": c.min_tier.map(|t| t.as_str()),
+        "bypass_queue": c.bypass_queue,
     })).collect::<Vec<_>>() })
 }
 
-async fn command_exec_payload(
+pub(crate) async fn command_exec_payload(
     runtime: &kelvin_sdk::KelvinSdkRuntime,
     params: CommandExecParams,
 ) -> Result<Value, KelvinError> {
@@ -1449,10 +1496,6 @@ async fn command_exec_payload(
                 .await?;
             Ok(json!({ "command": "new", "session_id": session_id }))
         }
-        "switch" => {
-            let session_id = params.session_id.as_deref().unwrap_or("main");
-            Ok(json!({ "command": "switch", "session_id": session_id }))
-        }
         "clear" => {
             let session_id = params.session_id.as_deref().unwrap_or("main");
             runtime.clear_session_history(session_id).await?;
@@ -1469,11 +1512,24 @@ async fn command_exec_payload(
                 })).collect::<Vec<_>>(),
             }))
         }
-        "sessions" => operator::sessions_list_payload(
-            runtime,
-            operator::OperatorSessionsListParams::default(),
-        )
-        .map(|payload| json!({ "command": "sessions", "result": payload })),
+        "session" => {
+            if let Some(session_id) = params
+                .args
+                .get("session_id")
+                .and_then(|v| v.as_str())
+                .filter(|s| !s.trim().is_empty())
+            {
+                // With a session_id arg: switch to that session.
+                Ok(json!({ "command": "session", "session_id": session_id }))
+            } else {
+                // Without args: list sessions.
+                operator::sessions_list_payload(
+                    runtime,
+                    operator::OperatorSessionsListParams::default(),
+                )
+                .map(|payload| json!({ "command": "session", "result": payload }))
+            }
+        }
         "plugins" => {
             let payload = operator::plugins_inspect_payload(
                 runtime,
