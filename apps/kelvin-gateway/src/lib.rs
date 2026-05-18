@@ -732,7 +732,10 @@ pub async fn run_gateway_with_listener_secure_and_ingress(
         .upsert_session(SessionDescriptor {
             session_id: kelvin_sdk::consts::DEFAULT_SESSION_ID.to_string(),
             session_key: kelvin_sdk::consts::DEFAULT_SESSION_ID.to_string(),
-            workspace_dir: runtime.default_workspace_dir().to_string_lossy().to_string(),
+            workspace_dir: runtime
+                .default_workspace_dir()
+                .to_string_lossy()
+                .to_string(),
         })
         .await;
     let channels = ChannelEngine::from_env_with_state_dir(
