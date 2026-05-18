@@ -211,11 +211,13 @@ pub fn load_installed_plugins_default(
 /// * `fs_read_paths` - what paths the plugin is allowed to read from
 /// * `network_allow_hosts` - what hosts the plugin is allowed to fetch from
 /// * `env_allow` - what env vars the plugin is allowed to access
+/// * `shell_allow_commands` - what command basenames the plugin is allowed to execute
 #[derive(Debug, Clone, Default)]
 pub struct CapabilityScopes {
     pub fs_read_paths: Vec<String>,
     pub network_allow_hosts: Vec<String>,
     pub env_allow: Vec<String>,
+    pub shell_allow_commands: Vec<String>,
 }
 
 /// ### Brief
@@ -708,6 +710,7 @@ struct InstalledPluginPackageManifest {
 /// * `fs_read_paths` - allowed file system paths for reading
 /// * `network_allow_hosts` - allowed network hosts (wildcard patterns supported)
 /// * `env_allow` - allowed environment variables
+/// * `shell_allow_commands` - allowed command basenames for shell execution
 #[derive(Debug, Clone, Default, Deserialize)]
 struct CapabilityScopesManifest {
     #[serde(default)]
@@ -716,6 +719,8 @@ struct CapabilityScopesManifest {
     network_allow_hosts: Vec<String>,
     #[serde(default)]
     env_allow: Vec<String>,
+    #[serde(default)]
+    shell_allow_commands: Vec<String>,
 }
 
 /// ### Brief
@@ -2527,17 +2532,6 @@ fn load_one_plugin(
             )));
         }
 
-        if package_manifest
-            .capabilities
-            .contains(&PluginCapability::CommandExecution)
-        {
-            return Err(KelvinError::InvalidInput(format!(
-                "plugin '{}' declares unsupported capability 'command_execution' for runtime '{}'",
-                package_manifest.id,
-                consts::DEFAULT_TOOL_RUNTIME_KIND
-            )));
-        }
-
         let tool_name = package_manifest.resolve_tool_name()?;
         let sandbox_policy = sandbox_from_manifest(&package_manifest)?;
         let tool_description = package_manifest.description.clone().unwrap_or_default();
@@ -2809,10 +2803,51 @@ fn normalize_scopes(manifest: &InstalledPluginPackageManifest) -> KelvinResult<C
         )));
     }
 
+    let has_command_exec = manifest
+        .capabilities
+        .contains(&PluginCapability::CommandExecution);
+    let shell_allow_commands = manifest.capability_scopes.shell_allow_commands.clone();
+    if has_command_exec && shell_allow_commands.is_empty() {
+        return Err(KelvinError::InvalidInput(format!(
+            "plugin '{}' declares command_execution but has no shell_allow_commands scopes",
+            manifest.id
+        )));
+    }
+    if !has_command_exec && !shell_allow_commands.is_empty() {
+        return Err(KelvinError::InvalidInput(format!(
+            "plugin '{}' has shell_allow_commands scopes but does not declare command_execution capability",
+            manifest.id
+        )));
+    }
+    // Reject wildcard "*" in shell_allow_commands for installed plugins —
+    // only explicit command basenames are accepted to minimise blast radius.
+    for cmd in &shell_allow_commands {
+        let trimmed = cmd.trim();
+        if trimmed.is_empty() {
+            return Err(KelvinError::InvalidInput(format!(
+                "plugin '{}' shell_allow_commands contains an empty entry",
+                manifest.id
+            )));
+        }
+        if trimmed == "*" {
+            return Err(KelvinError::InvalidInput(format!(
+                "plugin '{}' shell_allow_commands must not use wildcard '*'; list explicit command basenames",
+                manifest.id
+            )));
+        }
+        if trimmed.contains('/') || trimmed.contains('\\') {
+            return Err(KelvinError::InvalidInput(format!(
+                "plugin '{}' shell_allow_commands entry '{}' must be a plain basename without path separators",
+                manifest.id, trimmed
+            )));
+        }
+    }
+
     Ok(CapabilityScopes {
         fs_read_paths,
         network_allow_hosts,
         env_allow: manifest.capability_scopes.env_allow.clone(),
+        shell_allow_commands,
     })
 }
 
@@ -2893,8 +2928,8 @@ fn normalize_controls(
 /// ### Description
 ///
 /// initializes a locked-down sandbox policy and selectively enables capabilities (fs_read, network_egress,
-/// env_access, command_execution) based on what the manifest declares. validates that env_access and
-/// command_execution are only enabled when fs_write is also enabled.
+/// env_access, command_execution) based on what the manifest declares. validates that env_access
+/// requires the EnvAccess capability and command_execution requires the CommandExecution capability.
 ///
 /// ### Arguments
 /// * `manifest` - plugin manifest with capabilities
@@ -2903,7 +2938,9 @@ fn normalize_controls(
 /// sandbox policy with capabilities enabled as declared
 ///
 /// ### Errors
-/// - env_access or command_execution enabled without fs_write
+/// - env_allow scopes without EnvAccess capability
+/// - shell_allow_commands scopes without CommandExecution capability
+/// - FsWrite capability (still unsupported for WASM tool plugins)
 fn sandbox_from_manifest(manifest: &InstalledPluginPackageManifest) -> KelvinResult<SandboxPolicy> {
     let mut policy = SandboxPolicy::locked_down();
     if manifest.capabilities.contains(&PluginCapability::FsRead) {
@@ -2925,15 +2962,23 @@ fn sandbox_from_manifest(manifest: &InstalledPluginPackageManifest) -> KelvinRes
         }
         policy.env_allow = manifest.capability_scopes.env_allow.clone();
     }
+    if !manifest.capability_scopes.shell_allow_commands.is_empty() {
+        if !manifest
+            .capabilities
+            .contains(&PluginCapability::CommandExecution)
+        {
+            return Err(KelvinError::InvalidInput(format!(
+                "plugin '{}' declares shell_allow_commands scopes but lacks 'command_execution' capability",
+                manifest.id
+            )));
+        }
+        policy.shell_allow_commands = manifest.capability_scopes.shell_allow_commands.clone();
+    }
     if let Some(budget) = manifest.operational_controls.fuel_budget {
         // Clamp fuel_budget to the hard upper bound (#69)
         policy.fuel_budget = budget.min(kelvin_wasm::MAX_FUEL_BUDGET);
     }
-    if manifest.capabilities.contains(&PluginCapability::FsWrite)
-        || manifest
-            .capabilities
-            .contains(&PluginCapability::CommandExecution)
-    {
+    if manifest.capabilities.contains(&PluginCapability::FsWrite) {
         return Err(KelvinError::InvalidInput(format!(
             "plugin '{}' requests unsupported runtime capability",
             manifest.id
@@ -3259,6 +3304,11 @@ fn claw_call_json(call: &ClawCall) -> serde_json::Value {
         ClawCall::EnvAccess { key } => json!({
             "kind": "env_access",
             "key": key,
+        }),
+        ClawCall::ShellExec { command, args } => json!({
+            "kind": "shell_exec",
+            "command": command,
+            "args": args,
         }),
     }
 }
