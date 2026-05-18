@@ -1504,8 +1504,9 @@ pub(crate) async fn command_exec_payload(
         }
         "session" => {
             if let Some(session_id) = params
-                .session_id
-                .as_deref()
+                .args
+                .get("session_id")
+                .and_then(|v| v.as_str())
                 .filter(|s| !s.trim().is_empty())
             {
                 // With a session_id arg: switch to that session.
