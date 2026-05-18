@@ -728,6 +728,13 @@ pub async fn run_gateway_with_listener_secure_and_ingress(
     );
     let channel_state_dir = runtime.state_dir().map(Path::to_path_buf);
     let command_registry = Arc::new(build_command_registry());
+    let _ = runtime
+        .upsert_session(SessionDescriptor {
+            session_id: kelvin_sdk::consts::DEFAULT_SESSION_ID.to_string(),
+            session_key: kelvin_sdk::consts::DEFAULT_SESSION_ID.to_string(),
+            workspace_dir: runtime.default_workspace_dir().to_string_lossy().to_string(),
+        })
+        .await;
     let channels = ChannelEngine::from_env_with_state_dir(
         channel_state_dir.as_deref(),
         ingress.channel_exposure(ingress_runtime.as_ref()),
